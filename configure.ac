@@ -1,0 +1,195 @@
+# Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+#
+# This file is part of Distributed Privacy Guard (DKGPG).
+#
+#   DKGPG is free software; you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation; either version 2 of the License, or
+#   (at your option) any later version.
+#
+#   DKGPG is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with DKGPG; if not, write to the Free Software
+#   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# (Process this file with autoconf to produce a configure script.)
+
+AC_REVISION([20171031])
+AC_PREREQ(2.61)
+
+AC_INIT([Distributed Privacy Guard], [1.0.0], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
+
+AC_LANG(C++)
+AC_CONFIG_SRCDIR([src/dkg-common.hh])
+AC_CONFIG_HEADERS([src/dkgpg_config.h])
+AM_INIT_AUTOMAKE
+AM_MAINTAINER_MODE
+
+AC_SUBST(PACKAGE)
+AC_SUBST(VERSION)
+AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME", [Name of this package])
+AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION", [Version of this package])
+
+# Checks for Libtool
+LT_PREREQ([2.4.2])
+LT_INIT
+LT_LANG([C++])
+
+# Checks for programs
+AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MKDIR_P
+
+# Checks for libraries
+backup_LDFLAGS="$LDFLAGS"
+backup_CPPLAGS="$CPPFLAGS"
+AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>], [prefix of libgmp installation e.g. /usr/local])],\
+ [GMP_PREFIX="$with_gmp" LDFLAGS="-L${with_gmp}/lib $backup_LDFLAGS" CPPFLAGS="-I${with_gmp}/include $backup_CPPFLAGS"],\
+ [AC_CHECK_LIB(gmp, __gmpz_init, [LIBS=""], AC_MSG_ERROR([libgmp is needed; maybe you want call configure with the --with-gmp=<path> option]))])
+AC_CHECK_LIB(gmp, __gmpz_import, [LIBS=""], AC_MSG_ERROR([libgmp >= 4.2 is needed]))
+AC_CHECK_LIB(gmp, __gmpz_export, [LIBS=""], AC_MSG_ERROR([libgmp >= 4.2 is needed]))
+AC_CHECK_LIB(gmp, __gmpz_powm_sec, AC_DEFINE(HAVE_POWMSEC, , [Defined if your libgmp have the mpz_powm_sec() function]), AC_MSG_WARN([libgmp >= 5.0.3 is recommended]))
+AC_CHECK_HEADERS([gmp.h], , AC_MSG_ERROR([libgmp headers are missing]))
+if test "x$GMP_PREFIX" != x ; then
+	LIBGMP_LIBS=" -L${GMP_PREFIX}/lib"
+	LIBGMP_CFLAGS=" -I${GMP_PREFIX}/include"
+else
+	LIBGMP_LIBS=""
+	LIBGMP_CFLAGS=""
+fi
+LIBGMP_LIBS="${GMP_LIBS} -lgmp"
+AC_SUBST(LIBGMP_LIBS)
+AC_SUBST(LIBGMP_CFLAGS)
+LDFLAGS="$backup_LDFLAGS"
+CPPFLAGS="$backup_CPPFLAGS"
+
+AM_PATH_LIBGCRYPT("1.6.0")
+if test "x$LIBGCRYPT_LIBS" = "x"; then
+	AC_MSG_ERROR([libgcrypt >= 1.6.0 is needed])
+fi
+backup_CPPLAGS="$CPPFLAGS"
+CPPFLAGS="$LIBGCRYPT_CFLAGS $backup_CPPFLAGS"
+AC_CHECK_HEADERS([gcrypt.h], , AC_MSG_ERROR([libgcrypt headers are missing]))
+CPPFLAGS="$backup_CPPFLAGS"
+
+AM_PATH_GPG_ERROR("1.12")
+if test "x$GPG_ERROR_LIBS" = "x"; then
+	AC_MSG_ERROR([libgpg-error >= 1.12 is needed])
+fi
+
+AM_PATH_LIBTMCG("1.3.3")
+if test "x$LIBTMCG_LIBS" = "x"; then
+        AC_MSG_ERROR([libTMCG >= 1.3.3 is needed])
+fi
+AC_SUBST(LIBTMCG_LIBS)
+AC_SUBST(LIBTMCG_CFLAGS)
+
+# Checks for header files
+AC_HEADER_STDC
+AC_HEADER_TIME
+AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
+ ctime errno.h fcntl.h fstream functional inttypes.h iomanip iostream\
+ limits.h list map sstream stdint.h stdio.h string string.h sys/select.h\
+ time.h unistd.h vector], , 
+	AC_MSG_ERROR([some headers are missing]))
+
+# Checks for typedefs, structures, and compiler characteristics
+AC_C_CONST
+AC_C_INLINE
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+
+# Checks for library functions
+AC_FUNC_MALLOC
+AC_FUNC_MEMCMP
+AC_CHECK_FUNCS([abs clock close ctime fcntl fprintf memcmp memcpy memmove\
+ memset open perror read sscanf select sleep snprintf strrchr strtoul time\
+ write], ,
+	AC_MSG_ERROR([some functions are missing]))
+
+# Checks for dkg-tools
+AC_HEADER_SYS_WAIT
+AC_TYPE_PID_T
+AC_TYPE_SIGNAL
+AC_FUNC_FORK
+AC_CHECK_HEADERS([unistd.h sys/types.h sys/wait.h signal.h arpa/inet.h\
+ netdb.h netinet/in.h sys/socket.h], ,
+	AC_MSG_ERROR([some headers are missing]))
+AC_CHECK_FUNCS([fork kill pipe pipe2 waitpid getaddrinfo getnameinfo\
+ htons htonl socket setsockopt connect bind listen accept signal sigaction\
+ gai_strerror freeaddrinfo inet_ntop], , 
+	AC_MSG_ERROR([some functions are missing]))
+
+# Checks for GNUnet
+gnunet=0
+lookin=${prefix}
+backup_LDFLAGS="$LDFLAGS"       
+backup_CPPLAGS="$CPPFLAGS"
+GNUNET_LIBS=""
+GNUNET_CFLAGS=""
+AC_MSG_CHECKING([for GNUnet])
+AC_ARG_WITH(gnunet, [AS_HELP_STRING([--with-gnunet=<path>],
+	[prefix of GNUnet installation])], [AC_MSG_RESULT([$with_gnunet])
+	case $with_gnunet in
+		no)
+			lookin=""
+			;;
+		yes)
+			lookin="${prefix}"
+			;;
+		*)
+			lookin="$with_gnunet"
+			;;
+	esac
+	], [AC_MSG_RESULT([--with-gnunet not specified])])
+
+if test "x$gnunet" == "x0" -a ! "x$lookin" == "x"
+then
+	GNUNET_LIBS="-L${lookin}/lib"
+	GNUNET_CFLAGS="-I${lookin}/include"
+	LDFLAGS="$GNUNET_LIBS $backup_LDFLAGS"
+	CPPFLAGS="$GNUNET_CFLAGS $backup_CPPFLAGS"
+	AC_CHECK_HEADERS([gnunet/gnunet_util_lib.h], [gnunet=1], [gnunet=0], [#include <gnunet/platform.h>])
+	AC_CHECK_LIB([gnunetutil], [GNUNET_xfree_], [LIBS=""], [gnunet=0])
+##	AC_CHECK_HEADERS([gnunet/gnunet_peerinfo_service.h], , [gnunet=0], [#include <gnunet/platform.h>])
+##	AC_CHECK_LIB([gnunetpeerinfo], [GNUNET_PEERINFO_connect], [LIBS=""], [gnunet=0])
+	AC_CHECK_HEADERS([gnunet/gnunet_hello_lib.h], , [gnunet=0], [#include <gnunet/platform.h>])
+	AC_CHECK_LIB([gnunethello], [GNUNET_HELLO_get_id], [LIBS=""], [gnunet=0])
+	AC_CHECK_HEADERS([gnunet/gnunet_transport_hello_service.h], , [gnunet=0], [#include <gnunet/platform.h>])
+	AC_CHECK_LIB([gnunettransport], [GNUNET_TRANSPORT_hello_get], [LIBS=""], [gnunet=0])
+	AC_CHECK_HEADERS([gnunet/gnunet_cadet_service.h], , [gnunet=0], [#include <gnunet/platform.h>])
+	AC_CHECK_LIB([gnunetcadet], [GNUNET_CADET_connect], [LIBS=""], [gnunet=0])
+fi
+if test "x$gnunet" == "x1"
+then
+	AC_DEFINE(GNUNET, , [Define to enable the GNUnet-based tools])
+	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetutil -lgnunethello -lgnunettransport -lgnunetcadet"
+fi
+if test "x$gnunet" == "x0"
+then
+	GNUNET_LIBS=""
+	GNUNET_CFLAGS=""
+fi
+AC_SUBST(GNUNET_LIBS)
+AC_SUBST(GNUNET_CFLAGS)
+LDFLAGS="$backup_LDFLAGS"
+CPPFLAGS="$backup_CPPFLAGS"
+
+# Enable all compiler warnings
+CFLAGS="$CFLAGS -Wall"
+CXXFLAGS="$CXXFLAGS -Wall"
+
+# Define output
+AC_CONFIG_FILES([Makefile src/Makefile\
+ src/dkg-generate.1 src/dkg-encrypt.1 src/dkg-decrypt.1 src/dkg-sign.1\
+ src/dkg-revoke.1 src/dkg-verify.1])
+AC_OUTPUT
+
+echo "Now type 'make && make install' to build and install Distributed Privacy Guard."

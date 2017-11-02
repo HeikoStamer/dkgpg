@@ -39,24 +39,24 @@
 	#include <libTMCG.hh>
 
 	bool read_key_file
-		(const std::string filename, std::string &result);
+		(const std::string &filename, std::string &result);
 	void init_mpis
 		();
 	bool parse_message
-		(const std::string in, tmcg_octets_t &enc_out,
+		(const std::string &in, tmcg_octets_t &enc_out,
 		bool &have_seipd_out);
 	bool decrypt_message
 		(const bool have_seipd, const tmcg_octets_t &in,
 		tmcg_octets_t &key, tmcg_octets_t &out);
 	bool parse_signature
-		(const std::string in, tmcg_byte_t stype,
+		(const std::string &in, tmcg_byte_t stype,
 		time_t &sigcreationtime_out, time_t &sigexpirationtime_out,
 		tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out);
 	bool parse_public_key
-		(const std::string in,
+		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out);
 	bool parse_private_key
-		(const std::string in,
+		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out,
 		std::vector<std::string> &capl_out);
 	void release_mpis

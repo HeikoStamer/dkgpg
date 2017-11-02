@@ -44,7 +44,7 @@ extern gcry_mpi_t 				gk, myk, sig_r, sig_s;
 extern int					opt_verbose;
 
 bool read_key_file
-	(const std::string filename, std::string &result)
+	(const std::string &filename, std::string &result)
 {
 	// read the public/private key from file
 	std::string line;
@@ -102,7 +102,7 @@ void init_mpis
 }
 
 bool parse_message
-	(const std::string in, tmcg_octets_t &enc_out, bool &have_seipd_out)
+	(const std::string &in, tmcg_octets_t &enc_out, bool &have_seipd_out)
 {
 	// parse encrypted message
 	bool have_pkesk = false, have_sed = false;
@@ -355,7 +355,7 @@ bool decrypt_message
 }
 
 bool parse_signature
-	(const std::string in, tmcg_byte_t stype, time_t &sigcreationtime_out, time_t &sigexpirationtime_out, tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out)
+	(const std::string &in, tmcg_byte_t stype, time_t &sigcreationtime_out, time_t &sigexpirationtime_out, tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out)
 {
 	// parse the signature according to OpenPGP
 	bool sig = false;
@@ -439,7 +439,7 @@ bool parse_signature
 }
 
 bool parse_public_key
-	(const std::string in, time_t &keycreationtime_out, time_t &keyexpirationtime_out)
+	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out)
 {
 	// parse the public key according to OpenPGP
 	bool pubdsa = false, sigdsa = false, subelg = false, sigelg = false;
@@ -777,7 +777,7 @@ bool parse_public_key
 }
 
 bool parse_private_key
-	(const std::string in, time_t &keycreationtime_out, time_t &keyexpirationtime_out, std::vector<std::string> &capl_out)
+	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out, std::vector<std::string> &capl_out)
 {
 	// parse the private key according to OpenPGP
 	bool secdsa = false, sigdsa = false, ssbelg = false, sigelg = false;

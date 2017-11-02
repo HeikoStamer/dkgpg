@@ -70,7 +70,7 @@ char					*opt_hostname = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000;
 
 void write_signature
-	(const std::string filename, const std::string armored_signature)
+	(const std::string &filename, const std::string &armored_signature)
 {
 	// write out the armored signature
 	std::ofstream ofs(filename.c_str(), std::ofstream::out);

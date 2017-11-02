@@ -71,7 +71,7 @@ unsigned long int			opt_p = 55000;
 std::string				armored_message;
 
 void read_message
-	(const std::string ifilename, std::string &result)
+	(const std::string &ifilename, std::string &result)
 {
 	// read the encrypted message from file
 	std::string line;
@@ -94,7 +94,7 @@ void read_message
 }
 
 void write_message
-	(const std::string filename, const tmcg_octets_t &msg)
+	(const std::string &filename, const tmcg_octets_t &msg)
 {
 	// write out the decrypted message
 	std::ofstream ofs(filename.c_str(), std::ofstream::out);

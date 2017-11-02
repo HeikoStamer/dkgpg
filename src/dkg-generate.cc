@@ -45,12 +45,12 @@ std::vector<std::string>	peers;
 bool				instance_forked = false;
 
 size_t				N, T, S;
-std::string			u, passphrase, passwords, hostname, port;
+std::string			userid, passphrase, passwords, hostname, port;
 int 				opt_verbose = 0;
 char				*opt_crs = NULL;
 char				*opt_passwords = NULL;
 char				*opt_hostname = NULL;
-unsigned long int		opt_t = MAX_N, opt_s = MAX_N, opt_e = 0, opt_p = 55000;
+unsigned long int		opt_t = MAX_N, opt_s = MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
 
 bool				fips = false;
 std::stringstream		crss;
@@ -106,10 +106,10 @@ void run_instance
 	}
 
 	// create asynchronous authenticated unicast channels
-	aiounicast_select *aiou = new aiounicast_select(N, whoami, uP_in, uP_out, uP_key);
+	aiounicast_select *aiou = new aiounicast_select(N, whoami, uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 
 	// create asynchronous authenticated unicast channels for broadcast protocol
-	aiounicast_select *aiou2 = new aiounicast_select(N, whoami, bP_in, bP_out, bP_key);
+	aiounicast_select *aiou2 = new aiounicast_select(N, whoami, bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
 	std::string myID = "dkg-generate|";
@@ -120,7 +120,7 @@ void run_instance
 	myID += S; // include parameterized s-resiliance in the ID of broadcast protocol to enforce equal parameter set
 	myID += "|";
 	size_t T_RBC = (peers.size() - 1) / 3; // assume maximum asynchronous t-resilience for RBC
-	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(N, T_RBC, whoami, aiou2);
+	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(N, T_RBC, whoami, aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
@@ -524,7 +524,7 @@ void run_instance
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
 	CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(u, uid);
+	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 	if (S > 0)
 	{
 		dsaflags.push_back(0x02 | 0x10); // key may be used to sign data and has been split by a secret-sharing mechanism
@@ -538,7 +538,7 @@ void run_instance
 	// positive certification (0x13) of uid and pub
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareSelfSignature(0x13, hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
 	hash.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, u, uidsig_hashing, hashalgo, hash, uidsig_left);
+	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, uidsig_hashing, hashalgo, hash, uidsig_left);
 	if (S > 0)
 	{
 		tmcg_byte_t buffer[1024];
@@ -1247,6 +1247,7 @@ unsigned int gnunet_opt_s_resilience = MAX_N;
 unsigned int gnunet_opt_keyexptime = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
+unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
 #endif
 
@@ -1370,6 +1371,12 @@ int main
 			"minutes to wait until start of DKG/tDSS protocol",
 			&gnunet_opt_wait
 		),
+		GNUNET_GETOPT_option_uint('W',
+			"aiou-timeout",
+			"TIME",
+			"timeout for point-to-point messages in minutes",
+			&gnunet_opt_W
+		),
 		GNUNET_GETOPT_option_uint('x',
 			"x-tests",
 			NULL,
@@ -1400,6 +1407,8 @@ int main
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
+	if (gnunet_opt_W != opt_W)
+		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
 
 	if (argc < 2)
@@ -1414,7 +1423,7 @@ int main
 		{
 			std::string arg = argv[i+1];
 			// ignore options
-			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-t") == 0) || (arg.find("-w") == 0) || 
+			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-t") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
 				(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-g") == 0) || (arg.find("-x") == 0) ||
 				(arg.find("-s") == 0) || (arg.find("-e") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
 			{
@@ -1442,6 +1451,8 @@ int main
 					opt_e = strtoul(argv[i+1], NULL, 10);
 				if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
 					port = argv[i+1];
+				if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
+					opt_W = strtoul(argv[i+1], NULL, 10);
 				continue;
 			}
 			else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
@@ -1462,6 +1473,7 @@ int main
 					std::cout << "  -t INTEGER     resilience of DKG protocol (threshold decryption)" << std::endl;
 					std::cout << "  -v, --version  print the version number" << std::endl;
 					std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+					std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
 #endif
 					return 0; // not continue
 				}
@@ -1517,7 +1529,7 @@ int main
 		return -1;
 	}
 	std::cout << "1. Please enter an OpenPGP-style user ID (name <email>): ";
-	std::getline(std::cin, u);
+	std::getline(std::cin, userid);
 	std::cout << "2. Choose a passphrase to protect your private key: ";
 	std::getline(std::cin, passphrase);
 	if (opt_verbose)
@@ -1761,6 +1773,12 @@ int main
 			"TIME",
 			"minutes to wait until start of DKG/tDSS protocol",
 			&gnunet_opt_wait
+		),
+		GNUNET_GETOPT_option_uint('W',
+			"aiou-timeout",
+			"TIME",
+			"timeout for point-to-point messages in minutes",
+			&gnunet_opt_W
 		),
 		GNUNET_GETOPT_option_uint('x',
 			"x-tests",

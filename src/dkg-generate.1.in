@@ -74,6 +74,10 @@ With the option "-w" the number of minutes can be adjusted until DKG/tDSS
 protocols are started. The default value is 5. It is crucial for the key
 generation that all participants are connected with GNUnet CADET within
 this waiting time. Otherwise the distributed key generation may fail.
+The option "-W" defines the timeout of a message within the point-to-point
+network. The default value is 5 minutes. If the underlying network transport
+(i.e. GNUnet CADET or TCP/IP) is very slow then this value should be
+increased by all particpants. 
 .PP
 The established private communication channels for the protocols should be
 protected with bilateral exchanged passwords for encryption and message
@@ -92,22 +96,23 @@ that GNUnet will protect the exchanged protocol messages.
 .PP
 Additionally, instead of relying on GNUnet CADET protocol the messages can
 be exchanged by the built-in TCP/IP communication framework. In that case
-the given peer identities from PEERS are simple resolvable hostnames and the
-corresponding option "-H" defines the hostname of the calling peer within
-that list. The program binds some TCP ports up from 55000 to listen for
-incoming connections and connects to other peers in that port range.
-Since the communication is not protected by the network itself "-P" is
-a mandatory option in that case.
+the given peer identities from PEERS must be resolvable hostnames and the
+corresponding option "-H" defines the name of the calling peer within that
+list. The program binds some TCP ports up from 55000 to listen for incoming
+connections and connects to other peers in that port range. The used port
+numbers are determined by the unique position in the canonicalized peer list.
+Since the communication of TCP/IP is not protected by the network itself
+the option "-P" is mandatory in that case.
 .PP
 The included program 
 .BR dkg\-keyinfo
-shows some basic information about the private key. Finally, the program
+shows some basic information about threshold parameter and the private key.
+Finally, the program
 .BR dkg\-refresh
-updates the individual DSA key shares and thus provides proactive security
-against a so-called mobile adversary, if it is used regularly. It should be
-used very carefully because all parties not involved in the refreshment are
-excluded (disqualified) from all further private key operations of a successful
-majority.
+updates the individual DSA key shares and thus provides so-called proactive
+security against a mobile adversary, if it is used regularly. The refreshment
+should be handled very carefully because all parties not involved are excluded
+(disqualified) from all further private key operations.
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
@@ -155,6 +160,9 @@ turn on verbose output
 .TP
 \fB\-w\fR, \fB\-\-wait\fR=\fI\,TIME\/\fR
 minutes to wait until start of DKG/tDSS protocol
+.TP
+\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
+timeout for point-to-point messages in minutes
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT
@@ -189,7 +197,7 @@ ElGamal subkey. However, robustness of the DKG protocol is only guaranteed for t
 malicious party may disturb the key generation without being identified and excluded. The s-resilience is set to zero, which
 means that individual DSA keys instead of a shared key are generated and used as OpenPGP primary keys. Thus
 .BR dkg\-sign (1)
-will not work with such keys. The program waits ten minutes before the DKG protocol is started, because
+will not work with such restricted keys. The program waits ten minutes before the DKG protocol is started, because
 establishing a CADET channel with GNUnet may take some time.
 .PP
 Instead of using GNUnet for message exchange the built-in TCP/IP service can carry out this job. However, then each peer has to

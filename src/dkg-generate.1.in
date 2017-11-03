@@ -159,7 +159,7 @@ print the GNUnet version number
 turn on verbose output
 .TP
 \fB\-w\fR, \fB\-\-wait\fR=\fI\,TIME\/\fR
-minutes to wait until start of DKG/tDSS protocol
+minutes to wait until start of key generation protocol
 .TP
 \fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
 timeout for point-to-point messages in minutes

@@ -65,7 +65,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 int 					opt_verbose = 0;
 char					*opt_passwords = NULL;
 char					*opt_hostname = NULL;
-unsigned long int			opt_r = 0, opt_p = 55000;
+unsigned long int			opt_r = 0, opt_p = 55000, opt_W = 5;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const size_t reason, const size_t num_xtests)
@@ -127,17 +127,17 @@ void run_instance
 	}
 
 	// create asynchronous authenticated unicast channels
-	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out, uP_key);
+	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 
 	// create asynchronous authenticated unicast channels for broadcast protocol
-	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out, bP_key);
+	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
 	std::string myID = "dkg-revoke|";
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
 	size_t T_RBC = (peers.size() - 1) / 3; // assume maximum asynchronous t-resilience for RBC
-	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2);
+	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
@@ -488,6 +488,7 @@ char *gnunet_opt_port = NULL;
 unsigned int gnunet_opt_reason = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
+unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
 #endif
 
@@ -571,6 +572,12 @@ int main
 			"minutes to wait until start of revocation protocol",
 			&gnunet_opt_wait
 		),
+		GNUNET_GETOPT_option_uint('W',
+			"aiou-timeout",
+			"TIME",
+			"timeout for point-to-point messages in minutes",
+			&gnunet_opt_W
+		),
 		GNUNET_GETOPT_option_uint('x',
 			"x-tests",
 			NULL,
@@ -597,6 +604,8 @@ int main
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
+	if (gnunet_opt_W != opt_W)
+		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
 
 	if (argc < 2)
@@ -611,8 +620,8 @@ int main
 		{
 			std::string arg = argv[i+1];
 			// ignore options
-			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-r") == 0) || (arg.find("-w") == 0) || (arg.find("-L") == 0) || 
-				(arg.find("-l") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
+			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-r") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
+				(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
 			{
 				size_t idx = ++i;
 				if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
@@ -629,6 +638,8 @@ int main
 					opt_r = strtoul(argv[i+1], NULL, 10);
 				if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
 					port = argv[i+1];
+				if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
+					opt_W = strtoul(argv[i+1], NULL, 10);
 				continue;
 			}
 			else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
@@ -646,6 +657,7 @@ int main
 					std::cout << "  -r INTEGER     reason for revocation (OpenPGP machine-readable code)" << std::endl;
 					std::cout << "  -v, --version  print the version number" << std::endl;
 					std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+					std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
 #endif
 					return 0; // not continue
 				}
@@ -762,6 +774,12 @@ int main
 			"minutes to wait until start of revocation protocol",
 			&gnunet_opt_wait
 		),
+		GNUNET_GETOPT_option_uint('W',
+			"aiou-timeout",
+			"TIME",
+			"timeout for point-to-point messages in minutes",
+			&gnunet_opt_W
+		),
 		GNUNET_GETOPT_option_uint('x',
 			"x-tests",
 			NULL,
@@ -777,7 +795,7 @@ int main
 	else
 		return -1;
 #else
-	std::cerr << "WARNING: GNUnet development files are required for message exchange of revocation protocol" << std::endl;
+	std::cerr << "WARNING: GNUnet CADET is required for the message exchange of this program" << std::endl;
 #endif
 
 	std::cout << "INFO: running local test with " << peers.size() << " participants" << std::endl;

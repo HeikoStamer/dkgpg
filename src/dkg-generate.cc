@@ -44,7 +44,6 @@ pid_t				pid[MAX_N];
 std::vector<std::string>	peers;
 bool				instance_forked = false;
 
-size_t				N, T, S;
 std::string			userid, passphrase, passwords, hostname, port;
 int 				opt_verbose = 0;
 char				*opt_crs = NULL;
@@ -56,6 +55,8 @@ bool				fips = false;
 std::stringstream		crss;
 mpz_t 				cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
 size_t				cache_avail = 0;
+
+size_t				T, S;
 
 void run_instance
 	(const size_t whoami, const time_t keytime, const time_t keyexptime, const size_t num_xtests)
@@ -106,10 +107,10 @@ void run_instance
 	}
 
 	// create asynchronous authenticated unicast channels
-	aiounicast_select *aiou = new aiounicast_select(N, whoami, uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 
 	// create asynchronous authenticated unicast channels for broadcast protocol
-	aiounicast_select *aiou2 = new aiounicast_select(N, whoami, bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
 	std::string myID = "dkg-generate|";
@@ -120,7 +121,7 @@ void run_instance
 	myID += S; // include parameterized s-resiliance in the ID of broadcast protocol to enforce equal parameter set
 	myID += "|";
 	size_t T_RBC = (peers.size() - 1) / 3; // assume maximum asynchronous t-resilience for RBC
-	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(N, T_RBC, whoami, aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
@@ -130,7 +131,7 @@ void run_instance
 		mpz_init_set_ui(xtest, i);
 		std::cout << "P_" << whoami << ": xtest = " << xtest << " <-> ";
 		rbc->Broadcast(xtest);
-		for (size_t ii = 0; ii < N; ii++)
+		for (size_t ii = 0; ii < peers.size(); ii++)
 		{
 			if (!rbc->DeliverFrom(xtest, ii))
 				std::cout << "<X> ";
@@ -152,7 +153,7 @@ void run_instance
 	rbc->Broadcast(vtmf->h_i);
 	rbc->Broadcast(nizk_c);
 	rbc->Broadcast(nizk_r);
-	for (size_t i = 0; i < N; i++)
+	for (size_t i = 0; i < peers.size(); i++)
 	{
 		if (i != whoami)
 		{
@@ -182,12 +183,12 @@ void run_instance
 	// create an instance of tDSS
 	CanettiGennaroJareckiKrawczykRabinDSS *dss;
 	if (opt_verbose)
-		std::cout << "CanettiGennaroJareckiKrawczykRabinDSS(" << N << ", " << S << ", " << whoami << ", ...)" << std::endl;
+		std::cout << "CanettiGennaroJareckiKrawczykRabinDSS(" << peers.size() << ", " << S << ", " << whoami << ", ...)" << std::endl;
 	if (fips)
-		dss = new CanettiGennaroJareckiKrawczykRabinDSS(N, S, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+		dss = new CanettiGennaroJareckiKrawczykRabinDSS(peers.size(), S, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false, true);
 	else
-		dss = new CanettiGennaroJareckiKrawczykRabinDSS(N, S, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+		dss = new CanettiGennaroJareckiKrawczykRabinDSS(peers.size(), S, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true, true); // with verifiable generation of $g$
 	if (!dss->CheckGroup())
 	{
@@ -215,12 +216,12 @@ void run_instance
 	// create an instance of DKG
 	GennaroJareckiKrawczykRabinDKG *dkg;
 	if (opt_verbose)
-		std::cout << "GennaroJareckiKrawczykRabinDKG(" << N << ", " << T << ", " << whoami << ", ...)" << std::endl;
+		std::cout << "GennaroJareckiKrawczykRabinDKG(" << peers.size() << ", " << T << ", " << whoami << ", ...)" << std::endl;
 	if (fips)
-		dkg = new GennaroJareckiKrawczykRabinDKG(N, T, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+		dkg = new GennaroJareckiKrawczykRabinDKG(peers.size(), T, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false, true);
 	else
-		dkg = new GennaroJareckiKrawczykRabinDKG(N, T, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+		dkg = new GennaroJareckiKrawczykRabinDKG(peers.size(), T, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true, true); // with verifiable generation of $g$
 	if (!dkg->CheckGroup())
 	{
@@ -265,7 +266,7 @@ void run_instance
 	mpz_init_set_ui(mtv, keytime);
 	rbc->Broadcast(mtv);
 	tvs.push_back(keytime);
-	for (size_t i = 0; i < N; i++)
+	for (size_t i = 0; i < peers.size(); i++)
 	{
 		if (i != whoami)
 		{
@@ -283,7 +284,7 @@ void run_instance
 	}
 	mpz_clear(mtv);
 	std::sort(tvs.begin(), tvs.end());
-	if (tvs.size() < (N - S))
+	if (tvs.size() < (peers.size() - S))
 	{
 		std::cerr << "P_" << whoami << ": not enough timestamps received" << std::endl;
 		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
@@ -580,7 +581,7 @@ void run_instance
 		std::stringstream err_log_sign;
 		if (opt_verbose)
 			std::cout << "P_" << whoami << ": dss.Sign() for self signature on uid" << std::endl;
-		if (!dss->Sign(N, whoami, dsa_m, dsa_r, dsa_s, aiou, rbc, err_log_sign))
+		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc, err_log_sign))
 		{
 			std::cerr << "P_" << whoami << ": " << "tDSS Sign() failed" << std::endl;
 			std::cerr << "P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
@@ -860,7 +861,7 @@ void run_instance
 			std::stringstream err_log_sign;
 			if (opt_verbose)
 				std::cout << "P_" << whoami << ": dss.Sign() for subkey binding signature" << std::endl;
-			if (!dss->Sign(N, whoami, dsa_m, dsa_r, dsa_s, aiou, rbc, err_log_sign))
+			if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc, err_log_sign))
 			{
 				std::cerr << "P_" << whoami << ": " << "tDSS Sign() failed" << std::endl;
 				std::cerr << "P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
@@ -1368,7 +1369,7 @@ int main
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
 			"TIME",
-			"minutes to wait until start of DKG/tDSS protocol",
+			"minutes to wait until start of key generation protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
@@ -1509,11 +1510,10 @@ int main
 		std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
 		peers.resize(std::distance(peers.begin(), it));
 	}
-	N = peers.size();
-	T = (N - 1) / 2; // default: maximum t-resilience for DKG (RBC is not affected by this)
-	S = (N - 1) / 2; // default: maximum s-resilience for tDSS (RBC is also not affected by this)
+	T = (peers.size() - 1) / 2; // default: maximum t-resilience for DKG (RBC is not affected by this)
+	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS (RBC is also not affected by this)
 
-	if ((N < 3)  || (N > MAX_N))
+	if ((peers.size() < 3)  || (peers.size() > MAX_N))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
@@ -1549,10 +1549,10 @@ int main
 	if (opt_s != MAX_N)
 		S = opt_s; // get vaule of S from options
 #endif
-	if (T >= N)
-		T = (N - 1); // apply an upper limit on T
-	if (S > ((N - 1) / 2))
-		S = (N - 1) / 2; // apply an upper limit on S
+	if (T >= peers.size())
+		T = (peers.size() - 1); // apply an upper limit on T
+	if (S > ((peers.size() - 1) / 2))
+		S = (peers.size() - 1) / 2; // apply an upper limit on S
 	// check magic of CRS (common reference string)
 	if (TMCG_ParseHelper::cm(crs, "crs", '|'))
 	{
@@ -1771,7 +1771,7 @@ int main
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
 			"TIME",
-			"minutes to wait until start of DKG/tDSS protocol",
+			"minutes to wait until start of key generation protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
@@ -1798,7 +1798,7 @@ int main
 	else
 		return -1;
 #else
-	std::cerr << "WARNING: GNUnet development files are required for message exchange of DKG/tDSS protocol" << std::endl;
+	std::cerr << "WARNING: GNUnet CADET is required for the message exchange of this program" << std::endl;
 #endif
 
 	std::cout << "INFO: running local test with " << peers.size() << " participants" << std::endl;

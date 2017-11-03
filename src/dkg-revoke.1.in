@@ -39,6 +39,15 @@ The default value is zero (no reason specified). This reason must be the
 same for all parties who run the revocation protocol. Otherwise the
 generation of the revocation signature will fail.
 .PP
+With the option "-w" the number of minutes can be adjusted until the
+revocation protocol is started. The default value is 5. It is crucial that
+all participants are connected with GNUnet CADET within this waiting time.
+Otherwise the revocation may fail.
+The option "-W" defines the timeout of a message within the point-to-point
+network. The default value is 5 minutes. If the underlying network transport
+(i.e. GNUnet CADET or TCP/IP) is very slow then this value should be
+increased by all particpants. 
+.PP
 The established communication channels for the protocols should be
 protected with bilateral exchanged passwords for encryption and message
 authentication, if the underlying P2P network does not guarantee required
@@ -98,6 +107,9 @@ turn on verbose output
 .TP
 \fB\-w\fR, \fB\-\-wait\fR=\fI\,TIME\/\fR
 minutes to wait until start of revocation protocol
+.TP
+\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
+timeout for point-to-point messages in minutes
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT

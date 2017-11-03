@@ -8,4 +8,5 @@ in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
 * [2017-11-*] initial release 1.0.0 of Distributed Privacy Guard (DKGPG)
-* [2017-11-02] added option "-W" (protocol timeout) for dkg-generate
+* [2017-11-03] added option "-W" for dkg-sign and dkg-revoke
+* [2017-11-02] added option "-W" (aiou message timeout) for dkg-generate

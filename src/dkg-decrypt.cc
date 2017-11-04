@@ -1109,7 +1109,7 @@ int main
 				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 				{
 #ifndef GNUNET
-					std::cout << "dkg-decrypt " << version << std::endl;
+					std::cout << "dkg-decrypt v" << version << " without GNUNET support" << std::endl;
 #endif
 					return 0; // not continue
 				}

@@ -57,6 +57,7 @@ int main
 {
 	static const char *usage = "dkg-verify [OPTIONS] -i INPUTFILE KEYFILE";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
+	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -87,7 +88,7 @@ int main
 			}
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
-				std::cout << "dkg-verify " << VERSION << std::endl;
+				std::cout << "dkg-verify v" << version << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))

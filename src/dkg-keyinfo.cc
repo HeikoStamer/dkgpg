@@ -60,6 +60,7 @@ int main
 {
 	static const char *usage = "dkg-keyinfo [OPTIONS] PEER";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
+	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
 	if (argc < 2)
 	{
@@ -86,7 +87,7 @@ int main
 				}
 				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 				{
-					std::cout << "dkg-keyinfo " << VERSION << std::endl;
+					std::cout << "dkg-keyinfo v" << version << std::endl;
 					return 0; // not continue
 				}
 				if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))

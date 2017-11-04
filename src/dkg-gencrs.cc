@@ -33,6 +33,7 @@ int main
 {
 	static const char *usage = "dkg-gencrs [OPTIONS] [ARGS]; number of dummy ARGS determines security level (bit size)";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
+	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 	size_t factor = 0;
 	std::string fips;
 	int opt_verbose = 0;
@@ -63,7 +64,7 @@ int main
 			}
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
-				std::cout << "dkg-gencrs " << VERSION << std::endl;
+				std::cout << "dkg-gencrs v" << version << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))

@@ -129,7 +129,7 @@ expiration time of generated keys in seconds
 common reference string that defines the underlying DDH-hard group
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-print this help
+print this list of options
 .TP
 \fB\-H\fR, \fB\-\-hostname\fR=\fI\,STRING\/\fR
 hostname (e.g. onion address) of this peer within PEERS
@@ -153,7 +153,7 @@ resilience of threshold DSS protocol (signature scheme)
 resilience of DKG protocol (threshold decryption)
 .TP
 \fB\-v\fR, \fB\-\-version\fR
-print the GNUnet version number
+print the version number of the program
 .TP
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
@@ -233,5 +233,6 @@ in the sources of this package and additionally can be obtained from Internet
 .BR dkg\-encrypt (1),
 .BR dkg\-decrypt (1),
 .BR dkg\-sign (1),
+.BR dkg\-verify (1),
 .BR dkg\-revoke (1)
 

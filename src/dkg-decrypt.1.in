@@ -61,7 +61,7 @@ Arguments mandatory for long options are also mandatory for short options.
 use GNUnet configuration file FILENAME (only interactive mode)
 .TP
 \fB\-h\fR, \fB\-\-help\fR
-print this help
+print this list of options
 .TP
 \fB\-H\fR, \fB\-\-hostname\fR=\fI\,STRING\/\fR
 hostname (e.g. onion address) of this peer within PEERS
@@ -88,7 +88,7 @@ GNUnet CADET port to listen/connect (only interactive mode)
 exchanged passwords to protect private and broadcast channels
 .TP
 \fB\-v\fR, \fB\-\-version\fR
-print the GNUnet version number
+print the version number of the program
 .TP
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
@@ -146,8 +146,6 @@ in the sources of this package and additionally can be obtained from Internet
 
 .SH "SEE ALSO"
 .BR dkg\-generate (1),
-.BR dkg\-encrypt (1),
-.BR dkg\-sign (1),
-.BR dkg\-revoke (1)
+.BR dkg\-encrypt (1)
 
 

@@ -52,12 +52,58 @@ int 					opt_verbose = 0;
 int main
 	(int argc, char **argv)
 {
+	static const char *usage = "dkg-encrypt [OPTIONS] KEYFILE";
+	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
+	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
+
 	if (argc < 2)
 	{
 		std::cerr << "ERROR: no KEYFILE given as argument; usage: " << argv[0] << " KEYFILE" << std::endl;
 		return -1;
 	}
-	else if (!init_libTMCG())
+	else
+	{
+		// parse argument list
+		for (size_t i = 0; i < (size_t)(argc - 1); i++)
+		{
+			std::string arg = argv[i+1];
+			if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+			{
+				if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
+				{
+					std::cout << usage << std::endl;
+					std::cout << about << std::endl;
+					std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+					std::cout << "  -h, --help     print this help" << std::endl;
+					std::cout << "  -v, --version  print the version number" << std::endl;
+					std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+					return 0; // not continue
+				}
+				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
+				{
+					std::cout << "dkg-encrypt v" << version << std::endl;
+					return 0; // not continue
+				}
+				if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
+					opt_verbose++; // increase verbosity
+				continue;
+			}
+			else if (arg.find("-") == 0)
+			{
+				std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
+				return -1;
+			}
+			// store argument
+			peers.push_back(arg);
+
+		}
+	}
+	if (peers.size() != 1)
+	{
+		std::cerr << "ERROR: too many arguments given" << std::endl;
+		return -1;
+	}
+	if (!init_libTMCG())
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
@@ -65,7 +111,7 @@ int main
 
 	// read and parse the public key
 	std::string armored_pubkey;
-	if (!read_key_file(argv[1], armored_pubkey))
+	if (!read_key_file(peers[0], armored_pubkey))
 		return -1;
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0;

@@ -5,14 +5,15 @@ dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
 
 .SH SYNOPSIS
 .B dkg\-encrypt
+.RI [ options ]
 .IR KEYFILE
 
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN according to the OpenPGP standard.
-KEYFILE must contain the ASCII-armored public key, for which the then following
-encryption is performed.
+KEYFILE must contain the ASCII-armored public key, for which the following encryption is
+performed.
 .PP
-First, AES is applied as symmetric cipher with a randomly chosen 256-bit session key.
+First, AES\-256 is applied as symmetric cipher with a randomly chosen 256-bit session key.
 Finally, the session key is transformed by PKCS#1 v1.5 block encoding and encrypted with
 the ElGamal public-key algorithm. Note that an integrity protection packet (MDC) is appended. 
 .PP
@@ -25,7 +26,16 @@ can be further processed with
 .BR dkg\-decrypt (1).
 
 .SH OPTIONS
-None.
+Arguments mandatory for long options are also mandatory for short options.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+print this list of options
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+print the version number of the program
+.TP
+\fB\-V\fR, \fB\-\-verbose\fR
+turn on verbose output
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT
@@ -54,7 +64,5 @@ in the sources of this package and additionally can be obtained from Internet
 
 .SH "SEE ALSO"
 .BR dkg\-generate (1),
-.BR dkg\-decrypt (1),
-.BR dkg\-sign (1),
-.BR dkg\-revoke (1)
+.BR dkg\-decrypt (1)
 

@@ -20,7 +20,7 @@ in the proceedings of CRYPTO'99. Both protocols employ GNUnet or a simple built-
 TCP/IP service as underlying peer-to-peer (P2P) network for exchange of internal
 protocol messages between the participants. Thus either a working GNUnet peer or
 a host with appropriate TCP/IP port forwarding (e.g. via Tor Hidden Service) is
-neccesary to proceed. Otherwise only local test instances are started.
+necessary to proceed. Otherwise only local test instances are started.
 .PP
 For each party either an individual or a shared DSA signing key is generated.
 This key acts as OpenPGP's primary key. Then the shared ElGamal encryption key
@@ -183,7 +183,7 @@ Home page of Distributed Privacy Guard (DKGPG): <https://savannah.nongnu.org/pro
 
 .SH "EXAMPLES"
 .TP
-The following command initiates a distributed key generation process with four participants defined by their GNUnet peer identities (WS3K...QKFG, XS72...4ZVG, 3PT1...4530, S41S...G3N0). 
+The following command initiates a distributed key generation with four participants defined by their GNUnet peer identities (WS3K...QKFG, XS72...4ZVG, 3PT1...4530, S41S...G3N0). 
 .PP
 .nf
 .RS
@@ -202,19 +202,48 @@ establishing a CADET channel with GNUnet may take some time.
 .PP
 Instead of using GNUnet for message exchange the built-in TCP/IP service can carry out this job. However, then each peer has to
 be reachable by all other peers over the underlying network. Resolvable hostnames are used as peer identities: 
-PP
 .nf
 .RS
 dkg-generate -t 2 -P secret1/secret2/secret3/secret4/ -H host2.example.com host1.example.com host2.example.com host3.example.com host4.example.com  
 .RE
 .fi
 The s-resilience is non-zero in this example, which means that a shared DSA key is generated and used as OpenPGP primary key. Thus
-the contained shared ElGamal encryption subkey is protected against individual manipulation. 
+the shared encryption subkey (ElGamal) is protected against individual manipulation. This subkey is generated with a default
+threshold of t = (n-1)/2.
 .PP
 Last but not least, in the following example only a shared DSA key, e.g. for jointly code signing, is generated:
 .nf
 .RS
 dkg-generate -t 0 -P secret1/secret2/secret3/ -H supertapir evilsloth supertapir lazyhedgehog 
+.RE
+.fi
+.PP
+To use TOR as underlying point-to-point network for TCP/IP a hidden service has to be configured in the torrc file:
+.nf
+.RS
+HiddenServiceDir /var/lib/tor/dkg/
+HiddenServicePort 35000 127.0.0.1:35000
+HiddenServicePort 35001 127.0.0.1:35001
+HiddenServicePort 35002 127.0.0.1:35002
+HiddenServicePort 35003 127.0.0.1:35003
+HiddenServicePort 35004 127.0.0.1:35004
+HiddenServicePort 35005 127.0.0.1:35005
+HiddenServicePort 35006 127.0.0.1:35006
+HiddenServicePort 35007 127.0.0.1:35007
+HiddenServicePort 35008 127.0.0.1:35008
+HiddenServicePort 35009 127.0.0.1:35009
+HiddenServicePort 35010 127.0.0.1:35010
+HiddenServicePort 35011 127.0.0.1:35011
+HiddenServicePort 35012 127.0.0.1:35012
+HiddenServicePort 35013 127.0.0.1:35013
+HiddenServicePort 35014 127.0.0.1:35014
+HiddenServicePort 35015 127.0.0.1:35015
+HiddenServicePort 35016 127.0.0.1:35016
+HiddenServicePort 35017 127.0.0.1:35017
+HiddenServicePort 35018 127.0.0.1:35018
+HiddenServicePort 35019 127.0.0.1:35019
+HiddenServicePort 35020 127.0.0.1:35020
+...
 .RE
 .fi
 

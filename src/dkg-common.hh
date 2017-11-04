@@ -27,7 +27,6 @@
 	#include <sstream>
 	#include <fstream>
 	#include <vector>
-	#include <list>
 	#include <map>
 	#include <algorithm>
 	#include <cassert>
@@ -36,6 +35,7 @@
 	#include <unistd.h>
 	#include <errno.h>
 	#include <fcntl.h>
+
 	#include <libTMCG.hh>
 
 	bool read_key_file

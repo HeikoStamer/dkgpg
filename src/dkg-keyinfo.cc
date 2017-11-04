@@ -22,19 +22,17 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
-#include <libTMCG.hh>
 
 #include <iomanip>
 #include <sstream>
-#include <fstream>
 #include <vector>
 #include <map>
+#include <string>
 #include <algorithm>
 #include <cstdio>
-#include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
 #include <ctime>
+
+#include <libTMCG.hh>
 
 #include "dkg-common.hh"
 
@@ -61,7 +59,7 @@ int main
 	(int argc, char *const *argv)
 {
 	static const char *usage = "dkg-keyinfo [OPTIONS] PEER";
-	static const char *about = "show information about private threshold key share";
+	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 
 	if (argc < 2)
 	{

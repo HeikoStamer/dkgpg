@@ -22,13 +22,16 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
-#include <libTMCG.hh>
-#include <aiounicast_select.hh>
-static const char *version = VERSION; // copy VERSION from DKGPG before overwritten by GNUnet headers
+
+// copy infos from DKGPG package before overwritten by GNUnet headers
+static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
+static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <map>
+#include <string>
 #include <algorithm>
 #include <cstdio>
 #include <unistd.h>
@@ -37,12 +40,15 @@ static const char *version = VERSION; // copy VERSION from DKGPG before overwrit
 #include <sys/wait.h>
 #include <signal.h>
 
+#include <libTMCG.hh>
+#include <aiounicast_select.hh>
+
 #include "dkg-tcpip-common.hh"
 #include "dkg-gnunet-common.hh"
 #include "dkg-common.hh"
 
-int 					pipefd[MAX_N][MAX_N][2], broadcast_pipefd[MAX_N][MAX_N][2];
-pid_t 					pid[MAX_N];
+int 					pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+pid_t 					pid[DKGPG_MAX_N];
 std::vector<std::string>		peers;
 bool					instance_forked = false;
 
@@ -951,7 +957,6 @@ int main
 	(int argc, char *const *argv)
 {
 	static const char *usage = "dkg-decrypt [OPTIONS] PEERS";
-	static const char *about = "threshold decryption for OpenPGP (only ElGamal)";
 #ifdef GNUNET
 	char *loglev = NULL;
 	char *logfile = NULL;
@@ -1135,7 +1140,7 @@ int main
 		std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
 		peers.resize(std::distance(peers.begin(), it));
 	}
-	if (!nonint && ((peers.size() < 3)  || (peers.size() > MAX_N)))
+	if (!nonint && ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;

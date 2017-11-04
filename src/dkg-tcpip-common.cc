@@ -24,8 +24,8 @@
 #endif
 #include "dkg-tcpip-common.hh"
 
-extern int				pipefd[MAX_N][MAX_N][2], broadcast_pipefd[MAX_N][MAX_N][2];
-extern pid_t				pid[MAX_N];
+extern int				pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+extern pid_t				pid[DKGPG_MAX_N];
 extern std::vector<std::string>		peers;
 extern bool				instance_forked;
 extern int				opt_verbose;

@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20171031])
+AC_REVISION([20171104])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.0], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -33,6 +33,9 @@ AC_SUBST(PACKAGE)
 AC_SUBST(VERSION)
 AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE_NAME", [Name of this package])
 AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION", [Version of this package])
+
+# Define some parameters and helping macros
+AC_DEFINE(DKGPG_MAX_N, 32, [Define the maximum number of parties/peers])
 
 # Checks for Libtool
 LT_PREREQ([2.4.2])

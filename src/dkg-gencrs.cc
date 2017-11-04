@@ -22,16 +22,17 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
-#include <libTMCG.hh>
 
-#include <sstream>
+#include <string>
 #include <vector>
+
+#include <libTMCG.hh>
 
 int main
 	(int argc, char **argv)
 {
-	static const char *usage = "dkg-gencrs [OPTIONS] [ARGS]; number of ARGS determines security level";
-	static const char *about = "domain parameter generation (only for Dlog-based cryptosystems)";
+	static const char *usage = "dkg-gencrs [OPTIONS] [ARGS]; number of dummy ARGS determines security level (bit size)";
+	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	size_t factor = 0;
 	std::string fips;
 	int opt_verbose = 0;

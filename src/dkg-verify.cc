@@ -22,11 +22,13 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
-#include <libTMCG.hh>
 
-#include <fstream>
 #include <vector>
+#include <map>
+#include <string>
 #include <algorithm>
+
+#include <libTMCG.hh>
 
 #include "dkg-common.hh"
 
@@ -54,7 +56,7 @@ int main
 	(int argc, char **argv)
 {
 	static const char *usage = "dkg-verify [OPTIONS] -i INPUTFILE KEYFILE";
-	static const char *about = "verifies a detached signature from STDIN according to OpenPGP (only DSA/DSS)";
+	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)

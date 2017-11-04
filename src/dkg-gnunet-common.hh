@@ -34,12 +34,10 @@
 	#include <unistd.h>
 	#include <errno.h>
 	#include <fcntl.h>
-
 	#include <sys/wait.h>
 	#include <signal.h>
 
 	#undef NDEBUG
-	#define MAX_N 32
 
 #ifdef GNUNET
 

@@ -22,11 +22,11 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
-#include <libTMCG.hh>
 
-#include <fstream>
 #include <vector>
-#include <algorithm>
+#include <string>
+
+#include <libTMCG.hh>
 
 #include "dkg-common.hh"
 

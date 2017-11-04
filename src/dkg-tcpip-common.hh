@@ -26,7 +26,6 @@
 	#include <iostream>
 	#include <sstream>
 	#include <vector>
-	#include <list>
 	#include <map>
 	#include <algorithm>
 	#include <cassert>
@@ -43,8 +42,6 @@
 	#include <netdb.h>
 	#include <netinet/in.h>
 	#include <sys/socket.h>
-
-	#define MAX_N 32
 
 	RETSIGTYPE tcpip_sig_handler_quit
 		(int sig);

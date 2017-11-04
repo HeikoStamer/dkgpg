@@ -22,13 +22,15 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
-#include <libTMCG.hh>
-#include <aiounicast_select.hh>
-static const char *version = VERSION; // copy VERSION from DKGPG before overwritten by GNUnet headers
+
+// copy infos from DKGPG package before overwritten by GNUnet headers
+static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
+static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 
 #include <sstream>
 #include <fstream>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <unistd.h>
 #include <errno.h>
@@ -36,11 +38,14 @@ static const char *version = VERSION; // copy VERSION from DKGPG before overwrit
 #include <sys/wait.h>
 #include <signal.h>
 
+#include <libTMCG.hh>
+#include <aiounicast_select.hh>
+
 #include "dkg-tcpip-common.hh"
 #include "dkg-gnunet-common.hh"
 
-int				pipefd[MAX_N][MAX_N][2], broadcast_pipefd[MAX_N][MAX_N][2];
-pid_t				pid[MAX_N];
+int				pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+pid_t				pid[DKGPG_MAX_N];
 std::vector<std::string>	peers;
 bool				instance_forked = false;
 
@@ -49,7 +54,7 @@ int 				opt_verbose = 0;
 char				*opt_crs = NULL;
 char				*opt_passwords = NULL;
 char				*opt_hostname = NULL;
-unsigned long int		opt_t = MAX_N, opt_s = MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
+unsigned long int		opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
 
 bool				fips = false;
 std::stringstream		crss;
@@ -1243,8 +1248,8 @@ char *gnunet_opt_crs = NULL;
 char *gnunet_opt_hostname = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
-unsigned int gnunet_opt_t_resilience = MAX_N;
-unsigned int gnunet_opt_s_resilience = MAX_N;
+unsigned int gnunet_opt_t_resilience = DKGPG_MAX_N;
+unsigned int gnunet_opt_s_resilience = DKGPG_MAX_N;
 unsigned int gnunet_opt_keyexptime = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
@@ -1308,7 +1313,6 @@ int main
 		"33kejKu10MGhvrWQMA3z86EcA4uvHdTTcYhXwaRssKfidViHKJbQxT9MPXkj"
 		"bmKw1Sm93777gxSUQjtBC5EXRYiI1xSqW02e|";
 	static const char *usage = "dkg-generate [OPTIONS] PEERS";
-	static const char *about = "distributed key generation (DSA+ElGamal with OpenPGP-output)";
 #ifdef GNUNET
 	char *loglev = NULL;
 	char *logfile = NULL;
@@ -1444,9 +1448,9 @@ int main
 					passwords = argv[i+1];
 					opt_passwords = (char*)passwords.c_str();
 				}
-				if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) && (opt_t == MAX_N))
+				if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) && (opt_t == DKGPG_MAX_N))
 					opt_t = strtoul(argv[i+1], NULL, 10);
-				if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) && (opt_s == MAX_N))
+				if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) && (opt_s == DKGPG_MAX_N))
 					opt_s = strtoul(argv[i+1], NULL, 10);
 				if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
 					opt_e = strtoul(argv[i+1], NULL, 10);
@@ -1481,7 +1485,7 @@ int main
 				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 				{
 #ifndef GNUNET
-					std::cout << "dkg-generate " << version << std::endl;
+					std::cout << @PACKAGE_NAME@ << " (dkg-generate) " << version << " without GNUNET support" << std::endl;
 #endif
 					return 0; // not continue
 				}
@@ -1513,7 +1517,7 @@ int main
 	T = (peers.size() - 1) / 2; // default: maximum t-resilience for DKG (RBC is not affected by this)
 	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS (RBC is also not affected by this)
 
-	if ((peers.size() < 3)  || (peers.size() > MAX_N))
+	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
@@ -1539,14 +1543,14 @@ int main
 			std::cout << peers[i] << std::endl;
 	}
 #ifdef GNUNET
-	if (gnunet_opt_t_resilience != MAX_N)
+	if (gnunet_opt_t_resilience != DKGPG_MAX_N)
 		T = gnunet_opt_t_resilience; // get value of T from GNUnet options
-	if (gnunet_opt_s_resilience != MAX_N)
+	if (gnunet_opt_s_resilience != DKGPG_MAX_N)
 		S = gnunet_opt_s_resilience; // get value of S from GNUnet options
 #else
-	if (opt_t != MAX_N)
+	if (opt_t != DKGPG_MAX_N)
 		T = opt_t; // get vaule of T from options
-	if (opt_s != MAX_N)
+	if (opt_s != DKGPG_MAX_N)
 		S = opt_s; // get vaule of S from options
 #endif
 	if (T >= peers.size())

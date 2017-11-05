@@ -68,7 +68,7 @@ int main
 				return 0; // not continue
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
-				opt_verbose = 1; // verbose output
+				opt_verbose++; // increase verbosity
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -78,6 +78,12 @@ int main
 		}
 		factor++;
 	}
+
+#ifdef DKGPG_TESTSUITE
+	factor = 1;
+	fips = "DKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITE";
+	opt_verbose = 1;
+#endif
 
 	// initialize LibTMCG
 	if (!init_libTMCG())

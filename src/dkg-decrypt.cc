@@ -22,6 +22,9 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
+#ifdef DKGPG_TESTSUITE
+	#undef GNUNET
+#endif
 
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";

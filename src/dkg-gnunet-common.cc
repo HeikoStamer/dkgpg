@@ -22,6 +22,9 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
+#ifdef DKGPG_TESTSUITE
+	#undef GNUNET
+#endif
 #include "dkg-gnunet-common.hh"
 
 extern int				pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];

@@ -17,8 +17,8 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-SUBDIRS = src
-DIST_SUBDIRS = src
+SUBDIRS = src tests
+DIST_SUBDIRS = src tests
 
 EXTRA_DIST = AUTHORS BUGS COPYING FDL INSTALL NEWS README TODO THANKS\
 	ChangeLog

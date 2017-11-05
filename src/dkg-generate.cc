@@ -22,6 +22,9 @@
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
 #endif
+#ifdef DKGPG_TESTSUITE
+	#undef GNUNET
+#endif
 
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
@@ -1416,104 +1419,139 @@ int main
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
 
-	if (argc < 2)
+
+	// create peer list from remaining arguments
+	for (size_t i = 0; i < (size_t)(argc - 1); i++)
+	{
+		std::string arg = argv[i+1];
+		// ignore options
+		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-t") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
+			(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-g") == 0) || (arg.find("-x") == 0) ||
+			(arg.find("-s") == 0) || (arg.find("-e") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
+		{
+			size_t idx = ++i;
+			if ((arg.find("-g") == 0) && (idx < (size_t)(argc - 1)) && (opt_crs == NULL))
+			{
+				crs = argv[i+1]; // overwrite included CRS
+				opt_crs = (char*)crs.c_str();
+			}
+			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
+			{
+				hostname = argv[i+1];
+				opt_hostname = (char*)hostname.c_str();
+			}
+			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
+			{
+				passwords = argv[i+1];
+				opt_passwords = (char*)passwords.c_str();
+			}
+			if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) && (opt_t == DKGPG_MAX_N))
+				opt_t = strtoul(argv[i+1], NULL, 10);
+			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) && (opt_s == DKGPG_MAX_N))
+				opt_s = strtoul(argv[i+1], NULL, 10);
+			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
+				opt_e = strtoul(argv[i+1], NULL, 10);
+			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
+				port = argv[i+1];
+			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
+				opt_W = strtoul(argv[i+1], NULL, 10);
+			continue;
+		}
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		{
+			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
+			{
+#ifndef GNUNET
+				std::cout << usage << std::endl;
+				std::cout << about << std::endl;
+				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -h, --help     print this help" << std::endl;
+				std::cout << "  -e TIME        expiration time of generated keys in seconds" << std::endl;
+				std::cout << "  -g STRING      common reference string that defines underlying DDH-hard group" << std::endl;
+				std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
+				std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl; 
+				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
+				std::cout << "  -s INTEGER     resilience of threshold DSS protocol (signature scheme)" << std::endl;
+				std::cout << "  -t INTEGER     resilience of DKG protocol (threshold decryption)" << std::endl;
+				std::cout << "  -v, --version  print the version number" << std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
+			{
+#ifndef GNUNET
+				std::cout << "dkg-generate v" << version << " without GNUNET support" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
+				opt_verbose++; // increase verbosity
+			continue;
+		}
+		else if (arg.find("-") == 0)
+		{
+			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
+			return -1;
+		}
+		// store argument for peer list
+		if (arg.length() <= 255)
+		{
+			peers.push_back(arg);
+		}
+		else
+		{
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			return -1;
+		}
+	}
+
+#ifdef DKGPG_TESTSUITE
+	peers.push_back("Test1");
+	peers.push_back("Test2");
+	peers.push_back("Test3");
+	peers.push_back("Test4");
+	opt_verbose = 1;
+	opt_e = 3600;
+	crs = "fips-crs|WakEheLwRVrxLwVnPIL4OvkErTqHD1qLJoG4chn4YretxGTFWEe1GZ"
+		"tlYucLjgJNDbMIhCj6SHYBepeeGTMfPihjfaauYl1g4lCAACrneCh3ENdlkyC"
+		"WrPmS6XDQmRXnT6vovK9aKym4royUts0C5cu3FG33uZxJKByLmh2rb3e0T5Uj"
+		"5hTFJDCCc8Q1Do8Xtu86sHGGMmubD19N311GXRlb8c4ypSqESWCEDn1fBlLQb"
+		"hm6MBHeTAlWPh8iiVBUxV6uhWCL5KnnNycDvUXL0AnlnfLUG5SfbRKqM4BWVI"
+		"qvJynslljR3AWVuoa5JHx0k0pAEUwST2gcuuBghnkQLegDuRHHbc6uBHUwCHr"
+		"rx7bapLDjxlHvXPbK5775qNMa0IQ0yzhBGp4lCHBbjgmr9TQLzipBcjqZsACr"
+		"uQlpcvH56miDCIzhu5IVqmVsBU3wLXflFXzZBk2fYOfcxgxuaozfwDHN5tXI1"
+		"m4it0lQFPotONUpbPoWoeL7yVhC8NZ9PVgH|XEnmhXSTllRtNuC9EZ2KB1A0v"
+		"94v5VntOEfjbSpGuOt|L2iMBbEhTqeFusqRP24AvtTLy2DYiqQt8E9WE7Klgs"
+		"OrVTqs16UVo9AHPdRiYSmzvvJf7C1vM0LumpO0lQKo91vnf8KTzVnIE59oTSe"
+		"CVpixijxWPAi4nK16BE5wNDKatQWFugeGHUrMqOaW44b1cZC9C4evAkzBjquW"
+		"LxH6qaOsSlo51E7dgvnDxBgsrkBJQgOe08ZYcYqWazCKE9VZPl12VSErrS0xt"
+		"eM1K47EDQB9ppfsz05oDuNbMxI3a7YtY08mPLg2zB2YfbLeBFJ53a4xVoH6BY"
+		"YUlIpqZiwBiq0qusGYMFvF6okCa8SjseSPMd51c1tyUQyigqDhICbd34TTMHK"
+		"mWMnjgtCM3teG91lzPW6aqZ25i8erVuHCyTVXCQM1Rejla1yf2Vjx56TO9R9i"
+		"xnW5cZA0MeLYjwZWleimMccz6ZIZ1Ltw1T4ltkN1yjugkm324vOIpb0CjVg6I"
+		"mzcPz1S8zkWZoOg5yuR9swtLLhP8bOKHzd3nUrvknFflimv|ynHSI4Woukcmz"
+		"ecjZGpKZeHqCCKyKcKROB7SnD0o6E4ZyuKx7ntYieGBxFlLGNJX0ig88lOUZP"
+		"E7S23J2UDOZDg33hh9fPk0h50kGmHSZWGI3TSzDk83qAkIy7gy0h4j8YFZBnR"
+		"5CHkXSsoHUt6GzJs5D5XUao04N3v2O12I3mx6iiMNIGa0TtYJMcXNKssmamQ0"
+		"KVhlnkRKjcdMS44Gl2JnN8I6qNoR5JLpJBwc0oVqZhnMXd60ZzDKDkGJV9R5H"
+		"OBbqpY1eevoEscj7XaXC8f8dYccu8FsU2yPe5dPmSctw8RqOcF3chH7lMxqpP"
+		"5ELVm8q6SCpWFH9H9RMqfVFdfQAjIeVss2ZAr5C6DMgW7wrpgpNLr1EZCRYOJ"
+		"Jd3Ykg832YnyEOAQ9SpPkZsiUHfXi1VBCZvtqZdqN8N9FjzkG7HcAQeev6kZo"
+		"ALNb15Fcj550V40uidU5fxkgvlK2Orwbg|8|DKGPGTESTSUITEDKGPGTESTSU"
+		"ITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUIU2|1v|1k|";
+#endif
+
+	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
-	else
-	{
-		// create peer list from remaining arguments
-		for (size_t i = 0; i < (size_t)(argc - 1); i++)
-		{
-			std::string arg = argv[i+1];
-			// ignore options
-			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-t") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
-				(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-g") == 0) || (arg.find("-x") == 0) ||
-				(arg.find("-s") == 0) || (arg.find("-e") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
-			{
-				size_t idx = ++i;
-				if ((arg.find("-g") == 0) && (idx < (size_t)(argc - 1)) && (opt_crs == NULL))
-				{
-					crs = argv[i+1]; // overwrite included CRS
-					opt_crs = (char*)crs.c_str();
-				}
-				if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
-				{
-					hostname = argv[i+1];
-					opt_hostname = (char*)hostname.c_str();
-				}
-				if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
-				{
-					passwords = argv[i+1];
-					opt_passwords = (char*)passwords.c_str();
-				}
-				if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) && (opt_t == DKGPG_MAX_N))
-					opt_t = strtoul(argv[i+1], NULL, 10);
-				if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) && (opt_s == DKGPG_MAX_N))
-					opt_s = strtoul(argv[i+1], NULL, 10);
-				if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
-					opt_e = strtoul(argv[i+1], NULL, 10);
-				if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
-					port = argv[i+1];
-				if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
-					opt_W = strtoul(argv[i+1], NULL, 10);
-				continue;
-			}
-			else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
-			{
-				if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
-				{
-#ifndef GNUNET
-					std::cout << usage << std::endl;
-					std::cout << about << std::endl;
-					std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-					std::cout << "  -h, --help     print this help" << std::endl;
-					std::cout << "  -e TIME        expiration time of generated keys in seconds" << std::endl;
-					std::cout << "  -g STRING      common reference string that defines underlying DDH-hard group" << std::endl;
-					std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
-					std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl; 
-					std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
-					std::cout << "  -s INTEGER     resilience of threshold DSS protocol (signature scheme)" << std::endl;
-					std::cout << "  -t INTEGER     resilience of DKG protocol (threshold decryption)" << std::endl;
-					std::cout << "  -v, --version  print the version number" << std::endl;
-					std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-					std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
-				{
-#ifndef GNUNET
-					std::cout << "dkg-generate v" << version << " without GNUNET support" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
-					opt_verbose++; // increase verbosity
-				continue;
-			}
-			else if (arg.find("-") == 0)
-			{
-				std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
-				return -1;
-			}
-			// store argument for peer list
-			if (arg.length() <= 255)
-			{
-				peers.push_back(arg);
-			}
-			else
-			{
-				std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
-				return -1;
-			}
-		}
-		// canonicalize peer list
-		std::sort(peers.begin(), peers.end());
-		std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
-		peers.resize(std::distance(peers.begin(), it));
-	}
+	// canonicalize peer list and setup threshold values
+	std::sort(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	peers.resize(std::distance(peers.begin(), it));
 	T = (peers.size() - 1) / 2; // default: maximum t-resilience for DKG (RBC is not affected by this)
 	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS (RBC is also not affected by this)
 
@@ -1532,10 +1570,15 @@ int main
 		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
 		return -1;
 	}
+#ifdef DKGPG_TESTSUITE
+	userid = "TestGroup <testing@localhost>";
+	passphrase = "Test";
+#else
 	std::cout << "1. Please enter an OpenPGP-style user ID (name <email>): ";
 	std::getline(std::cin, userid);
-	std::cout << "2. Choose a passphrase to protect your private key: ";
+	std::cout << "2. Passphrase to protect your part of the private key (input will be displayed): ";
 	std::getline(std::cin, passphrase);
+#endif
 	if (opt_verbose)
 	{
 		std::cout << "INFO: canonicalized peer list = " << std::endl;

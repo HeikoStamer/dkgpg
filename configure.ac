@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20171104])
+AC_REVISION([20171105])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.0], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -26,7 +26,7 @@ AC_INIT([Distributed Privacy Guard], [1.0.0], [HeikoStamer@gmx.net], [dkgpg], [h
 AC_LANG(C++)
 AC_CONFIG_SRCDIR([src/dkg-common.hh])
 AC_CONFIG_HEADERS([src/dkgpg_config.h])
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 AM_MAINTAINER_MODE
 
 AC_SUBST(PACKAGE)
@@ -189,8 +189,16 @@ CPPFLAGS="$backup_CPPFLAGS"
 CFLAGS="$CFLAGS -Wall"
 CXXFLAGS="$CXXFLAGS -Wall"
 
+# Linking the test sources
+AC_CONFIG_LINKS([tests/t-dkg-gencrs.cc:src/dkg-gencrs.cc])
+AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.hh:src/dkg-tcpip-common.hh])
+AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.cc:src/dkg-tcpip-common.cc])
+AC_CONFIG_LINKS([tests/t-dkg-gnunet-common.hh:src/dkg-gnunet-common.hh])
+AC_CONFIG_LINKS([tests/t-dkg-gnunet-common.cc:src/dkg-gnunet-common.cc])
+AC_CONFIG_LINKS([tests/t-dkg-generate.cc:src/dkg-generate.cc])
+
 # Define output
-AC_CONFIG_FILES([Makefile src/Makefile\
+AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile\
  src/dkg-generate.1 src/dkg-encrypt.1 src/dkg-decrypt.1 src/dkg-sign.1\
  src/dkg-revoke.1 src/dkg-verify.1])
 AC_OUTPUT

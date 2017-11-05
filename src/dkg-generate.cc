@@ -1506,7 +1506,6 @@ int main
 			return -1;
 		}
 	}
-
 #ifdef DKGPG_TESTSUITE
 	peers.push_back("Test1");
 	peers.push_back("Test2");
@@ -1542,7 +1541,6 @@ int main
 		"ALNb15Fcj550V40uidU5fxkgvlK2Orwbg|8|DKGPGTESTSUITEDKGPGTESTSU"
 		"ITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUIU2|1v|1k|";
 #endif
-
 	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
@@ -1554,7 +1552,6 @@ int main
 	peers.resize(std::distance(peers.begin(), it));
 	T = (peers.size() - 1) / 2; // default: maximum t-resilience for DKG (RBC is not affected by this)
 	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS (RBC is also not affected by this)
-
 	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;

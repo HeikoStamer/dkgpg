@@ -189,13 +189,17 @@ CPPFLAGS="$backup_CPPFLAGS"
 CFLAGS="$CFLAGS -Wall"
 CXXFLAGS="$CXXFLAGS -Wall"
 
-# Linking the test sources
+# Linking the sources for subdirectory tests
 AC_CONFIG_LINKS([tests/t-dkg-gencrs.cc:src/dkg-gencrs.cc])
 AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.hh:src/dkg-tcpip-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.cc:src/dkg-tcpip-common.cc])
 AC_CONFIG_LINKS([tests/t-dkg-gnunet-common.hh:src/dkg-gnunet-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-gnunet-common.cc:src/dkg-gnunet-common.cc])
 AC_CONFIG_LINKS([tests/t-dkg-generate.cc:src/dkg-generate.cc])
+AC_CONFIG_LINKS([tests/t-dkg-common.hh:src/dkg-common.hh])
+AC_CONFIG_LINKS([tests/t-dkg-common.cc:src/dkg-common.cc])
+AC_CONFIG_LINKS([tests/t-dkg-encrypt.cc:src/dkg-encrypt.cc])
+AC_CONFIG_LINKS([tests/t-dkg-decrypt.cc:src/dkg-decrypt.cc])
 
 # Define output
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile\

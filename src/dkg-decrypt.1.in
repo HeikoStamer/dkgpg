@@ -67,7 +67,7 @@ print this list of options
 hostname (e.g. onion address) of this peer within PEERS
 .TP
 \fB\-i\fR, \fB\-\-input\fR=\fI\,FILENAME\/\fR
-read encrypted message from FILENAME
+read encrypted message rather from FILENAME than STDIN
 .TP
 \fB\-L\fR, \fB\-\-log\fR=\fI\,LOGLEVEL\/\fR
 configure logging to use LOGLEVEL
@@ -79,7 +79,7 @@ configure logging to write logs to FILENAME
 switch to non\-interactive mode
 .TP
 \fB\-o\fR, \fB\-\-output\fR=\fI\,FILENAME\/\fR
-write decrypted message to FILENAME
+write decrypted message rather to FILENAME than STDOUT
 .TP
 \fB\-p\fR, \fB\-\-port\fR=\fI\,STRING\/\fR
 GNUnet CADET port to listen/connect (only interactive mode)

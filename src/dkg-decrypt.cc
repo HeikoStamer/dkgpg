@@ -79,50 +79,6 @@ unsigned long int			opt_p = 55000;
 
 std::string				armored_message;
 
-void read_message
-	(const std::string &ifilename, std::string &result)
-{
-	// read the encrypted message from file
-	std::string line;
-	std::stringstream msg;
-	std::ifstream ifs(ifilename.c_str(), std::ifstream::in);
-	if (!ifs.is_open())
-	{
-		std::cerr << "ERROR: cannot open input file" << std::endl;
-		exit(-1);
-	}
-	while (std::getline(ifs, line))
-		msg << line << std::endl;
-	if (!ifs.eof())
-	{
-		std::cerr << "ERROR: reading from input file until EOF failed" << std::endl;
-		exit(-1);
-	}
-	ifs.close();
-	result = msg.str();
-}
-
-void write_message
-	(const std::string &filename, const tmcg_octets_t &msg)
-{
-	// write out the decrypted message
-	std::ofstream ofs(filename.c_str(), std::ofstream::out);
-	if (!ofs.good())
-	{
-		std::cerr << "ERROR: cannot open output file" << std::endl;
-		exit(-1);
-	}
-	for (size_t i = 0; i < msg.size(); i++)
-	{
-		ofs << msg[i];
-		if (!ofs.good())
-		{
-			std::cerr << "ERROR: writing to output file failed" << std::endl;
-			exit(-1);
-		}
-	}
-	ofs.close();
-}
 
 void print_message
 	(const tmcg_octets_t &msg)
@@ -574,9 +530,13 @@ void run_instance
 		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
 		dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 		// protected with password
+#ifdef DKGPG_TESTSUITE
+		passphrase = "Test";
+#else
 		std::cout << "Please enter the passphrase to unlock your private key: ";
 		std::getline(std::cin, passphrase);
 		std::cin.clear();
+#endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{
 			std::cerr << "ERROR: wrong passphrase to unlock private key" << std::endl;
@@ -905,7 +865,14 @@ void run_instance
 		}
 		// output result
 		if (opt_ofilename != NULL)
-			write_message(opt_ofilename, msg);
+		{
+			if (!write_message(opt_ofilename, msg))
+			{
+				release_mpis();
+				done_dkg(dkg);
+				exit(-1);
+			}
+		}
 		else
 			print_message(msg);
 	}
@@ -1049,99 +1016,104 @@ int main
 #endif
 
 	bool nonint = false;
-	if (argc < 2)
+	// create peer list from remaining arguments
+	for (size_t i = 0; i < (size_t)(argc - 1); i++)
+	{
+		std::string arg = argv[i+1];
+		// ignore options
+		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-w") == 0) || (arg.find("-L") == 0) || (arg.find("-l") == 0) ||
+			(arg.find("-i") == 0) || (arg.find("-o") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
+		{
+			size_t idx = ++i;
+			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
+			{
+				ifilename = argv[i+1];
+				opt_ifilename = (char*)ifilename.c_str();
+			}
+			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) && (opt_ofilename == NULL))
+			{
+				ofilename = argv[i+1];
+				opt_ofilename = (char*)ofilename.c_str();
+			}
+			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
+			{
+				hostname = argv[i+1];
+				opt_hostname = (char*)hostname.c_str();
+			}
+			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
+			{
+				passwords = argv[i+1];
+				opt_passwords = (char*)passwords.c_str();
+			}
+			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
+				port = argv[i+1];
+			continue;
+		}
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-n") == 0) || (arg.find("-V") == 0))
+		{
+			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
+			{
+#ifndef GNUNET
+				std::cout << usage << std::endl;
+				std::cout << about << std::endl;
+				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -h, --help             print this help" << std::endl;
+				std::cout << "  -H STRING              hostname (e.g. onion address) of this peer within PEERS" << std::endl;
+				std::cout << "  -i FILENAME            read encrypted message rather from FILENAME than STDIN" << std::endl;
+				std::cout << "  -n, --non-interactive  run in non-interactive mode" << std::endl;
+				std::cout << "  -o FILENAME            write decrypted message rather to FILENAME than STDOUT" << std::endl;
+				std::cout << "  -p INTEGER             start port for built-in TCP/IP message exchange service" << std::endl;
+				std::cout << "  -P STRING              exchanged passwords to protect private and broadcast channels" << std::endl;
+				std::cout << "  -v, --version          print the version number" << std::endl;
+				std::cout << "  -V, --verbose          turn on verbose output" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
+			{
+#ifndef GNUNET
+				std::cout << "dkg-decrypt v" << version << " without GNUNET support" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-n") == 0) || (arg.find("--non-interactive") == 0))
+				nonint = true; // non-interactive mode
+			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
+				opt_verbose++; // increade verbosity
+			continue;
+		}
+		else if (arg.find("-") == 0)
+		{
+			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
+			return -1;
+		}
+		// store argument for peer list
+		if (arg.length() <= 255)
+		{
+			peers.push_back(arg);
+		}
+		else
+		{
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			return -1;
+		}
+	}
+#ifdef DKGPG_TESTSUITE
+	peers.push_back("Test2");
+	peers.push_back("Test3");
+	peers.push_back("Test4");
+	ifilename = "Test1_output.asc";
+	opt_ifilename = (char*)ifilename.c_str();
+	opt_verbose = 1;
+#endif
+	// canonicalize peer list
+	std::sort(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	peers.resize(std::distance(peers.begin(), it));
+	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
-	}
-	else
-	{
-		// create peer list from remaining arguments
-		for (size_t i = 0; i < (size_t)(argc - 1); i++)
-		{
-			std::string arg = argv[i+1];
-			// ignore options
-			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-w") == 0) || (arg.find("-L") == 0) || (arg.find("-l") == 0) ||
-				(arg.find("-i") == 0) || (arg.find("-o") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
-			{
-				size_t idx = ++i;
-				if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
-				{
-					ifilename = argv[i+1];
-					opt_ifilename = (char*)ifilename.c_str();
-				}
-				if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) && (opt_ofilename == NULL))
-				{
-					ofilename = argv[i+1];
-					opt_ofilename = (char*)ofilename.c_str();
-				}
-				if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
-				{
-					hostname = argv[i+1];
-					opt_hostname = (char*)hostname.c_str();
-				}
-				if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
-				{
-					passwords = argv[i+1];
-					opt_passwords = (char*)passwords.c_str();
-				}
-				if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
-					port = argv[i+1];
-				continue;
-			}
-			else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-n") == 0) || (arg.find("-V") == 0))
-			{
-				if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
-				{
-#ifndef GNUNET
-					std::cout << usage << std::endl;
-					std::cout << about << std::endl;
-					std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-					std::cout << "  -h, --help             print this help" << std::endl;
-					std::cout << "  -H STRING              hostname (e.g. onion address) of this peer within PEERS" << std::endl;
-					std::cout << "  -i FILENAME            read encrypted message from FILENAME" << std::endl;
-					std::cout << "  -n, --non-interactive  run in non-interactive mode" << std::endl;
-					std::cout << "  -o FILENAME            write decrypted message to FILENAME" << std::endl;
-					std::cout << "  -p INTEGER             start port for built-in TCP/IP message exchange service" << std::endl;
-					std::cout << "  -P STRING              exchanged passwords to protect private and broadcast channels" << std::endl;
-					std::cout << "  -v, --version          print the version number" << std::endl;
-					std::cout << "  -V, --verbose          turn on verbose output" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
-				{
-#ifndef GNUNET
-					std::cout << "dkg-decrypt v" << version << " without GNUNET support" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-n") == 0) || (arg.find("--non-interactive") == 0))
-					nonint = true; // non-interactive mode
-				if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
-					opt_verbose++; // increade verbosity
-				continue;
-			}
-			else if (arg.find("-") == 0)
-			{
-				std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
-				return -1;
-			}
-			// store argument for peer list
-			if (arg.length() <= 255)
-			{
-				peers.push_back(arg);
-			}
-			else
-			{
-				std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
-				return -1;
-			}
-		}
-		// canonicalize peer list
-		std::sort(peers.begin(), peers.end());
-		std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
-		peers.resize(std::distance(peers.begin(), it));
 	}
 	if (!nonint && ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)))
 	{
@@ -1164,7 +1136,10 @@ int main
 		return -1;
 	}
 	if (opt_ifilename != NULL)
-		read_message(opt_ifilename, armored_message);
+	{
+		if (!read_message(opt_ifilename, armored_message))
+			return -1;
+	}
 	else
 	{
 		std::cout << "Please enter the encrypted message (in ASCII Armor; ^D for EOF): " << std::endl;
@@ -1287,7 +1262,11 @@ int main
 		if (res)
 		{
 			if (opt_ofilename != NULL)
-				write_message(opt_ofilename, msg);
+			{
+				if (!write_message(opt_ofilename, msg))
+					return -1;
+
+			}
 			else
 				print_message(msg);
 			return 0;

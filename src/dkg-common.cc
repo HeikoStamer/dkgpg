@@ -68,6 +68,79 @@ bool read_key_file
 	return true;
 }
 
+bool read_message
+	(const std::string &filename, std::string &result)
+{
+	// read the (encrypted) message from file
+	std::string line;
+	std::stringstream msg;
+	std::ifstream ifs(filename.c_str(), std::ifstream::in);
+	if (!ifs.is_open())
+	{
+		std::cerr << "ERROR: cannot open input file" << std::endl;
+		return false;
+	}
+	while (std::getline(ifs, line))
+		msg << line << std::endl;
+	if (!ifs.eof())
+	{
+		ifs.close();
+		std::cerr << "ERROR: reading from input file until EOF failed" << std::endl;
+		return false;
+	}
+	ifs.close();
+	result = msg.str();
+	return true;
+}
+
+bool write_message
+	(const std::string &filename, const tmcg_octets_t &msg)
+{
+	// write out the (decrypted) message to file
+	std::ofstream ofs(filename.c_str(), std::ofstream::out);
+	if (!ofs.good())
+	{
+		std::cerr << "ERROR: cannot open output file" << std::endl;
+		return false;
+	}
+	for (size_t i = 0; i < msg.size(); i++)
+	{
+		ofs << msg[i];
+		if (!ofs.good())
+		{
+			ofs.close();
+			std::cerr << "ERROR: writing to output file failed" << std::endl;
+			return false;
+		}
+	}
+	ofs.close();
+	return true;
+}
+
+bool write_message
+	(const std::string &filename, const std::string &msg)
+{
+	// write out the (decrypted) message to file
+	std::ofstream ofs(filename.c_str(), std::ofstream::out);
+	if (!ofs.good())
+	{
+		std::cerr << "ERROR: cannot open output file" << std::endl;
+		return false;
+	}
+	for (size_t i = 0; i < msg.length(); i++)
+	{
+		ofs << msg[i];
+		if (!ofs.good())
+		{
+			ofs.close();
+			std::cerr << "ERROR: writing to output file failed" << std::endl;
+			return false;
+		}
+	}
+	ofs.close();
+	return true;
+}
+
 void init_mpis
 	()
 {

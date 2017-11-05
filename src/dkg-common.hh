@@ -40,6 +40,12 @@
 
 	bool read_key_file
 		(const std::string &filename, std::string &result);
+	bool read_message
+		(const std::string &filename, std::string &result);
+	bool write_message
+		(const std::string &filename, const tmcg_octets_t &msg);
+	bool write_message
+		(const std::string &filename, const std::string &msg);
 	void init_mpis
 		();
 	bool parse_message

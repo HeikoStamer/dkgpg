@@ -1106,15 +1106,15 @@ int main
 	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 1;
 #endif
-	// canonicalize peer list
-	std::sort(peers.begin(), peers.end());
-	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
-	peers.resize(std::distance(peers.begin(), it));
 	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
+	// canonicalize peer list
+	std::sort(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	peers.resize(std::distance(peers.begin(), it));
 	if (!nonint && ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;

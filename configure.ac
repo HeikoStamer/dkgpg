@@ -201,6 +201,8 @@ AC_CONFIG_LINKS([tests/t-dkg-common.cc:src/dkg-common.cc])
 AC_CONFIG_LINKS([tests/t-dkg-keyinfo.cc:src/dkg-keyinfo.cc])
 AC_CONFIG_LINKS([tests/t-dkg-encrypt.cc:src/dkg-encrypt.cc])
 AC_CONFIG_LINKS([tests/t-dkg-decrypt.cc:src/dkg-decrypt.cc])
+AC_CONFIG_LINKS([tests/t-dkg-sign.cc:src/dkg-sign.cc])
+AC_CONFIG_LINKS([tests/t-dkg-verify.cc:src/dkg-verify.cc])
 
 # Define output
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile\

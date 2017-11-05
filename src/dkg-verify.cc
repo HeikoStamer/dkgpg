@@ -102,6 +102,12 @@ int main
 		}
 		kfilename = arg;
 	}
+#ifdef DKGPG_TESTSUITE
+	kfilename = "Test1_dkg-pub.asc";
+	ifilename = "Test1_output.asc";
+	opt_ifilename = (char*)ifilename.c_str();
+	opt_verbose = 1;
+#endif
 	if ((kfilename.length() == 0) || (ifilename.length() == 0))
 	{
 		std::cerr << "ERROR: some filename missing; usage: " << usage << std::endl;
@@ -128,10 +134,19 @@ int main
 
 	// read the signature from stdin
 	std::string signature;
+#ifdef DKGPG_TESTSUITE
+	std::string sigfilename = "Test1_output.sig";
+	if (!read_message(sigfilename, signature))
+	{
+		release_mpis();
+		return -1;
+	}
+#else
 	char c;
 	while (std::cin.get(c))
 		signature += c;
 	std::cin.clear();
+#endif
 
 	// parse the signature
 	tmcg_octets_t trailer;

@@ -77,25 +77,6 @@ char					*opt_passwords = NULL;
 char					*opt_hostname = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
 
-void write_signature
-	(const std::string &filename, const std::string &armored_signature)
-{
-	// write out the armored signature
-	std::ofstream ofs(filename.c_str(), std::ofstream::out);
-	if (!ofs.good())
-	{
-		std::cerr << "ERROR: opening output file failed" << std::endl;
-		exit(-1);
-	}
-	ofs << armored_signature << std::endl;
-	if (!ofs.good())
-	{
-		std::cerr << "ERROR: writing to output file failed" << std::endl;
-		exit(-1);
-	}
-	ofs.close();
-}
-
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime, const size_t num_xtests)
 {
@@ -111,9 +92,13 @@ void run_instance
 		keyid.clear();
 		dss_qual.clear(), dss_c_ik.clear();
 		// protected with password
+#ifdef DKGPG_TESTSUITE
+		passphrase = "Test";
+#else
 		std::cout << "Please enter the passphrase to unlock your private key: ";
 		std::getline(std::cin, passphrase);
 		std::cin.clear();
+#endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{
 			std::cerr << "S_" << whoami << ": wrong passphrase to unlock private key" << std::endl;
@@ -409,10 +394,13 @@ void run_instance
 	// output the result
 	std::string sigstr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(2, sig, sigstr);
-	if (opt_ofilename == NULL)
-		std::cout << sigstr << std::endl;
+	if (opt_ofilename != NULL)
+	{
+		if (!write_message(opt_ofilename, sigstr))
+			exit(-1);
+	}
 	else
-		write_signature(opt_ofilename, sigstr);
+		std::cout << sigstr << std::endl;
 }
 
 #ifdef GNUNET
@@ -559,104 +547,111 @@ int main
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
 
-	if (argc < 2)
+	// create peer list from remaining arguments
+	for (size_t i = 0; i < (size_t)(argc - 1); i++)
+	{
+		std::string arg = argv[i+1];
+		// ignore options
+		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
+			(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-i") == 0) || (arg.find("-o") == 0) || 
+			(arg.find("-e") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
+		{
+			size_t idx = ++i;
+			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
+			{
+				ifilename = argv[i+1];
+				opt_ifilename = (char*)ifilename.c_str();
+			}
+			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) && (opt_ofilename == NULL))
+			{
+				ofilename = argv[i+1];
+				opt_ofilename = (char*)ofilename.c_str();
+			}
+			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
+			{
+				hostname = argv[i+1];
+				opt_hostname = (char*)hostname.c_str();
+			}
+			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
+			{
+				passwords = argv[i+1];
+				opt_passwords = (char*)passwords.c_str();
+			}
+			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
+				opt_e = strtoul(argv[i+1], NULL, 10);
+			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
+				port = argv[i+1];
+			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
+				opt_W = strtoul(argv[i+1], NULL, 10);
+			continue;
+		}
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		{
+			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
+			{
+#ifndef GNUNET
+				std::cout << usage << std::endl;
+				std::cout << about << std::endl;
+				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -h, --help     print this help" << std::endl;
+				std::cout << "  -e TIME        expiration time of generated signature in seconds" << std::endl;
+				std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
+				std::cout << "  -i FILENAME    create detached signature from FILENAME" << std::endl;
+				std::cout << "  -o FILENAME    write detached signature to FILENAME" << std::endl;
+				std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl;
+				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
+				std::cout << "  -v, --version  print the version number" << std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
+			{
+#ifndef GNUNET
+				std::cout << "dkg-sign v" << version << " without GNUNET support" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
+				opt_verbose++; // increase verbosity
+			continue;
+		}
+		else if (arg.find("-") == 0)
+		{
+			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
+			return -1;
+		}
+		// store argument for peer list
+		if (arg.length() <= 255)
+		{
+			peers.push_back(arg);
+		}
+		else
+		{
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			return -1;
+		}
+	}
+#ifdef DKGPG_TESTSUITE
+	peers.push_back("Test2");
+	peers.push_back("Test3");
+	peers.push_back("Test4");
+	ifilename = "Test1_output.asc";
+	opt_ifilename = (char*)ifilename.c_str();
+	ofilename = "Test1_output.sig";
+	opt_ofilename = (char*)ofilename.c_str();
+	opt_verbose = 1;
+#endif
+	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
-	else
-	{
-		// create peer list from remaining arguments
-		for (size_t i = 0; i < (size_t)(argc - 1); i++)
-		{
-			std::string arg = argv[i+1];
-			// ignore options
-			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
-				(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-i") == 0) || (arg.find("-o") == 0) || 
-				(arg.find("-e") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
-			{
-				size_t idx = ++i;
-				if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
-				{
-					ifilename = argv[i+1];
-					opt_ifilename = (char*)ifilename.c_str();
-				}
-				if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) && (opt_ofilename == NULL))
-				{
-					ofilename = argv[i+1];
-					opt_ofilename = (char*)ofilename.c_str();
-				}
-				if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
-				{
-					hostname = argv[i+1];
-					opt_hostname = (char*)hostname.c_str();
-				}
-				if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
-				{
-					passwords = argv[i+1];
-					opt_passwords = (char*)passwords.c_str();
-				}
-				if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
-					opt_e = strtoul(argv[i+1], NULL, 10);
-				if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
-					port = argv[i+1];
-				if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
-					opt_W = strtoul(argv[i+1], NULL, 10);
-				continue;
-			}
-			else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
-			{
-				if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
-				{
-#ifndef GNUNET
-					std::cout << usage << std::endl;
-					std::cout << about << std::endl;
-					std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-					std::cout << "  -h, --help     print this help" << std::endl;
-					std::cout << "  -e TIME        expiration time of generated signature in seconds" << std::endl;
-					std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
-					std::cout << "  -i FILENAME    create detached signature from FILENAME" << std::endl;
-					std::cout << "  -o FILENAME    write detached signature to FILENAME" << std::endl;
-					std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl;
-					std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
-					std::cout << "  -v, --version  print the version number" << std::endl;
-					std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-					std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
-				{
-#ifndef GNUNET
-					std::cout << "dkg-sign v" << version << " without GNUNET support" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
-					opt_verbose++; // increase verbosity
-				continue;
-			}
-			else if (arg.find("-") == 0)
-			{
-				std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
-				return -1;
-			}
-			// store argument for peer list
-			if (arg.length() <= 255)
-			{
-				peers.push_back(arg);
-			}
-			else
-			{
-				std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
-				return -1;
-			}
-		}
-		// canonicalize peer list
-		std::sort(peers.begin(), peers.end());
-		std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
-		peers.resize(std::distance(peers.begin(), it));
-	}
+	// canonicalize peer list
+	std::sort(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	peers.resize(std::distance(peers.begin(), it));
 	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;

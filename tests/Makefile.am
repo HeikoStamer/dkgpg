@@ -17,7 +17,7 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-TESTS = t-dkg-gencrs t-dkg-generate t-dkg-encrypt t-dkg-decrypt
+TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-encrypt t-dkg-decrypt
 
 AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
@@ -26,11 +26,11 @@ noinst_PROGRAMS = $(TESTS)
 
 t_dkg_gencrs_SOURCES = t-dkg-gencrs.cc
 t_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-generate.cc
+t_dkg_keyinfo_SOURCES = t-dkg-common.hh t-dkg-common.cc t-dkg-keyinfo.cc
 t_dkg_encrypt_SOURCES = t-dkg-common.hh t-dkg-common.cc t-dkg-encrypt.cc
 t_dkg_decrypt_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc t-dkg-decrypt.cc
 ##dkg_sign_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc dkg-sign.cc
 ##dkg_revoke_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc dkg-revoke.cc
-##dkg_keyinfo_SOURCES = dkg-common.hh dkg-common.cc dkg-keyinfo.cc
 ##dkg_refresh_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc dkg-refresh.cc
 ##dkg_verify_SOURCES = dkg-common.hh dkg-common.cc dkg-verify.cc
 

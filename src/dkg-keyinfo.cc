@@ -62,59 +62,60 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	if (argc < 2)
+	// parse argument list
+	for (size_t i = 0; i < (size_t)(argc - 1); i++)
+	{
+		std::string arg = argv[i+1];
+		if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		{
+			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
+			{
+				std::cout << usage << std::endl;
+				std::cout << about << std::endl;
+				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -h, --help     print this help" << std::endl;
+				std::cout << "  -v, --version  print the version number" << std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				return 0; // not continue
+			}
+			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
+			{
+				std::cout << "dkg-keyinfo v" << version << std::endl;
+				return 0; // not continue
+			}
+			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
+				opt_verbose++; // increase verbosity
+			continue;
+		}
+		else if (arg.find("-") == 0)
+		{
+			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
+			return -1;
+		}
+		// store argument for peer list
+		if (arg.length() <= 255)
+		{
+			peers.push_back(arg);
+		}
+		else
+		{
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			return -1;
+		}
+	}
+#ifdef DKGPG_TESTSUITE
+	peers.push_back("Test1");
+	opt_verbose = 1;
+#endif
+	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peer given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
-	else
-	{
-		// parse argument list
-		for (size_t i = 0; i < (size_t)(argc - 1); i++)
-		{
-			std::string arg = argv[i+1];
-			if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
-			{
-				if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
-				{
-					std::cout << usage << std::endl;
-					std::cout << about << std::endl;
-					std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-					std::cout << "  -h, --help     print this help" << std::endl;
-					std::cout << "  -v, --version  print the version number" << std::endl;
-					std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-					return 0; // not continue
-				}
-				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
-				{
-					std::cout << "dkg-keyinfo v" << version << std::endl;
-					return 0; // not continue
-				}
-				if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
-					opt_verbose++; // increase verbosity
-				continue;
-			}
-			else if (arg.find("-") == 0)
-			{
-				std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
-				return -1;
-			}
-			// store argument for peer list
-			if (arg.length() <= 255)
-			{
-				peers.push_back(arg);
-			}
-			else
-			{
-				std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
-				return -1;
-			}
-		}
-		// canonicalize peer list
-		std::sort(peers.begin(), peers.end());
-		std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
-		peers.resize(std::distance(peers.begin(), it));
-	}
+	// canonicalize peer list
+	std::sort(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	peers.resize(std::distance(peers.begin(), it));
 	if (peers.size() != 1)
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
@@ -129,7 +130,7 @@ int main
 	// read and parse the private key
 	std::string armored_seckey, thispeer = peers[0];
 	if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))
-		exit(-1);
+		return -1;
 	init_mpis();
 	std::vector<std::string> CAPL;
 	time_t ckeytime = 0, ekeytime = 0;
@@ -138,14 +139,18 @@ int main
 		keyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
 		dss_qual.clear(), dss_c_ik.clear();
 		// protected with password
+#ifdef DKGPG_TESTSUITE
+		passphrase = "Test";
+#else
 		std::cout << "Please enter the passphrase to unlock your private key: ";
 		std::getline(std::cin, passphrase);
 		std::cin.clear();
+#endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{
 			std::cerr << "ERROR: wrong passphrase to unlock private key" << std::endl;
 			release_mpis();
-			exit(-1);
+			return -1;
 		}
 	}
 
@@ -193,7 +198,7 @@ int main
 		std::cerr << "ERROR: tDSS domain parameters are not correctly generated!" << std::endl;
 		delete dss;
 		release_mpis();
-		exit(-1);
+		return -1;
 	}
 	if (dss_n == 0)
 	{
@@ -236,14 +241,14 @@ int main
 			std::cerr << "ERROR: DKG domain parameters are not correctly generated!" << std::endl;
 			delete dss, delete dkg;
 			release_mpis();
-			exit(-1);
+			return -1;
 		}
 		if (!dkg->CheckKey())
 		{
 			std::cerr << "ERROR: DKG CheckKey() failed!" << std::endl;
 			delete dss, delete dkg;
 			release_mpis();
-			exit(-1);
+			return -1;
 		}
 	}
 

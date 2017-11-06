@@ -90,9 +90,13 @@ void run_instance
 		keyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
 		dss_qual.clear(), dss_c_ik.clear();
 		// protected with password
+#ifdef DKGPG_TESTSUITE
+		passphrase = "Test";
+#else
 		std::cout << "Please enter the passphrase to unlock your private key: ";
 		std::getline(std::cin, passphrase);
 		std::cin.clear();
+#endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{
 			std::cerr << "R_" << whoami << ": wrong passphrase to unlock private key" << std::endl;
@@ -529,85 +533,88 @@ int main
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 #endif
 
-	if (argc < 2)
+	// create peer list from remaining arguments
+	for (size_t i = 0; i < (size_t)(argc - 1); i++)
+	{
+		std::string arg = argv[i+1];
+		// ignore options
+		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-r") == 0) || (arg.find("-w") == 0) || (arg.find("-L") == 0) || 
+			(arg.find("-l") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
+		{
+			size_t idx = ++i;
+			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
+			{
+				hostname = argv[i+1];
+				opt_hostname = (char*)hostname.c_str();
+			}
+			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
+			{
+				passwords = argv[i+1];
+				opt_passwords = (char*)passwords.c_str();
+			}
+			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
+				port = argv[i+1];
+			continue;
+		}
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		{
+			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
+			{
+#ifndef GNUNET
+				std::cout << usage << std::endl;
+				std::cout << about << std::endl;
+				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -h, --help     print this help" << std::endl;
+				std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
+				std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl;
+				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
+				std::cout << "  -v, --version  print the version number" << std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
+			{
+#ifndef GNUNET
+				std::cout << "dkg-refresh v" << version << " without GNUNET support" << std::endl;
+#endif
+				return 0; // not continue
+			}
+			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
+				opt_verbose++; // increase verbosity
+			continue;
+		}
+		else if (arg.find("-") == 0)
+		{
+			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
+			return -1;
+		}
+		// store argument for peer list
+		if (arg.length() <= 255)
+		{
+			peers.push_back(arg);
+		}
+		else
+		{
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			return -1;
+		}
+	}
+#ifdef DKGPG_TESTSUITE
+	peers.push_back("Test1");
+	peers.push_back("Test4");
+	peers.push_back("Test3");
+	opt_verbose = 1;
+#endif
+	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
-	else
-	{
-		// create peer list
-		for (size_t i = 0; i < (size_t)(argc - 1); i++)
-		{
-			std::string arg = argv[i+1];
-			// ignore options
-			if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-r") == 0) || (arg.find("-w") == 0) || (arg.find("-L") == 0) || 
-				(arg.find("-l") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
-			{
-				size_t idx = ++i;
-				if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
-				{
-					hostname = argv[i+1];
-					opt_hostname = (char*)hostname.c_str();
-				}
-				if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
-				{
-					passwords = argv[i+1];
-					opt_passwords = (char*)passwords.c_str();
-				}
-				if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
-					port = argv[i+1];
-				continue;
-			}
-			else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
-			{
-				if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
-				{
-#ifndef GNUNET
-					std::cout << usage << std::endl;
-					std::cout << about << std::endl;
-					std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-					std::cout << "  -h, --help     print this help" << std::endl;
-					std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
-					std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl;
-					std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
-					std::cout << "  -v, --version  print the version number" << std::endl;
-					std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
-				{
-#ifndef GNUNET
-					std::cout << "dkg-refresh v" << version << " without GNUNET support" << std::endl;
-#endif
-					return 0; // not continue
-				}
-				if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
-					opt_verbose++; // increase verbosity
-				continue;
-			}
-			else if (arg.find("-") == 0)
-			{
-				std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
-				return -1;
-			}
-			// store argument for peer list
-			if (arg.length() <= 255)
-			{
-				peers.push_back(arg);
-			}
-			else
-			{
-				std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
-				return -1;
-			}
-		}
-		// canonicalize peer list
-		std::sort(peers.begin(), peers.end());
-		std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
-		peers.resize(std::distance(peers.begin(), it));
-	}
+	// canonicalize peer list
+	std::sort(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	peers.resize(std::distance(peers.begin(), it));
 	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;

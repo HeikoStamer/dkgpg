@@ -435,7 +435,7 @@ void run_instance
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_very_long;
 	if (opt_verbose)
-		std::cout << "R_" << whoami << ": waiting " << synctime << " seconds for stalled parties" << std::endl;
+		std::cout << "R_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
 	rbc->Sync(synctime);
 
 	// export updated public key in OpenPGP armor format

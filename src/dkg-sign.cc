@@ -366,7 +366,7 @@ void run_instance
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_very_long;
 	if (opt_verbose)
-		std::cout << "S_" << whoami << ": waiting " << synctime << " seconds for stalled parties" << std::endl;
+		std::cout << "S_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
 	rbc->Sync(synctime);
 
 	// release tDSS

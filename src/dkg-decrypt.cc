@@ -827,7 +827,7 @@ void run_instance
 	// at the end: deliver some more rounds for waiting parties
 	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
-		std::cout << "D_" << whoami << ": waiting " << synctime << " seconds for stalled parties" << std::endl;
+		std::cout << "D_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
 	rbc->Sync(synctime);
 
 	// release EDCF

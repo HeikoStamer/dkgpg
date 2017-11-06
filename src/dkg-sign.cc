@@ -89,8 +89,10 @@ void run_instance
 	time_t ckeytime = 0, ekeytime = 0;
 	if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 	{
-		keyid.clear();
-		dss_qual.clear(), dss_c_ik.clear();
+		release_mpis();
+		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
+		dss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
+		init_mpis();
 		// protected with password
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";

@@ -1265,18 +1265,19 @@ int main
 			{
 				if (!write_message(opt_ofilename, msg))
 					return -1;
-
 			}
 			else
 				print_message(msg);
-			return 0;
 		}
 		else
-			return 1;
+			return -1;
+		return 0; // no error
 	}
+	// initialize return code
+	int ret = 0;
+	// create underlying point-to-point channels, if built-in TCP/IP service requested
 	if (opt_hostname != NULL)
 	{
-		int ret = 0;
 		if (port.length())
 			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from options
 		tcpip_init(hostname);
@@ -1351,7 +1352,7 @@ int main
 		),
 		GNUNET_GETOPT_OPTION_END
 	};
-	int ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
+	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
 	GNUNET_free((void *) argv);
 	if (ret == GNUNET_OK)
 		return 0;
@@ -1384,10 +1385,27 @@ int main
 	// wait for childs and close pipes
 	for (size_t i = 0; i < peers.size(); i++)
 	{
+		int wstatus = 0;
 		if (opt_verbose)
-			std::cerr << "waitpid(" << pid[i] << ")" << std::endl;
-		if (waitpid(pid[i], NULL, 0) != pid[i])
+			std::cout << "waitpid(" << pid[i] << ")" << std::endl;
+		if (waitpid(pid[i], &wstatus, 0) != pid[i])
 			perror("dkg-decrypt (waitpid)");
+		if (!WIFEXITED(wstatus))
+		{
+			std::cerr << "ERROR: protocol instance ";
+			if (WIFSIGNALED(wstatus))
+				std::cerr << pid[i] << " terminated by signal " << WTERMSIG(wstatus) << std::endl;
+			if (WCOREDUMP(wstatus))
+				std::cerr << pid[i] << " dumped core" << std::endl;
+			ret = -1; // fatal error
+		}
+		else if (WIFEXITED(wstatus))
+		{
+			if (opt_verbose)
+				std::cout << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+			if (WEXITSTATUS(wstatus))
+				ret = -2; // error
+		}
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
@@ -1397,6 +1415,6 @@ int main
 		}
 	}
 	
-	return 0;
+	return ret;
 }
 

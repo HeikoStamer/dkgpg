@@ -836,10 +836,27 @@ int main
 	// wait for childs and close pipes
 	for (size_t i = 0; i < peers.size(); i++)
 	{
+		int wstatus = 0;
 		if (opt_verbose)
-			std::cerr << "waitpid(" << pid[i] << ")" << std::endl;
-		if (waitpid(pid[i], NULL, 0) != pid[i])
+			std::cout << "waitpid(" << pid[i] << ")" << std::endl;
+		if (waitpid(pid[i], &wstatus, 0) != pid[i])
 			perror("dkg-revoke (waitpid)");
+		if (!WIFEXITED(wstatus))
+		{
+			std::cerr << "ERROR: protocol instance ";
+			if (WIFSIGNALED(wstatus))
+				std::cerr << pid[i] << " terminated by signal " << WTERMSIG(wstatus) << std::endl;
+			if (WCOREDUMP(wstatus))
+				std::cerr << pid[i] << " dumped core" << std::endl;
+			ret = -1;
+		}
+		else if (WIFEXITED(wstatus))
+		{
+			if (opt_verbose)
+				std::cout << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+			if (WEXITSTATUS(wstatus))
+				ret = -2; // error
+		}
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
@@ -849,6 +866,6 @@ int main
 		}
 	}
 	
-	return 0;
+	return ret;
 }
 

@@ -1870,7 +1870,7 @@ int main
 	{
 		int wstatus = 0;
 		if (opt_verbose)
-			std::cerr << "waitpid(" << pid[i] << ")" << std::endl;
+			std::cout << "waitpid(" << pid[i] << ")" << std::endl;
 		if (waitpid(pid[i], &wstatus, 0) != pid[i])
 			perror("dkg-generate (waitpid)");
 		if (!WIFEXITED(wstatus))
@@ -1885,7 +1885,9 @@ int main
 		else if (WIFEXITED(wstatus))
 		{
 			if (opt_verbose)
-				std::cerr << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+				std::cout << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+			if (WEXITSTATUS(wstatus))
+				ret = -2; // error
 		}
 		for (size_t j = 0; j < peers.size(); j++)
 		{

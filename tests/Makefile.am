@@ -22,6 +22,8 @@ TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-encrypt t-dkg-decrypt t-
 AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 
+EXTRA_PROGRAMS = t-dkg-refresh
+
 noinst_PROGRAMS = $(TESTS)
 
 t_dkg_gencrs_SOURCES = t-dkg-gencrs.cc

@@ -244,9 +244,9 @@ void run_instance
 	dss_in << dss_n << std::endl << dss_t << std::endl << dss_i << std::endl << dss_t << std::endl;
 	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl;
 	dss_in << "0" << std::endl << "0" << std::endl;
-	dss_in << dss_qual.size() << std::endl;
+	dss_in << dss_qual.size() << std::endl; // FIXME: we need a complete QUAL (generation time) for x_rvss here
 	for (size_t i = 0; i < dss_qual.size(); i++)
-		dss_in << dss_qual[i] << std::endl;
+		dss_in << dss_qual[i] << std::endl; // FIXME: we need a complete QUAL (generation time) for x_rvss here
 	assert((dss_c_ik.size() == dss_n));
 	for (size_t i = 0; i < dss_c_ik.size(); i++)
 	{

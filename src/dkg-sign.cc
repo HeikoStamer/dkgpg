@@ -201,7 +201,7 @@ void run_instance
 	}
 	mpz_clear(mtv);
 	std::sort(tvs.begin(), tvs.end());
-	if (tvs.size() < (peers.size() - dss_t))
+	if (tvs.size() < (peers.size() - T_RBC))
 	{
 		std::cerr << "S_" << whoami << ": not enough timestamps received" << std::endl;
 		delete rbc, delete aiou, delete aiou2;

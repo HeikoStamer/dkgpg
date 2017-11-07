@@ -1257,6 +1257,11 @@ bool parse_private_key
 					}
 					// create one-to-one mapping based on the stored canonicalized peer list
 					idx2dkg.clear(), dkg2idx.clear();
+					if (capl.size() != dss_qual.size())
+					{
+						std::cerr << "ERROR: QUAL size of tDSS key and CAPL does not match" << std::endl;
+						exit(-1);
+					}
 					for (size_t i = 0; i < peers.size(); i++)
 					{
 						bool found = false;
@@ -1264,18 +1269,12 @@ bool parse_private_key
 						{
 							if (peers[i] == capl[j])
 							{
+								assert((dss_qual[j] < dss_n));
 								found = true;
-								if (capl.size() == dss_qual.size())
-								{
-									idx2dkg[i] = dss_qual[j];
-									dkg2idx[dss_qual[j]] = i;
-								}
-								else
-								{
-									std::cerr << "ERROR: QUAL size of tDSS key and CAPL does not match" <<
-										std::endl;
-									exit(-1);
-								}
+								idx2dkg[i] = dss_qual[j];
+								dkg2idx[dss_qual[j]] = i;
+								if (opt_verbose)
+									std::cout << "INFO: mapping " << i << " -> P_" << dss_qual[j] << std::endl; 
 								break;
 							}
 						}

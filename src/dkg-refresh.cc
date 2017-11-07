@@ -191,6 +191,7 @@ void run_instance
 	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl;
 	dss_in << "0" << std::endl << "0" << std::endl;
 	dss_in << dss_qual.size() << std::endl;
+	assert((dss_qual.size() <= dss_n));
 	for (size_t i = 0; i < dss_qual.size(); i++)
 		dss_in << dss_qual[i] << std::endl;
 	assert((dss_c_ik.size() == dss_n));
@@ -348,7 +349,7 @@ void run_instance
 	}
 	std::vector<std::string> capl;
 	for (size_t j = 0; j < dss->QUAL.size(); j++)
-		capl.push_back(CAPL[dss->QUAL[j]]);
+		capl.push_back(CAPL[dss->QUAL[j]]); // FIXME: does not work, if CAPL.size() != dss->n
 	sec.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental108(ckeytime, p, q, g, h, y, 
 		n, t, i, qualsize, qual, capl, c_ik, x_i, xprime_i, passphrase, sec);

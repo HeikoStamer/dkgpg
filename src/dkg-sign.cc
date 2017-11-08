@@ -259,9 +259,20 @@ void run_instance
 	dss_in << dss_n << std::endl << dss_t << std::endl << dss_i << std::endl << dss_t << std::endl;
 	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl;
 	dss_in << "0" << std::endl << "0" << std::endl;
-	dss_in << dss_x_rvss_qual.size() << std::endl;
-	for (size_t i = 0; i < dss_x_rvss_qual.size(); i++)
-		dss_in << dss_x_rvss_qual[i] << std::endl;
+	if (dss_x_rvss_qual.size())
+	{
+		// new private key format 107
+		dss_in << dss_x_rvss_qual.size() << std::endl;
+		for (size_t i = 0; i < dss_x_rvss_qual.size(); i++)
+			dss_in << dss_x_rvss_qual[i] << std::endl;
+	}
+	else
+	{
+		// old private key format 108
+		dss_in << dss_qual.size() << std::endl;
+		for (size_t i = 0; i < dss_qual.size(); i++)
+			dss_in << dss_qual[i] << std::endl;
+	}
 	assert((dss_c_ik.size() == dss_n));
 	for (size_t i = 0; i < dss_c_ik.size(); i++)
 	{

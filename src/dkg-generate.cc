@@ -405,9 +405,9 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ckeytime, 17, p, q, g, y, pub); // use common key creation time
 	if (S > 0)
 	{
-		// create an OpenPGP private key as experimental algorithm ID 108 to store everything from tDSS
-		gcry_mpi_t h, n, t, i, qualsize, x_i, xprime_i;
-		std::vector<gcry_mpi_t> qual;
+		// create an OpenPGP private key as experimental algorithm ID 107 to store everything from tDSS
+		gcry_mpi_t h, n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
+		std::vector<gcry_mpi_t> qual, x_rvss_qual;
 		std::vector<std::string> capl; // canonicalized peer list
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
 		if (!mpz_get_gcry_mpi(&h, dss->h))
@@ -431,9 +431,16 @@ void run_instance
 		{
 			gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->QUAL[j]);
 			qual.push_back(tmp);
-			assert(dss->QUAL[j] < peers.size());
-			capl.push_back(peers[dss->QUAL[j]]);
 		}
+		x_rvss_qualsize = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL.size());
+		for (size_t j = 0; j < dss->dkg->x_rvss->QUAL.size(); j++)
+		{
+			gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL[j]);
+			x_rvss_qual.push_back(tmp);
+		}
+		assert((dss->n == peers.size()));
+		for (size_t j = 0; j < peers.size(); j++)
+			capl.push_back(peers[j]);
 		c_ik.resize(dss->n);
 		for (size_t j = 0; j < c_ik.size(); j++)
 		{
@@ -456,6 +463,9 @@ void run_instance
 					gcry_mpi_release(qualsize);
 					for (size_t jj = 0; jj < qual.size(); jj++)
 						gcry_mpi_release(qual[jj]);
+					gcry_mpi_release(x_rvss_qualsize);
+					for (size_t jj = 0; jj < x_rvss_qual.size(); jj++)
+						gcry_mpi_release(x_rvss_qual[jj]);
 					for (size_t jj = 0; jj < c_ik.size(); jj++)
 						for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
 							gcry_mpi_release(c_ik[jj][kk]);
@@ -482,6 +492,9 @@ void run_instance
 			gcry_mpi_release(qualsize);
 			for (size_t j = 0; j < qual.size(); j++)
 				gcry_mpi_release(qual[j]);
+			gcry_mpi_release(x_rvss_qualsize);
+			for (size_t j = 0; j < x_rvss_qual.size(); j++)
+				gcry_mpi_release(x_rvss_qual[j]);
 			for (size_t j = 0; j < c_ik.size(); j++)
 				for (size_t k = 0; k < c_ik[j].size(); k++)
 					gcry_mpi_release(c_ik[j][k]);
@@ -505,6 +518,9 @@ void run_instance
 			gcry_mpi_release(qualsize);
 			for (size_t j = 0; j < qual.size(); j++)
 				gcry_mpi_release(qual[j]);
+			gcry_mpi_release(x_rvss_qualsize);
+			for (size_t j = 0; j < x_rvss_qual.size(); j++)
+				gcry_mpi_release(x_rvss_qual[j]);
 			for (size_t j = 0; j < c_ik.size(); j++)
 				for (size_t k = 0; k < c_ik[j].size(); k++)
 					gcry_mpi_release(c_ik[j][k]);
@@ -513,8 +529,8 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental108(ckeytime, p, q, g, h, y, 
-			n, t, i, qualsize, qual, capl, c_ik, x_i, xprime_i, passphrase, sec);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental107(ckeytime, p, q, g, h, y, 
+			n, t, i, qualsize, qual, x_rvss_qualsize, x_rvss_qual, capl, c_ik, x_i, xprime_i, passphrase, sec);
 		gcry_mpi_release(h);
 		gcry_mpi_release(n);
 		gcry_mpi_release(t);
@@ -522,6 +538,9 @@ void run_instance
 		gcry_mpi_release(qualsize);
 		for (size_t j = 0; j < qual.size(); j++)
 			gcry_mpi_release(qual[j]);
+		gcry_mpi_release(x_rvss_qualsize);
+		for (size_t j = 0; j < x_rvss_qual.size(); j++)
+			gcry_mpi_release(x_rvss_qual[j]);
 		for (size_t j = 0; j < c_ik.size(); j++)
 			for (size_t k = 0; k < c_ik[j].size(); k++)
 				gcry_mpi_release(c_ik[j][k]);

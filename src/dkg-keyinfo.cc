@@ -43,7 +43,7 @@ tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual;
+std::vector<size_t>			dss_qual, dss_x_rvss_qual;
 std::vector< std::vector<mpz_ptr> >	dss_c_ik;
 mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
 size_t					dkg_n, dkg_t, dkg_i;
@@ -138,7 +138,7 @@ int main
 	{
 		release_mpis();
 		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
-		dss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
+		dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 		init_mpis();
 		// protected with password
 #ifdef DKGPG_TESTSUITE
@@ -180,9 +180,9 @@ int main
 	dss_in << dss_n << std::endl << dss_t << std::endl << dss_i << std::endl << dss_t << std::endl;
 	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl;
 	dss_in << "0" << std::endl << "0" << std::endl;
-	dss_in << dss_qual.size() << std::endl;
-	for (size_t i = 0; i < dss_qual.size(); i++)
-		dss_in << dss_qual[i] << std::endl;
+	dss_in << dss_x_rvss_qual.size() << std::endl;
+	for (size_t i = 0; i < dss_x_rvss_qual.size(); i++)
+		dss_in << dss_x_rvss_qual[i] << std::endl;
 	assert((dss_c_ik.size() == dss_n));
 	for (size_t i = 0; i < dss_c_ik.size(); i++)
 	{
@@ -295,12 +295,18 @@ int main
 		for (size_t i = 0; i < dss->QUAL.size(); i++)
 			std::cout << "P_" << dss->QUAL[i] << " ";
 		std::cout << "}" << std::endl;
+		if (dss->dkg->x_rvss->QUAL.size())
+		{
+			std::cout << "Set of non-disqualified parties of x_rvss subprotocol: " << std::endl << "\t" << "QUAL = { ";
+			for (size_t i = 0; i < dss->dkg->x_rvss->QUAL.size(); i++)
+				std::cout << "P_" << dss->dkg->x_rvss->QUAL[i] << " ";
+			std::cout << "}" << std::endl;
+		}
 		std::cout << "Unique identifier of this party (tDSS): " << std::endl << "\t";
 		std::cout << "P_" << dss->i << std::endl;
 		std::cout << "Canonicalized peer list (CAPL): " << std::endl;
-		assert(CAPL.size() == dss->QUAL.size());
 		for (size_t i = 0; i < CAPL.size(); i++)
-			std::cout << "\t" << "P_" << dss->QUAL[i] << "\t" << CAPL[i] << std::endl;
+			std::cout << "\t" << "P_" << ((dss->dkg->x_rvss->QUAL.size())?(i):(dss->QUAL[i])) << "\t" << CAPL[i] << std::endl;
 	}
 	if (sub.size() && (dkg != NULL))
 	{

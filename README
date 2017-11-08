@@ -52,7 +52,7 @@ problems may be recognized by looking for timeout error messages on STDERR.
 
 The program dkg-encrypt encrypts a text message for a given public key in
 OpenPGP format. It uses AES256 as fixed symmetric cipher and ElGamal as
-public-key algorithm. A similar encryption can be done by any
+public-key algorithm. Of course, a similar encryption can be done by any
 OpenPGP-compatible implementation. Conversely, a corresponding threshold
 decryption protocol (see Ronald Cramer, Rosario Gennaro, and Berry
 Schoenmakers: A Secure and Optimally Efficient Multi-Authority Election Scheme,
@@ -61,14 +61,14 @@ implemented in the program dkg-decrypt. It provides an interactive version and
 a non-interactive version for computing, verifying, and combining the required
 decryption shares.
 
-The program dkg-sign creates a detached signature on a binary file for a shared
-DSA/DSS key, if a threshold of the parties work together in an interactive
-signing protocol. Such a detached signature can be verified with any
-OpenPGP-compatible implementation. Thus it solves the problem of distributed
-code-signing without secret key splitting (e.g. libgfshare) and laborious
-reconstruction ceremonies.
+The program dkg-sign creates a detached signature on a binary file for a 
+shared DSA/DSS key, if a threshold of the parties work together in an
+interactive signing protocol. Such a detached signature can be verified with
+any OpenPGP-compatible implementation. Thus DKGPG solves the problem of
+distributed code-signing without secret key splitting (e.g. libgfshare) and
+laborious reconstruction ceremonies (e.g. DNSSEC root signing key).
 
-Please consult the manual pages for detailed information on DKGPG programs.
+Please consult the manual pages for detailed information on the programs.
 
 Note that for building dkg-generate, dkg-sign, dkg-revoke, dkg-refresh and the
 interactive version of dkg-decrypt the development files for a very recent
@@ -84,7 +84,7 @@ Requirements
   You need the following programs, libraries and appropriate header files to
   build (GNU gcc/g++ >= 5.4.y or higher is recommended) DKGPG successfully:
 
-  * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.3
+  * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.4
     http://www.nongnu.org/libtmcg/
   * GNU Multiple Precision Arithmetic Library (libgmp), version >= 4.2.0,
     https://gmplib.org/

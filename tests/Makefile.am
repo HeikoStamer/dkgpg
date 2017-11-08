@@ -17,12 +17,10 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-encrypt t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-revoke
+TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-encrypt t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-refresh t-dkg-revoke
 
 AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
-
-EXTRA_PROGRAMS = t-dkg-refresh
 
 noinst_PROGRAMS = $(TESTS)
 

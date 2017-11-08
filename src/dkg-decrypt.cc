@@ -60,7 +60,7 @@ tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual;
+std::vector<size_t>			dss_qual, dss_x_rvss_qual;
 std::vector< std::vector<mpz_ptr> >	dss_c_ik;
 mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
 size_t					dkg_n, dkg_t, dkg_i;
@@ -529,7 +529,7 @@ void run_instance
 	{
 		release_mpis();
 		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
-		dss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
+		dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 		init_mpis();
 		// protected with password
 #ifdef DKGPG_TESTSUITE
@@ -1174,7 +1174,7 @@ int main
 		{
 			release_mpis();
 			keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
-			dss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
+			dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 			init_mpis();
 			// protected with password
 			std::cout << "Please enter the passphrase to unlock your private key: ";

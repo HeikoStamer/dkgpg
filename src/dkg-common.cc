@@ -31,7 +31,7 @@ extern tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid
 extern std::map<size_t, size_t>			idx2dkg, dkg2idx;
 extern mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 extern size_t					dss_n, dss_t, dss_i;
-extern std::vector<size_t>			dss_qual;
+extern std::vector<size_t>			dss_qual, dss_x_rvss_qual;
 extern std::vector< std::vector<mpz_ptr> >	dss_c_ik;
 extern mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
 extern size_t					dkg_n, dkg_t, dkg_i;
@@ -865,7 +865,7 @@ bool parse_private_key
 	size_t erroff, keylen, ivlen, chksum, mlen, chksum2;
 	int algo;
 	tmcg_openpgp_packet_ctx ctx;
-	std::vector<gcry_mpi_t> qual, v_i;
+	std::vector<gcry_mpi_t> qual, v_i, x_rvss_qual;
 	std::vector<std::string> capl;
 	std::vector< std::vector<gcry_mpi_t> > c_ik;
 	gcry_mpi_t dsa_r, dsa_s, elg_r, elg_s;
@@ -884,7 +884,7 @@ bool parse_private_key
 	while (pkts.size() && ptag)
 	{
 		tmcg_octets_t current_packet;
-		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
+		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, x_rvss_qual, capl, v_i, c_ik);
 		if (opt_verbose)
 			std::cout << "PacketDecode(pkts.size = " << pkts.size() << ") = " << (int)ptag;
 		if (!ptag)
@@ -1003,7 +1003,7 @@ bool parse_private_key
 				}
 				break;
 			case 5: // Secret-Key Packet
-				if ((ctx.pkalgo == 108) && !secdsa)
+				if (((ctx.pkalgo == 107) || (ctx.pkalgo == 108)) && !secdsa)
 				{
 					secdsa = true;
 					keycreationtime_out = ctx.keycreationtime;
@@ -1059,6 +1059,12 @@ bool parse_private_key
 					size_t qualsize = qual.size();
 					for (size_t i = 0; i < qualsize; i++)
 						dss_qual.push_back(get_gcry_mpi_ui(qual[i]));
+					if (ctx.pkalgo == 107)
+					{
+						size_t x_rvss_qualsize = x_rvss_qual.size();
+						for (size_t i = 0; i < x_rvss_qualsize; i++)
+							dss_x_rvss_qual.push_back(get_gcry_mpi_ui(x_rvss_qual[i]));
+					}
 					dss_c_ik.resize(c_ik.size());
 					for (size_t i = 0; i < c_ik.size(); i++)
 					{
@@ -1257,7 +1263,12 @@ bool parse_private_key
 					}
 					// create one-to-one mapping based on the stored canonicalized peer list
 					idx2dkg.clear(), dkg2idx.clear();
-					if (capl.size() != dss_qual.size())
+					if ((ctx.pkalgo == 107) && (capl.size() != dss_n))
+					{
+						std::cerr << "ERROR: tDSS parameter n and CAPL size does not match" << std::endl;
+						exit(-1);
+					}
+					else if ((ctx.pkalgo == 108) && (capl.size() != dss_qual.size()))
 					{
 						std::cerr << "ERROR: QUAL size of tDSS key and CAPL does not match" << std::endl;
 						exit(-1);

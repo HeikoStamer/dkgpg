@@ -60,7 +60,7 @@ tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual;
+std::vector<size_t>			dss_qual, dss_x_rvss_qual;
 std::vector< std::vector<mpz_ptr> >	dss_c_ik;
 mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
 size_t					dkg_n, dkg_t, dkg_i;
@@ -89,7 +89,7 @@ void run_instance
 	{
 		release_mpis();
 		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
-		dss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
+		dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 		init_mpis();
 		// protected with password
 #ifdef DKGPG_TESTSUITE
@@ -190,10 +190,9 @@ void run_instance
 	dss_in << dss_n << std::endl << dss_t << std::endl << dss_i << std::endl << dss_t << std::endl;
 	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl;
 	dss_in << "0" << std::endl << "0" << std::endl;
-	dss_in << dss_qual.size() << std::endl; // FIXME: we need a complete QUAL (generation time) for x_rvss here
-	assert((dss_qual.size() <= dss_n));
-	for (size_t i = 0; i < dss_qual.size(); i++)
-		dss_in << dss_qual[i] << std::endl; // FIXME: we need a complete QUAL (generation time) for x_rvss here
+	dss_in << dss_x_rvss_qual.size() << std::endl;
+	for (size_t i = 0; i < dss_x_rvss_qual.size(); i++)
+		dss_in << dss_x_rvss_qual[i] << std::endl;
 	assert((dss_c_ik.size() == dss_n));
 	for (size_t i = 0; i < dss_c_ik.size(); i++)
 	{
@@ -233,8 +232,8 @@ void run_instance
 		std::cout << "R_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
 	rbc->Sync(synctime);
 	// create an OpenPGP DSA-based primary key using refreshed values from tDSS
-	gcry_mpi_t p, q, g, h, y, n, t, i, qualsize, x_i, xprime_i;
-	std::vector<gcry_mpi_t> qual;
+	gcry_mpi_t p, q, g, h, y, n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
+	std::vector<gcry_mpi_t> qual, x_rvss_qual;
 	std::vector< std::vector<gcry_mpi_t> > c_ik;
 	if (!mpz_get_gcry_mpi(&p, dss->p))
 	{
@@ -315,6 +314,12 @@ void run_instance
 		gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->QUAL[j]);
 		qual.push_back(tmp);
 	}
+	x_rvss_qualsize = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL.size());
+	for (size_t j = 0; j < dss->dkg->x_rvss->QUAL.size(); j++)
+	{
+		gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL[j]);
+		x_rvss_qual.push_back(tmp);
+	}
 	c_ik.resize(dss->n);
 	for (size_t j = 0; j < c_ik.size(); j++)
 	{
@@ -337,6 +342,9 @@ void run_instance
 				gcry_mpi_release(qualsize);
 				for (size_t jj = 0; jj < qual.size(); jj++)
 					gcry_mpi_release(qual[jj]);
+				gcry_mpi_release(x_rvss_qualsize);
+				for (size_t jj = 0; jj < x_rvss_qual.size(); jj++)
+					gcry_mpi_release(x_rvss_qual[jj]);
 				for (size_t jj = 0; jj < c_ik.size(); jj++)
 					for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
 						gcry_mpi_release(c_ik[jj][kk]);
@@ -347,12 +355,9 @@ void run_instance
 			c_ik[j].push_back(tmp);
 		}
 	}
-	std::vector<std::string> capl;
-	for (size_t j = 0; j < dss->QUAL.size(); j++)
-		capl.push_back(CAPL[dss->QUAL[j]]); // FIXME: does not work, if CAPL.size() != dss->n
 	sec.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental108(ckeytime, p, q, g, h, y, 
-		n, t, i, qualsize, qual, capl, c_ik, x_i, xprime_i, passphrase, sec);
+	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental107(ckeytime, p, q, g, h, y, 
+		n, t, i, qualsize, qual, x_rvss_qualsize, x_rvss_qual, CAPL, c_ik, x_i, xprime_i, passphrase, sec);
 	gcry_mpi_release(p);
 	gcry_mpi_release(q);
 	gcry_mpi_release(g);
@@ -366,6 +371,9 @@ void run_instance
 	gcry_mpi_release(qualsize);
 	for (size_t j = 0; j < qual.size(); j++)
 		gcry_mpi_release(qual[j]);
+	gcry_mpi_release(x_rvss_qualsize);
+	for (size_t j = 0; j < x_rvss_qual.size(); j++)
+		gcry_mpi_release(x_rvss_qual[j]);
 	for (size_t j = 0; j < c_ik.size(); j++)
 		for (size_t k = 0; k < c_ik[j].size(); k++)
 			gcry_mpi_release(c_ik[j][k]);

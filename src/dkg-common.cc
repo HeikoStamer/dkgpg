@@ -1280,19 +1280,18 @@ bool parse_private_key
 						{
 							if (peers[i] == capl[j])
 							{
-								assert((dss_qual[j] < dss_n));
+								assert((j < dss_n));
 								found = true;
-								idx2dkg[i] = dss_qual[j];
-								dkg2idx[dss_qual[j]] = i;
+								idx2dkg[i] = j, dkg2idx[j] = i;
 								if (opt_verbose)
-									std::cout << "INFO: mapping " << i << " -> P_" << dss_qual[j] << std::endl; 
+									std::cout << "INFO: mapping " << i << " -> P_" << j << std::endl; 
 								break;
 							}
 						}
 						if (!found)
 						{
 							std::cerr << "ERROR: peer \"" << peers[i] <<
-								"\" not found inside set QUAL of tDSS key" << std::endl;
+								"\" not found inside CAPL from tDSS key" << std::endl;
 							exit(-1);
 						}
 					}

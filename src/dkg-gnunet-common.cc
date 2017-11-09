@@ -408,9 +408,14 @@ void gnunet_shutdown_task(void *cls)
 		GNUNET_free(ohello);
 		ohello = NULL;
 	}
-	// FIXME: I guess this exit-call is not correct. However, otherwise the program does
-	//        not terminate, if GNUnet services are not running. Any ideas what's wrong?
-	exit(-1);
+	if (gh != NULL)
+	{
+		GNUNET_TRANSPORT_hello_get_cancel(gh);
+		gh = NULL;
+	}
+	// something else missed?
+	if (GNUNET_SCHEDULER_get_load(GNUNET_SCHEDULER_PRIORITY_COUNT))
+		exit(-1);
 }
 
 void gnunet_io(void *cls)

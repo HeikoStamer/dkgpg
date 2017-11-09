@@ -408,8 +408,8 @@ void gnunet_shutdown_task(void *cls)
 		GNUNET_free(ohello);
 		ohello = NULL;
 	}
-	// FIXME: I guess this exit-call is not correct. However, otherwise the program
-	//        does not terminate, if GNUnet services are not running.
+	// FIXME: I guess this exit-call is not correct. However, otherwise the program does
+	//        not terminate, if GNUnet services are not running. Any ideas what's wrong?
 	exit(-1);
 }
 
@@ -486,7 +486,7 @@ void gnunet_connect(void *cls)
 			stabilized = false;
 //		else if (!pipe2channel_in.count(i))
 //			stabilized = false;
-// NOTE: reconnect not needed, if GNUnet CADET works correctly
+// NOTE: reconnect is not needed, if GNUnet CADET works reliable
 		if ((i != peer2pipe[thispeer]) && !stabilized)
 		{
 			// destroy old CADET output channels, if exist

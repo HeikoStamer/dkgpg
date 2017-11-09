@@ -177,14 +177,16 @@ int main
 	ret = gcry_sexp_build(&dsakey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
 	if (ret)
 	{
-		std::cerr << "ERROR: parsing DSA key material failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+		std::cerr << "ERROR: parsing DSA key material failed (rc = " << gcry_err_code(ret) << ", str = " <<
+			gcry_strerror(ret) << ")" << std::endl;
 		release_mpis();
 		return ret;
 	}
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, sig_r, sig_s);
 	if (ret)
 	{
-		std::cerr << "ERROR: AsymmetricVerifyDSA() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+		std::cerr << "ERROR: AsymmetricVerifyDSA() failed (rc = " << gcry_err_code(ret) << ", str = " <<
+			gcry_strerror(ret) << ")" << std::endl;
 		release_mpis();
 		gcry_sexp_release(dsakey);
 		return ret;
@@ -193,6 +195,9 @@ int main
 	// release mpis and keys
 	release_mpis();
 	gcry_sexp_release(dsakey);
+
+	if (opt_verbose)
+		std::cout << "INFO: Good signature for input file \"" << opt_ifilename << "\"" << std::endl;
 	
 	return 0;
 }

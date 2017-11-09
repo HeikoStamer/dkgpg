@@ -795,7 +795,8 @@ bool parse_public_key
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, dsa_r, dsa_s);
 	if (ret)
 	{
-		std::cerr << "ERROR: verification of DSA key self-signature failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+		std::cerr << "ERROR: verification of DSA key self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+			gcry_strerror(ret) << ")" << std::endl;
 		gcry_sexp_release(dsakey);
 		gcry_mpi_release(dsa_r);
 		gcry_mpi_release(dsa_s);
@@ -833,7 +834,8 @@ bool parse_public_key
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);
 	if (ret)
 	{
-		std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+		std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+			gcry_strerror(ret) <<")" << std::endl;
 		gcry_sexp_release(dsakey);
 		gcry_mpi_release(dsa_r);
 		gcry_mpi_release(dsa_s);
@@ -1843,7 +1845,8 @@ bool parse_private_key
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, dsa_r, dsa_s);
 	if (ret)
 	{
-		std::cerr << "ERROR: verification of tDSS/DSA key self-signature failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+		std::cerr << "ERROR: verification of tDSS/DSA key self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+			gcry_strerror(ret) << ")" << std::endl;
 		exit(-1);
 	}
 	if (ssbelg)
@@ -1892,7 +1895,8 @@ bool parse_private_key
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);
 		if (ret)
 		{
-			std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+			std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) << ")" << std::endl;
 			exit(-1);
 		}
 	}

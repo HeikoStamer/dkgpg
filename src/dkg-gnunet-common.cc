@@ -421,11 +421,12 @@ void gnunet_io(void *cls)
 	if (send_queue.size())
 	{
 		DKG_BufferListEntry ble = send_queue.front();
-		DKG_Buffer buf = ble.second;
-		struct GNUNET_MQ_Envelope *env;
-		struct GNUNET_MessageHeader *msg;
 		if (pipe2channel_in.count(ble.first)) // have input channel to this peer?
 		{
+			DKG_Buffer buf = ble.second;
+			struct GNUNET_MQ_Envelope *env;
+			struct GNUNET_MessageHeader *msg;
+			// send message on input channel
 			if ((gnunet_opt_verbose) && (opt_verbose > 1))
 				std::cout << "INFO: try to send " << buf.first << " bytes on input channel to " << pipe2peer[ble.first] << std::endl;
 			env = GNUNET_MQ_msg_extra(msg, buf.first, GNUNET_MESSAGE_TYPE_TMCG_DKG_PIPE_UNICAST);
@@ -441,11 +442,12 @@ void gnunet_io(void *cls)
 	if (send_queue_broadcast.size())
 	{
 		DKG_BufferListEntry ble = send_queue_broadcast.front();
-		DKG_Buffer buf = ble.second;
-		struct GNUNET_MQ_Envelope *env;
-		struct GNUNET_MessageHeader *msg;
 		if (pipe2channel_in.count(ble.first)) // have input channel to this peer?
 		{
+			DKG_Buffer buf = ble.second;
+			struct GNUNET_MQ_Envelope *env;
+			struct GNUNET_MessageHeader *msg;
+			// send message on input channel
 			if ((gnunet_opt_verbose) && (opt_verbose > 1))
 				std::cout << "INFO: try to broadcast " << buf.first << " bytes on input channel to " << pipe2peer[ble.first] << std::endl;
 			env = GNUNET_MQ_msg_extra(msg, buf.first, GNUNET_MESSAGE_TYPE_TMCG_DKG_PIPE_BROADCAST);

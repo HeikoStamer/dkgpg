@@ -156,8 +156,8 @@ void tcpip_bindports
 			char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
 			memset(hbuf, 0, sizeof(hbuf));
 			memset(sbuf, 0, sizeof(sbuf));
-			if (getnameinfo(rp->ai_addr, rp->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf),
-				NI_NUMERICHOST | NI_NUMERICSERV) != 0)
+			if ((ret = getnameinfo(rp->ai_addr, rp->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), 
+				NI_NUMERICHOST | NI_NUMERICSERV)) != 0)
 			{
 				std::cerr << "ERROR: resolving wildcard address failed: ";
 				if (ret == EAI_SYSTEM)
@@ -257,8 +257,8 @@ size_t tcpip_connect
 					char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
 					memset(hbuf, 0, sizeof(hbuf));
 					memset(sbuf, 0, sizeof(sbuf));
-					if (getnameinfo(rp->ai_addr, rp->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf),
-						NI_NUMERICHOST | NI_NUMERICSERV) != 0)
+					if ((ret = getnameinfo(rp->ai_addr, rp->ai_addrlen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf),
+						NI_NUMERICHOST | NI_NUMERICSERV)) != 0)
 					{
 						std::cerr << "ERROR: resolving hostname \"" << peers[i] << "\" failed: ";
 						if (ret == EAI_SYSTEM)
@@ -351,9 +351,16 @@ void tcpip_accept
 				}
 				tcpip_pipe2socket_in[pi->first] = connfd;
 				char ipaddr[INET6_ADDRSTRLEN];
-				if (getnameinfo((struct sockaddr *)&sin, slen, ipaddr, sizeof(ipaddr), NULL, 0, NI_NUMERICHOST) != 0)
+				int ret;
+				if ((ret = getnameinfo((struct sockaddr *)&sin, slen, ipaddr, sizeof(ipaddr), NULL, 0,
+					NI_NUMERICHOST)) != 0)
 				{
-					perror("dkg-tcpip-common (getnameinfo)");
+					std::cerr << "ERROR: resolving incoming address failed: ";
+					if (ret == EAI_SYSTEM)
+						perror("dkg-tcpip-common (getnameinfo)");
+					else
+						std::cerr << gai_strerror(ret);
+					std::cerr << std::endl;
 					tcpip_close();
 					tcpip_done();
 					exit(-1);
@@ -376,9 +383,16 @@ void tcpip_accept
 				}
 				tcpip_broadcast_pipe2socket_in[pi->first] = connfd;
 				char ipaddr[INET6_ADDRSTRLEN];
-				if (getnameinfo((struct sockaddr *)&sin, slen, ipaddr, sizeof(ipaddr), NULL, 0, NI_NUMERICHOST) != 0)
+				int ret;
+				if ((ret = getnameinfo((struct sockaddr *)&sin, slen, ipaddr, sizeof(ipaddr), NULL, 0,
+					NI_NUMERICHOST)) != 0)
 				{
-					perror("dkg-tcpip-common (getnameinfo)");
+					std::cerr << "ERROR: resolving incoming address failed: ";
+					if (ret == EAI_SYSTEM)
+						perror("dkg-tcpip-common (getnameinfo)");
+					else
+						std::cerr << gai_strerror(ret);
+					std::cerr << std::endl;
 					tcpip_close();
 					tcpip_done();
 					exit(-1);

@@ -200,8 +200,9 @@ means that individual DSA keys instead of a shared key are generated and used as
 will not work with such restricted keys. The program waits ten minutes before the DKG protocol is started, because
 establishing a CADET channel with GNUnet may take some time.
 .PP
-Instead of using GNUnet for message exchange the built-in TCP/IP service can carry out this job. However, then each peer has to
-be reachable by all other peers over the underlying network. Resolvable hostnames are used as peer identities: 
+Instead of using GNUnet for message exchange the built-in TCP/IP service (currently IPv4 only) can carry out this job. However,
+then each peer has to be reachable by all other peers over the underlying network. In this case resolvable hostnames instead
+of GNUnet peer identities are used as unique identifiers: 
 .nf
 .RS
 dkg-generate -t 2 -P secret1/secret2/secret3/secret4/ -H host2.example.com host1.example.com host2.example.com host3.example.com host4.example.com  
@@ -218,7 +219,9 @@ dkg-generate -t 0 -P secret1/secret2/secret3/ -H supertapir evilsloth supertapir
 .RE
 .fi
 .PP
-To use TOR as underlying point-to-point network for TCP/IP a hidden service has to be configured in the torrc file:
+You can start the program with torsocks to use TOR as underlying point-to-point network. Note that for this case the option
+"AllowInbound" must be enabled in torsocks.conf. Additionally, a hidden service with port redirection to localhost has to be
+configured in your torrc file:
 .nf
 .RS
 HiddenServiceDir /var/lib/tor/dkg/
@@ -243,7 +246,7 @@ HiddenServicePort 35017 127.0.0.1:35017
 HiddenServicePort 35018 127.0.0.1:35018
 HiddenServicePort 35019 127.0.0.1:35019
 HiddenServicePort 35020 127.0.0.1:35020
-...
+..
 .RE
 .fi
 

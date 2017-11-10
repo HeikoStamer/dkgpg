@@ -51,7 +51,7 @@ RETSIGTYPE tcpip_sig_handler_quit(int sig)
 	else
 	{
 		if (opt_verbose)
-			std::cerr << "tcpip_sig_handler_quit(): got signal " << sig << std::endl;
+			std::cerr << "tcpip_sig_handler_quit(): parent got signal " << sig << std::endl;
 		signal(SIGINT, SIG_DFL);
 		signal(SIGQUIT, SIG_DFL);
 		signal(SIGTERM, SIG_DFL);
@@ -126,7 +126,7 @@ void tcpip_bindports
 		local_start += (peers.size() * peers.size());
 	for (uint16_t port = local_start; port < (local_start + (uint16_t)peers.size()); port++, i++)
 	{
-		int sockfd, ret;
+		int ret;
 		struct addrinfo hints = { 0 }, *res, *rp;
 		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
@@ -145,6 +145,7 @@ void tcpip_bindports
 			tcpip_done();
 			exit(-1);
 		}
+		int sockfd;
 		for (rp = res; rp != NULL; rp = rp->ai_next)
 		{
 			if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0)
@@ -214,7 +215,7 @@ size_t tcpip_connect
 		if ((broadcast && !tcpip_broadcast_pipe2socket_out.count(i)) || (!broadcast && !tcpip_pipe2socket_out.count(i)))
 		{
 			uint16_t port = start + (i * peers.size()) + (uint16_t)tcpip_peer2pipe[tcpip_thispeer];
-			int sockfd, ret;
+			int ret;
 			struct addrinfo hints = { 0 }, *res, *rp;
 			hints.ai_family = AF_INET;
 			hints.ai_socktype = SOCK_STREAM;
@@ -234,6 +235,7 @@ size_t tcpip_connect
 				tcpip_done();
 				exit(-1);
 			}
+			int sockfd;
 			for (rp = res; rp != NULL; rp = rp->ai_next)
 			{
 				if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0)
@@ -316,10 +318,19 @@ void tcpip_accept
 		retval = select((maxfd + 1), &rfds, NULL, NULL, &tv);
 		if (retval < 0)
 		{
-			perror("dkg-tcpip-common (select)");
-			tcpip_close();
-			tcpip_done();
-			exit(-1);
+			if ((errno == EAGAIN) || (errno == EINTR))
+			{
+				if (errno == EAGAIN)
+					perror("dkg-tcpip-common (select)");
+				continue;
+			}
+			else
+			{
+				perror("dkg-tcpip-common (select)");
+				tcpip_close();
+				tcpip_done();
+				exit(-1);
+			}
 		}
 		if (retval == 0)
 			continue; // timeout

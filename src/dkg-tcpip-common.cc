@@ -219,6 +219,7 @@ size_t tcpip_connect
 			struct addrinfo hints = { 0 }, *res, *rp;
 			hints.ai_family = AF_INET;
 			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_flags = AI_NUMERICSERV;
 			if (broadcast)
 				port += (peers.size() * peers.size());
 			std::stringstream ports;

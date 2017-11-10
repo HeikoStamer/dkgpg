@@ -19,8 +19,9 @@ version of a paper appeared under the title
 in the proceedings of CRYPTO'99. Both protocols employ GNUnet or a simple built-in
 TCP/IP service as underlying peer-to-peer (P2P) network for exchange of internal
 protocol messages between the participants. Thus either a working GNUnet peer or
-a host with appropriate TCP/IP port forwarding (e.g. via Tor Hidden Service) is
-necessary to proceed. Otherwise only local test instances are started.
+an interconnected host with appropriate TCP/IP port forwarding (e.g. via Tor
+Hidden Service) is necessary to proceed. Otherwise only local test instances
+with limited useability are started.
 .PP
 For each party either an individual or a shared DSA signing key is generated.
 This key acts as OpenPGP's primary key. Then the shared ElGamal encryption key

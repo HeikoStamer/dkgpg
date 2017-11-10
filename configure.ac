@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20171108])
+AC_REVISION([20171110])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.0], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -122,12 +122,12 @@ AC_HEADER_SYS_WAIT
 AC_TYPE_PID_T
 AC_TYPE_SIGNAL
 AC_FUNC_FORK
-AC_CHECK_HEADERS([unistd.h sys/types.h sys/wait.h signal.h arpa/inet.h\
- netdb.h netinet/in.h sys/socket.h], ,
+AC_CHECK_HEADERS([unistd.h sys/types.h sys/wait.h signal.h netdb.h\
+ netinet/in.h sys/socket.h], ,
 	AC_MSG_ERROR([some headers are missing]))
 AC_CHECK_FUNCS([fork kill pipe pipe2 waitpid getaddrinfo getnameinfo\
  htons htonl socket setsockopt connect bind listen accept signal sigaction\
- gai_strerror freeaddrinfo inet_ntop], , 
+ gai_strerror freeaddrinfo], , 
 	AC_MSG_ERROR([some functions are missing]))
 
 # Checks for GNUnet

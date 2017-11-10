@@ -38,7 +38,6 @@
 	#include <sys/types.h>
 	#include <sys/wait.h>
 	#include <signal.h>
-	#include <arpa/inet.h>
 	#include <netdb.h>
 	#include <netinet/in.h>
 	#include <sys/socket.h>

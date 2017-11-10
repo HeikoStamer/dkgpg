@@ -130,7 +130,7 @@ void tcpip_bindports
 		struct addrinfo hints = { 0 }, *res, *rp;
 		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
-		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_ADDRCONFIG;
 		std::stringstream ports;
 		ports << port;
 		if ((ret = getaddrinfo(NULL, (ports.str()).c_str(), &hints, &res)) != 0)
@@ -219,7 +219,7 @@ size_t tcpip_connect
 			struct addrinfo hints = { 0 }, *res, *rp;
 			hints.ai_family = AF_INET;
 			hints.ai_socktype = SOCK_STREAM;
-			hints.ai_flags = AI_NUMERICSERV;
+			hints.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG;
 			if (broadcast)
 				port += (peers.size() * peers.size());
 			std::stringstream ports;
@@ -339,7 +339,7 @@ void tcpip_accept
 		{
 			if (FD_ISSET(pi->second, &rfds))
 			{
-				struct sockaddr_in sin = { 0 };
+				struct sockaddr_storage sin = { 0 };
 				socklen_t slen = (socklen_t)sizeof(sin);
 				int connfd = accept(pi->second, (struct sockaddr*)&sin, &slen);
 				if (connfd < 0)
@@ -351,9 +351,9 @@ void tcpip_accept
 				}
 				tcpip_pipe2socket_in[pi->first] = connfd;
 				char ipaddr[INET6_ADDRSTRLEN];
-				if (inet_ntop(sin.sin_family, &sin.sin_addr, ipaddr, INET6_ADDRSTRLEN) == NULL)
+				if (getnameinfo((struct sockaddr *)&sin, slen, ipaddr, sizeof(ipaddr), NULL, 0, NI_NUMERICHOST) != 0)
 				{
-					perror("dkg-tcpip-common (inet_ntop)");
+					perror("dkg-tcpip-common (getnameinfo)");
 					tcpip_close();
 					tcpip_done();
 					exit(-1);
@@ -366,7 +366,7 @@ void tcpip_accept
 		{
 			if (FD_ISSET(pi->second, &rfds))
 			{
-				struct sockaddr_in sin = { 0 };
+				struct sockaddr_storage sin = { 0 };
 				socklen_t slen = (socklen_t)sizeof(sin);
 				int connfd = accept(pi->second, (struct sockaddr*)&sin, &slen);
 				if (connfd < 0)
@@ -376,9 +376,9 @@ void tcpip_accept
 				}
 				tcpip_broadcast_pipe2socket_in[pi->first] = connfd;
 				char ipaddr[INET6_ADDRSTRLEN];
-				if (inet_ntop(sin.sin_family, &sin.sin_addr, ipaddr, INET6_ADDRSTRLEN) == NULL)
+				if (getnameinfo((struct sockaddr *)&sin, slen, ipaddr, sizeof(ipaddr), NULL, 0, NI_NUMERICHOST) != 0)
 				{
-					perror("dkg-tcpip-common (inet_ntop)");
+					perror("dkg-tcpip-common (getnameinfo)");
 					tcpip_close();
 					tcpip_done();
 					exit(-1);

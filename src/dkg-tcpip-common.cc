@@ -126,13 +126,13 @@ void tcpip_bindports
 		local_start += (peers.size() * peers.size());
 	for (uint16_t port = local_start; port < (local_start + (uint16_t)peers.size()); port++, i++)
 	{
-		int ret;
 		struct addrinfo hints = { 0 }, *res, *rp;
 		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_ADDRCONFIG;
 		std::stringstream ports;
 		ports << port;
+		int ret;
 		if ((ret = getaddrinfo(NULL, (ports.str()).c_str(), &hints, &res)) != 0)
 		{
 			std::cerr << "ERROR: resolving wildcard address failed: ";
@@ -145,7 +145,7 @@ void tcpip_bindports
 			tcpip_done();
 			exit(-1);
 		}
-		int sockfd;
+		int sockfd = -1;
 		for (rp = res; rp != NULL; rp = rp->ai_next)
 		{
 			if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0)
@@ -179,19 +179,20 @@ void tcpip_bindports
 				perror("dkg-tcpip-common (bind)");
 				if (close(sockfd) < 0)
 					perror("dkg-tcpip-common (close)");
+				sockfd = -1;
 				continue; // try next address
 			}
 			break; // on success: leave the loop
 		}
 		freeaddrinfo(res);
-		if (rp == NULL)
+		if ((rp == NULL) || (sockfd < 0))
 		{
-			std::cerr << "ERROR: cannot bind TCP/IP port " << port << " for a valid IP address of this host" << std::endl;
+			std::cerr << "ERROR: cannot bind TCP/IP port " << port << " for any valid IP address of this host" << std::endl;
 			tcpip_close();
 			tcpip_done();
 			exit(-1);
 		}
-		if (listen(sockfd, SOMAXCONN) < 0)
+		else if (listen(sockfd, SOMAXCONN) < 0)
 		{
 			perror("dkg-tcpip-common (listen)");
 			if (close(sockfd) < 0)
@@ -236,9 +237,9 @@ size_t tcpip_connect
 				tcpip_done();
 				exit(-1);
 			}
-			int sockfd;
 			for (rp = res; rp != NULL; rp = rp->ai_next)
 			{
+				int sockfd;
 				if ((sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol)) < 0)
 				{
 					perror("dkg-tcpip-common (socket)");

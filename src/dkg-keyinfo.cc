@@ -61,21 +61,31 @@ int main
 	static const char *usage = "dkg-keyinfo [OPTIONS] PEER";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
+	std::string migrate_peer_from, migrate_peer_to;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
-		if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		if (arg.find("-m") == 0)
+		{
+			size_t idx = ++i + 1; // Note: this option has two arguments
+			if ((arg.find("-m") == 0) && (idx < (size_t)(argc - 1)) && (migrate_peer_from.length() == 0) && (migrate_peer_to.length() == 0))
+				migrate_peer_from = argv[i+1], migrate_peer_to = argv[i+2];
+			++i; // Note: this option has two arguments
+			continue;
+		}
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				std::cout << "  -h, --help           print this help" << std::endl;
+				std::cout << "  -m OLDPEER NEWPEER   migrate OLDPEER identity to NEWPEER" << std::endl;
+				std::cout << "  -v, --version        print the version number" << std::endl;
+				std::cout << "  -V, --verbose        turn on verbose output" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
@@ -344,6 +354,264 @@ int main
 
 	// restore default formatting
 	std::cout.copyfmt(oldcoutstate);
+
+	// migrate peer identity, if requested by option "-m OLDPEER NEWPEER"
+	if (migrate_peer_from.length() && migrate_peer_to.length())
+	{
+		if ((dss_n != 0) && (CAPL.size() > 0))
+		{
+			std::vector<std::string> CAPL_new;
+			size_t capl_idx = CAPL.size();
+			for (size_t i = 0; i < CAPL.size(); i++)
+			{
+				if (migrate_peer_from == CAPL[i])
+					capl_idx = i;
+				CAPL_new.push_back(CAPL[i]);
+			}
+			if (capl_idx == CAPL.size())
+			{
+				std::cerr << "ERROR: migration peer \"" << migrate_peer_from << "\" not contained in CAPL" << std::endl;
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			else
+				CAPL_new[capl_idx] = migrate_peer_to; // migration to NEWPEER
+			// canonicalize new peer list and check for persitent lexicographical order
+			std::sort(CAPL_new.begin(), CAPL_new.end());
+			std::vector<std::string>::iterator it = std::unique(CAPL_new.begin(), CAPL_new.end());
+			CAPL_new.resize(std::distance(CAPL_new.begin(), it));
+			if (CAPL_new.size() == CAPL.size())
+			{
+				for (size_t i = 0; i < CAPL_new.size(); i++)
+				{
+					if ((i != capl_idx) && (CAPL_new[i] != CAPL[i]))
+					{
+						std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" failed" << std::endl;
+						if (sub.size() && (dkg != NULL))
+							delete dkg;
+						delete dss;
+						release_mpis();
+						return -1;
+					}
+				}
+			}
+			else
+			{
+				std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" failed" << std::endl;
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			// create an OpenPGP DSA-based primary key using refreshed values from tDSS
+			gcry_mpi_t p, q, g, h, y, n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
+			std::vector<gcry_mpi_t> qual, x_rvss_qual;
+			std::vector< std::vector<gcry_mpi_t> > c_ik;
+			if (!mpz_get_gcry_mpi(&p, dss->p))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for p" << std::endl;
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			if (!mpz_get_gcry_mpi(&q, dss->q))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for q" << std::endl;
+				gcry_mpi_release(p);
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;	
+			}
+			if (!mpz_get_gcry_mpi(&g, dss->g))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for g" << std::endl;
+				gcry_mpi_release(p);
+				gcry_mpi_release(q);
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			if (!mpz_get_gcry_mpi(&h, dss->h))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for h" << std::endl;
+				gcry_mpi_release(p);
+				gcry_mpi_release(q);
+				gcry_mpi_release(g);
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			if (!mpz_get_gcry_mpi(&y, dss->y))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for y" << std::endl;
+				gcry_mpi_release(p);
+				gcry_mpi_release(q);
+				gcry_mpi_release(g);
+				gcry_mpi_release(h);
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			if (!mpz_get_gcry_mpi(&x_i, dss->x_i))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for x_i" << std::endl;
+				gcry_mpi_release(p);
+				gcry_mpi_release(q);
+				gcry_mpi_release(g);
+				gcry_mpi_release(h);
+				gcry_mpi_release(y);
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			if (!mpz_get_gcry_mpi(&xprime_i, dss->xprime_i))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for xprime_i" << std::endl;
+				gcry_mpi_release(p);
+				gcry_mpi_release(q);
+				gcry_mpi_release(g);
+				gcry_mpi_release(h);
+				gcry_mpi_release(y);
+				gcry_mpi_release(x_i);
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			n = gcry_mpi_set_ui(NULL, dss->n);
+			t = gcry_mpi_set_ui(NULL, dss->t);
+			i = gcry_mpi_set_ui(NULL, dss->i);
+			qualsize = gcry_mpi_set_ui(NULL, dss->QUAL.size());
+			for (size_t j = 0; j < dss->QUAL.size(); j++)
+			{
+				gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->QUAL[j]);
+				qual.push_back(tmp);
+			}
+			x_rvss_qualsize = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL.size());
+			for (size_t j = 0; j < dss->dkg->x_rvss->QUAL.size(); j++)
+			{
+				gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL[j]);
+				x_rvss_qual.push_back(tmp);
+			}
+			c_ik.resize(dss->n);
+			for (size_t j = 0; j < c_ik.size(); j++)
+			{
+				for (size_t k = 0; k <= dss->t; k++)
+				{
+					gcry_mpi_t tmp;
+					if (!mpz_get_gcry_mpi(&tmp, dss->dkg->x_rvss->C_ik[j][k]))
+					{
+						std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
+						gcry_mpi_release(p);
+						gcry_mpi_release(q);
+						gcry_mpi_release(g);
+						gcry_mpi_release(h);
+						gcry_mpi_release(y);
+						gcry_mpi_release(x_i);
+						gcry_mpi_release(xprime_i);
+						gcry_mpi_release(n);
+						gcry_mpi_release(t);
+						gcry_mpi_release(i);
+						gcry_mpi_release(qualsize);
+						for (size_t jj = 0; jj < qual.size(); jj++)
+							gcry_mpi_release(qual[jj]);
+						gcry_mpi_release(x_rvss_qualsize);
+						for (size_t jj = 0; jj < x_rvss_qual.size(); jj++)
+							gcry_mpi_release(x_rvss_qual[jj]);
+						for (size_t jj = 0; jj < c_ik.size(); jj++)
+							for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
+								gcry_mpi_release(c_ik[jj][kk]);
+						if (sub.size() && (dkg != NULL))
+							delete dkg;
+						delete dss;
+						release_mpis();
+						return -1;
+					}
+					c_ik[j].push_back(tmp);
+				}
+			}
+			sec.clear(); // clear old private key (tDSS)
+			CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental107(ckeytime, p, q, g, h, y, 
+				n, t, i, qualsize, qual, x_rvss_qualsize, x_rvss_qual, CAPL_new, c_ik, x_i, xprime_i, passphrase, sec);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(h);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x_i);
+			gcry_mpi_release(xprime_i);
+			gcry_mpi_release(n);
+			gcry_mpi_release(t);
+			gcry_mpi_release(i);
+			gcry_mpi_release(qualsize);
+			for (size_t j = 0; j < qual.size(); j++)
+				gcry_mpi_release(qual[j]);
+			gcry_mpi_release(x_rvss_qualsize);
+			for (size_t j = 0; j < x_rvss_qual.size(); j++)
+				gcry_mpi_release(x_rvss_qual[j]);
+			for (size_t j = 0; j < c_ik.size(); j++)
+				for (size_t k = 0; k < c_ik[j].size(); k++)
+					gcry_mpi_release(c_ik[j][k]);
+			// export updated private key in OpenPGP armor format
+			tmcg_octets_t all;
+			std::string armor;
+			std::stringstream secfilename;
+			secfilename << thispeer << "_dkg-sec.asc";
+			all.insert(all.end(), sec.begin(), sec.end());
+			all.insert(all.end(), uid.begin(), uid.end());
+			all.insert(all.end(), uidsig.begin(), uidsig.end());
+			if (sub.size())
+			{
+				all.insert(all.end(), ssb.begin(), ssb.end());
+				all.insert(all.end(), subsig.begin(), subsig.end());
+			}
+			CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(5, all, armor);
+			if (opt_verbose > 1)
+				std::cout << armor << std::endl;
+			std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out | std::ofstream::trunc);
+			if (!secofs.good())
+			{
+				std::cerr << "ERROR: opening private key file failed" << std::endl;
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			secofs << armor;
+			if (!secofs.good())
+			{
+				std::cerr << "ERROR: writing private key file failed" << std::endl;
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			secofs.close();
+			if (opt_verbose)
+				std::cout << "INFO: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" finished" << std::endl;
+		}
+		else
+			std::cerr << "WARNING: migration not possible due to missing or bad tDSS key" << std::endl;
+	}
 
 	// release
 	if (sub.size() && (dkg != NULL))

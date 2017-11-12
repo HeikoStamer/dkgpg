@@ -1617,9 +1617,9 @@ int main
 		if (!get_passphrase("Please repeat the given passphrase to continue", passphrase_check))
 			return -1;
 		if (passphrase != passphrase_check)
-			std::cerr << "WARNING: Passphrase does not match; please try again" << std::endl;
+			std::cerr << "WARNING: passphrase does not match; please try again" << std::endl;
 		else if (passphrase == "")
-			std::cerr << "WARNING: No key protection due to empty passphrase" << std::endl;
+			std::cerr << "WARNING: no key protection due to empty passphrase" << std::endl;
 	}
 	while (passphrase != passphrase_check);
 #endif

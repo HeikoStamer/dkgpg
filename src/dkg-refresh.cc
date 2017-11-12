@@ -396,7 +396,6 @@ void run_instance
 	std::string armor;
 	std::stringstream secfilename;
 	secfilename << peers[whoami] << "_dkg-sec.asc";
-	armor = "", all.clear();
 	all.insert(all.end(), sec.begin(), sec.end());
 	all.insert(all.end(), uid.begin(), uid.end());
 	all.insert(all.end(), uidsig.begin(), uidsig.end());

@@ -95,9 +95,11 @@ void run_instance
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
-		std::cout << "Please enter the passphrase to unlock your private key: ";
-		std::getline(std::cin, passphrase);
-		std::cin.clear();
+		if (!get_passphrase("Please enter passphrase to unlock your private key", passphrase))
+		{
+			release_mpis();
+			exit(-1);
+		}
 #endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{

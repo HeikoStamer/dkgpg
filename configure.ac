@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20171111])
+AC_REVISION([20171112])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.1], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -109,25 +109,25 @@ AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-# Checks for library functions
+# Checks for basic library functions
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
-AC_CHECK_FUNCS([abs clock close ctime fcntl fprintf memcmp memcpy memmove\
- memset open perror read sscanf select sleep snprintf strrchr strtoul time\
- write], ,
+AC_CHECK_FUNCS([abs clock close ctime fcntl fileno fprintf memcmp memcpy\
+ memmove memset open perror read sscanf select sleep snprintf strrchr\
+ strtoul time write], ,
 	AC_MSG_ERROR([some functions are missing]))
 
-# Checks for dkg-tools
+# Checks for extended library functions
 AC_HEADER_SYS_WAIT
 AC_TYPE_PID_T
 AC_TYPE_SIGNAL
 AC_FUNC_FORK
 AC_CHECK_HEADERS([unistd.h sys/types.h sys/wait.h signal.h netdb.h\
- netinet/in.h sys/socket.h], ,
+ netinet/in.h sys/socket.h termios.h], ,
 	AC_MSG_ERROR([some headers are missing]))
 AC_CHECK_FUNCS([fork kill pipe pipe2 waitpid getaddrinfo getnameinfo\
  htons htonl socket setsockopt connect bind listen accept signal sigaction\
- gai_strerror freeaddrinfo], , 
+ gai_strerror freeaddrinfo tcgetattr tcsetattr], , 
 	AC_MSG_ERROR([some functions are missing]))
 
 # Checks for GNUnet

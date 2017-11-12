@@ -535,9 +535,11 @@ void run_instance
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
-		std::cout << "Please enter the passphrase to unlock your private key: ";
-		std::getline(std::cin, passphrase);
-		std::cin.clear();
+		if (!get_passphrase("Please enter passphrase to unlock your private key", passphrase))
+		{
+			release_mpis();
+			exit(-1);
+		}
 #endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{
@@ -1177,9 +1179,11 @@ int main
 			dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 			init_mpis();
 			// protected with password
-			std::cout << "Please enter the passphrase to unlock your private key: ";
-			std::getline(std::cin, passphrase);
-			std::cin.clear();
+			if (!get_passphrase("Please enter passphrase to unlock your private key", passphrase))
+			{
+				release_mpis();
+				return -1;
+			}
 			if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 			{
 				std::cerr << "ERROR: wrong passphrase to unlock private key" << std::endl;

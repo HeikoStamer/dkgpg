@@ -43,6 +43,39 @@ extern gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 extern int					opt_verbose;
 
+bool get_passphrase
+	(const std::string &prompt, std::string &passphrase)
+{
+	struct termios old_term, new_term;
+	
+	// disable echo on stdin
+	if (tcgetattr(fileno(stdin), &old_term) < 0)
+	{
+		perror("get_passphrase (tcgetattr)");
+		exit(-1);
+	}
+	new_term = old_term;
+	new_term.c_lflag &= ~(ECHO | ISIG);
+	new_term.c_lflag |= ECHONL;
+	if (tcsetattr(fileno(stdin), TCSANOW, &new_term) < 0)
+	{
+		perror("get_passphrase (tcsetattr)");
+		exit(-1);
+	}
+	// read the passphrase
+	std::cout << prompt.c_str() << ": ";
+	std::getline(std::cin, passphrase);
+	std::cin.clear();
+	// enable echo on stdin
+	if (tcsetattr(fileno(stdin), TCSANOW, &old_term) < 0)
+	{
+		perror("get_passphrase (tcsetattr)");
+		exit(-1);
+	}
+	
+	return true;
+}
+
 bool read_key_file
 	(const std::string &filename, std::string &result)
 {

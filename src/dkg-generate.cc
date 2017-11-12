@@ -44,27 +44,42 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include <libTMCG.hh>
 #include <aiounicast_select.hh>
 
+#include "dkg-common.hh"
 #include "dkg-tcpip-common.hh"
 #include "dkg-gnunet-common.hh"
 
-int				pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
-pid_t				pid[DKGPG_MAX_N];
-std::vector<std::string>	peers;
-bool				instance_forked = false;
+int					pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+pid_t					pid[DKGPG_MAX_N];
+std::vector<std::string>		peers;
+bool					instance_forked = false;
 
-std::string			userid, passphrase, passwords, hostname, port;
-int 				opt_verbose = 0;
-char				*opt_crs = NULL;
-char				*opt_passwords = NULL;
-char				*opt_hostname = NULL;
-unsigned long int		opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
+std::string				passphrase, userid, passwords, hostname, port;
+tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+std::map<size_t, size_t>		idx2dkg, dkg2idx;
+mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
+size_t					dss_n, dss_t, dss_i;
+std::vector<size_t>			dss_qual, dss_x_rvss_qual;
+std::vector< std::vector<mpz_ptr> >	dss_c_ik;
+mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
+size_t					dkg_n, dkg_t, dkg_i;
+std::vector<size_t>			dkg_qual;
+std::vector<mpz_ptr>			dkg_v_i;
+std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
+gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
+gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
-bool				fips = false;
-std::stringstream		crss;
-mpz_t 				cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
-size_t				cache_avail = 0;
+int 					opt_verbose = 0;
+char					*opt_crs = NULL;
+char					*opt_passwords = NULL;
+char					*opt_hostname = NULL;
+unsigned long int			opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
 
-size_t				T, S;
+bool					fips = false;
+std::stringstream			crss;
+mpz_t 					cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
+size_t					cache_avail = 0;
+
+size_t					T, S;
 
 void run_instance
 	(const size_t whoami, const time_t keytime, const time_t keyexptime, const size_t num_xtests)
@@ -1592,8 +1607,21 @@ int main
 #else
 	std::cout << "1. Please enter an OpenPGP-style user ID (name <email>): ";
 	std::getline(std::cin, userid);
-	std::cout << "2. Passphrase to protect your part of the private key (input will be displayed): ";
-	std::getline(std::cin, passphrase);
+	std::cin.clear();
+	std::string passphrase_check;
+	do
+	{
+		passphrase = "", passphrase_check = "";
+		if (!get_passphrase("2. Passphrase to protect your part of the private key", passphrase))
+			return -1;
+		if (!get_passphrase("Please repeat the given passphrase to continue", passphrase_check))
+			return -1;
+		if (passphrase != passphrase_check)
+			std::cerr << "WARNING: Passphrase does not match; please try again" << std::endl;
+		else if (passphrase == "")
+			std::cerr << "WARNING: No key protection due to empty passphrase" << std::endl;
+	}
+	while (passphrase != passphrase_check);
 #endif
 	if (opt_verbose)
 	{

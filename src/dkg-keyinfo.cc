@@ -389,7 +389,8 @@ int main
 				{
 					if ((i != capl_idx) && (CAPL_new[i] != CAPL[i]))
 					{
-						std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" failed" << std::endl;
+						std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" <<
+							migrate_peer_to << "\" failed (wrong order of CAPL)" << std::endl;
 						if (sub.size() && (dkg != NULL))
 							delete dkg;
 						delete dss;
@@ -400,7 +401,8 @@ int main
 			}
 			else
 			{
-				std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" failed" << std::endl;
+				std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" << 
+					migrate_peer_to << "\" failed (identity occupied)" << std::endl;
 				if (sub.size() && (dkg != NULL))
 					delete dkg;
 				delete dss;

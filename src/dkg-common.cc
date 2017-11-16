@@ -1416,6 +1416,7 @@ bool parse_private_key
 						chksum = 0;
 						for (size_t i = 0; i < ctx.encdatalen; i++)
 							mpis.push_back(ctx.encdata[i]);
+						gcry_mpi_release(dsa_x);
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, dsa_x, chksum);
 						if (!mlen || (mlen > mpis.size()))
 						{
@@ -1440,6 +1441,7 @@ bool parse_private_key
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
+						gcry_mpi_release(dsa_x);
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, dsa_x, chksum);
 						if (!mlen || (mlen > mpis.size()))
 						{
@@ -1786,6 +1788,7 @@ bool parse_private_key
 						chksum = 0;
 						for (size_t i = 0; i < ctx.encdatalen; i++)
 							mpis.push_back(ctx.encdata[i]);
+						gcry_mpi_release(dsa_x);
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, dsa_x, chksum);
 						if (!mlen || (mlen > mpis.size()))
 						{
@@ -2181,6 +2184,7 @@ bool parse_private_key
 						chksum = 0;
 						for (size_t i = 0; i < ctx.encdatalen; i++)
 							mpis.push_back(ctx.encdata[i]);
+						gcry_mpi_release(elg_x);
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, elg_x, chksum);
 						if (!mlen || (mlen > mpis.size()))
 						{
@@ -2205,6 +2209,7 @@ bool parse_private_key
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
+						gcry_mpi_release(elg_x);
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, elg_x, chksum);
 						if (!mlen || (mlen > mpis.size()))
 						{

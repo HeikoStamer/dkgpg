@@ -307,7 +307,8 @@ bool parse_message
 				}
 				if (have_pkesk)
 					std::cerr << "WARNING: matching PKESK packet already found; g^k and my^k overwritten" << std::endl;
-				gk = ctx.gk, myk = ctx.myk;
+				gcry_mpi_set(gk, ctx.gk);
+				gcry_mpi_set(myk, ctx.myk);
 				have_pkesk = true;
 				break;
 			case 9: // Symmetrically Encrypted Data
@@ -382,6 +383,7 @@ bool parse_message
 	if (gcry_mpi_cmp_ui(tmp, 1L))
 	{
 		std::cerr << "ERROR: (g^k)^q \equiv 1 mod p not satisfied" << std::endl;
+		gcry_mpi_release(tmp);
 		return false;
 	}
 	gcry_mpi_release(tmp);
@@ -550,7 +552,8 @@ bool parse_signature
 					sigcreationtime_out = ctx.sigcreationtime;
 					sigexpirationtime_out = ctx.sigexpirationtime;
 					hashalgo_out = ctx.hashalgo;
-					sig_r = ctx.r, sig_s = ctx.s;
+					gcry_mpi_set(sig_r, ctx.r);
+					gcry_mpi_set(sig_s, ctx.s);
 					time_t kmax = ctx.sigcreationtime + ctx.sigexpirationtime;
 					if (ctx.sigexpirationtime && (time(NULL) > kmax))
 						std::cerr << "WARNING: DSA signature is expired" << std::endl;
@@ -656,7 +659,8 @@ bool parse_public_key
 					dsa_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						dsa_hspd.push_back(ctx.hspd[i]);
-					dsa_r = ctx.r, dsa_s = ctx.s;
+					gcry_mpi_set(dsa_r, ctx.r);
+					gcry_mpi_set(dsa_s, ctx.s);
 					if (dsa_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -698,7 +702,8 @@ bool parse_public_key
 					elg_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						elg_hspd.push_back(ctx.hspd[i]);
-					elg_r = ctx.r, elg_s = ctx.s;
+					gcry_mpi_set(elg_r, ctx.r);
+					gcry_mpi_set(elg_s, ctx.s);
 					if (elg_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -735,7 +740,10 @@ bool parse_public_key
 				if ((ctx.pkalgo == 17) && !pubdsa)
 				{
 					pubdsa = true;
-					dsa_p = ctx.p, dsa_q = ctx.q, dsa_g = ctx.g, dsa_y = ctx.y;
+					gcry_mpi_set(dsa_p, ctx.p);
+					gcry_mpi_set(dsa_q, ctx.q);
+					gcry_mpi_set(dsa_g, ctx.g);
+					gcry_mpi_set(dsa_y, ctx.y);
 					dsa_creation = ctx.keycreationtime;
 					keycreationtime_out = ctx.keycreationtime;
 					pub.clear();
@@ -772,7 +780,9 @@ bool parse_public_key
 				if ((ctx.pkalgo == 16) && !subelg)
 				{
 					subelg = true;
-					elg_p = ctx.p, elg_g = ctx.g, elg_y = ctx.y;
+					gcry_mpi_set(elg_p, ctx.p);
+					gcry_mpi_set(elg_g, ctx.g);
+					gcry_mpi_set(elg_y, ctx.y);
 					elg_creation = ctx.keycreationtime;
 					keycreationtime_out = ctx.keycreationtime;
 					sub.clear();
@@ -1014,7 +1024,8 @@ bool parse_private_key
 					dsa_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						dsa_hspd.push_back(ctx.hspd[i]);
-					dsa_r = ctx.r, dsa_s = ctx.s;
+					gcry_mpi_set(dsa_r, ctx.r);
+					gcry_mpi_set(dsa_s, ctx.s);
 					if (dsa_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -1065,7 +1076,8 @@ bool parse_private_key
 					elg_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						elg_hspd.push_back(ctx.hspd[i]);
-					elg_r = ctx.r, elg_s = ctx.s;
+					gcry_mpi_set(elg_r, ctx.r);
+					gcry_mpi_set(elg_s, ctx.s);
 					if (elg_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -1091,7 +1103,10 @@ bool parse_private_key
 				{
 					secdsa = true;
 					keycreationtime_out = ctx.keycreationtime;
-					dsa_p = ctx.p, dsa_q = ctx.q, dsa_g = ctx.g, dsa_y = ctx.y;
+					gcry_mpi_set(dsa_p, ctx.p);
+					gcry_mpi_set(dsa_q, ctx.q);
+					gcry_mpi_set(dsa_g, ctx.g);
+					gcry_mpi_set(dsa_y, ctx.y);
 					pub.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, 17, // public-key is DSA 
 						dsa_p, dsa_q, dsa_g, dsa_y, pub);
@@ -1167,18 +1182,12 @@ bool parse_private_key
 					dss_i = get_gcry_mpi_ui(ctx.i);
 					size_t qualsize = qual.size();
 					for (size_t i = 0; i < qualsize; i++)
-					{
 						dss_qual.push_back(get_gcry_mpi_ui(qual[i]));
-						gcry_mpi_release(qual[i]);
-					}
 					if (ctx.pkalgo == 107)
 					{
 						size_t x_rvss_qualsize = x_rvss_qual.size();
 						for (size_t i = 0; i < x_rvss_qualsize; i++)
-						{
 							dss_x_rvss_qual.push_back(get_gcry_mpi_ui(x_rvss_qual[i]));
-							gcry_mpi_release(x_rvss_qual[i]);
-						}
 					}
 					dss_c_ik.resize(c_ik.size());
 					for (size_t i = 0; i < c_ik.size(); i++)
@@ -1198,7 +1207,6 @@ bool parse_private_key
 								exit(-1);
 							}
 							dss_c_ik[i].push_back(tmp);
-							gcry_mpi_release(c_ik[i][k]);
 						}
 					}
 					if (ctx.s2kconv == 0)
@@ -1513,7 +1521,10 @@ bool parse_private_key
 				{
 					secdsa = true;
 					keycreationtime_out = ctx.keycreationtime;
-					dsa_p = ctx.p, dsa_q = ctx.q, dsa_g = ctx.g, dsa_y = ctx.y;
+					gcry_mpi_set(dsa_p, ctx.p);
+					gcry_mpi_set(dsa_q, ctx.q);
+					gcry_mpi_set(dsa_g, ctx.g);
+					gcry_mpi_set(dsa_y, ctx.y);
 					pub.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, 17, // public-key is DSA 
 						dsa_p, dsa_q, dsa_g, dsa_y, pub);
@@ -1566,7 +1577,7 @@ bool parse_private_key
 					}
 					if (ctx.s2kconv == 0)
 					{
-						dsa_x = ctx.x; // not encrypted
+						gcry_mpi_set(dsa_x, ctx.x); // not encrypted
 					}
 					else if ((ctx.s2kconv == 254) || (ctx.s2kconv == 255))
 					{
@@ -1801,7 +1812,10 @@ bool parse_private_key
 				if ((ctx.pkalgo == 109) && !ssbelg)
 				{
 					ssbelg = true;
-					elg_p = ctx.p, elg_q = ctx.q, elg_g = ctx.g, elg_y = ctx.y;
+					gcry_mpi_set(elg_p, ctx.p);
+					gcry_mpi_set(elg_q, ctx.q);
+					gcry_mpi_set(elg_g, ctx.g);
+					gcry_mpi_set(elg_y, ctx.y);
 					sub.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ctx.keycreationtime, 16, // public-key is ElGamal 
 						elg_p, dsa_q, elg_g, elg_y, sub);
@@ -1915,7 +1929,7 @@ bool parse_private_key
 					}
 					if (ctx.s2kconv == 0)
 					{
-						elg_x = ctx.x_i; // not encrypted
+						gcry_mpi_set(elg_x, ctx.x_i); // not encrypted
 						if (!mpz_set_gcry_mpi(ctx.x_i, dkg_x_i))
 						{
 							std::cerr << "ERROR: converting key component dkg_x_i failed" << std::endl;

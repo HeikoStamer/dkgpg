@@ -210,6 +210,28 @@ void init_mpis
 void cleanup_ctx
 	(tmcg_openpgp_packet_ctx &ctx)
 {
+	gcry_mpi_release(ctx.me);
+	gcry_mpi_release(ctx.gk);
+	gcry_mpi_release(ctx.myk);
+	gcry_mpi_release(ctx.md);
+	gcry_mpi_release(ctx.r);
+	gcry_mpi_release(ctx.s);
+	gcry_mpi_release(ctx.n);
+	gcry_mpi_release(ctx.e);
+	gcry_mpi_release(ctx.d);
+	gcry_mpi_release(ctx.p);
+	gcry_mpi_release(ctx.q);
+	gcry_mpi_release(ctx.u);
+	gcry_mpi_release(ctx.g);
+	gcry_mpi_release(ctx.h);
+	gcry_mpi_release(ctx.y);
+	gcry_mpi_release(ctx.x);
+	gcry_mpi_release(ctx.t);
+	gcry_mpi_release(ctx.i);
+	gcry_mpi_release(ctx.qualsize);
+	gcry_mpi_release(ctx.x_rvss_qualsize);
+	gcry_mpi_release(ctx.x_i);
+	gcry_mpi_release(ctx.xprime_i);
 	if (ctx.hspd != NULL)
 		delete [] ctx.hspd;
 	if (ctx.encdata != NULL)

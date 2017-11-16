@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2017-11-16] fixes small memory leak in parsing OpenPGP packets
 * [2017-11-15] added option "-W" for dkg-decrypt (interactive) and dkg-refresh
 * [2017-11-12] added option "-m" (migration of a peer identity) for dkg-keyinfo
 * [2017-11-12] removed echo of characters when reading passphrase from STDIN 

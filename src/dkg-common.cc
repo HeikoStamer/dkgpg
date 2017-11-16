@@ -207,6 +207,19 @@ void init_mpis
 	sig_s = gcry_mpi_new(2048);
 }
 
+void cleanup_ctx
+	(tmcg_openpgp_packet_ctx &ctx)
+{
+	if (ctx.hspd != NULL)
+		delete [] ctx.hspd;
+	if (ctx.encdata != NULL)
+		delete [] ctx.encdata;
+	if (ctx.compdata != NULL)
+		delete [] ctx.compdata;
+	if (ctx.data != NULL)
+		delete [] ctx.data;
+}
+
 bool parse_message
 	(const std::string &in, tmcg_octets_t &enc_out, bool &have_seipd_out)
 {
@@ -236,6 +249,7 @@ bool parse_message
 		if (!ptag)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			cleanup_ctx(ctx);
 			return false;
 		}
 		if (opt_verbose)
@@ -275,40 +289,42 @@ bool parse_message
 				have_pkesk = true;
 				break;
 			case 9: // Symmetrically Encrypted Data
-				if (have_sed)
+				if (!have_sed)
+				{
+					have_sed = true;
+					enc_out.clear();
+					for (size_t i = 0; i < ctx.encdatalen; i++)
+						enc_out.push_back(ctx.encdata[i]);
+				}
+				else
 				{
 					std::cerr << "ERROR: duplicate SED packet found" << std::endl;
+					cleanup_ctx(ctx);
 					return false;
 				}
-				have_sed = true;
-				enc_out.clear();
-				for (size_t i = 0; i < ctx.encdatalen; i++)
-					enc_out.push_back(ctx.encdata[i]);
 				break;
 			case 18: // Symmetrically Encrypted Integrity Protected Data
-				if (have_seipd_out)
+				if (!have_seipd_out)
+				{
+					have_seipd_out = true;
+					enc_out.clear();
+					for (size_t i = 0; i < ctx.encdatalen; i++)
+						enc_out.push_back(ctx.encdata[i]);
+				}
+				else
 				{
 					std::cerr << "ERROR: duplicate SEIPD packet found" << std::endl;
+					cleanup_ctx(ctx);
 					return false;
 				}
-				have_seipd_out = true;
-				enc_out.clear();
-				for (size_t i = 0; i < ctx.encdatalen; i++)
-					enc_out.push_back(ctx.encdata[i]);
 				break;
 			default:
 				std::cerr << "ERROR: unrecognized OpenPGP packet found" << std::endl;
+				cleanup_ctx(ctx);
 				return false;
 		}
 		// cleanup allocated buffers
-		if (ctx.hspd != NULL)
-			delete [] ctx.hspd;
-		if (ctx.encdata != NULL)
-			delete [] ctx.encdata;
-		if (ctx.compdata != NULL)
-			delete [] ctx.compdata;
-		if (ctx.data != NULL)
-			delete [] ctx.data;
+		cleanup_ctx(ctx);
 	}
 	if (!have_pkesk)
 	{
@@ -355,8 +371,6 @@ bool decrypt_message
 {
 	// decrypt the given message
 	tmcg_byte_t symalgo = 0;
-	gcry_error_t ret;
-	tmcg_octets_t prefix, litmdc;
 	if (opt_verbose)
 		std::cout << "symmetric decryption of message ..." << std::endl;
 	if (key.size() > 0)
@@ -370,6 +384,8 @@ bool decrypt_message
 		std::cerr << "ERROR: no session key provided" << std::endl;
 		return false;
 	}
+	gcry_error_t ret;
+	tmcg_octets_t prefix, litmdc;
 	if (have_seipd)
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, false, symalgo, litmdc);
 	else
@@ -398,6 +414,7 @@ bool decrypt_message
 		if (!ptag)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			cleanup_ctx(ctx);
 			return false;
 		}
 		if (opt_verbose)
@@ -408,33 +425,37 @@ bool decrypt_message
 				std::cerr << "WARNING: compressed OpenPGP packet found; not supported" << std::endl;
 				break;
 			case 11: // Literal Data
-				have_lit = true;
-				out.clear();
-				for (size_t i = 0; i < ctx.datalen; i++)
-					out.push_back(ctx.data[i]);
+				if (!have_lit)
+				{
+					have_lit = true;
+					out.clear();
+					for (size_t i = 0; i < ctx.datalen; i++)
+						out.push_back(ctx.data[i]);
+				}
+				else
+				{
+					std::cerr << "ERROR: OpenPGP message contains more than one literal data packet" << std::endl;
+					cleanup_ctx(ctx);
+					return false;
+				}
 				break;
 			case 19: // Modification Detection Code
 				have_mdc = true;
+				mdc_hash.clear();
 				for (size_t i = 0; i < sizeof(ctx.mdc_hash); i++)
 					mdc_hash.push_back(ctx.mdc_hash[i]);
 				break;
 			default:
 				std::cerr << "ERROR: unrecognized OpenPGP packet found" << std::endl;
-				exit(-1);
+				cleanup_ctx(ctx);
+				return false;
 		}
 		// cleanup allocated buffers
-		if (ctx.hspd != NULL)
-			delete [] ctx.hspd;
-		if (ctx.encdata != NULL)
-			delete [] ctx.encdata;
-		if (ctx.compdata != NULL)
-			delete [] ctx.compdata;
-		if (ctx.data != NULL)
-			delete [] ctx.data;
+		cleanup_ctx(ctx);
 	}
 	if (!have_lit)
 	{
-		std::cerr << "ERROR: no literal data found" << std::endl;
+		std::cerr << "ERROR: no literal data packet found" << std::endl;
 		return false;
 	}
 	if (have_seipd && !have_mdc)
@@ -442,18 +463,17 @@ bool decrypt_message
 		std::cerr << "ERROR: no modification detection code found" << std::endl;
 		return false;
 	}
-	tmcg_octets_t mdc_hashing, hash;
 	if (have_mdc)
 	{
+		tmcg_octets_t mdc_hashing, hash;
 		mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end()); // "it includes the prefix data described above" [RFC4880]
 		mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end()); // "it includes all of the plaintext" [RFC4880]
 		mdc_hashing.push_back(0xD3); // "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
 		mdc_hashing.push_back(0x14);
-		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(2, mdc_hashing, hash); // "passed through the SHA-1 hash function" [RFC4880]
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(mdc_hash, hash))
 		{
-			std::cerr << "ERROR: MDC hash does not match" << std::endl;
+			std::cerr << "ERROR: MDC hash does not match (security issue)" << std::endl;
 			return false;
 		}
 	}
@@ -486,6 +506,7 @@ bool parse_signature
 		if (!ptag)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			cleanup_ctx(ctx);
 			return false; // parsing error detected
 		}
 		switch (ptag)
@@ -494,6 +515,7 @@ bool parse_signature
 				if (ctx.pkalgo != 17)
 				{
 					std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
+					cleanup_ctx(ctx);
 					return false;
 				}
 				if ((ctx.hashalgo < 8) || (ctx.hashalgo >= 11))
@@ -522,26 +544,19 @@ bool parse_signature
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						trailer_out.push_back(ctx.hspd[i]); // hashed subpacket data
 				}
-				else if (sig)
+				else if (sig && (ctx.type == stype) && CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					std::cerr << "WARNING: more than one admissible signature; packet ignored" << std::endl;
 				}
 				break;
 		}
 		// cleanup allocated buffers
-		if (ctx.hspd != NULL)
-			delete [] ctx.hspd;
-		if (ctx.encdata != NULL)
-			delete [] ctx.encdata;
-		if (ctx.compdata != NULL)
-			delete [] ctx.compdata;
-		if (ctx.data != NULL)
-			delete [] ctx.data;
+		cleanup_ctx(ctx);
 	}
 	if (sig)
 		return true;
 	else
-		return false;
+		return false; // no admissible signature found
 }
 
 bool parse_public_key
@@ -590,6 +605,7 @@ bool parse_public_key
 			gcry_mpi_release(dsa_s);
 			gcry_mpi_release(elg_r);
 			gcry_mpi_release(elg_s);
+			cleanup_ctx(ctx);
 			return false; // parsing error detected
 		}
 		switch (ptag)
@@ -626,6 +642,7 @@ bool parse_public_key
 						gcry_mpi_release(dsa_s);
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						return false;
 					}
 					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
@@ -667,6 +684,7 @@ bool parse_public_key
 						gcry_mpi_release(dsa_s);
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						return false;
 					}
 					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
@@ -714,6 +732,7 @@ bool parse_public_key
 					gcry_mpi_release(dsa_s);
 					gcry_mpi_release(elg_r);
 					gcry_mpi_release(elg_s);
+					cleanup_ctx(ctx);
 					return false;
 				}
 				else
@@ -750,14 +769,7 @@ bool parse_public_key
 				break;
 		}
 		// cleanup allocated buffers
-		if (ctx.hspd != NULL)
-			delete [] ctx.hspd;
-		if (ctx.encdata != NULL)
-			delete [] ctx.encdata;
-		if (ctx.compdata != NULL)
-			delete [] ctx.compdata;
-		if (ctx.data != NULL)
-			delete [] ctx.data;
+		cleanup_ctx(ctx);
 	}
 	if (!pubdsa)
 	{
@@ -925,6 +937,11 @@ bool parse_private_key
 		if (!ptag)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			gcry_mpi_release(dsa_r);
+			gcry_mpi_release(dsa_s);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
+			cleanup_ctx(ctx);
 			exit(-1); // error detected
 		}
 		if (opt_verbose)
@@ -979,6 +996,11 @@ bool parse_private_key
 					if (dsa_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
@@ -1025,6 +1047,11 @@ bool parse_private_key
 					if (elg_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
@@ -1066,26 +1093,51 @@ bool parse_private_key
 					if (!mpz_set_gcry_mpi(ctx.p, dss_p))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_p" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dss_q))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_q" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dss_g))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_g" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.h, dss_h))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_h" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.y, dss_y))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_y" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					dss_n = get_gcry_mpi_ui(ctx.n);
@@ -1093,12 +1145,18 @@ bool parse_private_key
 					dss_i = get_gcry_mpi_ui(ctx.i);
 					size_t qualsize = qual.size();
 					for (size_t i = 0; i < qualsize; i++)
+					{
 						dss_qual.push_back(get_gcry_mpi_ui(qual[i]));
+						gcry_mpi_release(qual[i]);
+					}
 					if (ctx.pkalgo == 107)
 					{
 						size_t x_rvss_qualsize = x_rvss_qual.size();
 						for (size_t i = 0; i < x_rvss_qualsize; i++)
+						{
 							dss_x_rvss_qual.push_back(get_gcry_mpi_ui(x_rvss_qual[i]));
+							gcry_mpi_release(x_rvss_qual[i]);
+						}
 					}
 					dss_c_ik.resize(c_ik.size());
 					for (size_t i = 0; i < c_ik.size(); i++)
@@ -1110,9 +1168,15 @@ bool parse_private_key
 							if (!mpz_set_gcry_mpi(c_ik[i][k], tmp))
 							{
 								std::cerr << "ERROR: mpz_set_gcry_mpi() failed for tmp" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							dss_c_ik[i].push_back(tmp);
+							gcry_mpi_release(c_ik[i][k]);
 						}
 					}
 					if (ctx.s2kconv == 0)
@@ -1120,11 +1184,21 @@ bool parse_private_key
 						if (!mpz_set_gcry_mpi(ctx.x_i, dss_x_i))
 						{
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_x_i" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (!mpz_set_gcry_mpi(ctx.xprime_i, dss_xprime_i))
 						{
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_xprime_i" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 					}
@@ -1136,6 +1210,11 @@ bool parse_private_key
 						if (!keylen || !ivlen)
 						{
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						salt.clear();
@@ -1161,16 +1240,31 @@ bool parse_private_key
 						else
 						{
 							std::cerr << "ERROR: unknown S2K specifier" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (seskey.size() != keylen)
 						{
 							std::cerr << "ERROR: S2K failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
 						{
 							std::cerr << "ERROR: nothing to decrypt" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						key = new tmcg_byte_t[keylen], iv = new tmcg_byte_t[ivlen];
@@ -1182,24 +1276,44 @@ bool parse_private_key
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_open() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_setkey() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_setiv() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_decrypt() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						gcry_cipher_close(hd);
@@ -1213,50 +1327,44 @@ bool parse_private_key
 						if (!mlen || (mlen > mpis.size()))
 						{
 							std::cerr << "ERROR: reading MPI x_i failed (bad passphrase)" << std::endl;
-							// cleanup
-							if (ctx.hspd != NULL)
-								delete [] ctx.hspd;
-							if (ctx.encdata != NULL)
-								delete [] ctx.encdata;
-							if (ctx.compdata != NULL)
-								delete [] ctx.compdata;
-							if (ctx.data != NULL)
-								delete [] ctx.data;
 							gcry_mpi_release(dsa_r);
 							gcry_mpi_release(dsa_s);
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
 						if (!mpz_set_gcry_mpi(dsa_x, dss_x_i))
 						{
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_x_i" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, dsa_x, chksum);
 						if (!mlen || (mlen > mpis.size()))
 						{
 							std::cerr << "ERROR: reading MPI xprime_i failed (bad passphrase)" << std::endl;
-							// cleanup
-							if (ctx.hspd != NULL)
-								delete [] ctx.hspd;
-							if (ctx.encdata != NULL)
-								delete [] ctx.encdata;
-							if (ctx.compdata != NULL)
-								delete [] ctx.compdata;
-							if (ctx.data != NULL)
-								delete [] ctx.data;
 							gcry_mpi_release(dsa_r);
 							gcry_mpi_release(dsa_s);
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
 						if (!mpz_set_gcry_mpi(dsa_x, dss_xprime_i))
 						{
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_xprime_i" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (ctx.s2kconv == 255)
@@ -1264,12 +1372,22 @@ bool parse_private_key
 							if (mpis.size() < 2)
 							{
 								std::cerr << "ERROR: no checksum found" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
 							if (chksum != chksum2)
 							{
 								std::cerr << "ERROR: checksum mismatch" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 						}
@@ -1278,6 +1396,11 @@ bool parse_private_key
 							if (mpis.size() != 20)
 							{
 								std::cerr << "ERROR: no SHA-1 hash found" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							hash_input.clear(), hash.clear();
@@ -1287,6 +1410,11 @@ bool parse_private_key
 							if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(hash, mpis))
 							{
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 						}
@@ -1294,6 +1422,11 @@ bool parse_private_key
 					else
 					{
 						std::cerr << "ERROR: S2K format not supported" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					// create one-to-one mapping based on the stored canonicalized peer list
@@ -1301,11 +1434,21 @@ bool parse_private_key
 					if ((ctx.pkalgo == 107) && (capl.size() != dss_n))
 					{
 						std::cerr << "ERROR: tDSS parameter n and CAPL size does not match" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					else if ((ctx.pkalgo == 108) && (capl.size() != dss_qual.size()))
 					{
 						std::cerr << "ERROR: QUAL size of tDSS key and CAPL does not match" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					for (size_t i = 0; i < peers.size(); i++)
@@ -1327,6 +1470,11 @@ bool parse_private_key
 						{
 							std::cerr << "ERROR: peer \"" << peers[i] <<
 								"\" not found inside CAPL from tDSS key" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 					}
@@ -1367,16 +1515,31 @@ bool parse_private_key
 					if (!mpz_set_gcry_mpi(ctx.p, dss_p))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_p" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dss_q))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_q" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dss_g))
 					{
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_g" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (ctx.s2kconv == 0)
@@ -1391,6 +1554,11 @@ bool parse_private_key
 						if (!keylen || !ivlen)
 						{
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						salt.clear();
@@ -1416,16 +1584,31 @@ bool parse_private_key
 						else
 						{
 							std::cerr << "ERROR: unknown S2K specifier" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (seskey.size() != keylen)
 						{
 							std::cerr << "ERROR: S2K failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
 						{
 							std::cerr << "ERROR: nothing to decrypt" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						key = new tmcg_byte_t[keylen], iv = new tmcg_byte_t[ivlen];
@@ -1437,24 +1620,44 @@ bool parse_private_key
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_open() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_setkey() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_setiv() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_decrypt() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						gcry_cipher_close(hd);
@@ -1468,19 +1671,11 @@ bool parse_private_key
 						if (!mlen || (mlen > mpis.size()))
 						{
 							std::cerr << "ERROR: reading MPI x failed (bad passphrase)" << std::endl;
-							// cleanup
-							if (ctx.hspd != NULL)
-								delete [] ctx.hspd;
-							if (ctx.encdata != NULL)
-								delete [] ctx.encdata;
-							if (ctx.compdata != NULL)
-								delete [] ctx.compdata;
-							if (ctx.data != NULL)
-								delete [] ctx.data;
 							gcry_mpi_release(dsa_r);
 							gcry_mpi_release(dsa_s);
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -1489,12 +1684,22 @@ bool parse_private_key
 							if (mpis.size() < 2)
 							{
 								std::cerr << "ERROR: no checksum found" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
 							if (chksum != chksum2)
 							{
 								std::cerr << "ERROR: checksum mismatch" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 						}
@@ -1503,6 +1708,11 @@ bool parse_private_key
 							if (mpis.size() != 20)
 							{
 								std::cerr << "ERROR: no SHA-1 hash found" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							hash_input.clear(), hash.clear();
@@ -1512,6 +1722,11 @@ bool parse_private_key
 							if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(hash, mpis))
 							{
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 						}
@@ -1519,6 +1734,11 @@ bool parse_private_key
 					else
 					{
 						std::cerr << "ERROR: S2K format not supported" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					// store the whole packet
@@ -1529,6 +1749,11 @@ bool parse_private_key
 				else if (((ctx.pkalgo == 108) || (ctx.pkalgo == 17)) && secdsa)
 				{
 					std::cerr << "ERROR: more than one primary key not supported" << std::endl;
+					gcry_mpi_release(dsa_r);
+					gcry_mpi_release(dsa_s);
+					gcry_mpi_release(elg_r);
+					gcry_mpi_release(elg_s);
+					cleanup_ctx(ctx);
 					exit(-1);
 				}
 				else
@@ -1578,26 +1803,51 @@ bool parse_private_key
 					if (!mpz_set_gcry_mpi(ctx.p, dkg_p))
 					{
 						std::cerr << "ERROR: converting key component dkg_p failed" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dkg_q))
 					{
 						std::cerr << "ERROR: converting key component dkg_q failed" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dkg_g))
 					{
 						std::cerr << "ERROR: converting key component dkg_g failed" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.h, dkg_h))
 					{
 						std::cerr << "ERROR: converting key component dkg_h failed" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.y, dkg_y))
 					{
 						std::cerr << "ERROR: converting key component dkg_y failed" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					dkg_n = get_gcry_mpi_ui(ctx.n);
@@ -1612,6 +1862,11 @@ bool parse_private_key
 						if (!mpz_set_gcry_mpi(v_i[i], tmp))
 						{
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for tmp (v_i)" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						dkg_v_i.push_back(tmp);
@@ -1626,6 +1881,11 @@ bool parse_private_key
 							if (!mpz_set_gcry_mpi(c_ik[i][k], tmp))
 							{
 								std::cerr << "ERROR: mpz_set_gcry_mpi() failed for tmp (c_ik)" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							dkg_c_ik[i].push_back(tmp);
@@ -1637,11 +1897,21 @@ bool parse_private_key
 						if (!mpz_set_gcry_mpi(ctx.x_i, dkg_x_i))
 						{
 							std::cerr << "ERROR: converting key component dkg_x_i failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (!mpz_set_gcry_mpi(ctx.xprime_i, dkg_xprime_i))
 						{
 							std::cerr << "ERROR: converting key component dkg_xprime_i failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 					}
@@ -1652,6 +1922,11 @@ bool parse_private_key
 						if (!keylen || !ivlen)
 						{
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						salt.clear();
@@ -1677,16 +1952,31 @@ bool parse_private_key
 						else
 						{
 							std::cerr << "ERROR: unknown S2K specifier" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (seskey.size() != keylen)
 						{
 							std::cerr << "ERROR: S2K failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
 						{
 							std::cerr << "ERROR: nothing to decrypt" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						key = new tmcg_byte_t[keylen], iv = new tmcg_byte_t[ivlen];
@@ -1698,24 +1988,44 @@ bool parse_private_key
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_open() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_setkey() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_setiv() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_decrypt() failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						gcry_cipher_close(hd);
@@ -1729,24 +2039,44 @@ bool parse_private_key
 						if (!mlen || (mlen > mpis.size()))
 						{
 							std::cerr << "ERROR: reading MPI x_i failed (bad passphrase)" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
  						if (!mpz_set_gcry_mpi(elg_x, dkg_x_i))
 						{
 							std::cerr << "ERROR: converting key component dkg_x_i failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, elg_x, chksum);
 						if (!mlen || (mlen > mpis.size()))
 						{
 							std::cerr << "ERROR: reading MPI xprime_i failed (bad passphrase)" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
 						if (!mpz_set_gcry_mpi(elg_x, dkg_xprime_i))
 						{
 							std::cerr << "ERROR: converting key component dkg_xprime_i failed" << std::endl;
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
+							cleanup_ctx(ctx);
 							exit(-1);
 						}
 						if (ctx.s2kconv == 255)
@@ -1754,12 +2084,22 @@ bool parse_private_key
 							if (mpis.size() < 2)
 							{
 								std::cerr << "ERROR: no checksum found" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
 							if (chksum != chksum2)
 							{
 								std::cerr << "ERROR: checksum mismatch" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 						}
@@ -1768,6 +2108,11 @@ bool parse_private_key
 							if (mpis.size() != 20)
 							{
 								std::cerr << "ERROR: no SHA-1 hash found" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 							hash_input.clear(), hash.clear();
@@ -1777,6 +2122,11 @@ bool parse_private_key
 							if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(hash, mpis))
 							{
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
+								cleanup_ctx(ctx);
 								exit(-1);
 							}
 						}
@@ -1784,6 +2134,11 @@ bool parse_private_key
 					else
 					{
 						std::cerr << "ERROR: S2K format not supported" << std::endl;
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
+						cleanup_ctx(ctx);
 						exit(-1);
 					}
 					// store the whole packet
@@ -1798,14 +2153,7 @@ bool parse_private_key
 				break;
 		}
 		// cleanup allocated buffers
-		if (ctx.hspd != NULL)
-			delete [] ctx.hspd;
-		if (ctx.encdata != NULL)
-			delete [] ctx.encdata;
-		if (ctx.compdata != NULL)
-			delete [] ctx.compdata;
-		if (ctx.data != NULL)
-			delete [] ctx.data;
+		cleanup_ctx(ctx);
 	}
 	if (!secdsa)
 	{

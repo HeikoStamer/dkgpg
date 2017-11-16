@@ -242,6 +242,33 @@ void cleanup_ctx
 		delete [] ctx.data;
 }
 
+void cleanup_containers
+	(std::vector<gcry_mpi_t> &qual, std::vector<gcry_mpi_t> &v_i, std::vector< std::vector<gcry_mpi_t> > &c_ik)
+{
+	for (size_t i = 0; i < qual.size(); i++)
+		gcry_mpi_release(qual[i]);
+	qual.clear();
+	for (size_t i = 0; i < v_i.size(); i++)
+		gcry_mpi_release(v_i[i]);
+	v_i.clear();
+	for (size_t i = 0; i < c_ik.size(); i++)
+	{
+		for (size_t k = 0; k < c_ik[i].size(); k++)
+			gcry_mpi_release(c_ik[i][k]);
+		c_ik[i].clear();
+	}
+	c_ik.clear();
+}
+
+void cleanup_containers
+	(std::vector<gcry_mpi_t> &qual, std::vector<gcry_mpi_t> &v_i, std::vector<gcry_mpi_t> &x_rvss_qual, std::vector< std::vector<gcry_mpi_t> > &c_ik)
+{
+	cleanup_containers(qual, v_i, c_ik);
+	for (size_t i = 0; i < x_rvss_qual.size(); i++)
+		gcry_mpi_release(x_rvss_qual[i]);
+	x_rvss_qual.clear();
+}
+
 bool parse_message
 	(const std::string &in, tmcg_octets_t &enc_out, bool &have_seipd_out)
 {
@@ -272,6 +299,7 @@ bool parse_message
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
 			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
 			return false;
 		}
 		if (opt_verbose)
@@ -323,6 +351,7 @@ bool parse_message
 				{
 					std::cerr << "ERROR: duplicate SED packet found" << std::endl;
 					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
@@ -338,16 +367,19 @@ bool parse_message
 				{
 					std::cerr << "ERROR: duplicate SEIPD packet found" << std::endl;
 					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
 			default:
 				std::cerr << "ERROR: unrecognized OpenPGP packet found" << std::endl;
 				cleanup_ctx(ctx);
+				cleanup_containers(qual, v_i, c_ik);
 				return false;
 		}
-		// cleanup allocated buffers
+		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);
+		cleanup_containers(qual, v_i, c_ik);
 	}
 	if (!have_pkesk)
 	{
@@ -439,6 +471,7 @@ bool decrypt_message
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
 			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
 			return false;
 		}
 		if (opt_verbose)
@@ -460,6 +493,7 @@ bool decrypt_message
 				{
 					std::cerr << "ERROR: OpenPGP message contains more than one literal data packet" << std::endl;
 					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
@@ -472,10 +506,12 @@ bool decrypt_message
 			default:
 				std::cerr << "ERROR: unrecognized OpenPGP packet found" << std::endl;
 				cleanup_ctx(ctx);
+				cleanup_containers(qual, v_i, c_ik);
 				return false;
 		}
-		// cleanup allocated buffers
+		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);
+		cleanup_containers(qual, v_i, c_ik);
 	}
 	if (!have_lit)
 	{
@@ -531,6 +567,7 @@ bool parse_signature
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
 			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
 		}
 		switch (ptag)
@@ -540,6 +577,7 @@ bool parse_signature
 				{
 					std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				if ((ctx.hashalgo < 8) || (ctx.hashalgo >= 11))
@@ -575,8 +613,9 @@ bool parse_signature
 				}
 				break;
 		}
-		// cleanup allocated buffers
+		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);
+		cleanup_containers(qual, v_i, c_ik);
 	}
 	if (sig)
 		return true;
@@ -631,6 +670,7 @@ bool parse_public_key
 			gcry_mpi_release(elg_r);
 			gcry_mpi_release(elg_s);
 			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
 		}
 		switch (ptag)
@@ -669,6 +709,7 @@ bool parse_public_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, c_ik);
 						return false;
 					}
 					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
@@ -712,6 +753,7 @@ bool parse_public_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, c_ik);
 						return false;
 					}
 					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
@@ -763,6 +805,7 @@ bool parse_public_key
 					gcry_mpi_release(elg_r);
 					gcry_mpi_release(elg_s);
 					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				else
@@ -800,8 +843,9 @@ bool parse_public_key
 					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " not supported" << std::endl;
 				break;
 		}
-		// cleanup allocated buffers
+		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);
+		cleanup_containers(qual, v_i, c_ik);
 	}
 	if (!pubdsa)
 	{
@@ -974,6 +1018,7 @@ bool parse_private_key
 			gcry_mpi_release(elg_r);
 			gcry_mpi_release(elg_s);
 			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 			exit(-1); // error detected
 		}
 		if (opt_verbose)
@@ -1034,6 +1079,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
@@ -1086,6 +1132,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
@@ -1135,6 +1182,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dss_q))
@@ -1145,6 +1193,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dss_g))
@@ -1155,6 +1204,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.h, dss_h))
@@ -1165,6 +1215,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.y, dss_y))
@@ -1175,6 +1226,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					dss_n = get_gcry_mpi_ui(ctx.n);
@@ -1204,6 +1256,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							dss_c_ik[i].push_back(tmp);
@@ -1219,6 +1272,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (!mpz_set_gcry_mpi(ctx.xprime_i, dss_xprime_i))
@@ -1229,6 +1283,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 					}
@@ -1245,6 +1300,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						salt.clear();
@@ -1275,6 +1331,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (seskey.size() != keylen)
@@ -1285,6 +1342,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
@@ -1295,6 +1353,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						key = new tmcg_byte_t[keylen], iv = new tmcg_byte_t[ivlen];
@@ -1311,6 +1370,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
@@ -1322,6 +1382,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
@@ -1333,6 +1394,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
@@ -1344,6 +1406,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						gcry_cipher_close(hd);
@@ -1362,6 +1425,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -1373,6 +1437,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, dsa_x, chksum);
@@ -1384,6 +1449,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -1395,6 +1461,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (ctx.s2kconv == 255)
@@ -1407,6 +1474,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
@@ -1418,6 +1486,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 						}
@@ -1431,6 +1500,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							hash_input.clear(), hash.clear();
@@ -1445,6 +1515,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 						}
@@ -1457,6 +1528,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					// create one-to-one mapping based on the stored canonicalized peer list
@@ -1469,6 +1541,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					else if ((ctx.pkalgo == 108) && (capl.size() != dss_qual.size()))
@@ -1479,6 +1552,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					for (size_t i = 0; i < peers.size(); i++)
@@ -1505,6 +1579,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 					}
@@ -1553,6 +1628,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dss_q))
@@ -1563,6 +1639,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dss_g))
@@ -1573,6 +1650,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (ctx.s2kconv == 0)
@@ -1592,6 +1670,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						salt.clear();
@@ -1622,6 +1701,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (seskey.size() != keylen)
@@ -1632,6 +1712,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
@@ -1642,6 +1723,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						key = new tmcg_byte_t[keylen], iv = new tmcg_byte_t[ivlen];
@@ -1658,6 +1740,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
@@ -1669,6 +1752,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
@@ -1680,6 +1764,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
@@ -1691,6 +1776,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						gcry_cipher_close(hd);
@@ -1709,6 +1795,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -1722,6 +1809,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
@@ -1733,6 +1821,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 						}
@@ -1746,6 +1835,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							hash_input.clear(), hash.clear();
@@ -1760,6 +1850,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 						}
@@ -1772,6 +1863,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					// store the whole packet
@@ -1787,6 +1879,7 @@ bool parse_private_key
 					gcry_mpi_release(elg_r);
 					gcry_mpi_release(elg_s);
 					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 					exit(-1);
 				}
 				else
@@ -1844,6 +1937,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dkg_q))
@@ -1854,6 +1948,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dkg_g))
@@ -1864,6 +1959,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.h, dkg_h))
@@ -1874,6 +1970,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					if (!mpz_set_gcry_mpi(ctx.y, dkg_y))
@@ -1884,6 +1981,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					dkg_n = get_gcry_mpi_ui(ctx.n);
@@ -1903,6 +2001,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						dkg_v_i.push_back(tmp);
@@ -1922,6 +2021,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							dkg_c_ik[i].push_back(tmp);
@@ -1938,6 +2038,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (!mpz_set_gcry_mpi(ctx.xprime_i, dkg_xprime_i))
@@ -1948,6 +2049,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 					}
@@ -1963,6 +2065,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						salt.clear();
@@ -1993,6 +2096,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (seskey.size() != keylen)
@@ -2003,6 +2107,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
@@ -2013,6 +2118,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						key = new tmcg_byte_t[keylen], iv = new tmcg_byte_t[ivlen];
@@ -2029,6 +2135,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
@@ -2040,6 +2147,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
@@ -2051,6 +2159,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
@@ -2062,6 +2171,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						gcry_cipher_close(hd);
@@ -2080,6 +2190,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -2091,6 +2202,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, elg_x, chksum);
@@ -2102,6 +2214,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -2113,6 +2226,7 @@ bool parse_private_key
 							gcry_mpi_release(elg_r);
 							gcry_mpi_release(elg_s);
 							cleanup_ctx(ctx);
+							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							exit(-1);
 						}
 						if (ctx.s2kconv == 255)
@@ -2125,6 +2239,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
@@ -2136,6 +2251,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 						}
@@ -2149,6 +2265,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 							hash_input.clear(), hash.clear();
@@ -2163,6 +2280,7 @@ bool parse_private_key
 								gcry_mpi_release(elg_r);
 								gcry_mpi_release(elg_s);
 								cleanup_ctx(ctx);
+								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 								exit(-1);
 							}
 						}
@@ -2175,6 +2293,7 @@ bool parse_private_key
 						gcry_mpi_release(elg_r);
 						gcry_mpi_release(elg_s);
 						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
 					// store the whole packet
@@ -2188,8 +2307,10 @@ bool parse_private_key
 					std::cerr << "WARNING: public-key algorithm not supported; packet ignored" << std::endl;
 				break;
 		}
-		// cleanup allocated buffers
+		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);
+		cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+
 	}
 	if (!secdsa)
 	{

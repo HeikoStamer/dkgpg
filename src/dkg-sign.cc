@@ -297,17 +297,21 @@ void run_instance
 
 	// sign the hash
 	tmcg_byte_t buffer[1024];
-	gcry_mpi_t h;
+	gcry_mpi_t r, s, h;
 	mpz_t dsa_m, dsa_r, dsa_s;
 	size_t buflen = 0;
 	gcry_error_t ret;
+	memset(buffer, 0, sizeof(buffer));
 	for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer))); i++, buflen++)
 		buffer[i] = hash[i];
+	r = gcry_mpi_new(2048);
+	s = gcry_mpi_new(2048);
 	mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
 	ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 	if (ret)
 	{
 		std::cerr << "S_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
+		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -316,6 +320,7 @@ void run_instance
 	if (!mpz_set_gcry_mpi(h, dsa_m))
 	{
 		std::cerr << "S_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
+		gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -329,17 +334,18 @@ void run_instance
 	{
 		std::cerr << "S_" << whoami << ": " << "tDSS Sign() failed" << std::endl;
 		std::cerr << "S_" << whoami << ": log follows " << std::endl << err_log_sign.str();
+		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
 	if (opt_verbose > 1)
-		std::cout << "S_" << whoami << ": log follows " << std::endl << err_log_sign.str();
-	gcry_mpi_t r, s;
+		std::cout << "S_" << whoami << ": log follows " << std::endl << err_log_sign.str(); 
 	if (!mpz_get_gcry_mpi(r, dsa_r))
 	{
 		std::cerr << "S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
+		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -348,7 +354,7 @@ void run_instance
 	if (!mpz_get_gcry_mpi(s, dsa_s))
 	{
 		std::cerr << "S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
-		gcry_mpi_release(r);
+		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -356,8 +362,7 @@ void run_instance
 	}
 	tmcg_octets_t sig;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(trailer, left, r, s, sig);
-	gcry_mpi_release(r);
-	gcry_mpi_release(s);
+	gcry_mpi_release(r), gcry_mpi_release(s);
 	mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 
 	// at the end: deliver some more rounds for still waiting parties

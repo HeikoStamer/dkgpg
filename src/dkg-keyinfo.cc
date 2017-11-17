@@ -413,39 +413,33 @@ int main
 			gcry_mpi_t p, q, g, h, y, n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
 			std::vector<gcry_mpi_t> qual, x_rvss_qual;
 			std::vector< std::vector<gcry_mpi_t> > c_ik;
+			p = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(p, dss->p))
 			{
 				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for p" << std::endl;
+				gcry_mpi_release(p);
 				if (sub.size() && (dkg != NULL))
 					delete dkg;
 				delete dss;
 				release_mpis();
 				return -1;
 			}
+			q = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(q, dss->q))
 			{
 				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for q" << std::endl;
-				gcry_mpi_release(p);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;	
-			}
-			if (!mpz_get_gcry_mpi(g, dss->g))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for g" << std::endl;
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				if (sub.size() && (dkg != NULL))
 					delete dkg;
 				delete dss;
 				release_mpis();
-				return -1;
+				return -1;	
 			}
-			if (!mpz_get_gcry_mpi(h, dss->h))
+			g = gcry_mpi_new(2048);
+			if (!mpz_get_gcry_mpi(g, dss->g))
 			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for h" << std::endl;
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for g" << std::endl;
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
@@ -455,9 +449,10 @@ int main
 				release_mpis();
 				return -1;
 			}
-			if (!mpz_get_gcry_mpi(y, dss->y))
+			h = gcry_mpi_new(2048);
+			if (!mpz_get_gcry_mpi(h, dss->h))
 			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for y" << std::endl;
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for h" << std::endl;
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
@@ -468,9 +463,10 @@ int main
 				release_mpis();
 				return -1;
 			}
-			if (!mpz_get_gcry_mpi(x_i, dss->x_i))
+			y = gcry_mpi_new(2048);
+			if (!mpz_get_gcry_mpi(y, dss->y))
 			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for x_i" << std::endl;
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for y" << std::endl;
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
@@ -482,6 +478,23 @@ int main
 				release_mpis();
 				return -1;
 			}
+			x_i = gcry_mpi_new(2048);
+			if (!mpz_get_gcry_mpi(x_i, dss->x_i))
+			{
+				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for x_i" << std::endl;
+				gcry_mpi_release(p);
+				gcry_mpi_release(q);
+				gcry_mpi_release(g);
+				gcry_mpi_release(h);
+				gcry_mpi_release(y);
+				gcry_mpi_release(x_i);
+				if (sub.size() && (dkg != NULL))
+					delete dkg;
+				delete dss;
+				release_mpis();
+				return -1;
+			}
+			xprime_i = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 			{
 				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for xprime_i" << std::endl;
@@ -491,6 +504,7 @@ int main
 				gcry_mpi_release(h);
 				gcry_mpi_release(y);
 				gcry_mpi_release(x_i);
+				gcry_mpi_release(xprime_i);
 				if (sub.size() && (dkg != NULL))
 					delete dkg;
 				delete dss;
@@ -518,6 +532,7 @@ int main
 				for (size_t k = 0; k <= dss->t; k++)
 				{
 					gcry_mpi_t tmp;
+					tmp = gcry_mpi_new(2048);
 					if (!mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
 					{
 						std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
@@ -540,6 +555,7 @@ int main
 						for (size_t jj = 0; jj < c_ik.size(); jj++)
 							for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
 								gcry_mpi_release(c_ik[jj][kk]);
+						gcry_mpi_release(tmp);
 						if (sub.size() && (dkg != NULL))
 							delete dkg;
 						delete dss;

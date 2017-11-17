@@ -356,14 +356,14 @@ void run_instance
 		mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, dsa_x, vtmf->q); // choose private key for DSA
 		mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p); // compute public key for DSA
 	}
-	if (!mpz_get_gcry_mpi(&p, vtmf->p))
+	if (!mpz_get_gcry_mpi(p, vtmf->p))
 	{
 		std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for p" << std::endl;
 		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	if (!mpz_get_gcry_mpi(&q, vtmf->q))
+	if (!mpz_get_gcry_mpi(q, vtmf->q))
 	{
 		std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for q" << std::endl;
 		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -371,7 +371,7 @@ void run_instance
 		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	if (!mpz_get_gcry_mpi(&g, vtmf->g))
+	if (!mpz_get_gcry_mpi(g, vtmf->g))
 	{
 		std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for g" << std::endl;
 		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -380,7 +380,7 @@ void run_instance
 		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	if (!mpz_get_gcry_mpi(&y, dsa_y))
+	if (!mpz_get_gcry_mpi(y, dsa_y))
 	{
 		std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_y" << std::endl;
 		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -390,7 +390,7 @@ void run_instance
 		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	if (!mpz_get_gcry_mpi(&x, dsa_x))
+	if (!mpz_get_gcry_mpi(x, dsa_x))
 	{
 		std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_x" << std::endl;
 		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -425,7 +425,7 @@ void run_instance
 		std::vector<gcry_mpi_t> qual, x_rvss_qual;
 		std::vector<std::string> capl; // canonicalized peer list
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
-		if (!mpz_get_gcry_mpi(&h, dss->h))
+		if (!mpz_get_gcry_mpi(h, dss->h))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->h" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -462,7 +462,7 @@ void run_instance
 			for (size_t k = 0; k <= dss->t; k++)
 			{
 				gcry_mpi_t tmp;
-				if (!mpz_get_gcry_mpi(&tmp, dss->dkg->x_rvss->C_ik[j][k]))
+				if (!mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
 				{
 					std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
 					mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -491,7 +491,7 @@ void run_instance
 				c_ik[j].push_back(tmp);
 			}
 		}
-		if (!mpz_get_gcry_mpi(&x_i, dss->x_i))
+		if (!mpz_get_gcry_mpi(x_i, dss->x_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->x_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -517,7 +517,7 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		if (!mpz_get_gcry_mpi(&xprime_i, dss->xprime_i))
+		if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->xprime_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -639,7 +639,7 @@ void run_instance
 		}
 		if (opt_verbose > 1)
 			std::cout << "P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
-		if (!mpz_get_gcry_mpi(&r, dsa_r))
+		if (!mpz_get_gcry_mpi(r, dsa_r))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -652,7 +652,7 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		if (!mpz_get_gcry_mpi(&s, dsa_s))
+		if (!mpz_get_gcry_mpi(s, dsa_s))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -695,7 +695,7 @@ void run_instance
 	gcry_mpi_release(y);
 	if (T > 0)
 	{
-		if (!mpz_get_gcry_mpi(&y, dkg->y)) // computed by DKG (cf. LibTMCG source code)
+		if (!mpz_get_gcry_mpi(y, dkg->y)) // computed by DKG (cf. LibTMCG source code)
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->y" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -711,7 +711,7 @@ void run_instance
 		gcry_mpi_t h, n, t, i, qualsize, x_i, xprime_i;
 		std::vector<gcry_mpi_t> qual, v_i;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
-		if (!mpz_get_gcry_mpi(&h, dkg->h))
+		if (!mpz_get_gcry_mpi(h, dkg->h))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->h" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -735,7 +735,7 @@ void run_instance
 		v_i.resize(dkg->n);
 		for (size_t j = 0; j < v_i.size(); j++)
 		{
-			if (!mpz_get_gcry_mpi(&v_i[j], dkg->v_i[j]))
+			if (!mpz_get_gcry_mpi(v_i[j], dkg->v_i[j]))
 			{
 				std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->v_i[j]" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -764,7 +764,7 @@ void run_instance
 			for (size_t k = 0; k <= dkg->t; k++)
 			{
 				gcry_mpi_t tmp;
-				if (!mpz_get_gcry_mpi(&tmp, dkg->C_ik[j][k]))
+				if (!mpz_get_gcry_mpi(tmp, dkg->C_ik[j][k]))
 				{
 					std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->C_ik[j][k]" << std::endl;
 					mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -789,7 +789,7 @@ void run_instance
 				c_ik[j].push_back(tmp);
 			}
 		}
-		if (!mpz_get_gcry_mpi(&x_i, dkg->x_i))
+		if (!mpz_get_gcry_mpi(x_i, dkg->x_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->x_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -813,7 +813,7 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		if (!mpz_get_gcry_mpi(&xprime_i, dkg->xprime_i))
+		if (!mpz_get_gcry_mpi(xprime_i, dkg->xprime_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->xprime_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -917,7 +917,7 @@ void run_instance
 			}
 			if (opt_verbose > 1)
 				std::cout << "P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
-			if (!mpz_get_gcry_mpi(&r, dsa_r))
+			if (!mpz_get_gcry_mpi(r, dsa_r))
 			{
 				std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -928,7 +928,7 @@ void run_instance
 				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
-			if (!mpz_get_gcry_mpi(&s, dsa_s))
+			if (!mpz_get_gcry_mpi(s, dsa_s))
 			{
 				std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);

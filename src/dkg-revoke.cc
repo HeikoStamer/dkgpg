@@ -303,9 +303,6 @@ void run_instance
 	mpz_t dsa_m, dsa_r, dsa_s;
 	size_t buflen = 0;
 	gcry_error_t ret;
-	h = gcry_mpi_new(2048);
-	r = gcry_mpi_new(2048);
-	s = gcry_mpi_new(2048);
 	mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
 	memset(buffer, 0, sizeof(buffer));
 	for (size_t i = 0; ((i < hash_pub.size()) && (i < sizeof(buffer))); i++, buflen++)
@@ -314,9 +311,6 @@ void run_instance
 	if (ret)
 	{
 		std::cerr << "R_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
-		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -326,13 +320,12 @@ void run_instance
 	{
 		std::cerr << "R_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
 		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
+	gcry_mpi_release(h);
 	std::stringstream err_log_sign;
 	if (opt_verbose)
 		std::cout << "R_" << whoami << ": dss.Sign() on pub" << std::endl;
@@ -340,9 +333,6 @@ void run_instance
 	{
 		std::cerr << "R_" << whoami << ": " << "tDSS Sign() on pub failed" << std::endl;
 		std::cerr << "R_" << whoami << ": log follows " << std::endl << err_log_sign.str();
-		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -350,29 +340,26 @@ void run_instance
 	}
 	if (opt_verbose > 1)
 		std::cout << "R_" << whoami << ": log follows " << std::endl << err_log_sign.str();
-	if (!mpz_get_gcry_mpi(&r, dsa_r))
+	if (!mpz_get_gcry_mpi(r, dsa_r))
 	{
 		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
-		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
-	if (!mpz_get_gcry_mpi(&s, dsa_s))
+	if (!mpz_get_gcry_mpi(s, dsa_s))
 	{
 		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
-		gcry_mpi_release(h);
 		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(trailer_pub, left_pub, r, s, revsig_pub);
+	gcry_mpi_release(r);
+	gcry_mpi_release(s);
 	buflen = 0;
 	memset(buffer, 0, sizeof(buffer));
 	for (size_t i = 0; ((i < hash_sub.size()) && (i < sizeof(buffer))); i++, buflen++)
@@ -381,9 +368,6 @@ void run_instance
 	if (ret)
 	{
 		std::cerr << "R_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
-		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -393,13 +377,12 @@ void run_instance
 	{
 		std::cerr << "R_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
 		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
+	gcry_mpi_release(h);
 	std::stringstream err_log_sign2;
 	if (opt_verbose)
 		std::cout << "R_" << whoami << ": dss.Sign() on sub" << std::endl;
@@ -407,9 +390,6 @@ void run_instance
 	{
 		std::cerr << "R_" << whoami << ": " << "tDSS Sign() on sub failed" << std::endl;
 		std::cerr << "R_" << whoami << ": log follows " << std::endl << err_log_sign2.str();
-		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -417,30 +397,24 @@ void run_instance
 	}
 	if (opt_verbose > 1)
 		std::cout << "R_" << whoami << ": log follows " << std::endl << err_log_sign2.str();
-	if (!mpz_get_gcry_mpi(&r, dsa_r))
+	if (!mpz_get_gcry_mpi(r, dsa_r))
 	{
 		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
-		gcry_mpi_release(h);
-		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
-	if (!mpz_get_gcry_mpi(&s, dsa_s))
+	if (!mpz_get_gcry_mpi(s, dsa_s))
 	{
 		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
-		gcry_mpi_release(h);
 		gcry_mpi_release(r);
-		gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(trailer_sub, left_sub, r, s, revsig_sub);
-	gcry_mpi_release(h);
 	gcry_mpi_release(r);
 	gcry_mpi_release(s);
 	mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);

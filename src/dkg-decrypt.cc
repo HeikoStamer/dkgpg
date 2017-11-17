@@ -467,8 +467,7 @@ bool combine_decryption_shares
 		}
 
 		// copy the result from R to gk
-		gcry_mpi_release(gk);
-		if (!mpz_get_gcry_mpi(&gk, R))
+		if (!mpz_get_gcry_mpi(gk, R))
 		{
 			std::cerr << "ERROR: converting interpolated result failed" << std::endl;
 			exit(-1);

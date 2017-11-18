@@ -605,6 +605,7 @@ void run_instance
 		tmcg_byte_t buffer[1024];
 		gcry_mpi_t h;
 		size_t buflen = 0;
+		memset(buffer, 0, sizeof(buffer));
 		for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer))); i++, buflen++)
 			buffer[i] = hash[i];
 		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);

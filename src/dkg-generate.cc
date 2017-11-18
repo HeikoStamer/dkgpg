@@ -776,8 +776,8 @@ void run_instance
 				gcry_mpi_release(qualsize);
 				for (size_t jj = 0; jj < qual.size(); jj++)
 					gcry_mpi_release(qual[jj]);
-				for (size_t j = 0; j < v_i.size(); j++)
-					gcry_mpi_release(v_i[j]);
+				for (size_t jj = 0; jj < v_i.size(); jj++)
+					gcry_mpi_release(v_i[jj]);
 				for (size_t jj = 0; jj < c_ik.size(); jj++)
 					for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
 						gcry_mpi_release(c_ik[jj][kk]);
@@ -809,8 +809,8 @@ void run_instance
 					gcry_mpi_release(qualsize);
 					for (size_t jj = 0; jj < qual.size(); jj++)
 						gcry_mpi_release(qual[jj]);
-					for (size_t j = 0; j < v_i.size(); j++)
-						gcry_mpi_release(v_i[j]);
+					for (size_t jj = 0; jj < v_i.size(); jj++)
+						gcry_mpi_release(v_i[jj]);
 					for (size_t jj = 0; jj < c_ik.size(); jj++)
 						for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
 							gcry_mpi_release(c_ik[jj][kk]);

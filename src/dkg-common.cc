@@ -637,7 +637,7 @@ bool parse_public_key
 		return false;
 	}
 	// parse the public key according to OpenPGP
-	bool pubdsa = false, sigdsa = false, subelg = false, sigelg = false;
+	bool pubdsa = false, sigdsa = false, subelg = false, sigelg = false, uid = false;
 	tmcg_byte_t ptag = 0xFF;
 	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
 	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
@@ -809,12 +809,17 @@ bool parse_public_key
 					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " not supported" << std::endl;
 				break;
 			case 13: // User ID Packet
+				if (uid)
+					std::cerr << "WARNING: more than one uid packet found; using last to verify signature" << std::endl;
+				uid = true;
 				userid = "";
 				for (size_t i = 0; i < sizeof(ctx.uid); i++)
+				{
 					if (ctx.uid[i])
 						userid += ctx.uid[i];
 					else
 						break;
+				}
 				break;
 			case 14: // Public-Subkey Packet
 				if ((ctx.pkalgo == 16) && !subelg)

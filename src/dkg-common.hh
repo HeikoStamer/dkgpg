@@ -63,7 +63,8 @@
 		tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out);
 	bool parse_public_key
 		(const std::string &in,
-		time_t &keycreationtime_out, time_t &keyexpirationtime_out);
+		time_t &keycreationtime_out, time_t &keyexpirationtime_out,
+		bool elg_required = true);
 	bool parse_private_key
 		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out,

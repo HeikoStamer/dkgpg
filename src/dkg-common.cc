@@ -624,14 +624,23 @@ bool parse_signature
 }
 
 bool parse_public_key
-	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out)
+	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out, bool elg_required)
 {
+	// decode ASCII Armor
+	tmcg_octets_t pkts;
+	tmcg_byte_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	if (opt_verbose)
+		std::cout << "ArmorDecode() = " << (int)atype << std::endl;
+	if (atype != 6)
+	{
+		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
+		return false;
+	}
 	// parse the public key according to OpenPGP
 	bool pubdsa = false, sigdsa = false, subelg = false, sigelg = false;
-	tmcg_byte_t atype = 0, ptag = 0xFF;
+	tmcg_byte_t ptag = 0xFF;
 	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
 	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
-	tmcg_octets_t pkts;
 	tmcg_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd, hash;
 	time_t dsa_creation = 0, elg_creation = 0;
 	gcry_mpi_t dsa_r, dsa_s, elg_r, elg_s;
@@ -642,18 +651,6 @@ bool parse_public_key
 	dsa_s = gcry_mpi_new(2048);
 	elg_r = gcry_mpi_new(2048);
 	elg_s = gcry_mpi_new(2048);
-	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
-	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << std::endl;
-	if (atype != 6)
-	{
-		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
-		gcry_mpi_release(dsa_r);
-		gcry_mpi_release(dsa_s);
-		gcry_mpi_release(elg_r);
-		gcry_mpi_release(elg_s);
-		return false;
-	}
 	while (pkts.size() && ptag)
 	{
 		tmcg_openpgp_packet_ctx ctx;
@@ -856,7 +853,7 @@ bool parse_public_key
 		gcry_mpi_release(elg_s);
 		return false;
 	}
-	if (!subelg)
+	if (!subelg && elg_required)
 	{
 		std::cerr << "ERROR: no ElGamal subkey found" << std::endl;
 		gcry_mpi_release(dsa_r);
@@ -874,7 +871,7 @@ bool parse_public_key
 		gcry_mpi_release(elg_s);
 		return false;
 	}
-	if (!sigelg)
+	if (!sigelg && elg_required)
 	{
 		std::cerr << "ERROR: no self-signature for ElGamal subkey found" << std::endl;
 		gcry_mpi_release(dsa_r);
@@ -885,7 +882,7 @@ bool parse_public_key
 	}
 	
 	// build keys, check key usage and self-signatures
-	tmcg_octets_t dsa_trailer, elg_trailer, dsa_left, elg_left;
+	tmcg_octets_t dsa_trailer, dsa_left;
 	ret = gcry_sexp_build(&dsakey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
 	if (ret)
 	{
@@ -925,48 +922,48 @@ bool parse_public_key
 		gcry_mpi_release(elg_s);
 		return false;
 	}
-	flags = 0;
-	for (size_t i = 0; i < sizeof(elg_keyflags); i++)
-	{
-		if (elg_keyflags[i])
-			flags = (flags << 8) + elg_keyflags[i];
-		else
-			break;
-	}
-	if ((flags & 0x04) != 0x04)
-	{
-		std::cerr << "ERROR: ElGamal subkey cannot used to encrypt communications" << std::endl;
-		gcry_sexp_release(dsakey);
-		gcry_mpi_release(dsa_r);
-		gcry_mpi_release(dsa_s);
-		gcry_mpi_release(elg_r);
-		gcry_mpi_release(elg_s);
-		return false;
-	}
-	elg_trailer.push_back(4); // only V4 format supported
-	elg_trailer.push_back(elg_sigtype);
-	elg_trailer.push_back(elg_pkalgo);
-	elg_trailer.push_back(elg_hashalgo);
-	elg_trailer.push_back(elg_hspd.size() >> 8); // length of hashed subpacket data
-	elg_trailer.push_back(elg_hspd.size());
-	elg_trailer.insert(elg_trailer.end(), elg_hspd.begin(), elg_hspd.end());
-	hash.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
-	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);
-	if (ret)
-	{
-		std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
-			gcry_strerror(ret) <<")" << std::endl;
-		gcry_sexp_release(dsakey);
-		gcry_mpi_release(dsa_r);
-		gcry_mpi_release(dsa_s);
-		gcry_mpi_release(elg_r);
-		gcry_mpi_release(elg_s);
-		return false;
-	}
-	gcry_sexp_release(dsakey);
 	gcry_mpi_release(dsa_r);
 	gcry_mpi_release(dsa_s);
+	if (elg_required)
+	{
+		tmcg_octets_t elg_trailer, elg_left;
+		flags = 0;
+		for (size_t i = 0; i < sizeof(elg_keyflags); i++)
+		{
+			if (elg_keyflags[i])
+				flags = (flags << 8) + elg_keyflags[i];
+			else
+				break;
+		}
+		if ((flags & 0x04) != 0x04)
+		{
+			std::cerr << "ERROR: ElGamal subkey cannot used to encrypt communications" << std::endl;
+			gcry_sexp_release(dsakey);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
+			return false;
+		}
+		elg_trailer.push_back(4); // only V4 format supported
+		elg_trailer.push_back(elg_sigtype);
+		elg_trailer.push_back(elg_pkalgo);
+		elg_trailer.push_back(elg_hashalgo);
+		elg_trailer.push_back(elg_hspd.size() >> 8); // length of hashed subpacket data
+		elg_trailer.push_back(elg_hspd.size());
+		elg_trailer.insert(elg_trailer.end(), elg_hspd.begin(), elg_hspd.end());
+		hash.clear();
+		CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);
+		if (ret)
+		{
+			std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) <<")" << std::endl;
+			gcry_sexp_release(dsakey);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
+			return false;
+		}
+	}
+	gcry_sexp_release(dsakey);
 	gcry_mpi_release(elg_r);
 	gcry_mpi_release(elg_s);
 	return true;

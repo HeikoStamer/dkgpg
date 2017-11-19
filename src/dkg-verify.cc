@@ -130,7 +130,7 @@ int main
 		return -1;
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0;
-	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime))
+	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, false))
 	{
 		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
 		release_mpis();

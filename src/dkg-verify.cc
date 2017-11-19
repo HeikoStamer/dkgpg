@@ -108,16 +108,21 @@ int main
 	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 1;
 #endif
+	// check command line arguments
 	if ((kfilename.length() == 0) || (ifilename.length() == 0))
 	{
 		std::cerr << "ERROR: some filename missing; usage: " << usage << std::endl;
 		return -1;
 	}
-	else if (!init_libTMCG())
+
+	// initialize LibTMCG
+	if (!init_libTMCG())
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
 	}
+	if (opt_verbose)
+		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	// read and parse the public key
 	std::string armored_pubkey;

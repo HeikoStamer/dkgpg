@@ -91,6 +91,8 @@ int main
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
 	}
+	if (opt_verbose)
+		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	if (fips.length()) // generate primes and generator according to FIPS 186-4?
 	{

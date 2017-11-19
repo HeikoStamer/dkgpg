@@ -657,11 +657,19 @@ int main
 	peers.push_back("Test3");
 	opt_verbose = 1;
 #endif
+
+	// check command line arguments
+	if ((opt_hostname != NULL) && (opt_passwords == NULL))
+	{
+		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
+		return -1;
+	}
 	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
+
 	// canonicalize peer list
 	std::sort(peers.begin(), peers.end());
 	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
@@ -671,22 +679,22 @@ int main
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
 	}
-	if (!init_libTMCG())
-	{
-		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
-		return -1;
-	}
-	if ((opt_hostname != NULL) && (opt_passwords == NULL))
-	{
-		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
-		return -1;
-	}
 	if (opt_verbose)
 	{
 		std::cout << "INFO: canonicalized peer list = " << std::endl;
 		for (size_t i = 0; i < peers.size(); i++)
 			std::cout << peers[i] << std::endl;
 	}
+
+	// initialize LibTMCG
+	if (!init_libTMCG())
+	{
+		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		return -1;
+	}
+	if (opt_verbose)
+		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+
 	// initialize return code
 	int ret = 0;
 	// create underlying point-to-point channels, if built-in TCP/IP service requested

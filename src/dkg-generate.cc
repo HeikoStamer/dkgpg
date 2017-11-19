@@ -1615,11 +1615,19 @@ int main
 		"ALNb15Fcj550V40uidU5fxkgvlK2Orwbg|8|DKGPGTESTSUITEDKGPGTESTSU"
 		"ITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUIU2|1v|1k|";
 #endif
+
+	// check command line arguments
+	if ((opt_hostname != NULL) && (opt_passwords == NULL))
+	{
+		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
+		return -1;
+	}
 	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
+
 	// canonicalize peer list and setup threshold values
 	std::sort(peers.begin(), peers.end());
 	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
@@ -1631,16 +1639,23 @@ int main
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
 	}
+	if (opt_verbose)
+	{
+		std::cout << "INFO: canonicalized peer list = " << std::endl;
+		for (size_t i = 0; i < peers.size(); i++)
+			std::cout << peers[i] << std::endl;
+	}
+
+	// initialize LibTMCG
 	if (!init_libTMCG())
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
 	}
-	if ((opt_hostname != NULL) && (opt_passwords == NULL))
-	{
-		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
-		return -1;
-	}
+	if (opt_verbose)
+		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+
+	// read userid and passphrase
 #ifdef DKGPG_TESTSUITE
 	userid = "TestGroup <testing@localhost>";
 	passphrase = "Test";
@@ -1663,12 +1678,7 @@ int main
 	}
 	while (passphrase != passphrase_check);
 #endif
-	if (opt_verbose)
-	{
-		std::cout << "INFO: canonicalized peer list = " << std::endl;
-		for (size_t i = 0; i < peers.size(); i++)
-			std::cout << peers[i] << std::endl;
-	}
+
 #ifdef GNUNET
 	if (gnunet_opt_t_resilience != DKGPG_MAX_N)
 		T = gnunet_opt_t_resilience; // get value of T from GNUnet options

@@ -116,6 +116,8 @@ int main
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 1;
 #endif
+
+	// check command line arguments
 	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no KEYFILE given as argument; usage: " << argv[0] << " KEYFILE" << std::endl;
@@ -126,11 +128,15 @@ int main
 		std::cerr << "ERROR: too many arguments given" << std::endl;
 		return -1;
 	}
+
+	// initialize LibTMCG
 	if (!init_libTMCG())
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
 	}
+	if (opt_verbose)
+		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	// read and parse the public key
 	std::string armored_pubkey;

@@ -1122,11 +1122,19 @@ int main
 	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 1;
 #endif
+
+	// check command line arguments
+	if ((opt_hostname != NULL) && (opt_passwords == NULL))
+	{
+		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
+		return -1;
+	}
 	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
+
 	// canonicalize peer list
 	std::sort(peers.begin(), peers.end());
 	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
@@ -1141,16 +1149,23 @@ int main
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
 	}
+	if (opt_verbose)
+	{
+		std::cout << "INFO: canonicalized peer list = " << std::endl;
+		for (size_t i = 0; i < peers.size(); i++)
+			std::cout << peers[i] << std::endl;
+	}
+
+	// initialize LibTMCG
 	if (!init_libTMCG())
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
 	}
-	if ((opt_hostname != NULL) && (opt_passwords == NULL))
-	{
-		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
-		return -1;
-	}
+	if (opt_verbose)
+		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+
+	// read message
 	if (opt_ifilename != NULL)
 	{
 		if (!read_message(opt_ifilename, armored_message))
@@ -1164,12 +1179,8 @@ int main
 			armored_message += line + "\r\n";
 		std::cin.clear();
 	}
-	if (opt_verbose)
-	{
-		std::cout << "INFO: canonicalized peer list = " << std::endl;
-		for (size_t i = 0; i < peers.size(); i++)
-			std::cout << peers[i] << std::endl;
-	}
+
+	// start non-interactive variant
 	if (nonint)
 	{
 		size_t idx;

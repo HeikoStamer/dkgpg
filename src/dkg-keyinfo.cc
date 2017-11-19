@@ -117,25 +117,27 @@ int main
 	peers.push_back("Test1");
 	opt_verbose = 1;
 #endif
+
+	// check command line arguments
 	if (peers.size() < 1)
 	{
 		std::cerr << "ERROR: no peer given as argument; usage: " << usage << std::endl;
 		return -1;
 	}
-	// canonicalize peer list
-	std::sort(peers.begin(), peers.end());
-	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
-	peers.resize(std::distance(peers.begin(), it));
 	if (peers.size() != 1)
 	{
-		std::cerr << "ERROR: too few or too many peers given" << std::endl;
+		std::cerr << "ERROR: too many peers given" << std::endl;
 		return -1;
 	}
+
+	// initialize LibTMCG
 	if (!init_libTMCG())
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
 	}
+	if (opt_verbose)
+		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	// read and parse the private key
 	std::string armored_seckey, thispeer = peers[0];

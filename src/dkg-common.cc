@@ -272,13 +272,13 @@ void cleanup_containers
 bool parse_message
 	(const std::string &in, tmcg_octets_t &enc_out, bool &have_seipd_out)
 {
-	// parse encrypted message
+	// decode ASCII armor and parse encrypted message
 	bool have_pkesk = false, have_sed = false;
 	tmcg_byte_t atype = 0, ptag = 0xFF;
 	tmcg_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << std::endl;
+		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != 1)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
@@ -297,7 +297,7 @@ bool parse_message
 			std::cout << "PacketDecode() = " << (int)ptag;
 		if (!ptag)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
 			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			return false;
@@ -469,7 +469,7 @@ bool decrypt_message
 			std::cout << "PacketDecode() = " << (int)ptag;
 		if (!ptag)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << litmdc.size() << std::endl;
 			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			return false;
@@ -543,13 +543,13 @@ bool decrypt_message
 bool parse_signature
 	(const std::string &in, tmcg_byte_t stype, time_t &sigcreationtime_out, time_t &sigexpirationtime_out, tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out)
 {
-	// parse the signature according to OpenPGP
+	// decode ASCII armor and parse the signature according to OpenPGP
 	bool sig = false;
 	tmcg_byte_t atype = 0, ptag = 0xFF;
 	tmcg_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << std::endl;
+		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != 2)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
@@ -565,7 +565,7 @@ bool parse_signature
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
 		if (!ptag)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
 			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
@@ -630,7 +630,7 @@ bool parse_public_key
 	tmcg_octets_t pkts;
 	tmcg_byte_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << std::endl;
+		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != 6)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
@@ -661,7 +661,7 @@ bool parse_public_key
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
 		if (!ptag)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
 			gcry_mpi_release(dsa_r);
 			gcry_mpi_release(dsa_s);
 			gcry_mpi_release(elg_r);
@@ -972,13 +972,22 @@ bool parse_public_key
 bool parse_private_key
 	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out, std::vector<std::string> &capl_out)
 {
+	// decode ASCII Armor
+	tmcg_octets_t pkts;
+	tmcg_byte_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	if (opt_verbose)
+		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
+	if (atype != 5)
+	{
+		std::cerr << "ERROR: wrong type of ASCII Armor found" << std::endl;
+		exit(-1);
+	}
 	// parse the private key according to OpenPGP
 	bool secdsa = false, sigdsa = false, ssbelg = false, sigelg = false;
-	tmcg_byte_t atype = 0, ptag = 0xFF;
+	tmcg_byte_t ptag = 0xFF;
 	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
 	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
 	tmcg_byte_t *key, *iv;
-	tmcg_octets_t pkts;
 	tmcg_octets_t seskey, salt, mpis, hash_input, hash, pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
 	gcry_cipher_hd_t hd;
 	gcry_error_t ret;
@@ -993,14 +1002,6 @@ bool parse_private_key
 	dsa_s = gcry_mpi_new(2048);
 	elg_r = gcry_mpi_new(2048);
 	elg_s = gcry_mpi_new(2048);
-	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
-	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << std::endl;
-	if (atype != 5)
-	{
-		std::cerr << "ERROR: wrong type of ASCII Armor found" << std::endl;
-		exit(-1);
-	}
 	while (pkts.size() && ptag)
 	{
 		tmcg_octets_t current_packet;
@@ -1009,7 +1010,7 @@ bool parse_private_key
 			std::cout << "PacketDecode(pkts.size = " << pkts.size() << ") = " << (int)ptag;
 		if (!ptag)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed" << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
 			gcry_mpi_release(dsa_r);
 			gcry_mpi_release(dsa_s);
 			gcry_mpi_release(elg_r);

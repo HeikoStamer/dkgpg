@@ -19,14 +19,14 @@ Introduction
   Using well-established multi-party protocols a shared private key and a
   common public key (DSA/ElGamal) is generated. Then further interactive
   protocols perform the private operations like decryption and signing of
-  messages, provided that a previously defined threshold of parties/devices
+  files, provided that a previously defined threshold of parties/devices
   take part in the distributed computation.
 
-  The security is based on the assumption that computing discrete logarithms
-  in large prime order subgroups of Zp is hard. The current implementation
-  is in experimental state and should NOT be used in production environments.
-  Details about the implementation can be found in these presentation slides: 
-  http://www.nongnu.org/libtmcg/dg81_slides.pdf
+  The security is based on the well-established assumption that computing
+  discrete logarithms in large prime order subgroups of Zp is hard. The
+  current implementation is in experimental state and should NOT be used in
+  production environments. Some details about the implementation can be found
+  in these presentation slides: http://www.nongnu.org/libtmcg/dg81_slides.pdf
 
   DKGPG is Free Software according to the definition of the Free Software
   Foundation. The source code is released under the GNU General Public License.
@@ -35,12 +35,12 @@ Overview
 --------
   Distributed Privacy Guard contains a bunch of command-line programs: 
   The program dkg-generate provides an implementation for DSA/DSS and the
-  ElGamal cryptosystem. For key generation it needs a lot of strong quality
-  randomness (cf. D. Eastlake, J. Schiller, and S. Crocker: Randomness
-  Requirements for Security, Network Working Group, Request for Comments: 4086,
-  June 2005) obtained from the GNU Crypto Library (libgcrypt), that means, the
-  execution will slow down or even fail on systems (e.g. headless servers)
-  where only low entropy sources for /dev/random are available.
+  ElGamal cryptosystem. For key generation and refresh it needs a lot of strong
+  quality randomness (cf. D. Eastlake, J. Schiller, and S. Crocker: Randomness
+  Requirements for Security, Network Working Group, Request for Comments:
+  4086, June 2005) obtained from the GNU Crypto Library (libgcrypt), that
+  means, the execution will slow down or even fail on systems (e.g. headless
+  servers) where only low entropy sources for /dev/random are available.
 
   Due to the interactiveness of the protocols a lot of messages between
   participating parties have to be exchanged in a secure way. We employ GNUnet,
@@ -77,8 +77,8 @@ Overview
   these lines still not yet released) must be present at configure-time resp.
   compile-time of DKGPG. However, as alternative to GNUnet a simple TCP/IP
   based service for message exchange is included (option "-H <hostname>").
-  With torsocks and some port forwarding rules for a hidden service this allows
-  running the interactive DKGPG programs over the TOR network. 
+  With torsocks and some port forwarding rules for a hidden service (see manual
+  page for details) this allows running DKGPG programs over the TOR network.
 
 Requirements
 ------------

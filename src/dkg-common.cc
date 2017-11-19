@@ -901,6 +901,25 @@ bool parse_public_key
 		else
 			break;
 	}
+	if (opt_verbose)
+	{
+		std::cout << "key flags on primary key: ";
+		if ((flags & 0x01) == 0x01)
+			std::cout << "C"; // The key may be used to certify other keys.
+		if ((flags & 0x02) == 0x02)
+			std::cout << "S"; // The key may be used to sign data.
+		if ((flags & 0x04) == 0x04)
+			std::cout << "E"; // The key may be used encrypt communications.
+		if ((flags & 0x08) == 0x08)
+			std::cout << "e"; // The key may be used encrypt storage.
+		if ((flags & 0x10) == 0x10)
+			std::cout << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
+		if ((flags & 0x20) == 0x20)
+			std::cout << "A"; // The key may be used for authentication.
+		if ((flags & 0x80) == 0x80)
+			std::cout << "M"; // The private component of this key may be in the possession of more than one person.
+		std::cout << std::endl;
+	}
 	dsa_trailer.push_back(4); // only V4 format supported
 	dsa_trailer.push_back(dsa_sigtype);
 	dsa_trailer.push_back(dsa_pkalgo);
@@ -934,6 +953,25 @@ bool parse_public_key
 				flags = (flags << 8) + elg_keyflags[i];
 			else
 				break;
+		}
+		if (opt_verbose)
+		{
+			std::cout << "key flags on subkey: ";
+			if ((flags & 0x01) == 0x01)
+				std::cout << "C"; // The key may be used to certify other keys.
+			if ((flags & 0x02) == 0x02)
+				std::cout << "S"; // The key may be used to sign data.
+			if ((flags & 0x04) == 0x04)
+				std::cout << "E"; // The key may be used encrypt communications.
+			if ((flags & 0x08) == 0x08)
+				std::cout << "e"; // The key may be used encrypt storage.
+			if ((flags & 0x10) == 0x10)
+				std::cout << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
+			if ((flags & 0x20) == 0x20)
+				std::cout << "A"; // The key may be used for authentication.
+			if ((flags & 0x80) == 0x80)
+				std::cout << "M"; // The private component of this key may be in the possession of more than one person.
+			std::cout << std::endl;
 		}
 		if ((flags & 0x04) != 0x04)
 		{

@@ -1587,7 +1587,6 @@ int main
 	peers.push_back("Test4");
 	opt_verbose = 1;
 	opt_e = 3600;
-	opt_W = 10;
 	crs = "fips-crs|WakEheLwRVrxLwVnPIL4OvkErTqHD1qLJoG4chn4YretxGTFWEe1GZ"
 		"tlYucLjgJNDbMIhCj6SHYBepeeGTMfPihjfaauYl1g4lCAACrneCh3ENdlkyC"
 		"WrPmS6XDQmRXnT6vovK9aKym4royUts0C5cu3FG33uZxJKByLmh2rb3e0T5Uj"

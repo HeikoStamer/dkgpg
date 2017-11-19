@@ -124,7 +124,7 @@ int main
 	if (opt_verbose)
 		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
-	// read and parse the public key
+	// read and parse the public key (no ElGamal subkey required)
 	std::string armored_pubkey;
 	if (!read_key_file(kfilename, armored_pubkey))
 		return -1;

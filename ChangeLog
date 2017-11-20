@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2017-11-20] dkg-keyinfo: added some basic checks on p, q, g, and h
 * [2017-11-19] removes requirement of ElGamal subkey for dkg-verify
 * [2017-11-19] release 1.0.1 of Distributed Privacy Guard (DKGPG)
 * [2017-11-16] fixes further memory leaks found by valgrind

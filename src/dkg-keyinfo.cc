@@ -377,7 +377,7 @@ int main
 	}
 	std::cout << "OpenPGP User ID: " << std::endl << "\t";
 	std::cout << userid << std::endl;
-	std::cout << "Security level of domain parameter set: " << std::endl << "\t"; 
+	std::cout << "Security level of domain parameter set: " << std::endl << "\t";
 	std::cout << "|p| = " << mpz_sizeinbase(dss->p, 2L) << " bit, ";
 	std::cout << "|q| = " << mpz_sizeinbase(dss->q, 2L) << " bit, ";
 	std::cout << "|g| = " << mpz_sizeinbase(dss->g, 2L) << " bit";
@@ -424,6 +424,14 @@ int main
 	if (mpz_cmp_ui(pm1, 1L))
 		std::cout << "NOT ";
 	std::cout << "generator of G_q" << std::endl;
+	std::cout << "Security level of public key: " << std::endl << "\t";
+	std::cout << "|y| = " << mpz_sizeinbase(dss->y, 2L) << " bit";
+	std::cout << std::endl << "\t";
+	std::cout << "y is ";
+	mpz_powm(pm1, dss->y, dss->q, dss->p);
+	if (mpz_cmp_ui(pm1, 1L))
+		std::cout << "NOT ";
+	std::cout << "element of G_q" << std::endl;
 	mpz_clear(pm1);
 	if (dss_n != 0)
 	{
@@ -464,7 +472,7 @@ int main
 		std::cout << "|p| = " << mpz_sizeinbase(dkg->p, 2L) << " bit, ";
 		std::cout << "|q| = " << mpz_sizeinbase(dkg->q, 2L) << " bit, ";
 		std::cout << "|g| = " << mpz_sizeinbase(dkg->g, 2L) << " bit, ";
-		std::cout << "|h| = " << mpz_sizeinbase(dkg->h, 2L) << " bit" << std::endl;
+		std::cout << "|h| = " << mpz_sizeinbase(dkg->h, 2L) << " bit" << std::endl << "\t";
 		std::cout << "p is ";
 		if (!mpz_probab_prime_p(dkg->p, TMCG_MR_ITERATIONS))
 			std::cout << "NOT ";
@@ -504,6 +512,14 @@ int main
 		if (mpz_cmp_ui(pm1, 1L))
 			std::cout << "NOT ";
 		std::cout << "generator of G_q" << std::endl;
+		std::cout << "Security level of public key: " << std::endl << "\t";
+		std::cout << "|y| = " << mpz_sizeinbase(dkg->y, 2L) << " bit";
+		std::cout << std::endl << "\t";
+		std::cout << "y is ";
+		mpz_powm(pm1, dkg->y, dkg->q, dkg->p);
+		if (mpz_cmp_ui(pm1, 1L))
+			std::cout << "NOT ";
+		std::cout << "element of G_q" << std::endl;
 		mpz_clear(pm1);
 		std::cout << "Threshold parameter set of subkey (DKG): " << std::endl << "\t";
 		std::cout << "n = " << dkg->n << ", t = " << dkg->t << std::endl;

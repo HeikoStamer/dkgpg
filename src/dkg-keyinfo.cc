@@ -432,7 +432,7 @@ int main
 	if (mpz_cmp_ui(pm1, 1L))
 		std::cout << "NOT ";
 	std::cout << "element of G_q" << std::endl << "\t";
-	std::cout << "Legendre symbol (y/p) is " << mpz_legendre(dss->y, dss->p) << std::endl;
+	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss->y, dss->p) << std::endl;
 	mpz_clear(pm1);
 	if (dss_n != 0)
 	{
@@ -521,7 +521,7 @@ int main
 		if (mpz_cmp_ui(pm1, 1L))
 			std::cout << "NOT ";
 		std::cout << "element of G_q" << std::endl << "\t";
-		std::cout << "Legendre symbol (y/p) is " << mpz_legendre(dkg->y, dkg->p) << std::endl;
+		std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dkg->y, dkg->p) << std::endl;
 		mpz_clear(pm1);
 		std::cout << "Threshold parameter set of subkey (DKG): " << std::endl << "\t";
 		std::cout << "n = " << dkg->n << ", t = " << dkg->t << std::endl;

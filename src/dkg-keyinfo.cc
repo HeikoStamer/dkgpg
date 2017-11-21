@@ -55,6 +55,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 int 					opt_verbose = 0;
 
+#define TRIVIAL_SIZE 1024
 #define PRIMES_SIZE 669
 unsigned long int 			primes[] = {
 						2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43,
@@ -432,6 +433,20 @@ int main
 	if (mpz_cmp_ui(pm1, 1L))
 		std::cout << "NOT ";
 	std::cout << "element of G_q" << std::endl << "\t";
+	bool trivial = false;
+	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
+	{
+		mpz_powm_ui(pm1, dss->g, i, dss->p);
+		if (!mpz_cmp(dss->y, pm1))
+		{
+			trivial = true;
+			break;
+		}
+	}
+	if (!trivial)
+		std::cout << "y is not trivial" << std::endl << "\t";
+	else
+		std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some c < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
 	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss->y, dss->p) << std::endl;
 	mpz_clear(pm1);
 	if (dss_n != 0)
@@ -521,6 +536,20 @@ int main
 		if (mpz_cmp_ui(pm1, 1L))
 			std::cout << "NOT ";
 		std::cout << "element of G_q" << std::endl << "\t";
+		trivial = false;
+		for (size_t i = 0; i < TRIVIAL_SIZE; i++)
+		{
+			mpz_powm_ui(pm1, dkg->g, i, dkg->p);
+			if (!mpz_cmp(dkg->y, pm1))
+			{
+				trivial = true;
+				break;
+			}
+		}
+		if (!trivial)
+			std::cout << "y is not trivial" << std::endl << "\t";
+		else
+			std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some c < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
 		std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dkg->y, dkg->p) << std::endl;
 		mpz_clear(pm1);
 		std::cout << "Threshold parameter set of subkey (DKG): " << std::endl << "\t";

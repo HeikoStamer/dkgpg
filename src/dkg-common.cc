@@ -646,7 +646,7 @@ bool parse_public_key
 	gcry_mpi_t dsa_r, dsa_s, elg_r, elg_s;
 	gcry_sexp_t dsakey;
 	gcry_error_t ret;
-	size_t erroff;
+	size_t erroff, pnum = 0;
 	dsa_r = gcry_mpi_new(2048);
 	dsa_s = gcry_mpi_new(2048);
 	elg_r = gcry_mpi_new(2048);
@@ -659,16 +659,27 @@ bool parse_public_key
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
+		++pnum;
 		if (!ptag)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
-			gcry_mpi_release(dsa_r);
-			gcry_mpi_release(dsa_s);
-			gcry_mpi_release(elg_r);
-			gcry_mpi_release(elg_s);
-			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
-			return false; // parsing error detected
+			if (ctx.version == 3)
+			{
+				std::cerr << "WARNING: old OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+				cleanup_ctx(ctx);
+				ptag = 0xFF;
+				continue;
+			}
+			else
+			{
+				std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
+				gcry_mpi_release(dsa_r);
+				gcry_mpi_release(dsa_s);
+				gcry_mpi_release(elg_r);
+				gcry_mpi_release(elg_s);
+				cleanup_ctx(ctx);
+				return false;
+			}
 		}
 		switch (ptag)
 		{
@@ -948,7 +959,7 @@ bool parse_public_key
 	}
 	gcry_mpi_release(dsa_r);
 	gcry_mpi_release(dsa_s);
-	if (elg_required)
+	if (elg_required || (subelg && sigelg))
 	{
 		tmcg_octets_t elg_trailer, elg_left;
 		flags = 0;
@@ -978,7 +989,7 @@ bool parse_public_key
 				std::cout << "M"; // The private component of this key may be in the possession of more than one person.
 			std::cout << std::endl;
 		}
-		if ((flags & 0x04) != 0x04)
+		if (elg_required && ((flags & 0x04) != 0x04))
 		{
 			std::cerr << "ERROR: ElGamal subkey cannot used to encrypt communications" << std::endl;
 			gcry_sexp_release(dsakey);

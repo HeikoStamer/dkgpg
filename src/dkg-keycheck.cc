@@ -23,10 +23,13 @@
 	#include "dkgpg_config.h"
 #endif
 
+#include <iomanip>
 #include <vector>
 #include <map>
 #include <string>
 #include <algorithm>
+#include <cstdio>
+#include <ctime>
 
 #include <libTMCG.hh>
 
@@ -204,7 +207,176 @@ int main
 		return -1;
 	}
 
-// TODO
+	// convert mpis
+	if (!mpz_set_gcry_mpi(dsa_p, dss_p) || !mpz_set_gcry_mpi(dsa_q, dss_q) || !mpz_set_gcry_mpi(dsa_g, dss_g) || !mpz_set_gcry_mpi(dsa_y, dss_y))
+	{
+		std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
+		release_mpis();
+		return -1;
+	}
+	if (!mpz_set_gcry_mpi(elg_p, dkg_p) || !mpz_set_gcry_mpi(elg_g, dkg_g) || !mpz_set_gcry_mpi(elg_y, dkg_y))
+	{
+		std::cerr << "ERROR: cannot convert ElGamal key material" << std::endl;
+		release_mpis();
+		return -1;
+	}
+
+	// show information
+	std::ios oldcoutstate(NULL);
+	oldcoutstate.copyfmt(std::cout);
+	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << std::hex << std::uppercase << "\t";
+	for (size_t i = 0; i < keyid.size(); i++)
+		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)keyid[i] << " ";
+	std::cout << std::dec << std::endl;
+	tmcg_octets_t pub_hashing, fpr;
+	for (size_t i = 6; i < pub.size(); i++)
+		pub_hashing.push_back(pub[i]);
+	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, fpr);
+	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << std::hex << std::uppercase << "\t";
+	for (size_t i = 0; i < fpr.size(); i++)
+		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)fpr[i] << " ";
+	std::cout << std::dec << std::endl;
+	std::cout << "OpenPGP Key Creation Time: " << std::endl << "\t" << ctime(&ckeytime);
+	std::cout << "OpenPGP Key Expiration Time: " << std::endl << "\t";
+	if (ekeytime == 0)
+		std::cout << "undefined" << std::endl;
+	else
+	{
+		ekeytime += ckeytime; // validity period of the key after key creation time
+		std::cout << ctime(&ekeytime);
+	}
+	std::cout << "OpenPGP User ID: " << std::endl << "\t";
+	std::cout << userid << std::endl;
+	std::cout << "Security level of DSA domain parameter set: " << std::endl << "\t";
+	std::cout << "|p| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";
+	std::cout << "|q| = " << mpz_sizeinbase(dss_q, 2L) << " bit, ";
+	std::cout << "|g| = " << mpz_sizeinbase(dss_g, 2L) << " bit";
+	std::cout << std::endl << "\t";
+	std::cout << "p is ";
+	if (!mpz_probab_prime_p(dss_p, TMCG_MR_ITERATIONS))
+		std::cout << "NOT ";
+	std::cout << "probable prime" << std::endl << "\t";
+	mpz_t pm1;
+	mpz_init_set(pm1, dss_p);
+	mpz_sub_ui(pm1, pm1, 1L);
+	std::cout << "(p-1) = ";
+	for (size_t i = 0; i < PRIMES_SIZE; i++)
+	{
+		if (mpz_divisible_ui_p(pm1, primes[i]))
+			std::cout << primes[i] << " * ";
+	}
+	std::cout << "...";
+	if (mpz_divisible_p(pm1, dss_q))
+		std::cout << " * q";
+	std::cout << std::endl << "\t";
+	std::cout << "q is ";
+	if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
+		std::cout << "NOT ";
+	std::cout << "probable prime" << std::endl << "\t";
+	mpz_set(pm1, dss_q);
+	mpz_sub_ui(pm1, pm1, 1L);
+	std::cout << "(q-1) = ";
+	for (size_t i = 0; i < PRIMES_SIZE; i++)
+	{
+		if (mpz_divisible_ui_p(pm1, primes[i]))
+			std::cout << primes[i] << " * ";
+	}
+	std::cout << "..." << std::endl << "\t";
+	std::cout << "g is ";
+	mpz_powm(pm1, dss_g, dss_q, dss_p);
+	if (mpz_cmp_ui(pm1, 1L))
+		std::cout << "NOT ";
+	std::cout << "generator of G_q" << std::endl;
+	std::cout << "Security level of public key: " << std::endl << "\t";
+	std::cout << "|y| = " << mpz_sizeinbase(dss_y, 2L) << " bit";
+	std::cout << std::endl << "\t";
+	std::cout << "y is ";
+	mpz_powm(pm1, dss_y, dss_q, dss_p);
+	if (mpz_cmp_ui(pm1, 1L))
+		std::cout << "NOT ";
+	std::cout << "element of G_q" << std::endl << "\t";
+	bool trivial = false;
+	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
+	{
+		mpz_powm_ui(pm1, dss_g, i, dss_p);
+		if (!mpz_cmp(dss_y, pm1))
+		{
+			trivial = true;
+			break;
+		}
+	}
+	if (!trivial)
+		std::cout << "y is not trivial" << std::endl << "\t";
+	else
+		std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some c < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
+	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss_y, dss_p) << std::endl;
+	mpz_clear(pm1);
+	if (sub.size())
+	{
+		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << std::hex << std::uppercase << "\t";
+		for (size_t i = 0; i < subkeyid.size(); i++)
+			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)subkeyid[i] << " ";
+		std::cout << std::dec << std::endl;
+		tmcg_octets_t sub_hashing, sub_fpr;
+		for (size_t i = 6; i < sub.size(); i++)
+			sub_hashing.push_back(sub[i]);
+		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(sub_hashing, sub_fpr);
+		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << std::hex << std::uppercase << "\t";
+		for (size_t i = 0; i < sub_fpr.size(); i++)
+			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)sub_fpr[i] << " ";
+		std::cout << std::dec << std::endl;
+		std::cout << "Security level of domain parameter set: " << std::endl << "\t"; 
+		std::cout << "|p| = " << mpz_sizeinbase(dkg_p, 2L) << " bit, ";
+		std::cout << "|g| = " << mpz_sizeinbase(dkg_g, 2L) << " bit" << std::endl << "\t";
+		std::cout << "p is ";
+		if (!mpz_probab_prime_p(dkg_p, TMCG_MR_ITERATIONS))
+			std::cout << "NOT ";
+		std::cout << "probable prime" << std::endl << "\t";
+		mpz_init_set(pm1, dkg_p);
+		mpz_sub_ui(pm1, pm1, 1L);
+		std::cout << "(p-1) = ";
+		for (size_t i = 0; i < PRIMES_SIZE; i++)
+		{
+			if (mpz_divisible_ui_p(pm1, primes[i]))
+				std::cout << primes[i] << " * ";
+		}
+		std::cout << "...";
+		if (mpz_divisible_p(pm1, dss_q))
+			std::cout << " * q";
+		std::cout << std::endl << "\t";
+		std::cout << "g is ";
+		mpz_powm(pm1, dkg_g, dss_q, dkg_p);
+		if (mpz_cmp_ui(pm1, 1L))
+			std::cout << "NOT ";
+		std::cout << "generator of G_q" << std::endl;
+		std::cout << "Security level of public key: " << std::endl << "\t";
+		std::cout << "|y| = " << mpz_sizeinbase(dkg_y, 2L) << " bit";
+		std::cout << std::endl << "\t";
+		std::cout << "y is ";
+		mpz_powm(pm1, dkg_y, dss_q, dkg_p);
+		if (mpz_cmp_ui(pm1, 1L))
+			std::cout << "NOT ";
+		std::cout << "element of G_q" << std::endl << "\t";
+		trivial = false;
+		for (size_t i = 0; i < TRIVIAL_SIZE; i++)
+		{
+			mpz_powm_ui(pm1, dkg_g, i, dkg_p);
+			if (!mpz_cmp(dkg_y, pm1))
+			{
+				trivial = true;
+				break;
+			}
+		}
+		if (!trivial)
+			std::cout << "y is not trivial" << std::endl << "\t";
+		else
+			std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some c < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
+		std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dkg_y, dkg_p) << std::endl;
+		mpz_clear(pm1);
+	}
+
+	// restore default formatting
+	std::cout.copyfmt(oldcoutstate);
 
 	// release mpis and keys
 	release_mpis();

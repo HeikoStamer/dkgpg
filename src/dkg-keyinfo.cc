@@ -153,10 +153,20 @@ int main
 		std::string arg = argv[i+1];
 		if (arg.find("-m") == 0)
 		{
-			size_t idx = ++i + 1; // Note: this option has two arguments
-			if ((arg.find("-m") == 0) && (idx < (size_t)(argc - 1)) && (migrate_peer_from.length() == 0) && (migrate_peer_to.length() == 0))
-				migrate_peer_from = argv[i+1], migrate_peer_to = argv[i+2];
-			++i; // Note: this option has two arguments
+			size_t idx = ++i + 1; // Note: this option has two required arguments
+			if (idx < (size_t)(argc - 1))
+			{
+				if ((migrate_peer_from.length() == 0) && (migrate_peer_to.length() == 0))
+					migrate_peer_from = argv[i+1], migrate_peer_to = argv[i+2];
+				else
+					std::cerr << "WARNING: duplicate option \"" << arg << "\" ignored" << std::endl;
+			}
+			else
+			{
+				std::cerr << "ERROR: missing some required arguments for option \"" << arg << "\"" << std::endl;
+				return -1;
+			}
+			++i; // Note: this option has two required arguments
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))

@@ -662,24 +662,14 @@ bool parse_public_key
 		++pnum;
 		if (!ptag)
 		{
+			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
+			gcry_mpi_release(dsa_r);
+			gcry_mpi_release(dsa_s);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
+			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
-			if (ctx.version == 3)
-			{
-				std::cerr << "WARNING: old OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
-				cleanup_ctx(ctx);
-				ptag = 0xFF;
-				continue;
-			}
-			else
-			{
-				std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
-				gcry_mpi_release(dsa_r);
-				gcry_mpi_release(dsa_s);
-				gcry_mpi_release(elg_r);
-				gcry_mpi_release(elg_s);
-				cleanup_ctx(ctx);
-				return false;
-			}
+			return false;
 		}
 		switch (ptag)
 		{

@@ -853,7 +853,7 @@ bool parse_public_key
 				else if ((ctx.pkalgo == 16) && subelg)
 					std::cerr << "WARNING: ElGamal subkey already found; the first one is used" << std::endl; 
 				else
-					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " not supported" << std::endl;
+					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " for subkey not supported" << std::endl;
 				break;
 		}
 		// cleanup allocated buffers and mpi's

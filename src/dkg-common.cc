@@ -845,6 +845,9 @@ bool parse_public_key
 				else
 					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " for subkey not supported" << std::endl;
 				break;
+			case 0xFE: // unrecognized packet content
+				std::cerr << "WARNING: unrecognized content of packet #" << pnum << " at position " << pkts.size() << std::endl;
+				break;
 		}
 		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);

@@ -637,7 +637,7 @@ bool parse_public_key
 		return false;
 	}
 	// parse the public key according to OpenPGP
-	bool pubdsa = false, sigdsa = false, subelg = false, sigelg = false, uid = false;
+	bool pubdsa = false, sigdsa = false, sigdsaV3 = false, subelg = false, sigelg = false, sigelgV3 = false, uid = false;
 	tmcg_byte_t ptag = 0xFF;
 	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
 	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
@@ -680,6 +680,8 @@ bool parse_public_key
 				if (pubdsa && !subelg && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
+					if (ctx.version == 3)
+						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
 					if (sigdsa)
 						std::cerr << "WARNING: more than one self-signatures; using last signature to check UID" << std::endl;
 					dsa_sigtype = ctx.type;
@@ -724,6 +726,8 @@ bool parse_public_key
 				else if (pubdsa && subelg && (ctx.type == 0x18) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
+					if (ctx.version == 3)
+						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
 					if (sigelg)
 						std::cerr << "WARNING: more than one subkey binding signature; using last signature" << std::endl;
 					elg_sigtype = ctx.type;

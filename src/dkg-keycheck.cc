@@ -296,6 +296,8 @@ int main
 		std::cout << "NOT ";
 	std::cout << "element of G_q" << std::endl << "\t";
 	bool trivial = false;
+	mpz_t tmp;
+	mpz_init(tmp);
 	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 	{
 		mpz_powm_ui(pm1, dss_g, i, dss_p);
@@ -304,11 +306,23 @@ int main
 			trivial = true;
 			break;
 		}
+		if (i > 0)
+		{
+			mpz_set_ui(tmp, i);
+			mpz_neg(tmp, tmp);
+			mpz_powm(pm1, dss_g, tmp, dss_p);
+			if (!mpz_cmp(dss_y, pm1))
+			{
+				trivial = true;
+				break;
+			}
+		}
 	}
+	mpz_clear(tmp);
 	if (!trivial)
 		std::cout << "y is not trivial" << std::endl << "\t";
 	else
-		std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some c < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
+		std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
 	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss_y, dss_p) << std::endl;
 	mpz_clear(pm1);
 	if (sub.size())

@@ -895,7 +895,6 @@ bool parse_public_key
 	}
 	
 	// build keys, check key usage and self-signatures
-	tmcg_octets_t dsa_trailer, dsa_left;
 	ret = gcry_sexp_build(&dsakey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
 	if (ret)
 	{
@@ -932,7 +931,10 @@ bool parse_public_key
 		if ((flags & 0x80) == 0x80)
 			std::cout << "M"; // The private component of this key may be in the possession of more than one person.
 		std::cout << std::endl;
+		std::cout << "INFO: dsa_sigtype = 0x" << std::hex << (int)dsa_sigtype << std::dec << 
+			" dsa_pkalgo = " << (int)dsa_pkalgo << " dsa_hashalgo = " << (int)dsa_hashalgo << std::endl;
 	}
+	tmcg_octets_t dsa_trailer, dsa_left;
 	dsa_trailer.push_back(4); // only V4 format supported
 	dsa_trailer.push_back(dsa_sigtype);
 	dsa_trailer.push_back(dsa_pkalgo);
@@ -942,6 +944,8 @@ bool parse_public_key
 	dsa_trailer.insert(dsa_trailer.end(), dsa_hspd.begin(), dsa_hspd.end());
 	hash.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, dsa_trailer, dsa_hashalgo, hash, dsa_left);
+	if (opt_verbose)
+		std::cout << "INFO: dsa_left = " << std::hex << (int)dsa_left[0] << " " << (int)dsa_left[1] << std::dec << std::endl;
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, dsa_r, dsa_s);
 	if (ret)
 	{

@@ -681,7 +681,10 @@ bool parse_public_key
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (ctx.version == 3)
+					{
 						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
+						sigdsaV3 = true;
+					}
 					if (sigdsa)
 						std::cerr << "WARNING: more than one self-signatures; using last signature to check UID" << std::endl;
 					dsa_sigtype = ctx.type;
@@ -723,13 +726,14 @@ bool parse_public_key
 					for (size_t i = 0; i < current_packet.size(); i++)
 						uidsig.push_back(current_packet[i]);
 				}
-				else if (pubdsa && subelg && (ctx.type == 0x18) && 
+				else if (pubdsa && subelg && !sigelg && (ctx.type == 0x18) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (ctx.version == 3)
+					{
 						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
-					if (sigelg)
-						std::cerr << "WARNING: more than one subkey binding signature; using last signature" << std::endl;
+						sigelgV3 = true;						
+					}
 					elg_sigtype = ctx.type;
 					elg_pkalgo = ctx.pkalgo;
 					elg_hashalgo = ctx.hashalgo;
@@ -768,6 +772,11 @@ bool parse_public_key
 					subsig.clear();
 					for (size_t i = 0; i < current_packet.size(); i++)
 						subsig.push_back(current_packet[i]);
+				}
+				else if (pubdsa && subelg && sigelg && (ctx.type == 0x18) && 
+					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
+				{
+					std::cerr << "WARNING: more than one subkey binding signature; using first signature" << std::endl;
 				}
 				else if (pubdsa && !subelg && (ctx.type == 0x20) && // Key revocation signature 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
@@ -827,9 +836,11 @@ bool parse_public_key
 				}
 				break;
 			case 14: // Public-Subkey Packet
-				if ((ctx.pkalgo == 16) && !subelg)
+				if (ctx.pkalgo == 16)
 				{
-					subelg = true;
+					if (subelg)
+						std::cerr << "WARNING: ElGamal subkey already found; the last one is used" << std::endl;
+					subelg = true, sigelg = false;
 					gcry_mpi_set(elg_p, ctx.p);
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
@@ -843,9 +854,14 @@ bool parse_public_key
 						sub_hashing.push_back(sub[i]);
 					subkeyid.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(sub_hashing, subkeyid);
+					if (opt_verbose)
+					{
+						std::cout << "INFO: Key ID of ElGamal subkey: " << std::hex;
+						for (size_t i = 0; i < subkeyid.size(); i++)
+							std::cout << (int)subkeyid[i] << " ";
+						std::cout << std::dec << std::endl;
+					}
 				}
-				else if ((ctx.pkalgo == 16) && subelg)
-					std::cerr << "WARNING: ElGamal subkey already found; the first one is used" << std::endl; 
 				else
 					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " for subkey not supported" << std::endl;
 				break;

@@ -397,7 +397,7 @@ int main
 		if (!trivial)
 			std::cout << "y is not trivial" << std::endl << "\t";
 		else
-			std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some c < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
+			std::cout << "y IS TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
 		std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dkg_y, dkg_p) << std::endl;
 		mpz_clear(pm1);
 	}

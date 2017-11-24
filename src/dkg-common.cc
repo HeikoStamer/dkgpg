@@ -989,6 +989,8 @@ bool parse_public_key
 			if ((flags & 0x80) == 0x80)
 				std::cout << "M"; // The private component of this key may be in the possession of more than one person.
 			std::cout << std::endl;
+			std::cout << "INFO: elg_sigtype = 0x" << std::hex << (int)elg_sigtype << std::dec << 
+				" elg_pkalgo = " << (int)elg_pkalgo << " elg_hashalgo = " << (int)elg_hashalgo << std::endl;
 		}
 		if (elg_required && ((flags & 0x04) != 0x04))
 		{
@@ -1007,6 +1009,8 @@ bool parse_public_key
 		elg_trailer.insert(elg_trailer.end(), elg_hspd.begin(), elg_hspd.end());
 		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+		if (opt_verbose)
+			std::cout << "INFO: elg_left = " << std::hex << (int)elg_left[0] << " " << (int)elg_left[1] << std::dec << std::endl;
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);
 		if (ret)
 		{

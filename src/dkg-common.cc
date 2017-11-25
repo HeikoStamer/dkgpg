@@ -928,7 +928,7 @@ bool parse_public_key
 		gcry_mpi_release(elg_s);
 		return false;
 	}
-	if (!sigelg && elg_required)
+	if ((!sigelg && elg_required) || (subelg && !sigelg))
 	{
 		std::cerr << "ERROR: no self-signature for ElGamal subkey found" << std::endl;
 		gcry_mpi_release(dsa_r);
@@ -1054,7 +1054,7 @@ bool parse_public_key
 				std::cout << "M"; // The private component of this key may be in the possession of more than one person.
 			std::cout << std::endl;
 			std::cout << "INFO: elg_sigtype = 0x" << std::hex << (int)elg_sigtype << std::dec << 
-				" elg_pkalgo = " << (int)elg_pkalgo << " elg_hashalgo = " << (int)elg_hashalgo << std::endl;
+				" elg_pkalgo = " << (int)elg_pkalgo << " elg_hashalgo = " << (int)elg_hashalgo << " elg_hspd.size() = " << elg_hspd.size() << std::endl;
 		}
 		if (elg_required && ((flags & 0x04) != 0x04))
 		{

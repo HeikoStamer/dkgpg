@@ -694,7 +694,7 @@ bool parse_public_key
 				issuer.clear();
 				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
 					issuer.push_back(ctx.issuer[i]);
-				if (pubdsa && !subelg && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+				if (pubdsa && !subelg && uid && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (ctx.version == 3)
@@ -743,6 +743,11 @@ bool parse_public_key
 					uidsig.clear();
 					for (size_t i = 0; i < current_packet.size(); i++)
 						uidsig.push_back(current_packet[i]);
+				}
+				else if (pubdsa && !subelg && !uid && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
+				{
+					// ignore certifying signature packets, if no uid was found
 				}
 				else if (pubdsa && subelg && !sigelg && (ctx.type == 0x18) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
@@ -884,6 +889,10 @@ bool parse_public_key
 				else
 					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " for subkey not supported" << std::endl;
 				break;
+			case 17: // User Attribute Packet
+				std::cerr << "WARNING: user attribute packet found; ignored" << std::endl;
+				uid = false;
+				break;
 			case 0xFE: // unrecognized packet content
 				std::cerr << "WARNING: unrecognized content of packet #" << pnum << " at position " << pkts.size() << std::endl;
 				break;
@@ -966,8 +975,9 @@ bool parse_public_key
 		if ((flags & 0x80) == 0x80)
 			std::cout << "M"; // The private component of this key may be in the possession of more than one person.
 		std::cout << std::endl;
+		std::cout << "INFO: userid = " << userid << std::endl;
 		std::cout << "INFO: dsa_sigtype = 0x" << std::hex << (int)dsa_sigtype << std::dec << 
-			" dsa_pkalgo = " << (int)dsa_pkalgo << " dsa_hashalgo = " << (int)dsa_hashalgo << std::endl;
+			" dsa_pkalgo = " << (int)dsa_pkalgo << " dsa_hashalgo = " << (int)dsa_hashalgo << " dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
 	}
 	tmcg_octets_t dsa_trailer, dsa_left;
 	hash.clear();

@@ -642,7 +642,7 @@ bool parse_public_key
 	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
 	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
 	tmcg_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd, hash;
-	time_t dsa_creation = 0, elg_creation = 0;
+	time_t dsa_creation = 0, dsa_sigtime = 0, elg_creation = 0, elg_sigtime = 0;
 	gcry_mpi_t dsa_r, dsa_s, elg_r, elg_s;
 	gcry_sexp_t dsakey;
 	gcry_error_t ret;
@@ -684,6 +684,7 @@ bool parse_public_key
 					{
 						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
 						sigdsaV3 = true;
+						dsa_sigtime = ctx.sigcreationtime;
 					}
 					if (sigdsa)
 						std::cerr << "WARNING: more than one self-signatures; using last signature to check UID" << std::endl;
@@ -732,7 +733,8 @@ bool parse_public_key
 					if (ctx.version == 3)
 					{
 						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
-						sigelgV3 = true;						
+						sigelgV3 = true;
+						elg_sigtime = ctx.sigcreationtime;
 					}
 					elg_sigtype = ctx.type;
 					elg_pkalgo = ctx.pkalgo;
@@ -951,15 +953,35 @@ bool parse_public_key
 			" dsa_pkalgo = " << (int)dsa_pkalgo << " dsa_hashalgo = " << (int)dsa_hashalgo << std::endl;
 	}
 	tmcg_octets_t dsa_trailer, dsa_left;
-	dsa_trailer.push_back(4); // only V4 format supported
-	dsa_trailer.push_back(dsa_sigtype);
-	dsa_trailer.push_back(dsa_pkalgo);
-	dsa_trailer.push_back(dsa_hashalgo);
-	dsa_trailer.push_back(dsa_hspd.size() >> 8); // length of hashed subpacket data
-	dsa_trailer.push_back(dsa_hspd.size());
-	dsa_trailer.insert(dsa_trailer.end(), dsa_hspd.begin(), dsa_hspd.end());
 	hash.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, dsa_trailer, dsa_hashalgo, hash, dsa_left);
+	if (sigdsaV3)
+	{
+		tmcg_octets_t dsa_sigtime_octets;
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(dsa_sigtime, dsa_sigtime_octets);
+		// The concatenation of the data to be signed, the signature type, and
+		// creation time from the Signature packet (5 additional octets) is
+		// hashed. The resulting hash value is used in the signature algorithm.
+		// The high 16 bits (first two octets) of the hash are included in the
+		// Signature packet to provide a quick test to reject some invalid
+		// signatures.
+		// A V3 signature hashes five octets of the packet body, starting from
+		// the signature type field. This data is the signature type, followed
+		// by the four-octet signature time.
+		dsa_trailer.push_back(dsa_sigtype);
+		dsa_trailer.insert(dsa_trailer.end(), dsa_sigtime_octets.begin(), dsa_sigtime_octets.end());
+		CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHashV3(pub_hashing, userid, dsa_trailer, dsa_hashalgo, hash, dsa_left);
+	}
+	else
+	{
+		dsa_trailer.push_back(4); // only V4 format supported
+		dsa_trailer.push_back(dsa_sigtype);
+		dsa_trailer.push_back(dsa_pkalgo);
+		dsa_trailer.push_back(dsa_hashalgo);
+		dsa_trailer.push_back(dsa_hspd.size() >> 8); // length of hashed subpacket data
+		dsa_trailer.push_back(dsa_hspd.size());
+		dsa_trailer.insert(dsa_trailer.end(), dsa_hspd.begin(), dsa_hspd.end());
+		CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, dsa_trailer, dsa_hashalgo, hash, dsa_left);
+	}
 	if (opt_verbose)
 		std::cout << "INFO: dsa_left = " << std::hex << (int)dsa_left[0] << " " << (int)dsa_left[1] << std::dec << std::endl;
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, dsa_r, dsa_s);
@@ -978,7 +1000,6 @@ bool parse_public_key
 	gcry_mpi_release(dsa_s);
 	if (elg_required || (subelg && sigelg))
 	{
-		tmcg_octets_t elg_trailer, elg_left;
 		flags = 0;
 		for (size_t i = 0; i < sizeof(elg_keyflags); i++)
 		{
@@ -1016,15 +1037,36 @@ bool parse_public_key
 			gcry_mpi_release(elg_s);
 			return false;
 		}
-		elg_trailer.push_back(4); // only V4 format supported
-		elg_trailer.push_back(elg_sigtype);
-		elg_trailer.push_back(elg_pkalgo);
-		elg_trailer.push_back(elg_hashalgo);
-		elg_trailer.push_back(elg_hspd.size() >> 8); // length of hashed subpacket data
-		elg_trailer.push_back(elg_hspd.size());
-		elg_trailer.insert(elg_trailer.end(), elg_hspd.begin(), elg_hspd.end());
+		tmcg_octets_t elg_trailer, elg_left;
 		hash.clear();
-		CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+		if (sigelgV3)
+		{
+			tmcg_octets_t elg_sigtime_octets;
+			CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(elg_sigtime, elg_sigtime_octets);
+			// The concatenation of the data to be signed, the signature type, and
+			// creation time from the Signature packet (5 additional octets) is
+			// hashed. The resulting hash value is used in the signature algorithm.
+			// The high 16 bits (first two octets) of the hash are included in the
+			// Signature packet to provide a quick test to reject some invalid
+			// signatures.
+			// A V3 signature hashes five octets of the packet body, starting from
+			// the signature type field. This data is the signature type, followed
+			// by the four-octet signature time.
+			elg_trailer.push_back(elg_sigtype);
+			elg_trailer.insert(elg_trailer.end(), elg_sigtime_octets.begin(), elg_sigtime_octets.end());
+			CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHashV3(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+		}
+		else
+		{
+			elg_trailer.push_back(4); // only V4 format supported
+			elg_trailer.push_back(elg_sigtype);
+			elg_trailer.push_back(elg_pkalgo);
+			elg_trailer.push_back(elg_hashalgo);
+			elg_trailer.push_back(elg_hspd.size() >> 8); // length of hashed subpacket data
+			elg_trailer.push_back(elg_hspd.size());
+			elg_trailer.insert(elg_trailer.end(), elg_hspd.begin(), elg_hspd.end());
+			CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+		}
 		if (opt_verbose)
 			std::cout << "INFO: elg_left = " << std::hex << (int)elg_left[0] << " " << (int)elg_left[1] << std::dec << std::endl;
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);

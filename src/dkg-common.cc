@@ -541,7 +541,8 @@ bool decrypt_message
 }
 
 bool parse_signature
-	(const std::string &in, tmcg_byte_t stype, time_t &sigcreationtime_out, time_t &sigexpirationtime_out, tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out)
+	(const std::string &in, tmcg_byte_t stype,
+	time_t &sigcreationtime_out, time_t &sigexpirationtime_out, tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out, bool &sigV3_out)
 {
 	// decode ASCII armor and parse the signature according to OpenPGP
 	bool sig = false;
@@ -595,17 +596,33 @@ bool parse_signature
 					time_t kmax = ctx.sigcreationtime + ctx.sigexpirationtime;
 					if (ctx.sigexpirationtime && (time(NULL) > kmax))
 						std::cerr << "WARNING: DSA signature is expired" << std::endl;
-					sig = true;
-					// construct the V4 trailer
+					// construct the trailer
 					trailer_out.clear();
-					trailer_out.push_back(4); // V4 format
-					trailer_out.push_back(ctx.type); // type (e.g. 0x00 Binary Document)
-					trailer_out.push_back(ctx.pkalgo); // public-key algorithm (i.e. DSA)
-					trailer_out.push_back(ctx.hashalgo); // hash algorithm
-					trailer_out.push_back(ctx.hspdlen >> 8); // length of hashed subpacket data
-					trailer_out.push_back(ctx.hspdlen);
-					for (size_t i = 0; i < ctx.hspdlen; i++)
-						trailer_out.push_back(ctx.hspd[i]); // hashed subpacket data
+					if (ctx.version == 3)
+					{
+						tmcg_octets_t sigtime_octets; // V3 format
+						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
+						sig = true;
+						sigV3_out = true;
+						CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(ctx.sigcreationtime, sigtime_octets);
+						trailer_out.push_back(ctx.type);
+						trailer_out.insert(trailer_out.end(), sigtime_octets.begin(), sigtime_octets.end());
+					}
+					else if (ctx.version == 4)
+					{
+						sig = true;
+						sigV3_out = false;
+						trailer_out.push_back(4); // V4 format
+						trailer_out.push_back(ctx.type); // type (e.g. 0x00 Binary Document)
+						trailer_out.push_back(ctx.pkalgo); // public-key algorithm (i.e. DSA)
+						trailer_out.push_back(ctx.hashalgo); // hash algorithm
+						trailer_out.push_back(ctx.hspdlen >> 8); // length of hashed subpacket data
+						trailer_out.push_back(ctx.hspdlen);
+						for (size_t i = 0; i < ctx.hspdlen; i++)
+							trailer_out.push_back(ctx.hspd[i]); // hashed subpacket data
+					}
+					else
+						std::cerr << "WARNING: unrecognized signature packet version " << (int)ctx.version << std::endl;
 				}
 				else if (sig && (ctx.type == stype) && CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{

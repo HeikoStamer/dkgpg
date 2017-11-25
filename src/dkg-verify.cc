@@ -157,7 +157,8 @@ int main
 	tmcg_octets_t trailer;
 	tmcg_byte_t hashalgo = 0;
 	time_t csigtime = 0, sigexptime = 0;
-	if (!parse_signature(signature, 0x00, csigtime, sigexptime, hashalgo, trailer))
+	bool sigV3 = false;
+	if (!parse_signature(signature, 0x00, csigtime, sigexptime, hashalgo, trailer, sigV3))
 	{
 		std::cerr << "ERROR: cannot parse the provided signature" << std::endl;
 		release_mpis();
@@ -168,7 +169,12 @@ int main
 	if (opt_verbose)
 		std::cout << "INFO: hashing the input file \"" << opt_ifilename << "\"" << std::endl;
 	tmcg_octets_t hash, left;
-	if (!CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
+	bool hashret = false;
+	if (sigV3)
+		hashret = CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHashV3(opt_ifilename, trailer, hashalgo, hash, left);
+	else
+		hashret = CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left);
+	if (!hashret)
 	{
 		std::cerr << "ERROR: BinaryDocumentHash() failed; cannot process input file \"" << opt_ifilename << "\"" << std::endl;
 		release_mpis();

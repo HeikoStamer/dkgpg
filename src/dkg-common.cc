@@ -605,8 +605,8 @@ bool parse_signature
 						sig = true;
 						sigV3_out = true;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(ctx.sigcreationtime, sigtime_octets);
-						trailer_out.push_back(ctx.type);
-						trailer_out.insert(trailer_out.end(), sigtime_octets.begin(), sigtime_octets.end());
+						trailer_out.push_back(ctx.type); // type (e.g. 0x00 Binary Document)
+						trailer_out.insert(trailer_out.end(), sigtime_octets.begin(), sigtime_octets.end()); // creation time
 					}
 					else if (ctx.version == 4)
 					{

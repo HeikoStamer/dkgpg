@@ -654,7 +654,7 @@ bool parse_public_key
 		return false;
 	}
 	// parse the public key according to OpenPGP
-	bool pubdsa = false, sigdsa = false, sigdsaV3 = false, subelg = false, sigelg = false, sigelgV3 = false, uid = false;
+	bool pubdsa = false, sigdsa = false, sigdsaV3 = false, subelg = false, sigelg = false, sigelgV3 = false, uid = false, uat = false;
 	tmcg_byte_t ptag = 0xFF;
 	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
 	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
@@ -694,7 +694,19 @@ bool parse_public_key
 				issuer.clear();
 				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
 					issuer.push_back(ctx.issuer[i]);
-				if (pubdsa && !subelg && uid && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+				if (pubdsa && !subelg && !uid && !uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
+				{
+					std::cerr << "ERROR: no uid found for this self-signature" << std::endl;
+					gcry_mpi_release(dsa_r);
+					gcry_mpi_release(dsa_s);
+					gcry_mpi_release(elg_r);
+					gcry_mpi_release(elg_s);
+					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
+					return false;
+				}
+				else if (pubdsa && !subelg && uid && !uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (ctx.version == 3)
@@ -744,10 +756,10 @@ bool parse_public_key
 					for (size_t i = 0; i < current_packet.size(); i++)
 						uidsig.push_back(current_packet[i]);
 				}
-				else if (pubdsa && !subelg && !uid && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+				else if (pubdsa && !subelg && uid && uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
-					// ignore certifying signature packets, if no uid was found
+					std::cerr << "WARNING: ignore certifying self-signature for a user attribute" << std::endl;
 				}
 				else if (pubdsa && subelg && !sigelg && (ctx.type == 0x18) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
@@ -831,6 +843,13 @@ bool parse_public_key
 						pub_hashing.push_back(pub[i]);
 					keyid.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
+					if (opt_verbose)
+					{
+						std::cout << "INFO: Key ID of DSA primary key: " << std::hex;
+						for (size_t i = 0; i < keyid.size(); i++)
+							std::cout << (int)keyid[i] << " ";
+						std::cout << std::dec << std::endl;
+					}
 				}
 				else if ((ctx.pkalgo == 17) && pubdsa)
 				{
@@ -869,7 +888,7 @@ bool parse_public_key
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
 					elg_creation = ctx.keycreationtime;
-					keycreationtime_out = ctx.keycreationtime;
+					keycreationtime_out = ctx.keycreationtime; // FIXME: overwrite time of primary key
 					sub.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ctx.keycreationtime, ctx.pkalgo,
 						elg_p, dsa_q, elg_g, elg_y, sub);
@@ -891,7 +910,7 @@ bool parse_public_key
 				break;
 			case 17: // User Attribute Packet
 				std::cerr << "WARNING: user attribute packet found; ignored" << std::endl;
-				uid = false;
+				uat = true;
 				break;
 			case 0xFE: // unrecognized packet content
 				std::cerr << "WARNING: unrecognized content of packet #" << pnum << " at position " << pkts.size() << std::endl;

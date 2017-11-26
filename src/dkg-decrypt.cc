@@ -71,6 +71,7 @@ gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, el
 gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 int 					opt_verbose = 0;
+bool					opt_binary = false;
 char					*opt_ifilename = NULL;
 char					*opt_ofilename = NULL;
 char					*opt_passwords = NULL;
@@ -896,6 +897,7 @@ unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_nonint = 0;
 int gnunet_opt_verbose = 0;
+int gnunet_opt_binary = 0;
 #endif
 
 void fork_instance
@@ -936,6 +938,11 @@ int main
 	char *logfile = NULL;
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
+		GNUNET_GETOPT_option_flag('b',
+			"binary",
+			"consider encrypted message from FILENAME as binary input",
+			&gnunet_opt_binary
+		),
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_help(about),
 		GNUNET_GETOPT_option_string('H',
@@ -1064,7 +1071,7 @@ int main
 				opt_W = strtoul(argv[i+1], NULL, 10);
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-n") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-n") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -1072,6 +1079,7 @@ int main
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -b, --binary           consider encrypted message from FILENAME as binary input" << std::endl;
 				std::cout << "  -h, --help             print this help" << std::endl;
 				std::cout << "  -H STRING              hostname (e.g. onion address) of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME            read encrypted message rather from FILENAME than STDIN" << std::endl;
@@ -1085,6 +1093,8 @@ int main
 #endif
 				return 0; // not continue
 			}
+			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
+				opt_binary = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
@@ -1168,8 +1178,16 @@ int main
 	// read message
 	if (opt_ifilename != NULL)
 	{
-		if (!read_message(opt_ifilename, armored_message))
-			return -1;
+		if (opt_binary)
+		{
+			if (!read_binary_message(opt_ifilename, armored_message))
+				return -1;
+		}
+		else
+		{
+			if (!read_message(opt_ifilename, armored_message))
+				return -1;
+		}
 	}
 	else
 	{
@@ -1329,6 +1347,11 @@ int main
 	// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+		GNUNET_GETOPT_option_flag('b',
+			"binary",
+			"consider encrypted message from FILENAME as binary input",
+			&gnunet_opt_binary
+		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
 			"STRING",

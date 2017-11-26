@@ -157,7 +157,7 @@ int main
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary   take KEYFILE as binary input" << std::endl;
+				std::cout << "  -b, --binary   consider KEYFILE as binary input" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;

@@ -48,6 +48,8 @@
 		std::string &result);
 	bool read_message
 		(const std::string &filename, std::string &result);
+	bool read_binary_message
+		(const std::string &filename, std::string &result);
 	bool write_message
 		(const std::string &filename, const tmcg_octets_t &msg);
 	bool write_message

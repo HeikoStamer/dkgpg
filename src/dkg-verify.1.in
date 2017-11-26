@@ -18,6 +18,9 @@ The program returns a non-zero value on error; e.g. if the signature is invalid.
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
 .TP
+\fB\-b\fR, \fB\-\-binary\fR
+consider KEYFILE as binary input
+.TP
 \fB\-h\fR, \fB\-\-help\fR
 print this list of options
 .TP

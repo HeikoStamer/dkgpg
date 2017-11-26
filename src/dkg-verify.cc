@@ -50,6 +50,7 @@ gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, el
 gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 int 					opt_verbose = 0;
+bool 					opt_binary = false;
 char					*opt_ifilename = NULL;
 
 int main
@@ -73,19 +74,22 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -b, --binary   consider KEYFILE as binary input" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -i FILENAME    verify detached signature on FILENAME" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
 				return 0; // not continue
 			}
+			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
+				opt_binary = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 				std::cout << "dkg-verify v" << version << std::endl;
@@ -126,7 +130,9 @@ int main
 
 	// read and parse the public key (no ElGamal subkey required)
 	std::string armored_pubkey;
-	if (!read_key_file(kfilename, armored_pubkey))
+	if (opt_binary && !read_binary_key_file(kfilename, 6, armored_pubkey))
+		return -1;
+	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0;

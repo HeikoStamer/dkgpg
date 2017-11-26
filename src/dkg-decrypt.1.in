@@ -57,6 +57,9 @@ the option "-P" is mandatory in that case.
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
 .TP
+\fB\-b\fR, \fB\-\-binary\fR
+consider encrypted message from FILENAME as binary input
+.TP
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME (only interactive mode)
 .TP

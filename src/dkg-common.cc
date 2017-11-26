@@ -151,6 +151,31 @@ bool read_message
 	return true;
 }
 
+bool read_binary_message
+	(const std::string &filename, std::string &result)
+{
+	// read the (encrypted) message from file and convert to ASCII armor
+	tmcg_octets_t input;
+	std::ifstream ifs(filename.c_str(), std::ifstream::in);
+	if (!ifs.is_open())
+	{
+		std::cerr << "ERROR: cannot open input file" << std::endl;
+		return false;
+	}
+	char c;
+	while (ifs.get(c))
+		input.push_back(c);
+	if (!ifs.eof())
+	{
+		ifs.close();
+		std::cerr << "ERROR: reading from input file until EOF failed" << std::endl;
+		return false;
+	}
+	ifs.close();
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(1, input, result);
+	return true;
+}
+
 bool write_message
 	(const std::string &filename, const tmcg_octets_t &msg)
 {

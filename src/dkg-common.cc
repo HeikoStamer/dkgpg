@@ -464,7 +464,7 @@ bool parse_message
 	gcry_mpi_powm(tmp, gk, elg_q, elg_p);
 	if (gcry_mpi_cmp_ui(tmp, 1L))
 	{
-		std::cerr << "ERROR: (g^k)^q \equiv 1 mod p not satisfied" << std::endl;
+		std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" << std::endl;
 		gcry_mpi_release(tmp);
 		return false;
 	}

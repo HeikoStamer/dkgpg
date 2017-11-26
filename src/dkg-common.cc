@@ -938,7 +938,7 @@ bool parse_public_key
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
 					elg_creation = ctx.keycreationtime;
-					keycreationtime_out = ctx.keycreationtime; // FIXME: overwrite time of primary key
+					keycreationtime_out = ctx.keycreationtime; // FIXME: overwrites creation time of primary key
 					sub.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ctx.keycreationtime, ctx.pkalgo,
 						elg_p, dsa_q, elg_g, elg_y, sub);

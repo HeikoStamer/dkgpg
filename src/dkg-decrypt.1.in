@@ -1,4 +1,4 @@
-.TH DKG\-DECRYPT "1" "August 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-DECRYPT "1" "November 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-decrypt \- threshold decryption for OpenPGP (only ElGamal)
@@ -58,7 +58,7 @@ the option "-P" is mandatory in that case.
 Arguments mandatory for long options are also mandatory for short options.
 .TP
 \fB\-b\fR, \fB\-\-binary\fR
-consider encrypted message from FILENAME as binary input
+consider encrypted message from FILENAME as in binary input format
 .TP
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME (only interactive mode)

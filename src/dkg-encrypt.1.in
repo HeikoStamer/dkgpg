@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "July 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "November 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
@@ -9,24 +9,29 @@ dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
 .IR KEYFILE
 
 .SH DESCRIPTION
-This program encrypts a (text) message read from STDIN according to the OpenPGP standard.
-KEYFILE must contain the ASCII-armored public key, for which the following encryption is
+This program encrypts a (text) message read from STDIN or a file according to the OpenPGP
+standard. KEYFILE must contain the ASCII-armored public key, for which the encryption is
 performed.
 .PP
 First, AES\-256 is applied as symmetric cipher with a randomly chosen 256-bit session key.
 Finally, the session key is transformed by PKCS#1 v1.5 block encoding and encrypted with
-the ElGamal public-key algorithm. Note that an integrity protection packet (MDC) is appended. 
+the ElGamal public-key algorithm. Note that an integrity protection packet (MDC) is always
+appended.
 .PP
 Currently, as public-key algorithm only ElGamal is supported and all certifying signatures
 in the corresponding subkey packet of the public key must be DSA signatures. This is due
-to the limitation in distributed key generation of LibTMCG.
+to the limitation of OpenPGP support in LibTMCG.
 .PP
-The encrypted message in ASCII-armored OpenPGP format is written to STDOUT and later it
-can be further processed with
+The encrypted message in ASCII-armored OpenPGP format is written to STDOUT or to a file
+and can later be processed with
 .BR dkg\-decrypt (1).
+There exists also an option to write out the encrypted message in binary OpenPGP format.
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
+.TP
+\fB\-b\fR, \fB\-\-binary\fR
+write encrypted message in binary format (only if option -i given)
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 print this list of options

@@ -80,13 +80,14 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-b") == 0)  || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "  -b, --binary   write encrypted message in binary format (only if -i given)" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -i FILENAME    read message rather from FILENAME than STDIN" << std::endl;
 				std::cout << "  -o FILENAME    write encrypted message rather to FILENAME than STDOUT" << std::endl;
@@ -94,6 +95,8 @@ int main
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
 				return 0; // not continue
 			}
+			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
+				opt_binary = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 				std::cout << "dkg-encrypt v" << version << std::endl;
@@ -264,7 +267,6 @@ int main
 	}
 	else
 		std::cout << armored_message << std::endl;
-	
 
 	// release mpis and keys
 	release_mpis();

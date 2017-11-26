@@ -757,8 +757,6 @@ bool parse_public_key
 					dsa_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						dsa_hspd.push_back(ctx.hspd[i]);
-					gcry_mpi_set(dsa_r, ctx.r);
-					gcry_mpi_set(dsa_s, ctx.s);
 					if (dsa_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -770,6 +768,8 @@ bool parse_public_key
 						cleanup_containers(qual, v_i, c_ik);
 						return false;
 					}
+					gcry_mpi_set(dsa_r, ctx.r);
+					gcry_mpi_set(dsa_s, ctx.s);
 					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)dsa_hashalgo << " used for signatures" << std::endl;
 					time_t kmax = dsa_creation + ctx.keyexpirationtime;
@@ -810,8 +810,6 @@ bool parse_public_key
 					elg_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						elg_hspd.push_back(ctx.hspd[i]);
-					gcry_mpi_set(elg_r, ctx.r);
-					gcry_mpi_set(elg_s, ctx.s);
 					if (elg_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -823,6 +821,8 @@ bool parse_public_key
 						cleanup_containers(qual, v_i, c_ik);
 						return false;
 					}
+					gcry_mpi_set(elg_r, ctx.r);
+					gcry_mpi_set(elg_s, ctx.s);
 					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)elg_hashalgo << " used for signatures" << std::endl;
 					time_t kmax = elg_creation + ctx.keyexpirationtime;
@@ -1255,8 +1255,6 @@ bool parse_private_key
 					dsa_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						dsa_hspd.push_back(ctx.hspd[i]);
-					gcry_mpi_set(dsa_r, ctx.r);
-					gcry_mpi_set(dsa_s, ctx.s);
 					if (dsa_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -1268,6 +1266,8 @@ bool parse_private_key
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
+					gcry_mpi_set(dsa_r, ctx.r);
+					gcry_mpi_set(dsa_s, ctx.s);
 					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)dsa_hashalgo << 
 							" used for signatures" << std::endl;
@@ -1308,8 +1308,6 @@ bool parse_private_key
 					elg_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						elg_hspd.push_back(ctx.hspd[i]);
-					gcry_mpi_set(elg_r, ctx.r);
-					gcry_mpi_set(elg_s, ctx.s);
 					if (elg_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -1321,6 +1319,8 @@ bool parse_private_key
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						exit(-1);
 					}
+					gcry_mpi_set(elg_r, ctx.r);
+					gcry_mpi_set(elg_s, ctx.s);
 					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)elg_hashalgo << 
 							" used for signatures" << std::endl;

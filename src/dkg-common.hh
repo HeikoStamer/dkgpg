@@ -43,6 +43,9 @@
 		(const std::string &prompt, std::string &passphrase);
 	bool read_key_file
 		(const std::string &filename, std::string &result);
+	bool read_binary_key_file
+		(const std::string &filename, const tmcg_byte_t type,
+		std::string &result);
 	bool read_message
 		(const std::string &filename, std::string &result);
 	bool write_message

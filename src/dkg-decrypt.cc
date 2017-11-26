@@ -1128,9 +1128,10 @@ int main
 	peers.push_back("Test2");
 	peers.push_back("Test3");
 	peers.push_back("Test4");
-	ifilename = "Test1_output.asc";
+	ifilename = "Test1_output.bin";
 	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 1;
+	opt_binary = true;
 #endif
 
 	// check command line arguments

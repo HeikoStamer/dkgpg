@@ -48,6 +48,7 @@ gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, el
 gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 int 					opt_verbose = 0;
+bool					opt_binary = false;
 char					*opt_ifilename = NULL;
 char					*opt_ofilename = NULL;
 
@@ -112,7 +113,8 @@ int main
 	}
 #ifdef DKGPG_TESTSUITE
 	peers.push_back("Test1_dkg-pub.asc");
-	ofilename = "Test1_output.asc";
+	opt_binary = true;
+	ofilename = "Test1_output.bin";
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 1;
 #endif
@@ -241,15 +243,28 @@ int main
 	// write out the result
 	if (opt_ofilename != NULL)
 	{
-		if (!write_message(opt_ofilename, armored_message))
+		if (opt_binary)
 		{
-			release_mpis();
-			gcry_sexp_release(elgkey);
-			return -1;
+			if (!write_message(opt_ofilename, all))
+			{
+				release_mpis();
+				gcry_sexp_release(elgkey);
+				return -1;
+			}
+		}
+		else
+		{
+			if (!write_message(opt_ofilename, armored_message))
+			{
+				release_mpis();
+				gcry_sexp_release(elgkey);
+				return -1;
+			}
 		}
 	}
 	else
 		std::cout << armored_message << std::endl;
+	
 
 	// release mpis and keys
 	release_mpis();

@@ -1462,6 +1462,8 @@ bool parse_private_key
 							if (!mpz_set_gcry_mpi(c_ik[i][k], tmp))
 							{
 								std::cerr << "ERROR: mpz_set_gcry_mpi() failed for tmp" << std::endl;
+								mpz_clear(tmp);
+								delete [] tmp;
 								gcry_mpi_release(dsa_r);
 								gcry_mpi_release(dsa_s);
 								gcry_mpi_release(elg_r);
@@ -2207,6 +2209,8 @@ bool parse_private_key
 						if (!mpz_set_gcry_mpi(v_i[i], tmp))
 						{
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for tmp (v_i)" << std::endl;
+							mpz_clear(tmp);
+							delete [] tmp;
 							gcry_mpi_release(dsa_r);
 							gcry_mpi_release(dsa_s);
 							gcry_mpi_release(elg_r);
@@ -2227,6 +2231,8 @@ bool parse_private_key
 							if (!mpz_set_gcry_mpi(c_ik[i][k], tmp))
 							{
 								std::cerr << "ERROR: mpz_set_gcry_mpi() failed for tmp (c_ik)" << std::endl;
+								mpz_clear(tmp);
+								delete [] tmp;
 								gcry_mpi_release(dsa_r);
 								gcry_mpi_release(dsa_s);
 								gcry_mpi_release(elg_r);

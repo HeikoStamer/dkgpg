@@ -108,7 +108,7 @@ int main
 	}
 #ifdef DKGPG_TESTSUITE
 	kfilename = "Test1_dkg-pub.asc";
-	ifilename = "Test1_output.asc";
+	ifilename = "Test1_output.bin";
 	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 1;
 #endif

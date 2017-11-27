@@ -641,7 +641,7 @@ int main
 	peers.push_back("Test2");
 	peers.push_back("Test3");
 	peers.push_back("Test4");
-	ifilename = "Test1_output.asc";
+	ifilename = "Test1_output.bin";
 	opt_ifilename = (char*)ifilename.c_str();
 	ofilename = "Test1_output.sig";
 	opt_ofilename = (char*)ofilename.c_str();

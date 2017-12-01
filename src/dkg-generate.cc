@@ -586,9 +586,10 @@ void run_instance
 		pub_hashing.push_back(pub[i]);
 	CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
+	// RFC 4880: "In a V4 key, the primary key MUST be a key capable of certification."
 	if (S > 0)
 	{
-		dsaflags.push_back(0x02 | 0x10); // key may be used to sign data and has been split by a secret-sharing mechanism
+		dsaflags.push_back(0x01 | 0x02 | 0x10); // key may be used to certify other keys, to sign data and has been split by a secret-sharing mechanism
 		sigtime = ckeytime; // use common key creation time as OpenPGP signature creation time
 	}
 	else

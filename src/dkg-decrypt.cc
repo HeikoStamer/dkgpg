@@ -486,7 +486,7 @@ bool combine_decryption_shares
 	}
 }
 
-void decrypt_session_key
+bool decrypt_session_key
 	(tmcg_octets_t &out)
 {
 	// decrypt the session key
@@ -498,15 +498,16 @@ void decrypt_session_key
 	if (ret)
 	{
 		std::cerr << "ERROR: processing ElGamal key material failed" << std::endl;
-		exit(-1);
+		return false;
 	}
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricDecryptElgamal(gk, myk, elgkey, out);
+	gcry_sexp_release(elgkey);
 	if (ret)
 	{
 		std::cerr << "ERROR: AsymmetricDecryptElgamal() failed with rc = " << gcry_err_code(ret) << std::endl;
-		exit(-1);
+		return false;
 	}
-	gcry_sexp_release(elgkey);
+	return true;
 }
 
 void done_dkg
@@ -860,7 +861,12 @@ void run_instance
 	tmcg_octets_t msg, seskey;
 	if (res)
 	{
-		decrypt_session_key(seskey);
+		if (!decrypt_session_key(seskey))
+		{
+			release_mpis();
+			done_dkg(dkg);
+			exit(-1);
+		}
 		if (!decrypt_message(have_seipd, enc, seskey, msg))
 		{
 			release_mpis();

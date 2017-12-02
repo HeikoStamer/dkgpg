@@ -2527,21 +2527,32 @@ bool parse_private_key
 		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);
 		cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
-
 	}
 	if (!secdsa)
 	{
 		std::cerr << "ERROR: no tDSS/DSA private key found" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		exit(-1);
 	}
 	if (!sigdsa)
 	{
 		std::cerr << "ERROR: no self-signature for tDSS/DSA key found" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		exit(-1);
 	}
 	if (ssbelg && !sigelg)
 	{
 		std::cerr << "ERROR: no self-signature for ElGamal subkey found" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		exit(-1);
 	}
 
@@ -2554,6 +2565,10 @@ bool parse_private_key
 	if (ret)
 	{
 		std::cerr << "ERROR: parsing tDSS/DSA key material failed" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		exit(-1);
 	}
 	size_t flags = 0;
@@ -2586,6 +2601,11 @@ bool parse_private_key
 	if ((flags & 0x02) != 0x02)
 	{
 		std::cerr << "ERROR: tDSS/DSA primary key cannot used to sign data" << std::endl;
+		gcry_sexp_release(dsakey);
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		exit(-1);
 	}
 	dsa_trailer.push_back(4); // only V4 format supported
@@ -2602,6 +2622,11 @@ bool parse_private_key
 	{
 		std::cerr << "ERROR: verification of tDSS/DSA key self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
 			gcry_strerror(ret) << ")" << std::endl;
+		gcry_sexp_release(dsakey);
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		exit(-1);
 	}
 	if (ssbelg)
@@ -2636,6 +2661,11 @@ bool parse_private_key
 		if ((flags & 0x04) != 0x04)
 		{
 			std::cerr << "ERROR: ElGamal subkey cannot used to encrypt communications" << std::endl;
+			gcry_sexp_release(dsakey);
+			gcry_mpi_release(dsa_r);
+			gcry_mpi_release(dsa_s);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
 			exit(-1);
 		}
 		elg_trailer.push_back(4); // only V4 format supported
@@ -2652,6 +2682,11 @@ bool parse_private_key
 		{
 			std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
 				gcry_strerror(ret) << ")" << std::endl;
+			gcry_sexp_release(dsakey);
+			gcry_mpi_release(dsa_r);
+			gcry_mpi_release(dsa_s);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
 			exit(-1);
 		}
 	}

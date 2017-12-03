@@ -331,6 +331,12 @@ int main
 		std::cout << "Canonicalized peer list (CAPL): " << std::endl;
 		for (size_t i = 0; i < CAPL.size(); i++)
 			std::cout << "\t" << "P_" << ((dss->dkg->x_rvss->QUAL.size())?(i):(dss->QUAL[i])) << "\t" << CAPL[i] << std::endl;
+		std::cout << "Public commitments C_ik of x_rvss subprotocol: " << std::endl;
+		for (size_t i = 0; i < dss->dkg->x_rvss->C_ik.size(); i++)
+		{
+			for (size_t k = 0; k < dss->dkg->x_rvss->C_ik[i].size(); k++)
+				std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " << dss->dkg->x_rvss->C_ik[i][k] << std::endl;
+		}
 	}
 	if (sub.size() && (dkg != NULL))
 	{
@@ -362,6 +368,12 @@ int main
 		std::cout << "Public verification keys (DKG): " << std::endl;
 		for (size_t i = 0; i < dkg->v_i.size(); i++)
 			std::cout << "\t" << "v_" << i << " = " << dkg->v_i[i] << std::endl;
+		std::cout << "Public commitments C_ik (DKG): " << std::endl;
+		for (size_t i = 0; i < dkg->C_ik.size(); i++)
+		{
+			for (size_t k = 0; k < dkg->C_ik[i].size(); k++)
+				std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " << dkg->C_ik[i][k] << std::endl;
+		}
 	}
 
 	// restore default formatting

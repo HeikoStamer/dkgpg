@@ -389,7 +389,7 @@ int main
 			mpz_set_ui(bar, *sfi);
 			mpz_powm(tmp, dkg_g, bar, dkg_p);
 			if (!mpz_cmp_ui(tmp, 1L))
-				std::cout << "is SMALL (" << *sfi << " elements) ";
+				std::cout << "is VERY SMALL (" << *sfi << " elements) ";
 		}
 		std::cout << std::endl;
 		mpz_clear(bar);

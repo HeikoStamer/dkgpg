@@ -334,6 +334,7 @@ bool parse_message
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
 		return false;
 	}
+	size_t pnum = 0;
 	while (pkts.size() && ptag)
 	{
 		tmcg_octets_t pkesk_keyid;
@@ -343,17 +344,23 @@ bool parse_message
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
+		++pnum;
 		if (opt_verbose)
-			std::cout << "PacketDecode() = " << (int)ptag;
-		if (!ptag)
+			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+		if (ptag == 0x00)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
 			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
-			return false;
+			return false; // parsing error detected
 		}
-		if (opt_verbose)
-			std::cout << " tag = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+		else if (ptag == 0xFE)
+		{
+			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore packet
+		}
 		switch (ptag)
 		{
 			case 1: // Public-Key Encrypted Session Key
@@ -361,7 +368,7 @@ bool parse_message
 					std::cout << " pkalgo = " << (int)ctx.pkalgo << std::endl;
 				if (ctx.pkalgo != 16)
 				{
-					std::cerr << "WARNING: public-key algorithm not supported; packet ignored" << std::endl;
+					std::cerr << "WARNING: public-key algorithm not supported; packet #" << pnum << " ignored" << std::endl;
 					break;
 				}
 				if (opt_verbose)
@@ -422,7 +429,7 @@ bool parse_message
 				}
 				break;
 			default:
-				std::cerr << "ERROR: unrecognized OpenPGP packet found" << std::endl;
+				std::cerr << "ERROR: unexpected OpenPGP packet found" << std::endl;
 				cleanup_ctx(ctx);
 				cleanup_containers(qual, v_i, c_ik);
 				return false;
@@ -491,17 +498,17 @@ bool decrypt_message
 		return false;
 	}
 	gcry_error_t ret;
-	tmcg_octets_t prefix, litmdc;
+	tmcg_octets_t prefix, pkts;
 	if (have_seipd)
-		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, false, symalgo, litmdc);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, false, symalgo, pkts);
 	else
-		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, true, symalgo, litmdc);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, true, symalgo, pkts);
 	if (ret)
 	{
 		std::cerr << "ERROR: SymmetricDecrypt() failed" << std::endl;
 		return false;
 	}
-	// parse content of decrypted message
+	// parse the content of decrypted message
 	tmcg_openpgp_packet_ctx ctx;
 	std::vector<gcry_mpi_t> qual, v_i;
 	std::vector<std::string> capl;
@@ -509,27 +516,34 @@ bool decrypt_message
 	bool have_lit = false, have_mdc = false;
 	tmcg_octets_t lit, mdc_hash;
 	tmcg_byte_t ptag = 0xFF;
-	if (litmdc.size() > (sizeof(ctx.mdc_hash) + 2))
-		lit.insert(lit.end(), litmdc.begin(), litmdc.end() - (sizeof(ctx.mdc_hash) + 2));
-	while (litmdc.size() && ptag)
+	size_t pnum = 0, mdc_len = sizeof(ctx.mdc_hash) + 2;
+	if (pkts.size() > mdc_len)
+		lit.insert(lit.end(), pkts.begin(), pkts.end() - mdc_len); // store literal data
+	while (pkts.size() && ptag)
 	{
 		tmcg_octets_t current_packet;
-		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(litmdc, ctx, current_packet, qual, capl, v_i, c_ik);
+		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
+		++pnum;
 		if (opt_verbose)
-			std::cout << "PacketDecode() = " << (int)ptag;
-		if (!ptag)
+			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+		if (ptag == 0x00)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << litmdc.size() << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
 			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
-			return false;
+			return false; // parsing error detected
 		}
-		if (opt_verbose)
-			std::cout << " tag = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+		else if (ptag == 0xFE)
+		{
+			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore packet
+		}
 		switch (ptag)
 		{
 			case 8: // Compressed Data
-				std::cerr << "WARNING: compressed OpenPGP packet found; not supported" << std::endl;
+				std::cerr << "WARNING: compressed OpenPGP packet found; not supported and ignored" << std::endl;
 				break;
 			case 11: // Literal Data
 				if (!have_lit)
@@ -554,7 +568,7 @@ bool decrypt_message
 					mdc_hash.push_back(ctx.mdc_hash[i]);
 				break;
 			default:
-				std::cerr << "ERROR: unrecognized OpenPGP packet found" << std::endl;
+				std::cerr << "ERROR: unexpected OpenPGP packet found" << std::endl;
 				cleanup_ctx(ctx);
 				cleanup_containers(qual, v_i, c_ik);
 				return false;
@@ -606,6 +620,7 @@ bool parse_signature
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
 		return false;
 	}
+	size_t pnum = 0;
 	while (pkts.size() && ptag)
 	{
 		tmcg_openpgp_packet_ctx ctx;
@@ -614,12 +629,22 @@ bool parse_signature
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
-		if (!ptag)
+		++pnum;
+		if (opt_verbose)
+			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+		if (ptag == 0x00)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
 			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
+		}
+		else if (ptag == 0xFE)
+		{
+			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore packet
 		}
 		switch (ptag)
 		{
@@ -679,6 +704,11 @@ bool parse_signature
 					std::cerr << "WARNING: more than one admissible signature; packet ignored" << std::endl;
 				}
 				break;
+			default:
+				std::cerr << "ERROR: unexpected OpenPGP packet found" << std::endl;
+				cleanup_ctx(ctx);
+				cleanup_containers(qual, v_i, c_ik);
+				return false;
 		}
 		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);
@@ -727,7 +757,9 @@ bool parse_public_key
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
 		++pnum;
-		if (!ptag)
+		if (opt_verbose)
+			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+		if (ptag == 0x00)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
 			gcry_mpi_release(dsa_r);
@@ -736,7 +768,14 @@ bool parse_public_key
 			gcry_mpi_release(elg_s);
 			cleanup_ctx(ctx);
 			cleanup_containers(qual, v_i, c_ik);
-			return false;
+			return false; // parsing error detected
+		}
+		else if (ptag == 0xFE)
+		{
+			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore packet
 		}
 		switch (ptag)
 		{
@@ -962,9 +1001,11 @@ bool parse_public_key
 				std::cerr << "WARNING: user attribute packet found; ignored" << std::endl;
 				uat = true;
 				break;
-			case 0xFE: // unrecognized packet content
-				std::cerr << "WARNING: unrecognized content of packet #" << pnum << " at position " << pkts.size() << std::endl;
-				break;
+			default:
+				std::cerr << "ERROR: unexpected OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+				cleanup_ctx(ctx);
+				cleanup_containers(qual, v_i, c_ik);
+				return false;
 		}
 		// cleanup allocated buffers and mpi's
 		cleanup_ctx(ctx);

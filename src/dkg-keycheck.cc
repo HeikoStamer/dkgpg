@@ -376,6 +376,10 @@ int main
 		if (mpz_divisible_p(pm1, dss_q))
 			std::cout << " * q";
 		std::cout << std::endl << "\t";
+		if (mpz_cmp_ui(dkg_g, 256L) <= 0)
+		{
+			std::cout << "g = " << dkg_g << std::endl << "\t";
+		}
 		std::cout << "g is ";
 		mpz_powm(pm1, dkg_g, dss_q, dkg_p);
 		if (mpz_cmp_ui(pm1, 1L))

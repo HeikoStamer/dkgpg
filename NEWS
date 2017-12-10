@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.0.3
 1.0.2   This release brings small improvements for dkg-keyinfo and fixes
         some bugs and memory leaks. It also adjusts the flags of shared DSA
         keys generated with dkg-generate due to a hidden RFC 4880 requirement.

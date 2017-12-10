@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "November 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "December 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
@@ -10,28 +10,29 @@ dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
 
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN or a file according to the OpenPGP
-standard. KEYFILE must contain the ASCII-armored public key, for which the encryption is
+standard. KEYFILE must contain the ASCII\-armored public key, for which the encryption is
 performed.
 .PP
-First, AES\-256 is applied as symmetric cipher with a randomly chosen 256-bit session key.
+First, AES\-256 is applied as symmetric cipher with a randomly chosen 256\-bit session key.
 Finally, the session key is transformed by PKCS#1 v1.5 block encoding and encrypted with
-the ElGamal public-key algorithm. Note that an integrity protection packet (MDC) is always
+the ElGamal public\-key algorithm. Note that an integrity protection packet (MDC) is always
 appended.
 .PP
-Currently, as public-key algorithm only ElGamal is supported and all certifying signatures
+Currently, as public\-key algorithm only ElGamal is supported and all certifying signatures
 in the corresponding subkey packet of the public key must be DSA signatures. This is due
 to the limitation of OpenPGP support in LibTMCG.
 .PP
-The encrypted message in ASCII-armored OpenPGP format is written to STDOUT or to a file
-and can later be processed with
+The encrypted message in ASCII\-armored is written to STDOUT or to an output file and can
+later be processed with
 .BR dkg\-decrypt (1).
 There exists also an option to write out the encrypted message in binary OpenPGP format.
+However, for obvious reason this must be an output file and not STDOUT. 
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
 .TP
 \fB\-b\fR, \fB\-\-binary\fR
-write encrypted message in binary format (only if option -i given)
+write encrypted message in binary format (only if option \-i given)
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 print this list of options
@@ -69,7 +70,7 @@ Copyright (C)  2017 Heiko Stamer <HeikoStamer@gmx.net>
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later
 version published by the Free Software Foundation; with no Invariant Sections,
-no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
+no Front\-Cover Texts, and no Back\-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 

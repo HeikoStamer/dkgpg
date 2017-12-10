@@ -1,4 +1,4 @@
-.TH DKG\-GENERATE "1" "August 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-GENERATE "1" "December 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-generate \- distributed key generation for OpenPGP
@@ -9,15 +9,15 @@ dkg\-generate \- distributed key generation for OpenPGP
 .IR PEERS
 
 .SH DESCRIPTION
-This program implements the t-resilient distributed key generation protocol (DKG)
+This program implements the t\-resilient distributed key generation protocol (DKG)
 by Gennaro et al. for discrete logarithm based cryptosystems as described in
 .I "Journal of Cryptology, Vol. 20(1), 2007".
-Additionally, it can perform the adaptively-secure threshold DSS protocol (tDSS)
+Additionally, it can perform the adaptively\-secure threshold DSS protocol (tDSS)
 by Canetti et al. for generating a shared DSA key as proposed in the extended
 version of a paper appeared under the title
 .I "Adaptive Security for Threshold Cryptosystems"
-in the proceedings of CRYPTO'99. Both protocols employ GNUnet or a simple built-in
-TCP/IP service as underlying peer-to-peer (P2P) network for exchange of internal
+in the proceedings of CRYPTO'99. Both protocols employ GNUnet or a simple built\-in
+TCP/IP service as underlying peer\-to\-peer (P2P) network for exchange of internal
 protocol messages between the participants. Thus either a working GNUnet peer or
 an interconnected host with appropriate TCP/IP port forwarding (e.g. via Tor
 Hidden Service) is necessary to proceed. Otherwise only local test instances
@@ -29,11 +29,11 @@ is arranged as subkey. Thus each party should verify after key generation, that
 the published public key of the group contains this shared ElGamal key, if no
 shared DSA signing key is used as integrity measure. The program generates two
 different files: First, one file that stores the individual private key shares in
-ASCII-armored OpenPGP format (experimental public-key algorithm IDs 108 an 109),
-and second, another file that contains the public keys again in ASCII-armored
+ASCII\-armored OpenPGP format (experimental public\-key algorithm IDs 108 an 109),
+and second, another file that contains the public keys again in ASCII\-armored
 format. These files have as a common prefix of their filename the GNUnet peer
 identity or the hostname of the calling party, i.e., the corresponding string
-from the n-element list
+from the n\-element list
 .IR "PEERS". 
 The first file must be kept confidential. A passphrase can be used to protect
 the private keys by a simple OpenPGP S2K encryption scheme. If an empty passphrase
@@ -43,39 +43,39 @@ to be protected otherwise.
 The parameter t determines how many parties may deviate from the DKG protocol
 during the key generation and later during threshold decryption. At least
 t+1 participants are needed to recover a key share or to decrypt a OpenPGP
-message. This parameter can be adjusted by using the option "-t". The default
-value is (n-1)/2 where n is the number of participants. If the program is
-called with a zero t-resilience (i.e. "-t 0"), then no ElGamal encryption
+message. This parameter can be adjusted by using the option "\-t". The default
+value is (n\-1)/2 where n is the number of participants. If the program is
+called with a zero t\-resilience (i.e. "\-t 0"), then no ElGamal encryption
 subkey is generated. It is always ensured by clipping that t <= n holds.
 .PP
-The option "-s" defines the parameter s, i.e., the s-resilience of the tDSS
+The option "\-s" defines the parameter s, i.e., the s\-resilience of the tDSS
 protocol. At least 2s+1 participants are required to create a signature of the
 shared DSA primary key, however, s+1 parties can recover all secret key shares.
-The default value for s is (n-1)/2. The generation of an unique shared DSA
+The default value for s is (n\-1)/2. The generation of an unique shared DSA
 key is disabled, if parameter s is set to zero. In that case individual DSA keys
 are generated which allow full control over the shared encryption subkey.
 .PP
-The underlying DDH-hard group, i.e., a large prime-order subgroup of special
-form (sometimes called Schnorr group), can be tweaked by using the option "-g"
+The underlying DDH\-hard group, i.e., a large prime\-order subgroup of special
+form (sometimes called Schnorr group), can be tweaked by using the option "\-g"
 with a common reference string (CRS) also known as domain parameter set. The
 included program
 .BR dkg\-gencrs
 generates such a string on that all participants must agree. The security
 level is increased for each remaining dummy argument of dkg\-gencrs.
 The generated domain parameters are verifiable up to a certain
-level. In particular there is an option for compliance with FIPS 186-4.
+level. In particular there is an option for compliance with FIPS 186\-4.
 However, it is recommended that this crucial part of the setup is either
 accomplished by some trusted members or all participants together.
-Without option "-g" a hard coded group with |p| = 2048 bit and |q| = 256 bit
+Without option "\-g" a hard coded group with |p| = 2048 bit and |q| = 256 bit
 is used by default. It was created by the author of the program at random
 and is fully compatible with DSA as defined in RFC 4880. Other choices may
 not be supported by all OpenPGP implementations.
 .PP
-With the option "-w" the number of minutes can be adjusted until DKG/tDSS
+With the option "\-w" the number of minutes can be adjusted until DKG/tDSS
 protocols are started. The default value is 5. It is crucial for the key
 generation that all participants are connected with GNUnet CADET within
 this waiting time. Otherwise the distributed key generation may fail.
-The option "-W" defines the timeout of a message within the point-to-point
+The option "\-W" defines the timeout of a message within the point\-to\-point
 network. The default value is 5 minutes. If the underlying network transport
 (i.e. GNUnet CADET or TCP/IP) is very slow then this value should be
 increased by all particpants. 
@@ -91,26 +91,26 @@ canonicalized peer list, i.e., the sorted unique list of given PEERS. For
 example, if participant P_0 uses A/B/C/ as password string, then "B" is
 the password for his channel to P_1 and "C" is the password for his channel
 to P_2. That means P_1 and P_2 have to provide matching password strings,
-i.e., B/D/E/ and C/E/F/, respectively. The default value of option "-P" is
+i.e., B/D/E/ and C/E/F/, respectively. The default value of option "\-P" is
 an empty password string (simple default passwords) based on the assumption,
 that GNUnet will protect the exchanged protocol messages.
 .PP
 Additionally, instead of relying on GNUnet CADET protocol the messages can
-be exchanged by the built-in TCP/IP communication framework. In that case
+be exchanged by the built\-in TCP/IP communication framework. In that case
 the given peer identities from PEERS must be resolvable hostnames and the
-corresponding option "-H" defines the name of the calling peer within that
+corresponding option "\-H" defines the name of the calling peer within that
 list. The program binds some TCP ports up from 55000 to listen for incoming
 connections and connects to other peers in that port range. The used port
 numbers are determined by the unique position in the canonicalized peer list.
 Since the communication of TCP/IP is not protected by the network itself
-the option "-P" is mandatory in that case.
+the option "\-P" is mandatory in that case.
 .PP
 The included program 
 .BR dkg\-keyinfo
 shows some basic information about threshold parameter and the private key.
 Finally, the program
 .BR dkg\-refresh
-updates the individual DSA key shares and thus provides so-called proactive
+updates the individual DSA key shares and thus provides so\-called proactive
 security against a mobile adversary, if it is used regularly. The refreshment
 should be handled very carefully because all parties not involved are excluded
 (disqualified) from all further private key operations.
@@ -127,7 +127,7 @@ use GNUnet configuration file FILENAME
 expiration time of generated keys in seconds
 .TP
 \fB\-g\fR, \fB\-\-group\fR=\fI\,STRING\/\fR
-common reference string that defines the underlying DDH-hard group
+common reference string that defines the underlying DDH\-hard group
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 print this list of options
@@ -163,7 +163,7 @@ turn on verbose output
 minutes to wait until start of key generation protocol
 .TP
 \fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
-timeout for point-to-point messages in minutes
+timeout for point\-to\-point messages in minutes
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT
@@ -192,16 +192,16 @@ dkg-generate -w 10 -s 0 -t 2 WS3KHEYKKF6QQ6NDQKKCJ2B374RSSXJ05TB5D9W9FYKPPEJ3QKF
 .RE
 .fi
 .PP
-Each party must run such a process with identical parameter set, i.e., please configure always the same t-resilience. Note that,
-e.g. 2-resilience, means that later at least three participants are needed in order to decrypt messages for the generated common
+Each party must run such a process with identical parameter set, i.e., please configure always the same t\-resilience. Note that,
+e.g. 2\-resilience, means that later at least three participants are needed in order to decrypt messages for the generated common
 ElGamal subkey. However, robustness of the DKG protocol is only guaranteed for t < n/2 which is violated in this example. Thus a
-malicious party may disturb the key generation without being identified and excluded. The s-resilience is set to zero, which
+malicious party may disturb the key generation without being identified and excluded. The s\-resilience is set to zero, which
 means that individual DSA keys instead of a shared key are generated and used as OpenPGP primary keys. Thus
 .BR dkg\-sign (1)
 will not work with such restricted keys. The program waits ten minutes before the DKG protocol is started, because
 establishing a CADET channel with GNUnet may take some time.
 .PP
-Instead of using GNUnet for message exchange the built-in TCP/IP service (currently IPv4 only) can carry out this job. However,
+Instead of using GNUnet for message exchange the built\-in TCP/IP service (currently IPv4 only) can carry out this job. However,
 then each peer has to be reachable by all other peers over the underlying network. In this case resolvable hostnames instead
 of GNUnet peer identities are used as unique identifiers: 
 .nf
@@ -209,9 +209,9 @@ of GNUnet peer identities are used as unique identifiers:
 dkg-generate -t 2 -P secret1/secret2/secret3/secret4/ -H host2.example.com host1.example.com host2.example.com host3.example.com host4.example.com  
 .RE
 .fi
-The s-resilience is non-zero in this example, which means that a shared DSA key is generated and used as OpenPGP primary key. Thus
+The s\-resilience is non\-zero in this example, which means that a shared DSA key is generated and used as OpenPGP primary key. Thus
 the shared encryption subkey (ElGamal) is protected against individual manipulation. This subkey is generated with a default
-threshold of t = (n-1)/2.
+threshold of t = (n\-1)/2.
 .PP
 Last but not least, in the following example only a shared DSA key, e.g. for jointly code signing, is generated:
 .nf
@@ -220,7 +220,7 @@ dkg-generate -t 0 -P secret1/secret2/secret3/ -H supertapir evilsloth supertapir
 .RE
 .fi
 .PP
-You can start the program with torsocks to use TOR as underlying point-to-point network. Note that for this case the option
+You can start the program with torsocks to use TOR as underlying point\-to\-point network. Note that for this case the option
 "AllowInbound" must be enabled in torsocks.conf. Additionally, a hidden service with port redirection to localhost has to be
 configured in your torrc file:
 .nf
@@ -258,7 +258,7 @@ Copyright (C)  2017 Heiko Stamer <HeikoStamer@gmx.net>
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later
 version published by the Free Software Foundation; with no Invariant Sections,
-no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
+no Front\-Cover Texts, and no Back\-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 

@@ -542,6 +542,12 @@ bool decrypt_message
 		}
 		switch (ptag)
 		{
+			case 2: // Signature
+				std::cerr << "WARNING: signature OpenPGP packet found; not supported and ignored" << std::endl;
+				break;
+			case 4: // One-Pass Signature
+				std::cerr << "WARNING: one-pass signature OpenPGP packet found; not supported and ignored" << std::endl;
+				break;
 			case 8: // Compressed Data
 				std::cerr << "WARNING: compressed OpenPGP packet found; not supported and ignored" << std::endl;
 				break;

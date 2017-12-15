@@ -429,7 +429,7 @@ bool parse_message
 				}
 				break;
 			default:
-				std::cerr << "ERROR: unexpected OpenPGP packet found" << std::endl;
+				std::cerr << "ERROR: unexpected OpenPGP packet " << (int)ptag<< " found at #" << pnum << std::endl;
 				cleanup_ctx(ctx);
 				cleanup_containers(qual, v_i, c_ik);
 				return false;
@@ -568,7 +568,7 @@ bool decrypt_message
 					mdc_hash.push_back(ctx.mdc_hash[i]);
 				break;
 			default:
-				std::cerr << "ERROR: unexpected OpenPGP packet found" << std::endl;
+				std::cerr << "ERROR: unexpected OpenPGP packet " << (int)ptag<< " found at #" << pnum << std::endl;
 				cleanup_ctx(ctx);
 				cleanup_containers(qual, v_i, c_ik);
 				return false;
@@ -705,7 +705,7 @@ bool parse_signature
 				}
 				break;
 			default:
-				std::cerr << "ERROR: unexpected OpenPGP packet found" << std::endl;
+				std::cerr << "ERROR: unexpected OpenPGP packet " << (int)ptag<< " found at #" << pnum << std::endl;
 				cleanup_ctx(ctx);
 				cleanup_containers(qual, v_i, c_ik);
 				return false;

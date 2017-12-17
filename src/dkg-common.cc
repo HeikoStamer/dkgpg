@@ -792,7 +792,7 @@ bool parse_public_key
 				if (pubdsa && !subelg && !uid && !uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
-					std::cerr << "ERROR: no uid found for this self-signature" << std::endl;
+					std::cerr << "ERROR: no uid/uat found for this self-signature" << std::endl;
 					gcry_mpi_release(dsa_r);
 					gcry_mpi_release(dsa_s);
 					gcry_mpi_release(elg_r);
@@ -827,6 +827,8 @@ bool parse_public_key
 					dsa_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						dsa_hspd.push_back(ctx.hspd[i]);
+					if (opt_verbose)
+						std::cout << "INFO: dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
 					if (dsa_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -840,6 +842,11 @@ bool parse_public_key
 					}
 					gcry_mpi_set(dsa_r, ctx.r);
 					gcry_mpi_set(dsa_s, ctx.s);
+					unsigned int rbits = 0, sbits = 0;
+					rbits = gcry_mpi_get_nbits(dsa_r);
+					sbits = gcry_mpi_get_nbits(dsa_s);
+					if (opt_verbose)
+						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
 					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)dsa_hashalgo << " used for signatures" << std::endl;
 					time_t kmax = dsa_creation + ctx.keyexpirationtime;
@@ -851,7 +858,7 @@ bool parse_public_key
 					for (size_t i = 0; i < current_packet.size(); i++)
 						uidsig.push_back(current_packet[i]);
 				}
-				else if (pubdsa && !subelg && uid && uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+				else if (pubdsa && !subelg && !uid && uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					std::cerr << "WARNING: ignore certifying self-signature for a user attribute" << std::endl;
@@ -880,6 +887,8 @@ bool parse_public_key
 					elg_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						elg_hspd.push_back(ctx.hspd[i]);
+					if (opt_verbose)
+						std::cout << "INFO: elg_hspd.size() = " << elg_hspd.size() << std::endl;
 					if (elg_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -893,6 +902,11 @@ bool parse_public_key
 					}
 					gcry_mpi_set(elg_r, ctx.r);
 					gcry_mpi_set(elg_s, ctx.s);
+					unsigned int rbits = 0, sbits = 0;
+					rbits = gcry_mpi_get_nbits(elg_r);
+					sbits = gcry_mpi_get_nbits(elg_s);
+					if (opt_verbose)
+						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
 					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)elg_hashalgo << " used for signatures" << std::endl;
 					time_t kmax = elg_creation + ctx.keyexpirationtime;
@@ -963,7 +977,7 @@ bool parse_public_key
 			case 13: // User ID Packet
 				if (uid)
 					std::cerr << "WARNING: more than one uid packet found; using last to verify signature" << std::endl;
-				uid = true;
+				uid = true, uat = false;
 				userid = "";
 				for (size_t i = 0; i < sizeof(ctx.uid); i++)
 				{
@@ -978,12 +992,12 @@ bool parse_public_key
 				{
 					if (subelg)
 						std::cerr << "WARNING: ElGamal subkey already found; the last one is used" << std::endl;
-					subelg = true, sigelg = false;
+					subelg = true, sigelg = false, sigelgV3 = false;
 					gcry_mpi_set(elg_p, ctx.p);
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
 					elg_creation = ctx.keycreationtime;
-					keycreationtime_out = ctx.keycreationtime; // FIXME: overwrites creation time of primary key
+					keycreationtime_out = ctx.keycreationtime; // FIXME: this overwrites saved creation time of primary key
 					sub.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ctx.keycreationtime, ctx.pkalgo,
 						elg_p, dsa_q, elg_g, elg_y, sub);
@@ -1005,7 +1019,7 @@ bool parse_public_key
 				break;
 			case 17: // User Attribute Packet
 				std::cerr << "WARNING: user attribute packet found; ignored" << std::endl;
-				uat = true;
+				uid = false, uat = true;
 				break;
 			default:
 				std::cerr << "ERROR: unexpected OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;

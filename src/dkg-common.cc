@@ -1105,7 +1105,7 @@ bool parse_public_key
 		if ((flags & 0x80) == 0x80)
 			std::cout << "M"; // The private component of this key may be in the possession of more than one person.
 		std::cout << std::endl;
-		std::cout << "INFO: userid = " << userid << std::endl;
+		std::cout << "INFO: userid = \"" << userid << "\"" << std::endl;
 		std::cout << "INFO: dsa_sigtype = 0x" << std::hex << (int)dsa_sigtype << std::dec << 
 			" dsa_pkalgo = " << (int)dsa_pkalgo << " dsa_hashalgo = " << (int)dsa_hashalgo << " dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
 	}

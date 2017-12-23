@@ -935,7 +935,9 @@ bool parse_public_key
 				}
 				break;
 			case 6: // Public-Key Packet
-				if ((ctx.pkalgo == 17) && !pubdsa)
+				if (ctx.version != 4)
+					std::cerr << "WARNING: public-key packet version " << (int)ctx.version << " not supported" << std::endl;
+				else if ((ctx.pkalgo == 17) && !pubdsa)
 				{
 					pubdsa = true;
 					gcry_mpi_set(dsa_p, ctx.p);
@@ -988,7 +990,9 @@ bool parse_public_key
 				}
 				break;
 			case 14: // Public-Subkey Packet
-				if (ctx.pkalgo == 16)
+				if (ctx.version != 4)
+					std::cerr << "WARNING: public-subkey packet version " << (int)ctx.version << " not supported" << std::endl;
+				else if (ctx.pkalgo == 16)
 				{
 					if (subelg)
 						std::cerr << "WARNING: ElGamal subkey already found; the last one is used" << std::endl;

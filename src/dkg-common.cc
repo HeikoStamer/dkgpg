@@ -825,10 +825,16 @@ bool parse_public_key
 					for (size_t i = 0; i < sizeof(dsa_pca); i++)
 						dsa_pca[i] = ctx.pca[i];
 					dsa_hspd.clear();
-					for (size_t i = 0; i < ctx.hspdlen; i++)
-						dsa_hspd.push_back(ctx.hspd[i]);
 					if (opt_verbose)
-						std::cout << "INFO: dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
+						std::cout << "INFO: dsa_hspd = " << std::hex;
+					for (size_t i = 0; i < ctx.hspdlen; i++)
+					{
+						dsa_hspd.push_back(ctx.hspd[i]);
+						if (opt_verbose)
+							std::cout << (int)ctx.hspd[i] << " ";
+					}
+					if (opt_verbose)
+						std::cout << std::dec << std::endl << "INFO: dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
 					if (dsa_pkalgo != 17)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;

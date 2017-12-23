@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.0.4   Since this release not required OpenPGP packets will be ignored.
 1.0.3   Only small bugfixes are included in this release. However, the most
         recent version of LibTMCG is required to recognize some important
         library changes (e.g. increased S2K count for secret key encryption).

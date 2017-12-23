@@ -18,10 +18,10 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20171223])
+AC_REVISION([20171224])
 AC_PREREQ(2.61)
 
-AC_INIT([Distributed Privacy Guard], [1.0.4], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
+AC_INIT([Distributed Privacy Guard], [1.0.5], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
 
 AC_LANG(C++)
 AC_CONFIG_SRCDIR([src/dkg-common.hh])

@@ -75,6 +75,9 @@ char					*opt_passwords = NULL;
 char					*opt_hostname = NULL;
 unsigned long int			opt_p = 55000, opt_W = 5;
 
+mpz_t					cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
+size_t					cache_avail = 0;
+
 void run_instance
 	(size_t whoami, const size_t num_xtests)
 {
@@ -108,14 +111,6 @@ void run_instance
 			exit(-1);
 		}
 	}
-
-	// initialize cache
-	mpz_t cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
-	size_t cache_avail = 0;
-	std::cout << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
-	std::cout << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
-	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * dss_t), dss_q);
-	std::cout << "Thank you!" << std::endl;
 
 	// create communication handles between all players
 	std::vector<int> uP_in, uP_out, bP_in, bP_out;
@@ -467,9 +462,6 @@ void run_instance
 	// release asynchronous unicast and broadcast
 	delete aiou, delete aiou2;
 
-	// release cache
-	mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
-
 	// release
 	release_mpis();
 }
@@ -706,6 +698,48 @@ int main
 	if (opt_verbose)
 		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
+	// initialize cache
+	std::string armored_pubkey = "undefined";
+	if (opt_hostname != NULL)
+	{
+		if (!read_key_file(hostname + "_dkg-pub.asc", armored_pubkey))
+			armored_pubkey = "undefined";
+	}
+	else
+	{
+		for (size_t i = 0; i < peers.size(); i++)
+		{
+			if (read_key_file(peers[i] + "_dkg-pub.asc", armored_pubkey))
+				break;
+		}
+	}
+	if (armored_pubkey == "undefined")
+	{
+		std::cerr << "ERROR: no corresponding public key file found" << std::endl;
+		return -1;
+	}
+	init_mpis();
+	time_t ckeytime = 0, ekeytime = 0;
+	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime))
+	{
+		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
+		release_mpis();
+		return -1;
+	}
+	if (!mpz_set_gcry_mpi(dsa_q, dss_q))
+	{
+		std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_q" << std::endl;
+		release_mpis();
+		return -1;
+	}
+	std::cout << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
+	std::cout << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
+	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * peers.size()), dss_q);
+	std::cout << "Thank you!" << std::endl;
+	keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
+	dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
+	release_mpis();
+
 	// initialize return code
 	int ret = 0;
 	// create underlying point-to-point channels, if built-in TCP/IP service requested
@@ -725,6 +759,8 @@ int main
 		ret = tcpip_io();
 		tcpip_close();
 		tcpip_done();
+		// release cache
+		mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 		return ret;
 	}
 
@@ -776,6 +812,8 @@ int main
 	};
 	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
 	GNUNET_free((void *) argv);
+	// release cache
+	mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 	if (ret == GNUNET_OK)
 		return 0;
 	else
@@ -837,6 +875,8 @@ int main
 		}
 	}
 	
+	// release cache
+	mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 	// finish	
 	return ret;
 }

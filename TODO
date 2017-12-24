@@ -8,6 +8,7 @@ in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
 
+* dkg-tools: use mlockall(2), if availablle
 * dkg-tools: use allocated secure memory from libgcrypt for secret values
 * dkg-tools: protect h-generation protocol with EDCF to avoid ROM
 

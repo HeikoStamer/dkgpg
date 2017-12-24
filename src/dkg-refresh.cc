@@ -109,6 +109,14 @@ void run_instance
 		}
 	}
 
+	// initialize cache
+	mpz_t cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
+	size_t cache_avail = 0;
+	std::cout << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
+	std::cout << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
+	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * dss_t), dss_q);
+	std::cout << "Thank you!" << std::endl;
+
 	// create communication handles between all players
 	std::vector<int> uP_in, uP_out, bP_in, bP_out;
 	std::vector<std::string> uP_key, bP_key;
@@ -229,7 +237,7 @@ void run_instance
 	std::stringstream err_log;
 	if (opt_verbose)
 		std::cout << "R_" << whoami << ": dss.Refresh()" << std::endl;
-	if (!dss->Refresh(peers.size(), whoami, idx2dkg, dkg2idx, aiou, rbc, err_log, false))
+	if (!dss->Refresh(peers.size(), whoami, idx2dkg, dkg2idx, aiou, rbc, err_log, false, cache, cache_mod, &cache_avail))
 	{
 		std::cerr << "R_" << whoami << ": " << "tDSS Refresh() failed" << std::endl;
 		std::cerr << "R_" << whoami << ": log follows " << std::endl << err_log.str();
@@ -458,6 +466,9 @@ void run_instance
 
 	// release asynchronous unicast and broadcast
 	delete aiou, delete aiou2;
+
+	// release cache
+	mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 
 	// release
 	release_mpis();
@@ -826,6 +837,7 @@ int main
 		}
 	}
 	
+	// finish	
 	return ret;
 }
 

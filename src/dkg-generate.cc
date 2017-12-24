@@ -1945,7 +1945,7 @@ int main
 	std::cerr << "WARNING: GNUnet CADET is required for the message exchange of this program" << std::endl;
 #endif
 
-	std::cout << "INFO: running local test with " << peers.size() << " participants" << std::endl;
+	std::cout << "INFO: running insecure local test with " << peers.size() << " participants" << std::endl;
 	// open pipes
 	for (size_t i = 0; i < peers.size(); i++)
 	{

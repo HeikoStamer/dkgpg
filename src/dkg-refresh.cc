@@ -823,6 +823,7 @@ int main
 #endif
 
 	std::cout << "INFO: running local test with " << peers.size() << " participants" << std::endl;
+	std::cerr << "WARNING: due to cache issues the generated shares are identical, don't use them!" << std::endl;
 	// open pipes
 	for (size_t i = 0; i < peers.size(); i++)
 	{

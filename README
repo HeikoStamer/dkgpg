@@ -86,7 +86,7 @@ Requirements
   build (GNU gcc/g++ >= 5.4.y or higher is recommended) DKGPG successfully:
 
   * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.9
-    http://www.nongnu.org/libtmcg/
+    https://savannah.nongnu.org/projects/libtmcg
   * GNU Multiple Precision Arithmetic Library (libgmp), version >= 4.2.0,
     https://gmplib.org/
   * GNU Crypto Library (libgcrypt), version >= 1.6.0,
@@ -116,11 +116,15 @@ Build & Install
 
 Bugs, Contribution, GIT
 -----------------------
-  Please send detailed bug reports to Heiko Stamer <HeikoStamer@gmx.net>.
+  Please send detailed bug reports to Heiko Stamer <HeikoStamer@gmx.net>,
+  or even better, use our bug tracker at:
+ 
+    https://savannah.nongnu.org/bugs/?func=additem&group=dkgpg
+
   You can get the latest sources from the source repository by using the
   command
 
-    git clone git://git.savannah.nongnu.org/dkgpg.git
+    git clone https://git.savannah.nongnu.org/git/dkgpg.git
 
   The GNU C++ compiler from GCC and the GNU Make program is required.
   Additionally you will need the following free software packages:

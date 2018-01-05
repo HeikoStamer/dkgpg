@@ -312,13 +312,23 @@ int main
 	if (mpz_cmp_ui(pm1, 1L))
 		std::cout << "NOT ";
 	std::cout << "element of G_q" << std::endl << "\t";
-	bool trivial = false;
+	mpz_t tmp_r;
+	mpz_init(tmp_r);
+	if (!mpz_set_gcry_mpi(dsa_r, tmp_r))
+		std::cout << "BAD signature (cannot convert dsa_r)" << std::endl << "\t";
+	bool trivial = false, suspicious = false;
 	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 	{
 		mpz_powm_ui(pm1, dss_g, i, dss_p);
 		if (!mpz_cmp(dss_y, pm1))
 		{
 			trivial = true;
+			break;
+		}
+		mpz_mod(pm1, pm1, dss_q);
+		if (!mpz_cmp(tmp_r, pm1))
+		{
+			suspicious = true;
 			break;
 		}
 		if (i > 0)
@@ -331,13 +341,22 @@ int main
 				trivial = true;
 				break;
 			}
+			mpz_mod(pm1, pm1, dss_q);
+			if (!mpz_cmp(tmp_r, pm1))
+			{
+				suspicious = true;
+				break;
+			}
 		}
 	}
 	mpz_clear(tmp);
+	mpz_clear(tmp_r);
 	if (!trivial)
 		std::cout << "y is not trivial" << std::endl << "\t";
 	else
 		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
+	if (suspicious)
+		std::cout << "r is SUSPICIOUS (small k)" << std::endl << "\t";
 	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss_y, dss_p) << std::endl;
 	mpz_clear(pm1);
 	if (sub.size())

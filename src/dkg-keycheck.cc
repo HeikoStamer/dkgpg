@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -315,7 +315,7 @@ int main
 	mpz_t tmp_r;
 	mpz_init(tmp_r);
 	if (!mpz_set_gcry_mpi(dsa_r, tmp_r))
-		std::cout << "BAD signature (cannot convert dsa_r)" << std::endl << "\t";
+		std::cerr << "ERROR: bad signature (cannot convert dsa_r)" << std::endl << "\t";
 	bool trivial = false, suspicious = false;
 	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 	{
@@ -349,6 +349,36 @@ int main
 			}
 		}
 	}
+	if (sub.size())
+	{
+		if (!mpz_set_gcry_mpi(elg_r, tmp))
+			std::cerr << "ERROR: bad signature (cannot convert elg_r)" << std::endl << "\t";
+		if (!mpz_cmp(tmp, tmp_r))
+			std::cout << "r is EQUAL for both signatures (e.g. same k used)" << std::endl << "\t";
+		mpz_set(tmp_r, tmp);
+		for (size_t i = 0; i < TRIVIAL_SIZE; i++)
+		{
+			mpz_powm_ui(pm1, dss_g, i, dss_p);
+			mpz_mod(pm1, pm1, dss_q);
+			if (!mpz_cmp(tmp_r, pm1))
+			{
+				suspicious = true;
+				break;
+			}
+			if (i > 0)
+			{
+				mpz_set_ui(tmp, i);
+				mpz_neg(tmp, tmp);
+				mpz_powm(pm1, dss_g, tmp, dss_p);
+				mpz_mod(pm1, pm1, dss_q);
+				if (!mpz_cmp(tmp_r, pm1))
+				{
+					suspicious = true;
+					break;
+				}
+			}
+		}
+	}
 	mpz_clear(tmp);
 	mpz_clear(tmp_r);
 	if (!trivial)
@@ -356,7 +386,7 @@ int main
 	else
 		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
 	if (suspicious)
-		std::cout << "r is SUSPICIOUS (small k)" << std::endl << "\t";
+		std::cout << "r is SUSPICIOUS (small k used)" << std::endl << "\t";
 	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss_y, dss_p) << std::endl;
 	mpz_clear(pm1);
 	if (sub.size())

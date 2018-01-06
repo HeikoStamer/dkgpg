@@ -379,8 +379,6 @@ int main
 			}
 		}
 	}
-	mpz_clear(tmp);
-	mpz_clear(tmp_r);
 	if (!trivial)
 		std::cout << "y is not trivial" << std::endl << "\t";
 	else
@@ -389,6 +387,8 @@ int main
 		std::cout << "r is SUSPICIOUS (small k used)" << std::endl << "\t";
 	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss_y, dss_p) << std::endl;
 	mpz_clear(pm1);
+	mpz_clear(tmp);
+	mpz_clear(tmp_r);
 	if (sub.size())
 	{
 		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << std::hex << std::uppercase << "\t";

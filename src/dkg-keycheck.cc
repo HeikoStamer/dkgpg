@@ -316,37 +316,27 @@ int main
 	mpz_init(tmp_r);
 	if (!mpz_set_gcry_mpi(dsa_r, tmp_r))
 		std::cerr << "ERROR: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+	if (!mpz_cmp_ui(tmp_r, 1L))
+		std::cout << "r is WEAK (i.e. r = 1)" << std::endl << "\t";
 	bool trivial = false, suspicious = false;
 	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 	{
 		mpz_powm_ui(pm1, dss_g, i, dss_p);
 		if (!mpz_cmp(dss_y, pm1))
-		{
 			trivial = true;
-			break;
-		}
 		mpz_mod(pm1, pm1, dss_q);
 		if (!mpz_cmp(tmp_r, pm1))
-		{
 			suspicious = true;
-			break;
-		}
 		if (i > 0)
 		{
 			mpz_set_ui(tmp, i);
 			mpz_neg(tmp, tmp);
 			mpz_powm(pm1, dss_g, tmp, dss_p);
 			if (!mpz_cmp(dss_y, pm1))
-			{
 				trivial = true;
-				break;
-			}
 			mpz_mod(pm1, pm1, dss_q);
 			if (!mpz_cmp(tmp_r, pm1))
-			{
 				suspicious = true;
-				break;
-			}
 		}
 	}
 	if (sub.size())
@@ -356,15 +346,14 @@ int main
 		if (!mpz_cmp(tmp, tmp_r))
 			std::cout << "r is EQUAL for both signatures (e.g. same k used)" << std::endl << "\t";
 		mpz_set(tmp_r, tmp);
+		if (!mpz_cmp_ui(tmp_r, 1L))
+			std::cout << "r is WEAK (i.e. r = 1)" << std::endl << "\t";
 		for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 		{
 			mpz_powm_ui(pm1, dss_g, i, dss_p);
 			mpz_mod(pm1, pm1, dss_q);
 			if (!mpz_cmp(tmp_r, pm1))
-			{
 				suspicious = true;
-				break;
-			}
 			if (i > 0)
 			{
 				mpz_set_ui(tmp, i);
@@ -372,10 +361,7 @@ int main
 				mpz_powm(pm1, dss_g, tmp, dss_p);
 				mpz_mod(pm1, pm1, dss_q);
 				if (!mpz_cmp(tmp_r, pm1))
-				{
 					suspicious = true;
-					break;
-				}
 			}
 		}
 	}
@@ -462,20 +448,14 @@ int main
 		{
 			mpz_powm_ui(pm1, dkg_g, i, dkg_p);
 			if (!mpz_cmp(dkg_y, pm1))
-			{
 				trivial = true;
-				break;
-			}
 			if (i > 0)
 			{
 				mpz_set_ui(tmp, i);
 				mpz_neg(tmp, tmp);
 				mpz_powm(pm1, dkg_g, tmp, dkg_p);
 				if (!mpz_cmp(dkg_y, pm1))
-				{
 					trivial = true;
-					break;
-				}
 			}
 		}
 		mpz_clear(tmp);

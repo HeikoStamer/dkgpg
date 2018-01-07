@@ -145,19 +145,26 @@ void compute_decryption_share
 	// Advances in Cryptology - EUROCRYPT '97, LNCS 1233, pp. 103--118, 1997.
 
 	// compute the decryption share
-	mpz_t nizk_gk, r_i, R;
-	mpz_init(nizk_gk), mpz_init(r_i), mpz_init(R);
+	mpz_t nizk_gk, r_i, R, foo;
+	mpz_init(nizk_gk), mpz_init(r_i), mpz_init(R), mpz_init(foo);
 	mpz_spowm(R, dkg->g, dkg->x_i, dkg->p);
 	if (mpz_cmp(R, dkg->v_i[dkg->i]))
 	{
 		std::cerr << "ERROR: check of DKG public verification key failed" << std::endl;
-		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R);
+		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
 		exit(-1);
 	}
 	if (!mpz_set_gcry_mpi(gk, nizk_gk))
 	{
 		std::cerr << "ERROR: converting message component failed" << std::endl;
-		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R);
+		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
+		exit(-1);
+	}
+	mpz_powm(foo, nizk_gk, dkg->q, dkg->p); // additional check for subgroup property
+	if (!mpz_cmp_ui(foo, 1L))
+	{
+		std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" << std::endl;
+		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
 		exit(-1);
 	}
 	mpz_spowm(r_i, nizk_gk, dkg->x_i, dkg->p);
@@ -184,19 +191,26 @@ void compute_decryption_share
 	std::ostringstream dds;
 	dds << "dds|" << dkg->i << "|" << r_i << "|" << c << "|" << r << "|";
 	mpz_clear(c), mpz_clear(r), mpz_clear(c2), mpz_clear(a), mpz_clear(b), mpz_clear(omega);
-	mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R);
+	mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
 	result = dds.str();
 }
 
 void prove_decryption_share_interactive_publiccoin
 	(GennaroJareckiKrawczykRabinDKG *dkg, mpz_srcptr r_i, aiounicast *aiou, CachinKursawePetzoldShoupRBC *rbc, JareckiLysyanskayaEDCF *edcf, std::ostream &err)
 {
-	mpz_t nizk_gk;
-	mpz_init(nizk_gk);
+	mpz_t nizk_gk, foo;
+	mpz_init(nizk_gk), mpz_init(foo);
 	if (!mpz_set_gcry_mpi(gk, nizk_gk))
 	{
 		std::cerr << "ERROR: converting message component failed" << std::endl;
-		mpz_clear(nizk_gk);
+		mpz_clear(nizk_gk), mpz_clear(foo);
+		exit(-1);
+	}
+	mpz_powm(foo, nizk_gk, dkg->q, dkg->p); // additional check for subgroup property
+	if (!mpz_cmp_ui(foo, 1L))
+	{
+		std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" << std::endl;
+		mpz_clear(nizk_gk), mpz_clear(foo);
 		exit(-1);
 	}
 	// set ID for RBC
@@ -225,7 +239,7 @@ void prove_decryption_share_interactive_publiccoin
 	}
 	// release
 	mpz_clear(c), mpz_clear(r), mpz_clear(c2), mpz_clear(a), mpz_clear(b), mpz_clear(omega);
-	mpz_clear(nizk_gk);
+	mpz_clear(nizk_gk), mpz_clear(foo);
 	// unset ID for RBC
 	rbc->unsetID();
 }

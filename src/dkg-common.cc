@@ -402,7 +402,9 @@ bool parse_message
 				have_pkesk = true;
 				break;
 			case 9: // Symmetrically Encrypted Data
-				if (!have_sed)
+				if (!have_pkesk)
+					std::cerr << "WARNING: no preceding PKESK packet found; decryption may fail" << std::endl;
+				if ((!have_sed) && (!have_seipd_out))
 				{
 					have_sed = true;
 					enc_out.clear();
@@ -411,14 +413,14 @@ bool parse_message
 				}
 				else
 				{
-					std::cerr << "ERROR: duplicate SED packet found" << std::endl;
+					std::cerr << "ERROR: duplicate SED/SEIPD packet found" << std::endl;
 					cleanup_ctx(ctx);
 					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
 			case 18: // Symmetrically Encrypted Integrity Protected Data
-				if (!have_seipd_out)
+				if ((!have_sed) && (!have_seipd_out))
 				{
 					have_seipd_out = true;
 					enc_out.clear();
@@ -427,7 +429,7 @@ bool parse_message
 				}
 				else
 				{
-					std::cerr << "ERROR: duplicate SEIPD packet found" << std::endl;
+					std::cerr << "ERROR: duplicate SED/SEIPD packet found" << std::endl;
 					cleanup_ctx(ctx);
 					cleanup_containers(qual, v_i, c_ik);
 					return false;
@@ -507,7 +509,10 @@ bool decrypt_message
 	if (have_seipd)
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, false, symalgo, pkts);
 	else
-		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, true, symalgo, pkts);
+	{
+		std::cerr << "ERROR: encrypted message was not integrity protected" << std::endl;
+		return false;
+	}
 	if (ret)
 	{
 		std::cerr << "ERROR: SymmetricDecrypt() failed" << std::endl;

@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-01-07] dkg-decrypt: removed support for not integrity protected messages
 * [2018-01-06] dkg-keycheck: added test for small/same k in DSA signatures
 * [2017-12-24] dkg-refresh: added cache for very strong randomness
 * [2017-12-23] release 1.0.4 of Distributed Privacy Guard (DKGPG)

@@ -161,7 +161,7 @@ void compute_decryption_share
 		exit(-1);
 	}
 	mpz_powm(foo, nizk_gk, dkg->q, dkg->p); // additional check for subgroup property
-	if (!mpz_cmp_ui(foo, 1L))
+	if (mpz_cmp_ui(foo, 1L))
 	{
 		std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" << std::endl;
 		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
@@ -207,7 +207,7 @@ void prove_decryption_share_interactive_publiccoin
 		exit(-1);
 	}
 	mpz_powm(foo, nizk_gk, dkg->q, dkg->p); // additional check for subgroup property
-	if (!mpz_cmp_ui(foo, 1L))
+	if (mpz_cmp_ui(foo, 1L))
 	{
 		std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" << std::endl;
 		mpz_clear(nizk_gk), mpz_clear(foo);

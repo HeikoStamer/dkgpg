@@ -1,4 +1,4 @@
-# Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+# Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 #
 # This file is part of Distributed Privacy Guard (DKGPG).
 #
@@ -17,7 +17,7 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-encrypt t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-refresh t-dkg-revoke
+TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-keysign t-dkg-encrypt t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-refresh t-dkg-revoke
 
 AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
@@ -27,6 +27,7 @@ noinst_PROGRAMS = $(TESTS)
 t_dkg_gencrs_SOURCES = t-dkg-gencrs.cc
 t_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-generate.cc
 t_dkg_keyinfo_SOURCES = t-dkg-common.hh t-dkg-common.cc t-dkg-keyinfo.cc
+t_dkg_keysign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc t-dkg-keysign.cc
 t_dkg_encrypt_SOURCES = t-dkg-common.hh t-dkg-common.cc t-dkg-encrypt.cc
 t_dkg_decrypt_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc t-dkg-decrypt.cc
 t_dkg_sign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc t-dkg-sign.cc

@@ -1,4 +1,4 @@
-# Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+# Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 #
 # This file is part of Distributed Privacy Guard (DKGPG).
 #
@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20171224])
+AC_REVISION([20180108])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.5], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -199,6 +199,7 @@ AC_CONFIG_LINKS([tests/t-dkg-generate.cc:src/dkg-generate.cc])
 AC_CONFIG_LINKS([tests/t-dkg-common.hh:src/dkg-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-common.cc:src/dkg-common.cc])
 AC_CONFIG_LINKS([tests/t-dkg-keyinfo.cc:src/dkg-keyinfo.cc])
+AC_CONFIG_LINKS([tests/t-dkg-keysign.cc:src/dkg-keysign.cc])
 AC_CONFIG_LINKS([tests/t-dkg-encrypt.cc:src/dkg-encrypt.cc])
 AC_CONFIG_LINKS([tests/t-dkg-decrypt.cc:src/dkg-decrypt.cc])
 AC_CONFIG_LINKS([tests/t-dkg-sign.cc:src/dkg-sign.cc])
@@ -209,7 +210,7 @@ AC_CONFIG_LINKS([tests/t-dkg-revoke.cc:src/dkg-revoke.cc])
 # Define output
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile\
  src/dkg-generate.1 src/dkg-encrypt.1 src/dkg-decrypt.1 src/dkg-sign.1\
- src/dkg-revoke.1 src/dkg-verify.1])
+ src/dkg-revoke.1 src/dkg-verify.1 src/dkg-keysign.1])
 AC_OUTPUT
 
 echo "Now type 'make && make install' to build and install Distributed Privacy Guard."

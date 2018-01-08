@@ -2420,6 +2420,325 @@ bool parse_private_key
 	return true;
 }
 
+bool parse_public_key_for_certification
+	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out)
+{
+	// decode ASCII Armor
+	tmcg_octets_t pkts;
+	tmcg_byte_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	if (opt_verbose)
+		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
+	if (atype != 6)
+	{
+		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
+		return false;
+	}
+	// parse the public key according to OpenPGP
+	bool primary = false, sig = false, sigV3 = false, uid = false, uat = false;
+	tmcg_byte_t ptag = 0xFF;
+	tmcg_byte_t sigtype, pkalgo, hashalgo, keyflags[4];
+	tmcg_octets_t pub_hashing, issuer, hspd;
+	time_t creation = 0, sigtime = 0;
+	size_t erroff, pnum = 0;
+	while (pkts.size() && ptag)
+	{
+		tmcg_openpgp_packet_ctx ctx;
+		tmcg_octets_t current_packet;
+		std::vector<gcry_mpi_t> qual, v_i;
+		std::vector<std::string> capl;
+		std::vector< std::vector<gcry_mpi_t> > c_ik;
+		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
+		++pnum;
+		if (opt_verbose)
+			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+		if (ptag == 0x00)
+		{
+			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
+			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			return false; // parsing error detected
+		}
+		else if (ptag == 0xFE)
+		{
+			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+			cleanup_ctx(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore packet
+		}
+		switch (ptag)
+		{
+			case 2: // Signature Packet
+				issuer.clear();
+				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
+					issuer.push_back(ctx.issuer[i]);
+				if (primary && !uid && !uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
+				{
+					std::cerr << "ERROR: no uid/uat found for this self-signature" << std::endl;
+					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
+					return false;
+				}
+				else if (primary && uid && !uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
+				{
+					if (ctx.version == 3)
+					{
+						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
+						sigV3 = true;
+						sigtime = ctx.sigcreationtime;
+					}
+					if (sig)
+						std::cerr << "WARNING: more than one self-signatures; using last signature to check key" << std::endl;
+					sig = true;
+					// store the whole packet
+					uidsig.clear();
+					for (size_t i = 0; i < current_packet.size(); i++)
+						uidsig.push_back(current_packet[i]);
+					// evaluate the content
+					sigtype = ctx.type;
+					pkalgo = ctx.pkalgo;
+					hashalgo = ctx.hashalgo;
+					keyexpirationtime_out = ctx.keyexpirationtime;
+					for (size_t i = 0; i < sizeof(keyflags); i++)
+						keyflags[i] = ctx.keyflags[i];
+					hspd.clear();
+					if (opt_verbose)
+						std::cout << "INFO: hspd = " << std::hex;
+					for (size_t i = 0; i < ctx.hspdlen; i++)
+					{
+						hspd.push_back(ctx.hspd[i]);
+						if (opt_verbose)
+							std::cout << (int)ctx.hspd[i] << " ";
+					}
+					if (opt_verbose)
+						std::cout << std::dec << std::endl << "INFO: hspd.size() = " << hspd.size() << std::endl;
+					if (ctx.pkalgo == 1)
+					{
+// TODO: RSA
+//						gcry_mpi_set(rsa_md, ctx.md);
+						unsigned int mdbits = 0;
+//						mdbits = gcry_mpi_get_nbits(rsa_md);
+						if (opt_verbose)
+							std::cout << "INFO: mdbits = " << mdbits << std::endl;
+					}
+					else if (ctx.pkalgo == 17)
+					{
+						gcry_mpi_set(dsa_r, ctx.r);
+						gcry_mpi_set(dsa_s, ctx.s);
+						unsigned int rbits = 0, sbits = 0;
+						rbits = gcry_mpi_get_nbits(dsa_r);
+						sbits = gcry_mpi_get_nbits(dsa_s);
+						if (opt_verbose)
+							std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+					}
+					else
+					{
+						std::cerr << "ERROR: public-key signature algorithm " << (int)ctx.pkalgo << " not supported" << std::endl;
+						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, c_ik);
+						return false;
+					}	
+					if ((ctx.hashalgo < 8) || (ctx.hashalgo >= 11))
+						std::cerr << "WARNING: insecure hash algorithm " << (int)ctx.hashalgo << " used for signatures" << std::endl;
+					time_t kmax = creation + ctx.keyexpirationtime;
+					if (ctx.keyexpirationtime && (time(NULL) > kmax))
+						std::cerr << "WARNING: primary key is expired" << std::endl;
+				}
+				else if (primary && !uid && uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
+				{
+					std::cerr << "WARNING: ignore self-signature for a user attribute" << std::endl;
+				}
+				else if (primary && (ctx.type == 0x20) && // Key revocation signature 
+					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
+				{
+					std::cerr << "WARNING: key revocation signature on primary key" << std::endl;
+				}
+				break;
+			case 6: // Public-Key Packet
+				if (ctx.version != 4)
+					std::cerr << "WARNING: public-key packet version " << (int)ctx.version << " not supported" << std::endl;
+				else if (!primary)
+				{
+					primary = true;
+					// store the whole packet
+					pub.clear();
+					for (size_t i = 0; i < current_packet.size(); i++)
+						pub.push_back(current_packet[i]);
+					// evaluate the content
+					if (ctx.pkalgo == 1)
+					{
+// TODO: RSA
+					}
+					else if (ctx.pkalgo == 17)
+					{
+						gcry_mpi_set(dsa_p, ctx.p);
+						gcry_mpi_set(dsa_q, ctx.q);
+						gcry_mpi_set(dsa_g, ctx.g);
+						gcry_mpi_set(dsa_y, ctx.y);
+					}
+					else
+					{
+						std::cerr << "ERROR: public-key algorithm " << (int)ctx.pkalgo << " not supported" << std::endl;
+						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, c_ik);
+						return false;
+					}
+					creation = ctx.keycreationtime;
+					keycreationtime_out = ctx.keycreationtime;
+					pub_hashing.clear();
+					for (size_t i = 6; i < pub.size(); i++)
+						pub_hashing.push_back(pub[i]);
+					keyid.clear();
+					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
+					if (opt_verbose)
+					{
+						std::cout << "INFO: Key ID of primary key: " << std::hex;
+						for (size_t i = 0; i < keyid.size(); i++)
+							std::cout << (int)keyid[i] << " ";
+						std::cout << std::dec << std::endl;
+					}
+				}
+				else
+				{
+					std::cerr << "ERROR: more than one primary key not supported" << std::endl;
+					cleanup_ctx(ctx);
+					cleanup_containers(qual, v_i, c_ik);
+					return false;
+				}
+				break;
+			case 13: // User ID Packet
+				if (uid)
+					std::cerr << "WARNING: more than one uid packet found; using last user ID" << std::endl;
+				uid = true, uat = false;
+				userid = "";
+				for (size_t i = 0; i < sizeof(ctx.uid); i++)
+				{
+					if (ctx.uid[i])
+						userid += ctx.uid[i];
+					else
+						break;
+				}
+				break;
+			case 17: // User Attribute Packet
+				std::cerr << "WARNING: user attribute packet found; ignored" << std::endl;
+				uid = false, uat = true;
+				break;
+			default:
+				if (opt_verbose)
+					std::cout << "INFO: ignore packet of type " << (int)ptag << std::endl;
+				break;
+		}
+		// cleanup allocated buffers and mpi's
+		cleanup_ctx(ctx);
+		cleanup_containers(qual, v_i, c_ik);
+	}
+	if (!primary)
+	{
+		std::cerr << "ERROR: no primary key found" << std::endl;
+		return false;
+	}
+	if (!sig)
+	{
+		std::cerr << "ERROR: no self-signature for primary key found" << std::endl;
+		return false;
+	}
+	
+	// build keys, check key usage and self-signature
+	gcry_sexp_t primarykey;
+	gcry_error_t ret = 1;
+	if (pkalgo == 1)
+	{
+// TODO: RSA
+//		ret = gcry_sexp_build(&primarykey, &erroff, "(public-key (rsa (n %M) (e %M)))", rsa_n, rsa_e);
+	}
+	else if (pkalgo == 17)
+		ret = gcry_sexp_build(&primarykey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
+	if (ret)
+	{
+		std::cerr << "ERROR: parsing primary key material failed" << std::endl;
+		return false;
+	}
+	size_t flags = 0;
+	for (size_t i = 0; i < sizeof(keyflags); i++)
+	{
+		if (keyflags[i])
+			flags = (flags << 8) + keyflags[i];
+		else
+			break;
+	}
+	if (opt_verbose)
+	{
+		std::cout << "key flags on primary key: ";
+		if ((flags & 0x01) == 0x01)
+			std::cout << "C"; // The key may be used to certify other keys.
+		if ((flags & 0x02) == 0x02)
+			std::cout << "S"; // The key may be used to sign data.
+		if ((flags & 0x04) == 0x04)
+			std::cout << "E"; // The key may be used encrypt communications.
+		if ((flags & 0x08) == 0x08)
+			std::cout << "e"; // The key may be used encrypt storage.
+		if ((flags & 0x10) == 0x10)
+			std::cout << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
+		if ((flags & 0x20) == 0x20)
+			std::cout << "A"; // The key may be used for authentication.
+		if ((flags & 0x80) == 0x80)
+			std::cout << "M"; // The private component of this key may be in the possession of more than one person.
+		std::cout << std::endl;
+		std::cout << "INFO: userid = \"" << userid << "\"" << std::endl;
+		std::cout << "INFO: sigtype = 0x" << std::hex << (int)sigtype << std::dec << 
+			" pkalgo = " << (int)pkalgo << " hashalgo = " << (int)hashalgo <<
+			" hspd.size() = " << hspd.size() << std::endl;
+	}
+	tmcg_octets_t trailer, left, hash;
+	if (sigV3)
+	{
+		tmcg_octets_t sigtime_octets;
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(sigtime, sigtime_octets);
+		// The concatenation of the data to be signed, the signature type, and
+		// creation time from the Signature packet (5 additional octets) is
+		// hashed. The resulting hash value is used in the signature algorithm.
+		// The high 16 bits (first two octets) of the hash are included in the
+		// Signature packet to provide a quick test to reject some invalid
+		// signatures.
+		// A V3 signature hashes five octets of the packet body, starting from
+		// the signature type field. This data is the signature type, followed
+		// by the four-octet signature time.
+		trailer.push_back(sigtype);
+		trailer.insert(trailer.end(), sigtime_octets.begin(), sigtime_octets.end());
+		CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHashV3(pub_hashing, userid, trailer, hashalgo, hash, left);
+	}
+	else
+	{
+		trailer.push_back(4); // only V4 format supported
+		trailer.push_back(sigtype);
+		trailer.push_back(pkalgo);
+		trailer.push_back(hashalgo);
+		trailer.push_back(hspd.size() >> 8); // length of hashed subpacket data
+		trailer.push_back(hspd.size());
+		trailer.insert(trailer.end(), hspd.begin(), hspd.end());
+		CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, trailer, hashalgo, hash, left);
+	}
+	if (opt_verbose)
+		std::cout << "INFO: left = " << std::hex << (int)left[0] << " " << (int)left[1] << std::dec << std::endl;
+	if (pkalgo == 1)
+	{
+// TODO: RSA
+	}
+	else if (pkalgo == 17)
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, primarykey, dsa_r, dsa_s);
+	if (ret)
+	{
+		std::cerr << "ERROR: verification of primary key self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+			gcry_strerror(ret) << ")" << std::endl;
+		gcry_sexp_release(primarykey);
+		return false;
+	}
+	gcry_sexp_release(primarykey);
+	return true;
+}
+
 void release_mpis
 	()
 {

@@ -2437,7 +2437,7 @@ bool parse_public_key_for_certification
 		return false;
 	}
 	// parse the public key according to OpenPGP
-	bool primary = false, sig = false, sigV3 = false, uid = false, uat = false;
+	bool primary = false, sig = false, sigV3 = false, uid_flag = false, uat_flag = false;
 	tmcg_byte_t ptag = 0xFF;
 	tmcg_byte_t sigtype, pkalgo, hashalgo, keyflags[4];
 	tmcg_octets_t pub_hashing, issuer, hspd;
@@ -2474,7 +2474,7 @@ bool parse_public_key_for_certification
 				issuer.clear();
 				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
 					issuer.push_back(ctx.issuer[i]);
-				if (primary && !uid && !uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+				if (primary && !uid_flag && !uat_flag && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					std::cerr << "ERROR: no uid/uat found for this self-signature" << std::endl;
@@ -2482,7 +2482,7 @@ bool parse_public_key_for_certification
 					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
-				else if (primary && uid && !uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+				else if (primary && uid_flag && !uat_flag && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (ctx.version == 3)
@@ -2547,7 +2547,7 @@ bool parse_public_key_for_certification
 					if (ctx.keyexpirationtime && (time(NULL) > kmax))
 						std::cerr << "WARNING: primary key is expired" << std::endl;
 				}
-				else if (primary && !uid && uat && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
+				else if (primary && !uid_flag && uat_flag && (ctx.type >= 0x10) && (ctx.type <= 0x13) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					std::cerr << "WARNING: ignore self-signature for a user attribute" << std::endl;
@@ -2613,9 +2613,14 @@ bool parse_public_key_for_certification
 				}
 				break;
 			case 13: // User ID Packet
-				if (uid)
+				if (uid_flag)
 					std::cerr << "WARNING: more than one uid packet found; using last user ID" << std::endl;
-				uid = true, uat = false;
+				uid_flag = true, uat_flag = false;
+				// store the whole packet
+				uid.clear();
+				for (size_t i = 0; i < current_packet.size(); i++)
+					uid.push_back(current_packet[i]);
+				// evaluate the content
 				userid = "";
 				for (size_t i = 0; i < sizeof(ctx.uid); i++)
 				{
@@ -2627,7 +2632,7 @@ bool parse_public_key_for_certification
 				break;
 			case 17: // User Attribute Packet
 				std::cerr << "WARNING: user attribute packet found; ignored" << std::endl;
-				uid = false, uat = true;
+				uid_flag = false, uat_flag = true;
 				break;
 			default:
 				if (opt_verbose)

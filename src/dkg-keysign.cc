@@ -418,17 +418,23 @@ void run_instance
 	// release
 	release_mpis();
 
-// TODO: attach certification signature to given public key and output all together
+	// attach certification signature to given public key and output all together (pub, uidsig, sig)
+	tmcg_octets_t all;
+	all.insert(all.end(), pub.begin(), pub.end());
+	all.insert(all.end(), uid.begin(), uid.end());
+	all.insert(all.end(), uidsig.begin(), uidsig.end());
+	all.insert(all.end(), sig.begin(), sig.end());
+
 	// output the result
-	std::string sigstr;
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(2, sig, sigstr);
+	std::string signedkey;
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(6, all, signedkey);
 	if (opt_ofilename != NULL)
 	{
-		if (!write_message(opt_ofilename, sigstr))
+		if (!write_message(opt_ofilename, signedkey))
 			exit(-1);
 	}
 	else
-		std::cout << sigstr << std::endl;
+		std::cout << signedkey << std::endl;
 }
 
 #ifdef GNUNET

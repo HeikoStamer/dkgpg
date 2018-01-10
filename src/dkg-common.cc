@@ -2648,13 +2648,12 @@ bool parse_public_key_for_certification
 		return false;
 	}
 	
-	// build keys, check key usage and self-signature
+	// build keys, print key usage, and check self-signature
 	gcry_sexp_t primarykey;
 	gcry_error_t ret = 1;
 	if ((pkalgo == 1) || (pkalgo == 3))
 	{
-// TODO: RSA
-//		ret = gcry_sexp_build(&primarykey, &erroff, "(public-key (rsa (n %M) (e %M)))", rsa_n, rsa_e);
+		ret = gcry_sexp_build(&primarykey, &erroff, "(public-key (rsa (n %M) (e %M)))", rsa_n, rsa_e);
 	}
 	else if (pkalgo == 17)
 		ret = gcry_sexp_build(&primarykey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
@@ -2727,7 +2726,7 @@ bool parse_public_key_for_certification
 		std::cout << "INFO: left = " << std::hex << (int)left[0] << " " << (int)left[1] << std::dec << std::endl;
 	if ((pkalgo == 1) || (pkalgo == 3))
 	{
-// TODO: RSA
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyRSA(hash, primarykey, hashalgo, rsa_md);
 	}
 	else if (pkalgo == 17)
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, primarykey, dsa_r, dsa_s);

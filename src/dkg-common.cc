@@ -2513,7 +2513,7 @@ bool parse_public_key_for_certification
 					}
 					if (opt_verbose)
 						std::cout << std::dec << std::endl << "INFO: hspd.size() = " << hspd.size() << std::endl;
-					if (ctx.pkalgo == 1)
+					if ((ctx.pkalgo == 1) || (ctx.pkalgo == 3))
 					{
 // TODO: RSA
 //						gcry_mpi_set(rsa_md, ctx.md);
@@ -2567,7 +2567,7 @@ bool parse_public_key_for_certification
 					for (size_t i = 0; i < current_packet.size(); i++)
 						pub.push_back(current_packet[i]);
 					// evaluate the content
-					if (ctx.pkalgo == 1)
+					if ((ctx.pkalgo == 1) || (ctx.pkalgo == 3))
 					{
 // TODO: RSA
 					}
@@ -2648,7 +2648,7 @@ bool parse_public_key_for_certification
 	// build keys, check key usage and self-signature
 	gcry_sexp_t primarykey;
 	gcry_error_t ret = 1;
-	if (pkalgo == 1)
+	if ((pkalgo == 1) || (pkalgo == 3))
 	{
 // TODO: RSA
 //		ret = gcry_sexp_build(&primarykey, &erroff, "(public-key (rsa (n %M) (e %M)))", rsa_n, rsa_e);
@@ -2722,7 +2722,7 @@ bool parse_public_key_for_certification
 	}
 	if (opt_verbose)
 		std::cout << "INFO: left = " << std::hex << (int)left[0] << " " << (int)left[1] << std::dec << std::endl;
-	if (pkalgo == 1)
+	if ((pkalgo == 1) || (pkalgo == 3))
 	{
 // TODO: RSA
 	}

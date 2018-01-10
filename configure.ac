@@ -87,9 +87,9 @@ if test "x$GPG_ERROR_LIBS" = "x"; then
 	AC_MSG_ERROR([libgpg-error >= 1.12 is needed])
 fi
 
-AM_PATH_LIBTMCG("1.3.9")
+AM_PATH_LIBTMCG("1.3.10")
 if test "x$LIBTMCG_LIBS" = "x"; then
-        AC_MSG_ERROR([libTMCG >= 1.3.9 is needed])
+        AC_MSG_ERROR([libTMCG >= 1.3.10 is needed])
 fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)

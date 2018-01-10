@@ -39,7 +39,7 @@ extern std::vector<size_t>			dkg_qual;
 extern std::vector<mpz_ptr>			dkg_v_i;
 extern std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
 extern gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-extern gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s;
+extern gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
 extern gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 extern int					opt_verbose;
@@ -256,6 +256,9 @@ void init_mpis
 	dsa_s = gcry_mpi_new(2048);
 	elg_r = gcry_mpi_new(2048);
 	elg_s = gcry_mpi_new(2048);
+	rsa_n = gcry_mpi_new(2048);
+	rsa_e = gcry_mpi_new(2048);
+	rsa_md = gcry_mpi_new(2048);
 	gk = gcry_mpi_new(2048);
 	myk = gcry_mpi_new(2048);
 	sig_r = gcry_mpi_new(2048);
@@ -2515,10 +2518,9 @@ bool parse_public_key_for_certification
 						std::cout << std::dec << std::endl << "INFO: hspd.size() = " << hspd.size() << std::endl;
 					if ((ctx.pkalgo == 1) || (ctx.pkalgo == 3))
 					{
-// TODO: RSA
-//						gcry_mpi_set(rsa_md, ctx.md);
+						gcry_mpi_set(rsa_md, ctx.md);
 						unsigned int mdbits = 0;
-//						mdbits = gcry_mpi_get_nbits(rsa_md);
+						mdbits = gcry_mpi_get_nbits(rsa_md);
 						if (opt_verbose)
 							std::cout << "INFO: mdbits = " << mdbits << std::endl;
 					}
@@ -2569,7 +2571,8 @@ bool parse_public_key_for_certification
 					// evaluate the content
 					if ((ctx.pkalgo == 1) || (ctx.pkalgo == 3))
 					{
-// TODO: RSA
+						gcry_mpi_set(rsa_n, ctx.n);
+						gcry_mpi_set(rsa_e, ctx.e);
 					}
 					else if (ctx.pkalgo == 17)
 					{
@@ -2791,6 +2794,9 @@ void release_mpis
 	gcry_mpi_release(dsa_s);
 	gcry_mpi_release(elg_r);
 	gcry_mpi_release(elg_s);
+	gcry_mpi_release(rsa_n);
+	gcry_mpi_release(rsa_e);
+	gcry_mpi_release(rsa_md);
 	gcry_mpi_release(gk);
 	gcry_mpi_release(myk);
 	gcry_mpi_release(sig_r);

@@ -68,7 +68,7 @@ std::vector<size_t>			dkg_qual;
 std::vector<mpz_ptr>			dkg_v_i;
 std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
 gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s;
+gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
 gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 int 					opt_verbose = 0;
@@ -235,7 +235,7 @@ void run_instance
 	tmcg_octets_t trailer;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x10, hashalgo, csigtime, sigexptime, keyid, trailer);
 
-	// read and parse the public key including user ID
+	// read and parse the public key including user ID to sign
 	std::string armored_pubkey;
 	if (!read_key_file(opt_ifilename, armored_pubkey))
 	{

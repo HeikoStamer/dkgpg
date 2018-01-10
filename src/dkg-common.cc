@@ -2564,15 +2564,14 @@ bool parse_public_key_for_certification
 				else if (!primary)
 				{
 					primary = true;
-					// store the whole packet
-					pub.clear();
-					for (size_t i = 0; i < current_packet.size(); i++)
-						pub.push_back(current_packet[i]);
 					// evaluate the content
+					pub.clear();
 					if ((ctx.pkalgo == 1) || (ctx.pkalgo == 3))
 					{
 						gcry_mpi_set(rsa_n, ctx.n);
 						gcry_mpi_set(rsa_e, ctx.e);
+						CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, ctx.pkalgo, // public-key is RSA 
+							rsa_n, rsa_e, rsa_n, rsa_e, pub);
 					}
 					else if (ctx.pkalgo == 17)
 					{
@@ -2580,6 +2579,8 @@ bool parse_public_key_for_certification
 						gcry_mpi_set(dsa_q, ctx.q);
 						gcry_mpi_set(dsa_g, ctx.g);
 						gcry_mpi_set(dsa_y, ctx.y);
+						CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, 17, // public-key is DSA 
+							dsa_p, dsa_q, dsa_g, dsa_y, pub);
 					}
 					else
 					{

@@ -54,7 +54,7 @@ gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
 gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 int 					opt_verbose = 0;
-bool 					opt_binary = false;
+bool 					opt_binary = false, opt_rsa = false;
 
 #define TRIVIAL_SIZE 1024
 #define PRIMES_SIZE 669
@@ -151,7 +151,7 @@ int main
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
-		if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-r") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -160,12 +160,15 @@ int main
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
 				std::cout << "  -b, --binary   consider KEYFILE as binary input" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
+				std::cout << "  -r, --rsa      use public-key algorithm RSA instead of DSA" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
 				opt_binary = true;
+			if ((arg.find("-r") == 0) || (arg.find("--rsa") == 0))
+				opt_rsa = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 				std::cout << "dkg-keycheck v" << version << std::endl;
@@ -207,7 +210,13 @@ int main
 		return -1;
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0;
-	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, false))
+	if (opt_rsa && !parse_public_key_for_certification(armored_pubkey, ckeytime, ekeytime))
+	{
+		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+		release_mpis();
+		return -1;
+	}
+	if (!opt_rsa && !parse_public_key(armored_pubkey, ckeytime, ekeytime, false))
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		release_mpis();
@@ -215,17 +224,29 @@ int main
 	}
 
 	// convert mpis
-	if (!mpz_set_gcry_mpi(dsa_p, dss_p) || !mpz_set_gcry_mpi(dsa_q, dss_q) || !mpz_set_gcry_mpi(dsa_g, dss_g) || !mpz_set_gcry_mpi(dsa_y, dss_y))
+	if (opt_rsa)
 	{
-		std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
-		release_mpis();
-		return -1;
+		if (!mpz_set_gcry_mpi(rsa_n, dss_p) || !mpz_set_gcry_mpi(rsa_e, dss_q) || !mpz_set_gcry_mpi(rsa_md, dss_y))
+		{
+			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
+			release_mpis();
+			return -1;
+		}
 	}
-	if (!mpz_set_gcry_mpi(elg_p, dkg_p) || !mpz_set_gcry_mpi(elg_g, dkg_g) || !mpz_set_gcry_mpi(elg_y, dkg_y))
+	else
 	{
-		std::cerr << "ERROR: cannot convert ElGamal key material" << std::endl;
-		release_mpis();
-		return -1;
+		if (!mpz_set_gcry_mpi(dsa_p, dss_p) || !mpz_set_gcry_mpi(dsa_q, dss_q) || !mpz_set_gcry_mpi(dsa_g, dss_g) || !mpz_set_gcry_mpi(dsa_y, dss_y))
+		{
+			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
+			release_mpis();
+			return -1;
+		}
+		if (!mpz_set_gcry_mpi(elg_p, dkg_p) || !mpz_set_gcry_mpi(elg_g, dkg_g) || !mpz_set_gcry_mpi(elg_y, dkg_y))
+		{
+			std::cerr << "ERROR: cannot convert ElGamal key material" << std::endl;
+			release_mpis();
+			return -1;
+		}
 	}
 
 	// show information
@@ -254,103 +275,84 @@ int main
 	}
 	std::cout << "OpenPGP User ID: " << std::endl << "\t";
 	std::cout << userid << std::endl;
-	std::cout << "Security level of DSA domain parameter set: " << std::endl << "\t";
-	std::cout << "|p| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";
-	std::cout << "|q| = " << mpz_sizeinbase(dss_q, 2L) << " bit, ";
-	std::cout << "|g| = " << mpz_sizeinbase(dss_g, 2L) << " bit";
-	std::cout << std::endl << "\t";
-	std::cout << "p is ";
-	if (!mpz_probab_prime_p(dss_p, TMCG_MR_ITERATIONS))
-		std::cout << "NOT ";
-	std::cout << "probable prime" << std::endl << "\t";
-	mpz_t pm1;
-	mpz_init_set(pm1, dss_p);
-	mpz_sub_ui(pm1, pm1, 1L);
-	std::cout << "(p-1) = ";
-	for (size_t i = 0; i < PRIMES_SIZE; i++)
+	if (opt_rsa)
 	{
-		if (mpz_divisible_ui_p(pm1, primes[i]))
-			std::cout << primes[i] << " * ";
+		std::cout << "Security level of public key: " << std::endl << "\t";
+		std::cout << "|n| = " << mpz_sizeinbase(dss_p, 2L) << " bit ";
+		std::cout << std::endl;
 	}
-	std::cout << "...";
-	if (mpz_divisible_p(pm1, dss_q))
-		std::cout << " * q";
-	std::cout << std::endl << "\t";
-	std::cout << "q is ";
-	if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
-		std::cout << "NOT ";
-	std::cout << "probable prime" << std::endl << "\t";
-	mpz_set(pm1, dss_q);
-	mpz_sub_ui(pm1, pm1, 1L);
-	std::cout << "(q-1) = ";
-	for (size_t i = 0; i < PRIMES_SIZE; i++)
+	else
 	{
-		if (mpz_divisible_ui_p(pm1, primes[i]))
-			std::cout << primes[i] << " * ";
-	}
-	std::cout << "..." << std::endl << "\t";
-	std::cout << "g is ";
-	mpz_powm(pm1, dss_g, dss_q, dss_p);
-	if (mpz_cmp_ui(pm1, 1L))
-		std::cout << "NOT ";
-	std::cout << "generator of G_q" << std::endl << "\t";
-	mpz_t tmp, foo, bar;
-	mpz_init(tmp), mpz_init_set_ui(foo, 2L), mpz_init(bar);
-	std::cout << "g is ";
-	mpz_sub_ui(pm1, dss_p, 1L);
-	mpz_tdiv_qr(bar, tmp, pm1, dss_q);
-	mpz_powm(tmp, foo, bar, dss_p);
-	if (mpz_cmp(tmp, dss_g))
-		std::cout << "not ";
-	std::cout << "canonical (i.e. 2^((p-1)/q) mod p)" << std::endl;
-	mpz_clear(foo), mpz_clear(bar);
-	std::cout << "Security level of public key: " << std::endl << "\t";
-	std::cout << "|y| = " << mpz_sizeinbase(dss_y, 2L) << " bit";
-	std::cout << std::endl << "\t";
-	std::cout << "y is ";
-	mpz_powm(pm1, dss_y, dss_q, dss_p);
-	if (mpz_cmp_ui(pm1, 1L))
-		std::cout << "NOT ";
-	std::cout << "element of G_q" << std::endl << "\t";
-	mpz_t tmp_r;
-	mpz_init(tmp_r);
-	if (!mpz_set_gcry_mpi(dsa_r, tmp_r))
-		std::cerr << "ERROR: bad signature (cannot convert dsa_r)" << std::endl << "\t";
-	if (!mpz_cmp_ui(tmp_r, 1L))
-		std::cout << "r is WEAK (i.e. r = 1)" << std::endl << "\t";
-	bool trivial = false, suspicious = false;
-	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
-	{
-		mpz_powm_ui(pm1, dss_g, i, dss_p);
-		if (!mpz_cmp(dss_y, pm1))
-			trivial = true;
-		mpz_mod(pm1, pm1, dss_q);
-		if (!mpz_cmp(tmp_r, pm1))
-			suspicious = true;
-		if (i > 0)
+		std::cout << "Security level of DSA domain parameter set: " << std::endl << "\t";
+		std::cout << "|p| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";
+		std::cout << "|q| = " << mpz_sizeinbase(dss_q, 2L) << " bit, ";
+		std::cout << "|g| = " << mpz_sizeinbase(dss_g, 2L) << " bit";
+		std::cout << std::endl << "\t";
+		std::cout << "p is ";
+		if (!mpz_probab_prime_p(dss_p, TMCG_MR_ITERATIONS))
+			std::cout << "NOT ";
+		std::cout << "probable prime" << std::endl << "\t";
+		mpz_t pm1;
+		mpz_init_set(pm1, dss_p);
+		mpz_sub_ui(pm1, pm1, 1L);
+		std::cout << "(p-1) = ";
+		for (size_t i = 0; i < PRIMES_SIZE; i++)
 		{
-			mpz_set_ui(tmp, i);
-			mpz_neg(tmp, tmp);
-			mpz_powm(pm1, dss_g, tmp, dss_p);
-			if (!mpz_cmp(dss_y, pm1))
-				trivial = true;
-			mpz_mod(pm1, pm1, dss_q);
-			if (!mpz_cmp(tmp_r, pm1))
-				suspicious = true;
+			if (mpz_divisible_ui_p(pm1, primes[i]))
+				std::cout << primes[i] << " * ";
 		}
-	}
-	if (sub.size())
-	{
-		if (!mpz_set_gcry_mpi(elg_r, tmp))
-			std::cerr << "ERROR: bad signature (cannot convert elg_r)" << std::endl << "\t";
-		if (!mpz_cmp(tmp, tmp_r))
-			std::cout << "r is EQUAL for both signatures (e.g. same k used)" << std::endl << "\t";
-		mpz_set(tmp_r, tmp);
+		std::cout << "...";
+		if (mpz_divisible_p(pm1, dss_q))
+			std::cout << " * q";
+		std::cout << std::endl << "\t";
+		std::cout << "q is ";
+		if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
+			std::cout << "NOT ";
+		std::cout << "probable prime" << std::endl << "\t";
+		mpz_set(pm1, dss_q);
+		mpz_sub_ui(pm1, pm1, 1L);
+		std::cout << "(q-1) = ";
+		for (size_t i = 0; i < PRIMES_SIZE; i++)
+		{
+			if (mpz_divisible_ui_p(pm1, primes[i]))
+				std::cout << primes[i] << " * ";
+		}
+		std::cout << "..." << std::endl << "\t";
+		std::cout << "g is ";
+		mpz_powm(pm1, dss_g, dss_q, dss_p);
+		if (mpz_cmp_ui(pm1, 1L))
+			std::cout << "NOT ";
+		std::cout << "generator of G_q" << std::endl << "\t";
+		mpz_t tmp, foo, bar;
+		mpz_init(tmp), mpz_init_set_ui(foo, 2L), mpz_init(bar);
+		std::cout << "g is ";
+		mpz_sub_ui(pm1, dss_p, 1L);
+		mpz_tdiv_qr(bar, tmp, pm1, dss_q);
+		mpz_powm(tmp, foo, bar, dss_p);
+		if (mpz_cmp(tmp, dss_g))
+			std::cout << "not ";
+		std::cout << "canonical (i.e. 2^((p-1)/q) mod p)" << std::endl;
+		mpz_clear(foo), mpz_clear(bar);
+		std::cout << "Security level of public key: " << std::endl << "\t";
+		std::cout << "|y| = " << mpz_sizeinbase(dss_y, 2L) << " bit";
+		std::cout << std::endl << "\t";
+		std::cout << "y is ";
+		mpz_powm(pm1, dss_y, dss_q, dss_p);
+		if (mpz_cmp_ui(pm1, 1L))
+			std::cout << "NOT ";
+		std::cout << "element of G_q" << std::endl << "\t";
+		mpz_t tmp_r;
+		mpz_init(tmp_r);
+		if (!mpz_set_gcry_mpi(dsa_r, tmp_r))
+			std::cerr << "ERROR: bad signature (cannot convert dsa_r)" << std::endl << "\t";
 		if (!mpz_cmp_ui(tmp_r, 1L))
 			std::cout << "r is WEAK (i.e. r = 1)" << std::endl << "\t";
+		bool trivial = false, suspicious = false;
 		for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 		{
 			mpz_powm_ui(pm1, dss_g, i, dss_p);
+			if (!mpz_cmp(dss_y, pm1))
+				trivial = true;
 			mpz_mod(pm1, pm1, dss_q);
 			if (!mpz_cmp(tmp_r, pm1))
 				suspicious = true;
@@ -359,112 +361,140 @@ int main
 				mpz_set_ui(tmp, i);
 				mpz_neg(tmp, tmp);
 				mpz_powm(pm1, dss_g, tmp, dss_p);
+				if (!mpz_cmp(dss_y, pm1))
+					trivial = true;
 				mpz_mod(pm1, pm1, dss_q);
 				if (!mpz_cmp(tmp_r, pm1))
 					suspicious = true;
 			}
 		}
-	}
-	if (!trivial)
-		std::cout << "y is not trivial" << std::endl << "\t";
-	else
-		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
-	if (suspicious)
-		std::cout << "r is SUSPICIOUS (small k used)" << std::endl << "\t";
-	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss_y, dss_p) << std::endl;
-	mpz_clear(pm1);
-	mpz_clear(tmp);
-	mpz_clear(tmp_r);
-	if (sub.size())
-	{
-		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << std::hex << std::uppercase << "\t";
-		for (size_t i = 0; i < subkeyid.size(); i++)
-			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)subkeyid[i] << " ";
-		std::cout << std::dec << std::endl;
-		tmcg_octets_t sub_hashing, sub_fpr;
-		for (size_t i = 6; i < sub.size(); i++)
-			sub_hashing.push_back(sub[i]);
-		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(sub_hashing, sub_fpr);
-		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << std::hex << std::uppercase << "\t";
-		for (size_t i = 0; i < sub_fpr.size(); i++)
-			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)sub_fpr[i] << " ";
-		std::cout << std::dec << std::endl;
-		std::cout << "Security level of domain parameter set: " << std::endl << "\t"; 
-		std::cout << "|p| = " << mpz_sizeinbase(dkg_p, 2L) << " bit, ";
-		std::cout << "|g| = " << mpz_sizeinbase(dkg_g, 2L) << " bit" << std::endl << "\t";
-		std::cout << "p is ";
-		if (!mpz_probab_prime_p(dkg_p, TMCG_MR_ITERATIONS))
-			std::cout << "NOT ";
-		std::cout << "probable prime" << std::endl << "\t";
-		mpz_init_set(pm1, dkg_p);
-		mpz_sub_ui(pm1, pm1, 1L);
-		std::vector<unsigned int> small_factors;
-		std::cout << "(p-1) = ";
-		for (size_t i = 0; i < PRIMES_SIZE; i++)
+		if (sub.size())
 		{
-			if (mpz_divisible_ui_p(pm1, primes[i]))
+			if (!mpz_set_gcry_mpi(elg_r, tmp))
+				std::cerr << "ERROR: bad signature (cannot convert elg_r)" << std::endl << "\t";
+			if (!mpz_cmp(tmp, tmp_r))
+				std::cout << "r is EQUAL for both signatures (e.g. same k used)" << std::endl << "\t";
+			mpz_set(tmp_r, tmp);
+			if (!mpz_cmp_ui(tmp_r, 1L))
+				std::cout << "r is WEAK (i.e. r = 1)" << std::endl << "\t";
+			for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 			{
-				std::cout << primes[i] << " * ";
-				small_factors.push_back(primes[i]);
+				mpz_powm_ui(pm1, dss_g, i, dss_p);
+				mpz_mod(pm1, pm1, dss_q);
+				if (!mpz_cmp(tmp_r, pm1))
+					suspicious = true;
+				if (i > 0)
+				{
+					mpz_set_ui(tmp, i);
+					mpz_neg(tmp, tmp);
+					mpz_powm(pm1, dss_g, tmp, dss_p);
+					mpz_mod(pm1, pm1, dss_q);
+					if (!mpz_cmp(tmp_r, pm1))
+						suspicious = true;
+				}
 			}
 		}
-		std::cout << "...";
-		if (mpz_divisible_p(pm1, dss_q))
-			std::cout << " * q";
-		std::cout << std::endl << "\t";
-		if (mpz_cmp_ui(dkg_g, 256L) <= 0)
-		{
-			std::cout << "g = " << dkg_g << std::endl << "\t";
-		}
-		std::cout << "g is ";
-		mpz_powm(pm1, dkg_g, dss_q, dkg_p);
-		if (mpz_cmp_ui(pm1, 1L))
-			std::cout << "NOT ";
-		std::cout << "generator of G_q" << std::endl << "\t";
-		mpz_init(tmp), mpz_init(bar);
-		std::cout << "subgroup generated by g ";
-		mpz_sub_ui(pm1, dkg_p, 1L);
-		for (std::vector<unsigned int>::const_iterator sfi = small_factors.begin(); sfi != small_factors.end(); ++sfi)
-		{
-			mpz_set_ui(bar, *sfi);
-			mpz_powm(tmp, dkg_g, bar, dkg_p);
-			if (!mpz_cmp_ui(tmp, 1L))
-				std::cout << "is VERY SMALL (" << *sfi << " elements) ";
-			else
-				std::cout << "is okay ";
-		}
-		std::cout << std::endl;
-		mpz_clear(bar);
-		std::cout << "Security level of public key: " << std::endl << "\t";
-		std::cout << "|y| = " << mpz_sizeinbase(dkg_y, 2L) << " bit";
-		std::cout << std::endl << "\t";
-		std::cout << "y is ";
-		mpz_powm(pm1, dkg_y, dss_q, dkg_p);
-		if (mpz_cmp_ui(pm1, 1L))
-			std::cout << "NOT ";
-		std::cout << "element of G_q" << std::endl << "\t";
-		trivial = false;
-		for (size_t i = 0; i < TRIVIAL_SIZE; i++)
-		{
-			mpz_powm_ui(pm1, dkg_g, i, dkg_p);
-			if (!mpz_cmp(dkg_y, pm1))
-				trivial = true;
-			if (i > 0)
-			{
-				mpz_set_ui(tmp, i);
-				mpz_neg(tmp, tmp);
-				mpz_powm(pm1, dkg_g, tmp, dkg_p);
-				if (!mpz_cmp(dkg_y, pm1))
-					trivial = true;
-			}
-		}
-		mpz_clear(tmp);
 		if (!trivial)
 			std::cout << "y is not trivial" << std::endl << "\t";
 		else
 			std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
-		std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dkg_y, dkg_p) << std::endl;
+		if (suspicious)
+			std::cout << "r is SUSPICIOUS (small k used)" << std::endl << "\t";
+		std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dss_y, dss_p) << std::endl;
 		mpz_clear(pm1);
+		mpz_clear(tmp);
+		mpz_clear(tmp_r);
+		if (sub.size())
+		{
+			std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << std::hex << std::uppercase << "\t";
+			for (size_t i = 0; i < subkeyid.size(); i++)
+				std::cout << std::setfill('0') << std::setw(2) << std::right << (int)subkeyid[i] << " ";
+			std::cout << std::dec << std::endl;
+			tmcg_octets_t sub_hashing, sub_fpr;
+			for (size_t i = 6; i < sub.size(); i++)
+				sub_hashing.push_back(sub[i]);
+			CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(sub_hashing, sub_fpr);
+			std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << std::hex << std::uppercase << "\t";
+			for (size_t i = 0; i < sub_fpr.size(); i++)
+				std::cout << std::setfill('0') << std::setw(2) << std::right << (int)sub_fpr[i] << " ";
+			std::cout << std::dec << std::endl;
+			std::cout << "Security level of domain parameter set: " << std::endl << "\t"; 
+			std::cout << "|p| = " << mpz_sizeinbase(dkg_p, 2L) << " bit, ";
+			std::cout << "|g| = " << mpz_sizeinbase(dkg_g, 2L) << " bit" << std::endl << "\t";
+			std::cout << "p is ";
+			if (!mpz_probab_prime_p(dkg_p, TMCG_MR_ITERATIONS))
+				std::cout << "NOT ";
+			std::cout << "probable prime" << std::endl << "\t";
+			mpz_init_set(pm1, dkg_p);
+			mpz_sub_ui(pm1, pm1, 1L);
+			std::vector<unsigned int> small_factors;
+			std::cout << "(p-1) = ";
+			for (size_t i = 0; i < PRIMES_SIZE; i++)
+			{
+				if (mpz_divisible_ui_p(pm1, primes[i]))
+				{
+					std::cout << primes[i] << " * ";
+					small_factors.push_back(primes[i]);
+				}
+			}
+			std::cout << "...";
+			if (mpz_divisible_p(pm1, dss_q))
+				std::cout << " * q";
+			std::cout << std::endl << "\t";
+			if (mpz_cmp_ui(dkg_g, 256L) <= 0)
+			{
+				std::cout << "g = " << dkg_g << std::endl << "\t";
+			}
+			std::cout << "g is ";
+			mpz_powm(pm1, dkg_g, dss_q, dkg_p);
+			if (mpz_cmp_ui(pm1, 1L))
+				std::cout << "NOT ";
+			std::cout << "generator of G_q" << std::endl << "\t";
+			mpz_init(tmp), mpz_init(bar);
+			std::cout << "subgroup generated by g ";
+			mpz_sub_ui(pm1, dkg_p, 1L);
+			for (std::vector<unsigned int>::const_iterator sfi = small_factors.begin(); sfi != small_factors.end(); ++sfi)
+			{
+				mpz_set_ui(bar, *sfi);
+				mpz_powm(tmp, dkg_g, bar, dkg_p);
+				if (!mpz_cmp_ui(tmp, 1L))
+					std::cout << "is VERY SMALL (" << *sfi << " elements) ";
+				else
+					std::cout << "is okay ";
+			}
+			std::cout << std::endl;
+			mpz_clear(bar);
+			std::cout << "Security level of public key: " << std::endl << "\t";
+			std::cout << "|y| = " << mpz_sizeinbase(dkg_y, 2L) << " bit";
+			std::cout << std::endl << "\t";
+			std::cout << "y is ";
+			mpz_powm(pm1, dkg_y, dss_q, dkg_p);
+			if (mpz_cmp_ui(pm1, 1L))
+				std::cout << "NOT ";
+			std::cout << "element of G_q" << std::endl << "\t";
+			trivial = false;
+			for (size_t i = 0; i < TRIVIAL_SIZE; i++)
+			{
+				mpz_powm_ui(pm1, dkg_g, i, dkg_p);
+				if (!mpz_cmp(dkg_y, pm1))
+					trivial = true;
+				if (i > 0)
+				{
+					mpz_set_ui(tmp, i);
+					mpz_neg(tmp, tmp);
+					mpz_powm(pm1, dkg_g, tmp, dkg_p);
+					if (!mpz_cmp(dkg_y, pm1))
+						trivial = true;
+				}
+			}
+			mpz_clear(tmp);
+			if (!trivial)
+				std::cout << "y is not trivial" << std::endl << "\t";
+			else
+				std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
+			std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dkg_y, dkg_p) << std::endl;
+			mpz_clear(pm1);
+		}
 	}
 
 	// restore default formatting

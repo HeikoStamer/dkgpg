@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <ctime>
+#include <climits>
 
 #include <libTMCG.hh>
 
@@ -278,8 +279,21 @@ int main
 	if (opt_rsa)
 	{
 		std::cout << "Security level of public key: " << std::endl << "\t";
-		std::cout << "|n| = " << mpz_sizeinbase(dss_p, 2L) << " bit ";
-		std::cout << std::endl;
+		std::cout << "|n| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";
+		if (mpz_cmp_ui(dss_q, ULONG_MAX) < 0)
+			std::cout << "e = " << mpz_get_ui(dss_q);
+		else
+			std::cout << "|e| = " << mpz_sizeinbase(dss_q, 2L) << " bit";
+		std::cout << std::endl << "\t";
+		std::cout << "e is ";
+		if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
+			std::cout << "NOT ";
+		std::cout << "probable prime" << std::endl << "\t";
+		std::cout << "e is ";
+		if (mpz_cmp_ui(dss_q, 41) < 0)
+			std::cout << "VERY SMALL" << std::endl;
+		else
+			std::cout << "okay" << std::endl;
 	}
 	else
 	{

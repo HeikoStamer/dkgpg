@@ -146,6 +146,7 @@ in the sources of this package and additionally can be obtained from Internet
 .SH "SEE ALSO"
 .BR dkg\-generate (1),
 .BR dkg\-revoke (1),
+.BR dkg\-keysign (1),
 .BR dkg\-verify (1)
 
 

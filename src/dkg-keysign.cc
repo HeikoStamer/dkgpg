@@ -55,7 +55,7 @@ pid_t 					pid[DKGPG_MAX_N];
 std::vector<std::string>		peers;
 bool					instance_forked = false;
 
-std::string				passphrase, userid, ifilename, ofilename, passwords, hostname, port;
+std::string				passphrase, userid, ifilename, ofilename, passwords, hostname, port, URI;
 tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
@@ -76,6 +76,7 @@ char					*opt_ifilename = NULL;
 char					*opt_ofilename = NULL;
 char					*opt_passwords = NULL;
 char					*opt_hostname = NULL;
+char					*opt_URI = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
 bool					opt_r = false;
 
@@ -235,9 +236,9 @@ void run_instance
 	// prepare the trailer of the certification (revocation) signature
 	tmcg_octets_t trailer;
 	if (opt_r)
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x30, hashalgo, csigtime, sigexptime, keyid, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x10, hashalgo, csigtime, sigexptime, keyid, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x10, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 
 	// read and parse the public key including user ID to sign
 	std::string armored_pubkey;
@@ -450,6 +451,7 @@ char *gnunet_opt_ifilename = NULL;
 char *gnunet_opt_ofilename = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
+char *gnunet_opt_URI = NULL;
 unsigned int gnunet_opt_sigexptime = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
@@ -542,6 +544,12 @@ int main
 			"create a certification revocation signature",
 			&gnunet_opt_r
 		),
+		GNUNET_GETOPT_option_string('U',
+			"URI",
+			"STRING",
+			"policy URI tied to signature",
+			&gnunet_opt_URI
+		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",
@@ -586,12 +594,16 @@ int main
 		opt_hostname = gnunet_opt_hostname;
 	if (gnunet_opt_passwords != NULL)
 		opt_passwords = gnunet_opt_passwords;
+	if (gnunet_opt_URI != NULL)
+		opt_URI = gnunet_opt_URI;
 	if (gnunet_opt_passwords != NULL)
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
+	if (gnunet_opt_URI != NULL)
+		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 #endif
 
 	// parse options and create peer list from remaining arguments
@@ -601,7 +613,8 @@ int main
 		// options with one argument
 		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
 			(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-i") == 0) || (arg.find("-o") == 0) || 
-			(arg.find("-e") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
+			(arg.find("-e") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0) ||
+			(arg.find("-U") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
@@ -623,6 +636,11 @@ int main
 			{
 				passwords = argv[i+1];
 				opt_passwords = (char*)passwords.c_str();
+			}
+			if ((arg.find("-U") == 0) && (idx < (size_t)(argc - 1)) && (opt_URI == NULL))
+			{
+				URI = argv[i+1];
+				opt_URI = (char*)URI.c_str();
 			}
 			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
 				opt_e = strtoul(argv[i+1], NULL, 10);
@@ -648,6 +666,7 @@ int main
 				std::cout << "  -p INTEGER       start port for built-in TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING        exchanged passwords to protect private and broadcast channels" << std::endl;
 				std::cout << "  -r, --revocation create a certification revocation signature" << std::endl;
+				std::cout << "  -U STRING        policy URI tied to generated signature" << std::endl;
 				std::cout << "  -v, --version    print the version number" << std::endl;
 				std::cout << "  -V, --verbose    turn on verbose output" << std::endl;
 				std::cout << "  -W TIME          timeout for point-to-point messages in minutes" << std::endl;
@@ -802,6 +821,12 @@ int main
 			"revocation",
 			"create a certification revocation signature",
 			&gnunet_opt_r
+		),
+		GNUNET_GETOPT_option_string('U',
+			"URI",
+			"STRING",
+			"policy URI tied to signature",
+			&gnunet_opt_URI
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",

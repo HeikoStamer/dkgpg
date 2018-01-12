@@ -7,7 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* [2018-01.12] added option "-r" for dkg-keysign (revocation signature)
+* [2018-01-12] added option "-U" for dkg-keysign (policy URI)
+* [2018-01-12] added option "-r" for dkg-keysign (revocation signature)
 * [2018-01-10] added option "-r" for dkg-keycheck (support for RSA keys)
 * [2018-01-08] added program dkg-keysign for creating certification signatures
 * [2018-01-07] dkg-decrypt: removed support for not integrity protected messages

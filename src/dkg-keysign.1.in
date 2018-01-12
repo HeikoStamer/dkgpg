@@ -94,6 +94,9 @@ GNUnet CADET port to listen/connect
 \fB\-P\fR, \fB\-\-passwords\fR=\fI\,STRING\/\fR
 exchanged passwords to protect private and broadcast channels
 .TP
+\fB\-r\fR, \fB\-\-revocation\fR
+create a certification revocation signature
+.TP
 \fB\-v\fR, \fB\-\-version\fR
 print the version number of the program
 .TP

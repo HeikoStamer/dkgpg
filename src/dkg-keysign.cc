@@ -77,6 +77,7 @@ char					*opt_ofilename = NULL;
 char					*opt_passwords = NULL;
 char					*opt_hostname = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
+bool					opt_r = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime, const size_t num_xtests)
@@ -231,9 +232,12 @@ void run_instance
 		exit(-1);
 	}
 
-	// prepare the trailer of the certification signature
+	// prepare the trailer of the certification (revocation) signature
 	tmcg_octets_t trailer;
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x10, hashalgo, csigtime, sigexptime, keyid, trailer);
+	if (opt_r)
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x30, hashalgo, csigtime, sigexptime, keyid, trailer);
+	else
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x10, hashalgo, csigtime, sigexptime, keyid, trailer);
 
 	// read and parse the public key including user ID to sign
 	std::string armored_pubkey;
@@ -263,7 +267,10 @@ void run_instance
 	char *hex_digest = new char[(3 * fpr.size()) + 1];
 	for (size_t i = 0; i < (fpr.size() / 2); i++)
                 snprintf(hex_digest + (5 * i), 6, "%02X%02X ", fpr[2*i], fpr[(2*i)+1]);
-	std::cout << "INFO: going to sign key of \"" << userid << "\" with fingerprint " << hex_digest << std::endl;
+	if (opt_r)
+		std::cout << "INFO: going to revoke signature on key of \"" << userid << "\" with fingerprint " << hex_digest << std::endl;
+	else
+		std::cout << "INFO: going to sign key of \"" << userid << "\" with fingerprint " << hex_digest << std::endl;
 	delete [] hex_digest;
 
 	// create an instance of tDSS by stored parameters from private key
@@ -418,7 +425,7 @@ void run_instance
 	// release
 	release_mpis();
 
-	// attach certification signature to given public key and output all together (pub, uidsig, sig)
+	// attach certification (revocation) signature to given public key and output all together (pub, uidsig, sig)
 	tmcg_octets_t all;
 	all.insert(all.end(), pub.begin(), pub.end());
 	all.insert(all.end(), uid.begin(), uid.end());
@@ -448,6 +455,7 @@ unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
+int gnunet_opt_r = 0;
 #endif
 
 void fork_instance
@@ -529,6 +537,11 @@ int main
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
 		),
+		GNUNET_GETOPT_option_flag('r',
+			"revocation",
+			"create a certification revocation signature",
+			&gnunet_opt_r
+		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",
@@ -581,11 +594,11 @@ int main
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
 
-	// create peer list from remaining arguments
+	// parse options and create peer list from remaining arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
-		// ignore options
+		// options with one argument
 		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
 			(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-i") == 0) || (arg.find("-o") == 0) || 
 			(arg.find("-e") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
@@ -619,7 +632,7 @@ int main
 				opt_W = strtoul(argv[i+1], NULL, 10);
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-r") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -627,19 +640,22 @@ int main
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -e TIME        expiration time of generated signature in seconds" << std::endl;
-				std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME    create certification signature on key resp. user ID from FILENAME" << std::endl;
-				std::cout << "  -o FILENAME    write key with certification signature attached to FILENAME" << std::endl;
-				std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl;
-				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
+				std::cout << "  -h, --help       print this help" << std::endl;
+				std::cout << "  -e TIME          expiration time of generated signature in seconds" << std::endl;
+				std::cout << "  -H STRING        hostname (e.g. onion address) of this peer within PEERS" << std::endl;
+				std::cout << "  -i FILENAME      create certification signature on key resp. user ID from FILENAME" << std::endl;
+				std::cout << "  -o FILENAME      write key with certification signature attached to FILENAME" << std::endl;
+				std::cout << "  -p INTEGER       start port for built-in TCP/IP message exchange service" << std::endl;
+				std::cout << "  -P STRING        exchanged passwords to protect private and broadcast channels" << std::endl;
+				std::cout << "  -r, --revocation create a certification revocation signature" << std::endl;
+				std::cout << "  -v, --version    print the version number" << std::endl;
+				std::cout << "  -V, --verbose    turn on verbose output" << std::endl;
+				std::cout << "  -W TIME          timeout for point-to-point messages in minutes" << std::endl;
 #endif
 				return 0; // not continue
 			}
+			if ((arg.find("-r") == 0) || (arg.find("--revocation") == 0))
+				opt_r = true; // create revocation signature
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
@@ -656,7 +672,7 @@ int main
 			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
 			return -1;
 		}
-		// store argument for peer list
+		// store remaining argument for peer list
 		if (arg.length() <= 255)
 		{
 			peers.push_back(arg);
@@ -781,6 +797,11 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
+		),
+		GNUNET_GETOPT_option_flag('r',
+			"revocation",
+			"create a certification revocation signature",
+			&gnunet_opt_r
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",

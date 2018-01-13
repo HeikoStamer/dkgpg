@@ -710,6 +710,8 @@ int main
 	opt_ifilename = (char*)ifilename.c_str();
 	ofilename = "Test1_dkg-pub_signed.asc";
 	opt_ofilename = (char*)ofilename.c_str();
+	opt_e = 44203;
+	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 1;
 #endif
 

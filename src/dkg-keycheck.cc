@@ -285,6 +285,11 @@ int main
 		else
 			std::cout << "|e| = " << mpz_sizeinbase(dss_q, 2L) << " bit";
 		std::cout << std::endl << "\t";
+		std::cout << "n ";
+		if (mpz_probab_prime_p(dss_p, TMCG_MR_ITERATIONS))
+			std::cout << "IS PROBABLE PRIME" << std::endl << "\t";
+		else
+			std::cout << "is not probable prime" << std::endl << "\t";
 		std::cout << "e is ";
 		if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
 			std::cout << "NOT ";

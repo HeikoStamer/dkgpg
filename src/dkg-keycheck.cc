@@ -290,6 +290,13 @@ int main
 			std::cout << "IS PROBABLE PRIME" << std::endl << "\t";
 		else
 			std::cout << "is not probable prime" << std::endl << "\t";
+		std::cout << "n = ";
+		for (size_t i = 0; i < PRIMES_SIZE; i++)
+		{
+			if (mpz_divisible_ui_p(dss_p, primes[i]))
+				std::cout << primes[i] << " * ";
+		}
+		std::cout << "..." << std::endl << "\t";
 		std::cout << "e is ";
 		if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
 			std::cout << "NOT ";

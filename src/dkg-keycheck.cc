@@ -302,11 +302,12 @@ int main
 		for (size_t i = 1; i < 10000000; i++)
 		{
 			mpz_set_ui(dss_g, i);
-			if (mpz_jacobi(dss_g, dss_p) == -1)
+			int jac = mpz_jacobi(dss_g, dss_p);
+			if (jac == -1)
 				neg++;
-			if (mpz_jacobi(dss_g, dss_p) == 1)
+			if (jac == 1)
 				pos++;
-			if (mpz_jacobi(dss_g, dss_p) == 0)
+			if (jac == 0)
 				std::cout << " ZERO for i = " << i << " ";
 		}
 		std::cout << "pos = " << pos << " neg = " << neg << std::endl << "\t";

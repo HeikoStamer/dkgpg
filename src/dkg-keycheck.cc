@@ -297,6 +297,19 @@ int main
 				std::cout << primes[i] << " * ";
 		}
 		std::cout << "..." << std::endl << "\t";
+		std::cout << "Legendre-Jacobi symbol (i/n): ";
+		size_t pos = 0, neg = 0;
+		for (size_t i = 1; i < 10000000; i++)
+		{
+			mpz_set_ui(dss_g, i);
+			if (mpz_jacobi(dss_g, dss_p) == -1)
+				neg++;
+			if (mpz_jacobi(dss_g, dss_p) == 1)
+				pos++;
+			if (mpz_jacobi(dss_g, dss_p) == 0)
+				std::cout << " ZERO for i = " << i << " ";
+		}
+		std::cout << "pos = " << pos << " neg = " << neg << std::endl << "\t";
 		std::cout << "e is ";
 		if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
 			std::cout << "NOT ";
@@ -306,6 +319,7 @@ int main
 			std::cout << "VERY SMALL" << std::endl;
 		else
 			std::cout << "okay" << std::endl;
+
 	}
 	else
 	{

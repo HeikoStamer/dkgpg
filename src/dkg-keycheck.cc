@@ -141,6 +141,150 @@ unsigned long int 			primes[] = {
 						4957, 4967, 4969, 4973, 4987, 4993, 4999, 0
 };
 
+bool decomp
+	(mpz_srcptr a, std::map<size_t, size_t> &result)
+{
+	mpz_t foo;
+	bool full = false;
+
+	result.clear();
+	mpz_init_set(foo, a);
+	for (size_t i = 0; i < PRIMES_SIZE; i++)
+	{
+		size_t power = 0;
+		while (mpz_divisible_ui_p(foo, primes[i]))
+		{
+			power++;
+			mpz_divexact_ui(foo, foo, primes[i]);
+		}
+		if (power)
+			result[primes[i]] = power;
+	}
+	if (!mpz_cmp_ui(foo, 1L))
+		full = true;
+	mpz_clear(foo);
+	return full;
+}
+
+bool order
+	(mpz_srcptr a, mpz_srcptr phi_m, const std::map<size_t, size_t> &phi_m_decomp, mpz_srcptr m, mpz_ptr result)
+{
+	mpz_t foo, bar, baz;
+	
+	if (!mpz_cmp_ui(a, 1L))
+	{
+		mpz_set_ui(result, 1L);
+		return true;
+	}
+	mpz_init(foo), mpz_init(bar), mpz_init(baz);
+	mpz_powm(foo, a, phi_m, m);
+	if (mpz_cmp_ui(foo, 1L))
+	{
+		mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
+		return false;
+	}
+	else
+	{
+		mpz_set(foo, phi_m);
+		for (std::map<size_t, size_t>::const_iterator it = phi_m_decomp.begin(); it != phi_m_decomp.end(); ++it)
+		{
+			for (size_t i = 0; i < it->second; i++)
+			{
+				mpz_divexact_ui(bar, foo, it->first);
+				mpz_powm(baz, a, bar, m);
+				if (!mpz_cmp_ui(baz, 1L))
+					mpz_set(foo, bar);
+				else
+					break;
+			}
+		}
+	}
+	mpz_set(result, foo);
+	mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
+	return true;
+}
+
+bool crt
+	(const std::vector<mpz_ptr> &n, const std::vector<mpz_ptr> &a, mpz_ptr result)
+{
+	mpz_t sum, prod, foo, bar;
+
+	if (n.size() != a.size())
+		return false;
+	mpz_init_set_ui(sum, 0L), mpz_init_set_ui(prod, 1L);
+	mpz_init(foo), mpz_init(bar);
+	for (size_t i = 0; i < n.size(); i++)
+		mpz_mul(prod, prod, n[i]);
+	for (size_t i = 0; i < n.size(); i++)
+	{
+		mpz_tdiv_q(foo, prod, n[i]);
+		if (!mpz_invert(bar, foo, n[i]))
+		{
+			mpz_clear(sum), mpz_clear(prod);
+			mpz_clear(foo), mpz_clear(bar);
+			return false;
+		}
+		mpz_mul(bar, bar, foo);
+		mpz_mul(bar, bar, a[i]);
+		mpz_add(sum, sum, n[i]);
+	}
+	mpz_mod(result, sum, prod);
+	mpz_clear(sum),	mpz_clear(prod);
+	mpz_clear(foo), mpz_clear(bar);
+	return true;
+}
+
+bool dlog
+	(mpz_srcptr a, mpz_srcptr g, mpz_srcptr order_g, const std::map<size_t, size_t> &order_g_decomp, mpz_srcptr m, mpz_ptr result)
+{
+	mpz_t foo, bar, baz;
+	std::vector<mpz_ptr> moduli, remainders;
+
+	mpz_init(foo), mpz_init(bar), mpz_init(baz);
+	mpz_powm(foo, a, order_g, m);
+	if (mpz_cmp_ui(foo, 1L))
+	{
+		mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
+		return false;
+	}
+	for (std::map<size_t, size_t>::const_iterator it = order_g_decomp.begin(); it != order_g_decomp.end(); ++it)
+	{
+		mpz_t idx, prime_to_power;
+		mpz_init_set_ui(idx, 0L);
+		mpz_init_set_ui(prime_to_power, 1L);
+		for (size_t i = 0; i < it->second; i++)
+			mpz_mul_ui(prime_to_power, prime_to_power, it->first);
+		mpz_tdiv_q(foo, order_g, prime_to_power);
+		mpz_powm(bar, g, foo, m);
+		mpz_powm(baz, a, foo, m);
+		bool found = false;
+		do
+		{
+			mpz_powm(foo, bar, idx, m);
+			if (!mpz_cmp(foo, baz))
+			{
+				mpz_ptr tmp1 = new mpz_t(), tmp2 = new mpz_t();
+                        	mpz_init_set(tmp1, idx), mpz_init_set(tmp2, prime_to_power);
+				remainders.push_back(tmp1);
+				moduli.push_back(tmp2);
+				found = true;
+				break;
+			}
+			mpz_add_ui(idx, idx, 1L);
+		}
+		while (mpz_cmp(idx, prime_to_power));
+		mpz_clear(idx);
+		mpz_clear(prime_to_power);
+		if (!found)
+		{
+			mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
+			return false;
+		}
+	}
+	mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
+	return crt(moduli, remainders, result);
+}
+
 int main
 	(int argc, char **argv)
 {
@@ -290,6 +434,11 @@ int main
 			std::cout << "IS PROBABLE PRIME" << std::endl << "\t";
 		else
 			std::cout << "is not probable prime" << std::endl << "\t";
+		for (size_t i = 1; i < 4; i++)
+		{
+			if (mpz_congruent_ui_p(dss_p, i, 4L))
+				std::cout << "n is congruent " << i << " mod 4" << std::endl << "\t";
+		}
 		std::cout << "n = ";
 		for (size_t i = 0; i < PRIMES_SIZE; i++)
 		{
@@ -310,7 +459,46 @@ int main
 			if (jac == 0)
 				std::cout << " ZERO for i = " << i << " ";
 		}
-		std::cout << "pos = " << pos << " neg = " << neg << std::endl << "\t";
+		std::cout << "#(+1) = " << pos << " #(-1) = " << neg << std::endl << "\t";
+		// check for ROCA fingerprint
+		bool roca_fingerprint = false;
+		std::vector<size_t> roca_max_prime_idx;
+		roca_max_prime_idx.push_back(39), roca_max_prime_idx.push_back(71), roca_max_prime_idx.push_back(126), roca_max_prime_idx.push_back(225);
+		for (std::vector<size_t>::const_iterator it = roca_max_prime_idx.begin(); it != roca_max_prime_idx.end(); ++it)
+		{
+			mpz_t roca_generator, roca_generator_order, roca_m, roca_phi_m;
+			mpz_init_set_ui(roca_generator, 65537L), mpz_init(roca_generator_order), mpz_init_set_ui(roca_m, 1L), mpz_init_set_ui(roca_phi_m, 1L);
+			for (size_t i = 0; i < *it; i++)
+			{
+				mpz_mul_ui(roca_m, roca_m, primes[i]);
+				mpz_mul_ui(roca_phi_m, roca_phi_m, (primes[i] - 1L));
+			}
+			std::map<size_t, size_t> roca_phi_m_decomp;
+			if (!decomp(roca_phi_m, roca_phi_m_decomp))
+			{
+				std::cerr << "BUG: decomp() for roca_phi_m failed" << std::endl;
+				mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
+				break;
+			}
+			if (!order(roca_generator, roca_phi_m, roca_phi_m_decomp, roca_m, roca_generator_order))
+			{
+				std::cerr << "BUG: order() for roca_generator failed" << std::endl;
+				mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
+				break;
+			}
+			std::map<size_t, size_t> roca_generator_order_decomp;
+			if (!decomp(roca_generator_order, roca_generator_order_decomp))
+			{
+				std::cerr << "BUG: decomp() for roca_generator_order failed" << std::endl;
+				mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
+				break;
+			}
+			if (dlog(dss_p, roca_generator, roca_generator_order, roca_generator_order_decomp, roca_m, dss_g))
+				roca_fingerprint = true;
+			mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
+		}
+		if (roca_fingerprint)
+			std::cout << "n is SUSPICIOUS for the ROCA attack" << std::endl << "\t";
 		std::cout << "e is ";
 		if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
 			std::cout << "NOT ";
@@ -320,7 +508,6 @@ int main
 			std::cout << "VERY SMALL" << std::endl;
 		else
 			std::cout << "okay" << std::endl;
-
 	}
 	else
 	{
@@ -336,11 +523,15 @@ int main
 		mpz_t pm1;
 		mpz_init_set(pm1, dss_p);
 		mpz_sub_ui(pm1, pm1, 1L);
+		std::map<size_t, size_t> pm1_decomp;
 		std::cout << "(p-1) = ";
-		for (size_t i = 0; i < PRIMES_SIZE; i++)
+		decomp(pm1, pm1_decomp);
+		for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
 		{
-			if (mpz_divisible_ui_p(pm1, primes[i]))
-				std::cout << primes[i] << " * ";
+			std::cout << it->first;
+			if (it->second > 1)
+				std::cout << "^" << it->second;
+			std::cout << " * ";
 		}
 		std::cout << "...";
 		if (mpz_divisible_p(pm1, dss_q))
@@ -353,11 +544,14 @@ int main
 		mpz_set(pm1, dss_q);
 		mpz_sub_ui(pm1, pm1, 1L);
 		std::cout << "(q-1) = ";
-		for (size_t i = 0; i < PRIMES_SIZE; i++)
+		decomp(pm1, pm1_decomp);
+		for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
 		{
-			if (mpz_divisible_ui_p(pm1, primes[i]))
-				std::cout << primes[i] << " * ";
-		}
+			std::cout << it->first;
+			if (it->second > 1)
+				std::cout << "^" << it->second;
+			std::cout << " * ";
+		}		
 		std::cout << "..." << std::endl << "\t";
 		std::cout << "g is ";
 		mpz_powm(pm1, dss_g, dss_q, dss_p);
@@ -468,15 +662,14 @@ int main
 			std::cout << "probable prime" << std::endl << "\t";
 			mpz_init_set(pm1, dkg_p);
 			mpz_sub_ui(pm1, pm1, 1L);
-			std::vector<unsigned int> small_factors;
 			std::cout << "(p-1) = ";
-			for (size_t i = 0; i < PRIMES_SIZE; i++)
+			decomp(pm1, pm1_decomp);
+			for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
 			{
-				if (mpz_divisible_ui_p(pm1, primes[i]))
-				{
-					std::cout << primes[i] << " * ";
-					small_factors.push_back(primes[i]);
-				}
+				std::cout << it->first;
+				if (it->second > 1)
+					std::cout << "^" << it->second;
+				std::cout << " * ";
 			}
 			std::cout << "...";
 			if (mpz_divisible_p(pm1, dss_q))
@@ -494,12 +687,12 @@ int main
 			mpz_init(tmp), mpz_init(bar);
 			std::cout << "subgroup generated by g ";
 			mpz_sub_ui(pm1, dkg_p, 1L);
-			for (std::vector<unsigned int>::const_iterator sfi = small_factors.begin(); sfi != small_factors.end(); ++sfi)
+			for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
 			{
-				mpz_set_ui(bar, *sfi);
+				mpz_ui_pow_ui(bar, it->first, it->second);
 				mpz_powm(tmp, dkg_g, bar, dkg_p);
 				if (!mpz_cmp_ui(tmp, 1L))
-					std::cout << "is VERY SMALL (" << *sfi << " elements) ";
+					std::cout << "is VERY SMALL (" << it->first << "^" << it->second << " elements) ";
 				else
 					std::cout << "is okay ";
 			}

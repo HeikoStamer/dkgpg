@@ -498,7 +498,7 @@ int main
 			mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
 		}
 		if (roca_fingerprint)
-			std::cout << "n is SUSPICIOUS for the ROCA attack" << std::endl << "\t";
+			std::cout << "n is SUSPICIOUS for the ROCA vulnerability" << std::endl << "\t";
 		std::cout << "e is ";
 		if (!mpz_probab_prime_p(dss_q, TMCG_MR_ITERATIONS))
 			std::cout << "NOT ";

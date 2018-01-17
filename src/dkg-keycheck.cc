@@ -460,7 +460,7 @@ int main
 				std::cout << " ZERO for i = " << i << " ";
 		}
 		std::cout << "#(+1) = " << pos << " #(-1) = " << neg << std::endl << "\t";
-		// check for ROCA fingerprint
+		// check for ROCA fingerprint (stupid Infineon RSALib certified by BSI)
 		bool roca_fingerprint = false;
 		std::vector<size_t> roca_max_prime_idx;
 		roca_max_prime_idx.push_back(39), roca_max_prime_idx.push_back(71), roca_max_prime_idx.push_back(126), roca_max_prime_idx.push_back(225);

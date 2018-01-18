@@ -435,7 +435,7 @@ int main
 	}
 	std::cout << "OpenPGP User ID: " << std::endl << "\t";
 	std::cout << userid << std::endl;
-	if (opt_rsa)
+	if ((opt_rsa) && (mpz_sizeinbase(dss_p, 2L) > 1L))
 	{
 		std::cout << "Security level of public key: " << std::endl << "\t";
 		std::cout << "|n| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";
@@ -524,7 +524,7 @@ int main
 		else
 			std::cout << "okay" << std::endl;
 	}
-	else
+	else if (!opt_rsa)
 	{
 		std::cout << "Security level of DSA domain parameter set: " << std::endl << "\t";
 		std::cout << "|p| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";

@@ -169,22 +169,24 @@ bool decomp
 bool order
 	(mpz_srcptr a, mpz_srcptr phi_m, const std::map<size_t, size_t> &phi_m_decomp, mpz_srcptr m, mpz_ptr result)
 {
-	mpz_t foo, bar, baz;
+	mpz_t foo;
 	
 	if (!mpz_cmp_ui(a, 1L))
 	{
 		mpz_set_ui(result, 1L);
 		return true;
 	}
-	mpz_init(foo), mpz_init(bar), mpz_init(baz);
+	mpz_init(foo);
 	mpz_powm(foo, a, phi_m, m);
 	if (mpz_cmp_ui(foo, 1L))
 	{
-		mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
-		return false;
+		mpz_clear(foo);
+		return false; // a is not an element of group G_m
 	}
 	else
 	{
+		mpz_t bar, baz;
+		mpz_init(bar), mpz_init(baz);
 		mpz_set(foo, phi_m);
 		for (std::map<size_t, size_t>::const_iterator it = phi_m_decomp.begin(); it != phi_m_decomp.end(); ++it)
 		{
@@ -198,9 +200,10 @@ bool order
 					break;
 			}
 		}
+		mpz_clear(bar), mpz_clear(baz);
 	}
 	mpz_set(result, foo);
-	mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
+	mpz_clear(foo);
 	return true;
 }
 
@@ -238,6 +241,7 @@ bool dlog
 	(mpz_srcptr a, mpz_srcptr g, mpz_srcptr order_g, const std::map<size_t, size_t> &order_g_decomp, mpz_srcptr m, mpz_ptr result)
 {
 	mpz_t foo, bar, baz;
+	bool found = false;
 	std::vector<mpz_ptr> moduli, remainders;
 
 	mpz_init(foo), mpz_init(bar), mpz_init(baz);
@@ -257,7 +261,7 @@ bool dlog
 		mpz_tdiv_q(foo, order_g, prime_to_power);
 		mpz_powm(bar, g, foo, m);
 		mpz_powm(baz, a, foo, m);
-		bool found = false;
+		found = false;
 		do
 		{
 			mpz_powm(foo, bar, idx, m);
@@ -282,7 +286,18 @@ bool dlog
 		}
 	}
 	mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
-	return crt(moduli, remainders, result);
+	found = crt(moduli, remainders, result);
+	for (size_t i = 0; i < moduli.size(); i++)
+	{
+		mpz_clear(moduli[i]);
+		delete [] moduli[i];
+	}
+	for (size_t i = 0; i < remainders.size(); i++)
+	{
+		mpz_clear(remainders[i]);
+		delete [] remainders[i];
+	}
+	return found;
 }
 
 int main

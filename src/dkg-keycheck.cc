@@ -362,7 +362,7 @@ int main
 	if (opt_verbose)
 		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
-	// read and parse the public key (no ElGamal subkey required)
+	// read and parse the public key (an ElGamal subkey is not required)
 	std::string armored_pubkey;
 	if (opt_binary && !read_binary_key_file(kfilename, 6, armored_pubkey))
 		return -1;
@@ -673,7 +673,13 @@ int main
 			std::cout << "OpenPGP Subkey Expiration Time: " << std::endl << "\t";
 			if (esubkeytime == 0)
 				std::cout << "undefined" << std::endl;
-			std::cout << "Security level of domain parameter set: " << std::endl << "\t"; 
+			else
+			{
+				esubkeytime += csubkeytime; // validity period of the subkey after key creation time
+				std::cout << ctime(&esubkeytime);
+			}
+
+			std::cout << "Security level of domain parameter set: " << std::endl << "\t";
 			std::cout << "|p| = " << mpz_sizeinbase(dkg_p, 2L) << " bit, ";
 			std::cout << "|g| = " << mpz_sizeinbase(dkg_g, 2L) << " bit" << std::endl << "\t";
 			std::cout << "p is ";

@@ -187,7 +187,7 @@ int main
 		return -2;
 	}
 	// 2. signature validity time (expired signatures are not valid)
-	if ((sigexptime) && (current_time > (csigtime + sigexptime)))
+	if (sigexptime && (current_time > (csigtime + sigexptime)))
 	{
 		std::cout << "ERROR: signature is expired" << std::endl;
 		return -2;
@@ -198,8 +198,13 @@ int main
 		std::cout << "ERROR: corresponding key was not intented for signing" << std::endl;
 		return -2;
 	}
-
-// TODO
+	// 4. key validity time (expired keys are not valid)
+	if (ekeytime && (current_time > (ckeytime + ekeytime)))
+	{
+		std::cout << "ERROR: corresponding key is expired" << std::endl;
+		return -2;
+	}
+// TODO: add some more checks suggested by dkg
 
 	// compute the hash of the input file
 	if (opt_verbose)

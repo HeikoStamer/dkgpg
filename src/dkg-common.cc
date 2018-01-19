@@ -740,7 +740,10 @@ bool parse_signature
 }
 
 bool parse_public_key
-	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out, bool elg_required)
+	(const std::string &in,
+	 time_t &keycreationtime_out, time_t &keyexpirationtime_out,
+	 time_t &subkeycreationtime_out, time_t &subkeyexpirationtime_out,
+	 tmcg_byte_t &keyusage_out, bool elg_required)
 {
 	// decode ASCII Armor
 	tmcg_octets_t pkts;
@@ -877,7 +880,7 @@ bool parse_public_key
 					elg_sigtype = ctx.type;
 					elg_pkalgo = ctx.pkalgo;
 					elg_hashalgo = ctx.hashalgo;
-					keyexpirationtime_out = ctx.keyexpirationtime;
+					subkeyexpirationtime_out = ctx.keyexpirationtime;
 					for (size_t i = 0; i < sizeof(elg_keyflags); i++)
 						elg_keyflags[i] = ctx.keyflags[i];
 					for (size_t i = 0; i < sizeof(elg_psa); i++)
@@ -995,7 +998,7 @@ bool parse_public_key
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
 					elg_creation = ctx.keycreationtime;
-					keycreationtime_out = ctx.keycreationtime; // FIXME: this overwrites the saved creation time of primary key
+					subkeycreationtime_out = ctx.keycreationtime;
 					sub.clear();
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ctx.keycreationtime, ctx.pkalgo,
 						elg_p, dsa_q, elg_g, elg_y, sub);
@@ -1065,6 +1068,7 @@ bool parse_public_key
 		else
 			break;
 	}
+	keyusage_out = flags & 0xFF; // return some flags
 	if (opt_verbose)
 	{
 		std::cout << "key flags on primary key: ";

@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -720,8 +720,9 @@ int main
 		return -1;
 	}
 	init_mpis();
-	time_t ckeytime = 0, ekeytime = 0;
-	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime))
+	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
+	tmcg_byte_t keyusage = 0;
+	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage))
 	{
 		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
 		release_mpis();

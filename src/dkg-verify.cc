@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -136,8 +136,9 @@ int main
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
 	init_mpis();
-	time_t ckeytime = 0, ekeytime = 0;
-	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, false))
+	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
+	tmcg_byte_t keyusage = 0;
+	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, false))
 	{
 		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
 		release_mpis();
@@ -171,6 +172,34 @@ int main
 		release_mpis();
 		return -1;
 	}
+
+	// additional validity checks on key and signature
+	time_t current_time = time(NULL);
+	// 1. key validity time (signatures made before key creation or after key expiry are not valid)
+	if (csigtime < ckeytime)
+	{
+		std::cout << "ERROR: signature was made before key creation" << std::endl;
+		return -2;
+	}
+	if (ekeytime && (csigtime > (ckeytime + ekeytime)))
+	{
+		std::cout << "ERROR: signature was made after key expiry" << std::endl;
+		return -2;
+	}
+	// 2. signature validity time (expired signatures are not valid)
+	if ((sigexptime) && (current_time > (csigtime + sigexptime)))
+	{
+		std::cout << "ERROR: signature is expired" << std::endl;
+		return -2;
+	}
+	// 3. key usage flags (signatures made by keys not with the "signing" capability are not valid)
+	if ((keyusage & 0x02) != 0x02)
+	{
+		std::cout << "ERROR: corresponding key was not intented for signing" << std::endl;
+		return -2;
+	}
+
+// TODO
 
 	// compute the hash of the input file
 	if (opt_verbose)

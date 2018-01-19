@@ -369,14 +369,15 @@ int main
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
 	init_mpis();
-	time_t ckeytime = 0, ekeytime = 0;
+	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
+	tmcg_byte_t keyusage = 0;
 	if (opt_rsa && !parse_public_key_for_certification(armored_pubkey, ckeytime, ekeytime))
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		release_mpis();
 		return -1;
 	}
-	if (!opt_rsa && !parse_public_key(armored_pubkey, ckeytime, ekeytime, false))
+	if (!opt_rsa && !parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, false))
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		release_mpis();
@@ -668,6 +669,10 @@ int main
 			for (size_t i = 0; i < sub_fpr.size(); i++)
 				std::cout << std::setfill('0') << std::setw(2) << std::right << (int)sub_fpr[i] << " ";
 			std::cout << std::dec << std::endl;
+			std::cout << "OpenPGP Subkey Creation Time: " << std::endl << "\t" << ctime(&csubkeytime);
+			std::cout << "OpenPGP Subkey Expiration Time: " << std::endl << "\t";
+			if (esubkeytime == 0)
+				std::cout << "undefined" << std::endl;
 			std::cout << "Security level of domain parameter set: " << std::endl << "\t"; 
 			std::cout << "|p| = " << mpz_sizeinbase(dkg_p, 2L) << " bit, ";
 			std::cout << "|g| = " << mpz_sizeinbase(dkg_g, 2L) << " bit" << std::endl << "\t";

@@ -10,13 +10,16 @@ dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
 
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN or a file according to the OpenPGP
-standard. KEYFILE must contain the ASCII\-armored public key, for which the encryption is
-performed.
+standard (RFC 4880). KEYFILE must contain the ASCII\-armored public key, for which the
+encryption is performed.
 .PP
 First, AES\-256 is applied as symmetric cipher with a randomly chosen 256\-bit session key.
 Finally, the session key is transformed by PKCS#1 v1.5 block encoding and encrypted with
 the ElGamal public\-key algorithm. Note that an integrity protection packet (MDC) is always
 appended.
+.PP
+With the option "\-z" the included key ID is set to zero, i.e., a "wild card" or
+"speculative" key ID. This format helps to reduce traffic analysis of messages. 
 .PP
 Currently, as public\-key algorithm only ElGamal is supported and all certification and
 subkey binding self-signatures in the corresponding subkey packet of the public key must
@@ -48,6 +51,9 @@ print the version number of the program
 .TP
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
+.TP
+\fB\-z\fR, \fB\-\-zero\-keyid\fR
+set the included key ID to zero for improved privacy
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT

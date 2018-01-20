@@ -50,6 +50,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 
 int 					opt_verbose = 0;
 bool					opt_binary = false;
+bool					opt_z = false;
 char					*opt_ifilename = NULL;
 char					*opt_ofilename = NULL;
 
@@ -81,19 +82,21 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-b") == 0)  || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-b") == 0)  || (arg.find("-v") == 0) || 
+			 (arg.find("-h") == 0) || (arg.find("-V") == 0) || (arg.find("-z") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary   write encrypted message in binary format (only if -i given)" << std::endl;
-				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -i FILENAME    read message rather from FILENAME than STDIN" << std::endl;
-				std::cout << "  -o FILENAME    write encrypted message rather to FILENAME than STDOUT" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				std::cout << "  -b, --binary      write encrypted message in binary format (only if -i given)" << std::endl;
+				std::cout << "  -h, --help        print this help" << std::endl;
+				std::cout << "  -i FILENAME       read message rather from FILENAME than STDIN" << std::endl;
+				std::cout << "  -o FILENAME       write encrypted message rather to FILENAME than STDOUT" << std::endl;
+				std::cout << "  -v, --version     print the version number" << std::endl;
+				std::cout << "  -V, --verbose     turn on verbose output" << std::endl;
+				std::cout << "  -z, --zero-keyid  set the included key ID to zero for improved privacy" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
@@ -105,6 +108,8 @@ int main
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
+			if ((arg.find("-z") == 0) || (arg.find("--binary") == 0))
+				opt_z = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -121,6 +126,7 @@ int main
 	ofilename = "Test1_output.bin";
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 1;
+	opt_z = true;
 #endif
 
 	// check command line arguments
@@ -236,7 +242,19 @@ int main
 		gcry_sexp_release(elgkey);
 		return ret;
 	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(subkeyid, gk, myk, pkesk);
+	if (opt_z)
+	{
+		// An implementation MAY accept or use a Key ID of zero as a "wild card"
+		// or "speculative" Key ID. In this case, the receiving implementation
+		// would try all available private keys, checking for a valid decrypted
+		// session key. This format helps reduce traffic analysis of messages. [RFC4880]
+		tmcg_octets_t wildcard;
+		for (size_t i = 0; i < 8; i++)
+			wildcard.push_back(0x00);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(wildcard, gk, myk, pkesk);
+	}
+	else
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(subkeyid, gk, myk, pkesk);
 
 	// concatenate and encode the packages in ASCII armor and finally print result to stdout
 	std::string armored_message;

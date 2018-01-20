@@ -8,7 +8,6 @@ in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
 
-* dkg-encrypt: provide an option for generating a wildcard PKESK packet
 * dkg-tools: use mlockall(2), if availablle
 * dkg-tools: use allocated secure memory from libgcrypt for secret values
 

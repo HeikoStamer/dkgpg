@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-01-20] dkg-encrypt: added option "-z" for improved privacy (zero key ID) 
 * [2018-01-19] dkg-verify: added validity checks on key and signature
 * [2018-01-17] dkg-keycheck: added ROCA vulnerability detector (Infineon RSALib)
 * [2018-01-12] added option "-U" for dkg-keysign (policy URI)

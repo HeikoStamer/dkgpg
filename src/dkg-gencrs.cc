@@ -31,7 +31,7 @@
 int main
 	(int argc, char **argv)
 {
-	static const char *usage = "dkg-gencrs [OPTIONS] [ARGS]; number of dummy ARGS determines security level (bit size)";
+	static const char *usage = "dkg-gencrs [OPTIONS] [ARGS]; number of dummy ARGS defines security level (bits)";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 	size_t factor = 0;

@@ -126,7 +126,6 @@ int main
 	ofilename = "Test1_output.bin";
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 1;
-	opt_z = true;
 #endif
 
 	// check command line arguments

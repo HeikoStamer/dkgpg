@@ -41,7 +41,7 @@ extern std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
 extern gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
 extern gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
 extern gcry_mpi_t 				gk, myk, sig_r, sig_s;
-extern gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s;
+extern gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 
 extern int					opt_verbose;
 
@@ -268,6 +268,7 @@ void init_mpis
 	revdsa_s = gcry_mpi_new(2048);
 	revelg_r = gcry_mpi_new(2048);
 	revelg_s = gcry_mpi_new(2048);
+	revrsa_md = gcry_mpi_new(2048);
 }
 
 void cleanup_ctx
@@ -951,6 +952,24 @@ bool parse_public_key
 						for (size_t i = 0; i < ctx.hspdlen; i++)
 							revdsa_hspd.push_back(ctx.hspd[i]);
 					}
+					if (opt_verbose)
+						std::cout << "INFO: revdsa_hspd.size() = " << revdsa_hspd.size() << std::endl;
+					if (revdsa_pkalgo != 17)
+					{
+						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
+						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, c_ik);
+						return false;
+					}
+					gcry_mpi_set(revdsa_r, ctx.r);
+					gcry_mpi_set(revdsa_s, ctx.s);
+					unsigned int rbits = 0, sbits = 0;
+					rbits = gcry_mpi_get_nbits(revdsa_r);
+					sbits = gcry_mpi_get_nbits(revdsa_s);
+					if (opt_verbose)
+						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+					if ((revdsa_hashalgo < 8) || (revdsa_hashalgo >= 11))
+						std::cerr << "WARNING: insecure hash algorithm " << (int)revdsa_hashalgo << " used for signatures" << std::endl;
 				}
 				else if (pubdsa && subelg && (ctx.type == 0x28) && // Subkey revocation signature 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
@@ -972,6 +991,24 @@ bool parse_public_key
 						for (size_t i = 0; i < ctx.hspdlen; i++)
 							revelg_hspd.push_back(ctx.hspd[i]);
 					}
+					if (opt_verbose)
+						std::cout << "INFO: revelg_hspd.size() = " << revelg_hspd.size() << std::endl;
+					if (revelg_pkalgo != 17)
+					{
+						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
+						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, c_ik);
+						return false;
+					}
+					gcry_mpi_set(revelg_r, ctx.r);
+					gcry_mpi_set(revelg_s, ctx.s);
+					unsigned int rbits = 0, sbits = 0;
+					rbits = gcry_mpi_get_nbits(revelg_r);
+					sbits = gcry_mpi_get_nbits(revelg_s);
+					if (opt_verbose)
+						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+					if ((revelg_hashalgo < 8) || (revelg_hashalgo >= 11))
+						std::cerr << "WARNING: insecure hash algorithm " << (int)revelg_hashalgo << " used for signatures" << std::endl;
 				}
 				break;
 			case 6: // Public-Key Packet
@@ -2576,11 +2613,11 @@ bool parse_public_key_for_certification
 		return false;
 	}
 	// parse the public key according to OpenPGP
-	bool primary = false, sig = false, sigV3 = false, uid_flag = false, uat_flag = false;
+	bool primary = false, sig = false, sigV3 = false, uid_flag = false, uat_flag = false, rev = false, revV3 = false;
 	tmcg_byte_t ptag = 0xFF;
-	tmcg_byte_t sigtype, pkalgo, hashalgo, keyflags[4];
-	tmcg_octets_t pub_hashing, issuer, hspd;
-	time_t creation = 0, sigtime = 0;
+	tmcg_byte_t sigtype, pkalgo, hashalgo, keyflags[4], rev_sigtype, rev_pkalgo, rev_hashalgo;
+	tmcg_octets_t pub_hashing, issuer, hspd, rev_hspd;
+	time_t creation = 0, sigtime = 0, rev_sigtime = 0;
 	size_t erroff, pnum = 0;
 	while (pkts.size() && ptag)
 	{
@@ -2695,6 +2732,51 @@ bool parse_public_key_for_certification
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					std::cerr << "WARNING: key revocation signature on primary key" << std::endl;
+					rev = true;
+					rev_sigtype = ctx.type;
+					rev_pkalgo = ctx.pkalgo;
+					rev_hashalgo = ctx.hashalgo;
+					if (ctx.version == 3)
+					{
+						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
+						revV3 = true;
+						rev_sigtime = ctx.sigcreationtime;
+					}
+					else
+					{
+						rev_hspd.clear();
+						for (size_t i = 0; i < ctx.hspdlen; i++)
+							rev_hspd.push_back(ctx.hspd[i]);
+					}
+					if (opt_verbose)
+						std::cout << "INFO: rev_hspd.size() = " << rev_hspd.size() << std::endl;
+					if ((ctx.pkalgo == 1) || (ctx.pkalgo == 3))
+					{
+						gcry_mpi_set(revrsa_md, ctx.md);
+						unsigned int mdbits = 0;
+						mdbits = gcry_mpi_get_nbits(revrsa_md);
+						if (opt_verbose)
+							std::cout << "INFO: mdbits = " << mdbits << std::endl;
+					}
+					else if (ctx.pkalgo == 17)
+					{
+						gcry_mpi_set(revdsa_r, ctx.r);
+						gcry_mpi_set(revdsa_s, ctx.s);
+						unsigned int rbits = 0, sbits = 0;
+						rbits = gcry_mpi_get_nbits(revdsa_r);
+						sbits = gcry_mpi_get_nbits(revdsa_s);
+						if (opt_verbose)
+							std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+					}
+					else
+					{
+						std::cerr << "ERROR: public-key signature algorithm " << (int)ctx.pkalgo << " not supported" << std::endl;
+						cleanup_ctx(ctx);
+						cleanup_containers(qual, v_i, c_ik);
+						return false;
+					}
+					if ((rev_hashalgo < 8) || (rev_hashalgo >= 11))
+						std::cerr << "WARNING: insecure hash algorithm " << (int)rev_hashalgo << " used for signatures" << std::endl;
 				}
 				break;
 			case 6: // Public-Key Packet
@@ -2870,9 +2952,7 @@ bool parse_public_key_for_certification
 	if (opt_verbose)
 		std::cout << "INFO: left = " << std::hex << (int)left[0] << " " << (int)left[1] << std::dec << std::endl;
 	if ((pkalgo == 1) || (pkalgo == 3))
-	{
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyRSA(hash, primarykey, hashalgo, rsa_md);
-	}
 	else if (pkalgo == 17)
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, primarykey, dsa_r, dsa_s);
 	if (ret)
@@ -2881,6 +2961,57 @@ bool parse_public_key_for_certification
 			gcry_strerror(ret) << ")" << std::endl;
 		gcry_sexp_release(primarykey);
 		return false;
+	}
+	if (rev)
+	{
+		tmcg_octets_t rev_trailer, rev_left;
+		hash.clear();
+		if (revV3)
+		{
+			tmcg_octets_t rev_sigtime_octets;
+			CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(rev_sigtime, rev_sigtime_octets);
+			// The concatenation of the data to be signed, the signature type, and
+			// creation time from the Signature packet (5 additional octets) is
+			// hashed. The resulting hash value is used in the signature algorithm.
+			// The high 16 bits (first two octets) of the hash are included in the
+			// Signature packet to provide a quick test to reject some invalid
+			// signatures.
+			// A V3 signature hashes five octets of the packet body, starting from
+			// the signature type field. This data is the signature type, followed
+			// by the four-octet signature time.
+			rev_trailer.push_back(rev_sigtype);
+			rev_trailer.insert(rev_trailer.end(), rev_sigtime_octets.begin(), rev_sigtime_octets.end());
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHashV3(pub_hashing, rev_trailer, rev_hashalgo, hash, rev_left);
+		}
+		else
+		{
+			rev_trailer.push_back(4); // only V4 format supported
+			rev_trailer.push_back(rev_sigtype);
+			rev_trailer.push_back(rev_pkalgo);
+			rev_trailer.push_back(rev_hashalgo);
+			rev_trailer.push_back(rev_hspd.size() >> 8); // length of hashed subpacket data
+			rev_trailer.push_back(rev_hspd.size());
+			rev_trailer.insert(rev_trailer.end(), rev_hspd.begin(), rev_hspd.end());
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, rev_trailer, rev_hashalgo, hash, rev_left);
+		}
+		if (opt_verbose)
+			std::cout << "INFO: rev_left = " << std::hex << (int)rev_left[0] << " " << (int)rev_left[1] << std::dec << std::endl;
+		if ((pkalgo == 1) || (pkalgo == 3))
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyRSA(hash, primarykey, rev_hashalgo, revrsa_md);
+		else if (pkalgo == 17)
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, primarykey, revdsa_r, revdsa_s);
+		gcry_sexp_release(primarykey);
+		if (ret)
+		{
+			std::cerr << "ERROR: verification of primary key revocation signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) << ")" << std::endl;
+			return false;
+		}
+		else
+		{
+			std::cerr << "ERROR: valid revocation signature on primary key found" << std::endl;
+			return false;
+		}
 	}
 	gcry_sexp_release(primarykey);
 	return true;
@@ -2949,5 +3080,6 @@ void release_mpis
 	gcry_mpi_release(revdsa_s);
 	gcry_mpi_release(revelg_r);
 	gcry_mpi_release(revelg_s);
+	gcry_mpi_release(revrsa_md);
 }
 

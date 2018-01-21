@@ -41,6 +41,7 @@ extern std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
 extern gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
 extern gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
 extern gcry_mpi_t 				gk, myk, sig_r, sig_s;
+extern gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s;
 
 extern int					opt_verbose;
 
@@ -263,6 +264,10 @@ void init_mpis
 	myk = gcry_mpi_new(2048);
 	sig_r = gcry_mpi_new(2048);
 	sig_s = gcry_mpi_new(2048);
+	revdsa_r = gcry_mpi_new(2048);
+	revdsa_s = gcry_mpi_new(2048);
+	revelg_r = gcry_mpi_new(2048);
+	revelg_s = gcry_mpi_new(2048);
 }
 
 void cleanup_ctx
@@ -757,11 +762,13 @@ bool parse_public_key
 	}
 	// parse the public key according to OpenPGP
 	bool pubdsa = false, sigdsa = false, sigdsaV3 = false, subelg = false, sigelg = false, sigelgV3 = false, uid = false, uat = false;
+	bool revdsa = false, revdsaV3 = false, revelg = false, revelgV3 = false;
 	tmcg_byte_t ptag = 0xFF;
-	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
+	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], revdsa_sigtype, revdsa_pkalgo, revdsa_hashalgo;
+	tmcg_byte_t elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32], revelg_sigtype, revelg_pkalgo, revelg_hashalgo;
 	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
-	tmcg_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd, hash;
-	time_t dsa_creation = 0, dsa_sigtime = 0, elg_creation = 0, elg_sigtime = 0;
+	tmcg_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, revdsa_hspd, elg_hspd, revelg_hspd, hash;
+	time_t dsa_creation = 0, dsa_sigtime = 0, revdsa_sigtime = 0, elg_creation = 0, elg_sigtime = 0, revelg_sigtime = 0;
 	gcry_sexp_t dsakey;
 	gcry_error_t ret;
 	size_t erroff, pnum = 0;
@@ -928,11 +935,43 @@ bool parse_public_key
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					std::cerr << "WARNING: key revocation signature on primary key" << std::endl;
+					revdsa = true;
+					revdsa_sigtype = ctx.type;
+					revdsa_pkalgo = ctx.pkalgo;
+					revdsa_hashalgo = ctx.hashalgo;
+					if (ctx.version == 3)
+					{
+						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
+						revdsaV3 = true;
+						revdsa_sigtime = ctx.sigcreationtime;
+					}
+					else
+					{
+						revdsa_hspd.clear();
+						for (size_t i = 0; i < ctx.hspdlen; i++)
+							revdsa_hspd.push_back(ctx.hspd[i]);
+					}
 				}
 				else if (pubdsa && subelg && (ctx.type == 0x28) && // Subkey revocation signature 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					std::cerr << "WARNING: subkey revocation signature on subkey" << std::endl;
+					revelg = true;
+					revelg_sigtype = ctx.type;
+					revelg_pkalgo = ctx.pkalgo;
+					revelg_hashalgo = ctx.hashalgo;
+					if (ctx.version == 3)
+					{
+						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
+						revelgV3 = true;
+						revelg_sigtime = ctx.sigcreationtime;
+					}
+					else
+					{
+						revelg_hspd.clear();
+						for (size_t i = 0; i < ctx.hspdlen; i++)
+							revelg_hspd.push_back(ctx.hspd[i]);
+					}
 				}
 				break;
 			case 6: // Public-Key Packet
@@ -993,7 +1032,7 @@ bool parse_public_key
 				{
 					if (subelg)
 						std::cerr << "WARNING: ElGamal subkey already found; the last one is used" << std::endl;
-					subelg = true, sigelg = false, sigelgV3 = false;
+					subelg = true, sigelg = false, sigelgV3 = false, revelg = false;
 					gcry_mpi_set(elg_p, ctx.p);
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
@@ -1131,6 +1170,54 @@ bool parse_public_key
 		gcry_sexp_release(dsakey);
 		return false;
 	}
+	if (revdsa)
+	{
+		tmcg_octets_t revdsa_trailer, revdsa_left;
+		hash.clear();
+		if (revdsaV3)
+		{
+			tmcg_octets_t revdsa_sigtime_octets;
+			CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(revdsa_sigtime, revdsa_sigtime_octets);
+			// The concatenation of the data to be signed, the signature type, and
+			// creation time from the Signature packet (5 additional octets) is
+			// hashed. The resulting hash value is used in the signature algorithm.
+			// The high 16 bits (first two octets) of the hash are included in the
+			// Signature packet to provide a quick test to reject some invalid
+			// signatures.
+			// A V3 signature hashes five octets of the packet body, starting from
+			// the signature type field. This data is the signature type, followed
+			// by the four-octet signature time.
+			revdsa_trailer.push_back(revdsa_sigtype);
+			revdsa_trailer.insert(revdsa_trailer.end(), revdsa_sigtime_octets.begin(), revdsa_sigtime_octets.end());
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHashV3(pub_hashing, revdsa_trailer, revdsa_hashalgo, hash, revdsa_left);
+		}
+		else
+		{
+			revdsa_trailer.push_back(4); // only V4 format supported
+			revdsa_trailer.push_back(revdsa_sigtype);
+			revdsa_trailer.push_back(revdsa_pkalgo);
+			revdsa_trailer.push_back(revdsa_hashalgo);
+			revdsa_trailer.push_back(revdsa_hspd.size() >> 8); // length of hashed subpacket data
+			revdsa_trailer.push_back(revdsa_hspd.size());
+			revdsa_trailer.insert(revdsa_trailer.end(), revdsa_hspd.begin(), revdsa_hspd.end());
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, revdsa_trailer, revdsa_hashalgo, hash, revdsa_left);
+		}
+		if (opt_verbose)
+			std::cout << "INFO: revdsa_left = " << std::hex << (int)revdsa_left[0] << " " << (int)revdsa_left[1] << std::dec << std::endl;
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, revdsa_r, revdsa_s);
+		gcry_sexp_release(dsakey);
+		if (ret)
+		{
+			std::cerr << "ERROR: verification of primary key revocation signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) << ")" << std::endl;
+			return false;
+		}
+		else
+		{
+			std::cerr << "ERROR: valid revocation signature on primary key found" << std::endl;
+			return false;
+		}
+	}
 	if (elg_required || (subelg && sigelg))
 	{
 		flags = 0;
@@ -1207,6 +1294,54 @@ bool parse_public_key
 				gcry_strerror(ret) <<")" << std::endl;
 			gcry_sexp_release(dsakey);
 			return false;
+		}
+		if (revelg)
+		{
+			tmcg_octets_t revelg_trailer, revelg_left;
+			hash.clear();
+			if (revelgV3)
+			{
+				tmcg_octets_t revelg_sigtime_octets;
+				CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(revelg_sigtime, revelg_sigtime_octets);
+				// The concatenation of the data to be signed, the signature type, and
+				// creation time from the Signature packet (5 additional octets) is
+				// hashed. The resulting hash value is used in the signature algorithm.
+				// The high 16 bits (first two octets) of the hash are included in the
+				// Signature packet to provide a quick test to reject some invalid
+				// signatures.
+				// A V3 signature hashes five octets of the packet body, starting from
+				// the signature type field. This data is the signature type, followed
+				// by the four-octet signature time.
+				revelg_trailer.push_back(revelg_sigtype);
+				revelg_trailer.insert(revelg_trailer.end(), revelg_sigtime_octets.begin(), revelg_sigtime_octets.end());
+				CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHashV3(pub_hashing, sub_hashing, revelg_trailer, revelg_hashalgo, hash, revelg_left);
+			}
+			else
+			{
+				revelg_trailer.push_back(4); // only V4 format supported
+				revelg_trailer.push_back(revelg_sigtype);
+				revelg_trailer.push_back(revelg_pkalgo);
+				revelg_trailer.push_back(revelg_hashalgo);
+				revelg_trailer.push_back(revelg_hspd.size() >> 8); // length of hashed subpacket data
+				revelg_trailer.push_back(revelg_hspd.size());
+				revelg_trailer.insert(revelg_trailer.end(), revelg_hspd.begin(), revelg_hspd.end());
+				CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, sub_hashing, revelg_trailer, revelg_hashalgo, hash, revelg_left);
+			}
+			if (opt_verbose)
+				std::cout << "INFO: revelg_left = " << std::hex << (int)revelg_left[0] << " " << (int)revelg_left[1] << std::dec << std::endl;
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, revelg_r, revelg_s);
+			gcry_sexp_release(dsakey);
+			if (ret)
+			{
+				std::cerr << "ERROR: verification of primary key revocation signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+					gcry_strerror(ret) << ")" << std::endl;
+				return false;
+			}
+			else
+			{
+				std::cerr << "ERROR: valid revocation signature on primary key found" << std::endl;
+				return false;
+			}
 		}
 	}
 	gcry_sexp_release(dsakey);
@@ -2810,5 +2945,9 @@ void release_mpis
 	gcry_mpi_release(myk);
 	gcry_mpi_release(sig_r);
 	gcry_mpi_release(sig_s);
+	gcry_mpi_release(revdsa_r);
+	gcry_mpi_release(revdsa_s);
+	gcry_mpi_release(revelg_r);
+	gcry_mpi_release(revelg_s);
 }
 

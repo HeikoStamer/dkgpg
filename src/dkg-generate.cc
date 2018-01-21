@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
 gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
 gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
 gcry_mpi_t 				gk, myk, sig_r, sig_s;
+gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s;
 
 int 					opt_verbose = 0;
 char					*opt_crs = NULL;

@@ -764,6 +764,7 @@ bool parse_public_key
 	// parse the public key according to OpenPGP
 	bool pubdsa = false, sigdsa = false, sigdsaV3 = false, subelg = false, sigelg = false, sigelgV3 = false, uid = false, uat = false;
 	bool revdsa = false, revdsaV3 = false, revelg = false, revelgV3 = false;
+	bool ignore_further_subkeys = false, ignore_further_signatures = false;
 	tmcg_byte_t ptag = 0xFF;
 	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], revdsa_sigtype, revdsa_pkalgo, revdsa_hashalgo;
 	tmcg_byte_t elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32], revelg_sigtype, revelg_pkalgo, revelg_hashalgo;
@@ -801,6 +802,8 @@ bool parse_public_key
 		switch (ptag)
 		{
 			case 2: // Signature Packet
+				if (ignore_further_signatures)
+					break;
 				issuer.clear();
 				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
 					issuer.push_back(ctx.issuer[i]);
@@ -1063,13 +1066,13 @@ bool parse_public_key
 				}
 				break;
 			case 14: // Public-Subkey Packet
+				ignore_further_signatures = true;
 				if (ctx.version != 4)
 					std::cerr << "WARNING: public-subkey packet version " << (int)ctx.version << " not supported" << std::endl;
-				else if (ctx.pkalgo == 16)
+				else if ((!ignore_further_subkeys && (ctx.pkalgo == 16)) ||
+					 (ignore_further_subkeys && revelg && (ctx.pkalgo == 16)))
 				{
-					if (subelg)
-						std::cerr << "WARNING: ElGamal subkey already found; the last one is used" << std::endl;
-					subelg = true, sigelg = false, sigelgV3 = false, revelg = false;
+					subelg = true, sigelg = false, sigelgV3 = false, revelg = false, revelgV3 = false;
 					gcry_mpi_set(elg_p, ctx.p);
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
@@ -1090,6 +1093,8 @@ bool parse_public_key
 							std::cout << (int)subkeyid[i] << " ";
 						std::cout << std::dec << std::endl;
 					}
+					ignore_further_subkeys = true;
+					ignore_further_signatures = false;
 				}
 				else
 					std::cerr << "WARNING: public-key algorithm " << (int)ctx.pkalgo << " for subkey not supported" << std::endl;
@@ -1209,6 +1214,10 @@ bool parse_public_key
 	}
 	if (revdsa)
 	{
+		if (opt_verbose)
+			std::cout << "INFO: revdsa_sigtype = 0x" << std::hex << (int)revdsa_sigtype << std::dec << 
+				" revdsa_pkalgo = " << (int)revdsa_pkalgo << " revdsa_hashalgo = " << (int)revdsa_hashalgo <<
+				" revdsa_hspd.size() = " << revdsa_hspd.size() << std::endl;
 		tmcg_octets_t revdsa_trailer, revdsa_left;
 		hash.clear();
 		if (revdsaV3)
@@ -1334,6 +1343,10 @@ bool parse_public_key
 		}
 		if (revelg)
 		{
+			if (opt_verbose)
+				std::cout << "INFO: revelg_sigtype = 0x" << std::hex << (int)revelg_sigtype << std::dec << 
+					" revelg_pkalgo = " << (int)revelg_pkalgo << " revelg_hashalgo = " << (int)revelg_hashalgo <<
+					" revelg_hspd.size() = " << revelg_hspd.size() << std::endl;
 			tmcg_octets_t revelg_trailer, revelg_left;
 			hash.clear();
 			if (revelgV3)
@@ -1370,14 +1383,19 @@ bool parse_public_key
 			gcry_sexp_release(dsakey);
 			if (ret)
 			{
-				std::cerr << "ERROR: verification of primary key revocation signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
+				std::cerr << "ERROR: verification of subkey revocation signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
 					gcry_strerror(ret) << ")" << std::endl;
 				return false;
 			}
 			else
 			{
-				std::cerr << "ERROR: valid revocation signature on primary key found" << std::endl;
-				return false;
+				if (elg_required)
+				{
+					std::cerr << "ERROR: valid revocation signature on subkey found" << std::endl;
+					return false;
+				}
+				else
+					std::cerr << "WARNING: valid revocation signature on subkey found" << std::endl;
 			}
 		}
 	}
@@ -2964,6 +2982,10 @@ bool parse_public_key_for_certification
 	}
 	if (rev)
 	{
+		if (opt_verbose)
+			std::cout << "INFO: rev_sigtype = 0x" << std::hex << (int)rev_sigtype << std::dec << 
+			" rev_pkalgo = " << (int)rev_pkalgo << " rev_hashalgo = " << (int)rev_hashalgo <<
+			" rev_hspd.size() = " << rev_hspd.size() << std::endl;
 		tmcg_octets_t rev_trailer, rev_left;
 		hash.clear();
 		if (revV3)

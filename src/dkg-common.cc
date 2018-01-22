@@ -74,7 +74,6 @@ bool get_passphrase
 		perror("get_passphrase (tcsetattr)");
 		return false;
 	}
-	
 	return true;
 }
 
@@ -223,6 +222,17 @@ bool write_message
 		}
 	}
 	ofs.close();
+	return true;
+}
+
+bool lock_memory
+	()
+{
+	if (mlockall(MCL_FUTURE) < 0)
+	{
+		perror("lock_memory (mlockall)");
+		return false;
+	}
 	return true;
 }
 
@@ -3103,5 +3113,16 @@ void release_mpis
 	gcry_mpi_release(revelg_r);
 	gcry_mpi_release(revelg_s);
 	gcry_mpi_release(revrsa_md);
+}
+
+bool unlock_memory
+	()
+{
+	if (munlockall() < 0)
+	{
+		perror("unlock_memory (munlockall)");
+		return false;
+	}
+	return true;
 }
 

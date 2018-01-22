@@ -36,6 +36,7 @@
 	#include <errno.h>
 	#include <fcntl.h>
 	#include <termios.h>
+	#include <sys/mman.h>
 
 	#include <libTMCG.hh>
 
@@ -54,6 +55,8 @@
 		(const std::string &filename, const tmcg_octets_t &msg);
 	bool write_message
 		(const std::string &filename, const std::string &msg);
+	bool lock_memory
+		();
 	void init_mpis
 		();
 	bool parse_message
@@ -81,6 +84,8 @@
 		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out);
 	void release_mpis
+		();
+	bool unlock_memory
 		();
 
 #endif

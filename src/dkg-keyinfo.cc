@@ -151,6 +151,13 @@ int main
 	if (opt_verbose)
 		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
+	// lock memory
+	if (!lock_memory())
+	{
+		std::cerr << "ERROR: locking memory failed" << std::endl;
+		return -1;
+	}
+
 	// read and parse the private key
 	std::string armored_seckey, thispeer = peers[0];
 	if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))

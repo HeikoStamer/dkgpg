@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180121])
+AC_REVISION([20180122])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.5], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -113,22 +113,28 @@ AC_TYPE_SSIZE_T
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_CHECK_FUNCS([abs clock close ctime fcntl fileno fprintf memcmp memcpy\
- memmove memset open perror read sscanf select sleep snprintf strrchr\
- strtoul time write], ,
-	AC_MSG_ERROR([some functions are missing]))
+ memmove memset open perror read sscanf select sleep snprintf strrchr strtoul\
+ time write], ,
+	AC_MSG_ERROR([some basic functions are missing]))
 
-# Checks for extended library functions
+# Checks for further library functions
 AC_HEADER_SYS_WAIT
 AC_TYPE_PID_T
 AC_TYPE_SIGNAL
 AC_FUNC_FORK
 AC_CHECK_HEADERS([unistd.h sys/types.h sys/wait.h signal.h netdb.h\
  netinet/in.h sys/socket.h termios.h], ,
-	AC_MSG_ERROR([some headers are missing]))
+	AC_MSG_ERROR([some further headers are missing]))
 AC_CHECK_FUNCS([fork kill pipe pipe2 waitpid getaddrinfo getnameinfo\
  htons htonl socket setsockopt connect bind listen accept signal sigaction\
  gai_strerror freeaddrinfo tcgetattr tcsetattr], , 
-	AC_MSG_ERROR([some functions are missing]))
+	AC_MSG_ERROR([some further functions are missing]))
+
+# Checks for locking memory
+AC_CHECK_HEADERS([sys/mman.h], , 
+	AC_MSG_ERROR([some headers for locking memory are missing]))
+AC_CHECK_FUNCS([mlockall munlockall], ,
+	AC_MSG_ERROR([some functions for locking memory are missing]))
 
 # Checks for GNUnet
 gnunet=0

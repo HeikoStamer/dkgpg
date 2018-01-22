@@ -228,7 +228,7 @@ bool write_message
 bool lock_memory
 	()
 {
-	if (mlockall(MCL_FUTURE) < 0)
+	if (mlockall(MCL_CURRENT | MCL_FUTURE) < 0)
 	{
 		perror("lock_memory (mlockall)");
 		return false;

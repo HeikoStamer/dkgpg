@@ -153,10 +153,7 @@ int main
 
 	// lock memory
 	if (!lock_memory())
-	{
-		std::cerr << "ERROR: locking memory failed" << std::endl;
-		return -1;
-	}
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" << std::endl;
 
 	// read and parse the private key
 	std::string armored_seckey, thispeer = peers[0];

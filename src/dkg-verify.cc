@@ -141,7 +141,7 @@ int main
 	tmcg_byte_t keyusage = 0;
 	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, false))
 	{
-		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
+		std::cerr << "ERROR: cannot parse resp. use the provided public key" << std::endl;
 		release_mpis();
 		return -1;
 	}
@@ -169,7 +169,7 @@ int main
 	bool sigV3 = false;
 	if (!parse_signature(signature, 0x00, csigtime, sigexptime, hashalgo, trailer, sigV3))
 	{
-		std::cerr << "ERROR: cannot parse the provided signature" << std::endl;
+		std::cerr << "ERROR: cannot parse resp. use the provided signature" << std::endl;
 		release_mpis();
 		return -1;
 	}

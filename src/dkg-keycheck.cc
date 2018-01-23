@@ -365,7 +365,7 @@ int main
 
 	// read and parse the public key (an ElGamal subkey is not required)
 	std::string armored_pubkey;
-	if (opt_binary && !read_binary_key_file(kfilename, 6, armored_pubkey))
+	if (opt_binary && !read_binary_key_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
 		return -1;
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;

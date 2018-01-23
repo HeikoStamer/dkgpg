@@ -436,7 +436,7 @@ void run_instance
 
 	// output the result
 	std::string signedkey;
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(6, all, signedkey);
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, signedkey);
 	if (opt_ofilename != NULL)
 	{
 		if (!write_message(opt_ofilename, signedkey))

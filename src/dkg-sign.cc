@@ -399,7 +399,7 @@ void run_instance
 
 	// output the result
 	std::string sigstr;
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(2, sig, sigstr);
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
 	if (opt_ofilename != NULL)
 	{
 		if (!write_message(opt_ofilename, sigstr))

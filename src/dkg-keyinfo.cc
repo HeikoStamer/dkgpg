@@ -630,7 +630,7 @@ int main
 				all.insert(all.end(), ssb.begin(), ssb.end());
 				all.insert(all.end(), subsig.begin(), subsig.end());
 			}
-			CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(5, all, armor);
+			CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
 			if (opt_verbose > 1)
 				std::cout << armor << std::endl;
 			std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out | std::ofstream::trunc);

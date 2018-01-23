@@ -103,7 +103,7 @@ bool read_key_file
 }
 
 bool read_binary_key_file
-	(const std::string &filename, const tmcg_byte_t type, std::string &result)
+	(const std::string &filename, const tmcg_armor_t type, std::string &result)
 {
 	// read the public/private key from file and convert to ASCII armor
 	tmcg_octets_t input;
@@ -173,7 +173,7 @@ bool read_binary_message
 		return false;
 	}
 	ifs.close();
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(1, input, result);
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, input, result);
 	return true;
 }
 
@@ -347,17 +347,18 @@ bool parse_message
 	(const std::string &in, tmcg_octets_t &enc_out, bool &have_seipd_out)
 {
 	// decode ASCII armor and parse encrypted message
-	bool have_pkesk = false, have_sed = false;
-	tmcg_byte_t atype = 0, ptag = 0xFF;
+	tmcg_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
 	tmcg_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
-	if (atype != 1)
+	if (atype != TMCG_OPENPGP_ARMOR_MESSAGE)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
 		return false;
 	}
+	bool have_pkesk = false, have_sed = false;
+	tmcg_byte_t ptag = 0xFF;
 	size_t pnum = 0;
 	while (pkts.size() && ptag)
 	{
@@ -644,17 +645,18 @@ bool parse_signature
 	time_t &sigcreationtime_out, time_t &sigexpirationtime_out, tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out, bool &sigV3_out)
 {
 	// decode ASCII armor and parse the signature according to OpenPGP
-	bool sig = false;
-	tmcg_byte_t atype = 0, ptag = 0xFF;
+	tmcg_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
 	tmcg_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
-	if (atype != 2)
+	if (atype != TMCG_OPENPGP_ARMOR_SIGNATURE)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
 		return false;
 	}
+	bool sig = false;
+	tmcg_byte_t ptag = 0xFF;
 	size_t pnum = 0;
 	while (pkts.size() && ptag)
 	{
@@ -763,10 +765,10 @@ bool parse_public_key
 {
 	// decode ASCII Armor
 	tmcg_octets_t pkts;
-	tmcg_byte_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	tmcg_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
-	if (atype != 6)
+	if (atype != TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
 		return false;
@@ -1418,10 +1420,10 @@ bool parse_private_key
 {
 	// decode ASCII Armor
 	tmcg_octets_t pkts;
-	tmcg_byte_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	tmcg_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
-	if (atype != 5)
+	if (atype != TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found" << std::endl;
 		return false;
@@ -2632,10 +2634,10 @@ bool parse_public_key_for_certification
 {
 	// decode ASCII Armor
 	tmcg_octets_t pkts;
-	tmcg_byte_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	tmcg_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
-	if (atype != 6)
+	if (atype != TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
 		return false;

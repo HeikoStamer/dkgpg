@@ -261,7 +261,7 @@ int main
 	tmcg_octets_t all;
 	all.insert(all.end(), pkesk.begin(), pkesk.end());
 	all.insert(all.end(), seipd.begin(), seipd.end());
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(1, all, armored_message);
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
 
 	// write out the result
 	if (opt_ofilename != NULL)

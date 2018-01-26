@@ -142,6 +142,22 @@ int main
 		return -1;
 	}
 
+	// lock memory
+	if (!lock_memory())
+	{
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" << std::endl;
+		// at least try to use libgcrypt's secure memory
+		if (!gcry_check_version(TMCG_LIBGCRYPT_VERSION))
+		{
+			std::cerr << "ERROR: libgcrypt version >= " << TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
+			return -1;
+		}
+		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
+		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
+		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+	}
+
 	// initialize LibTMCG
 	if (!init_libTMCG())
 	{
@@ -150,10 +166,6 @@ int main
 	}
 	if (opt_verbose)
 		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
-
-	// lock memory
-	if (!lock_memory())
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" << std::endl;
 
 	// read and parse the private key
 	std::string armored_seckey, thispeer = peers[0];

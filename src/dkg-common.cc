@@ -761,7 +761,8 @@ bool parse_public_key
 	(const std::string &in,
 	 time_t &keycreationtime_out, time_t &keyexpirationtime_out,
 	 time_t &subkeycreationtime_out, time_t &subkeyexpirationtime_out,
-	 tmcg_byte_t &keyusage_out, bool elg_required)
+	 tmcg_byte_t &keyusage_out, tmcg_byte_t &keystrength_out,
+	 bool elg_required)
 {
 	// decode ASCII Armor
 	tmcg_octets_t pkts;
@@ -1184,6 +1185,15 @@ bool parse_public_key
 		std::cout << "INFO: dsa_sigtype = 0x" << std::hex << (int)dsa_sigtype << std::dec << 
 			" dsa_pkalgo = " << (int)dsa_pkalgo << " dsa_hashalgo = " << (int)dsa_hashalgo << " dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
 	}
+	unsigned int pbits = 0, qbits = 0;
+	pbits = gcry_mpi_get_nbits(dsa_p);
+	qbits = gcry_mpi_get_nbits(dsa_q);
+	if (opt_verbose)
+		std::cout << "INFO: |p| = " << pbits << " bits, |q| = " << qbits << " bits" << std::endl;
+	if ((pbits < 2048) || (qbits < 256))
+		keystrength_out = 0; // bad DSA key strength
+	if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
+		keystrength_out = 0; // bad DSA hash algorithm
 	tmcg_octets_t dsa_trailer, dsa_left;
 	hash.clear();
 	if (sigdsaV3)
@@ -1313,6 +1323,13 @@ bool parse_public_key
 			gcry_sexp_release(dsakey);
 			return false;
 		}
+		pbits = gcry_mpi_get_nbits(elg_p);
+		if (opt_verbose)
+			std::cout << "INFO: |p| = " << pbits << " bits" << std::endl;
+		if (elg_required && (pbits < 2048))
+			keystrength_out = 0; // bad Elgamal key strength
+		if (elg_required && ((elg_hashalgo < 8) || (elg_hashalgo >= 11)))
+			keystrength_out = 0; // bad Elgamal hash algorithm
 		tmcg_octets_t elg_trailer, elg_left;
 		hash.clear();
 		if (sigelgV3)

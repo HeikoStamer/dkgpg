@@ -371,14 +371,14 @@ int main
 		return -1;
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_byte_t keyusage = 0;
+	tmcg_byte_t keyusage = 0, keystrength = 1;
 	if (opt_rsa && !parse_public_key_for_certification(armored_pubkey, ckeytime, ekeytime))
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		release_mpis();
 		return -1;
 	}
-	if (!opt_rsa && !parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, false))
+	if (!opt_rsa && !parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength, false))
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		release_mpis();

@@ -722,10 +722,16 @@ int main
 	}
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_byte_t keyusage = 0;
-	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage))
+	tmcg_byte_t keyusage = 0, keystrength = 1;
+	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength))
 	{
 		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
+		release_mpis();
+		return -1;
+	}
+	if (!keystrength)
+	{
+		std::cerr << "ERROR: provided public key is too weak" << std::endl;
 		release_mpis();
 		return -1;
 	}

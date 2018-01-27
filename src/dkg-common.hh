@@ -74,7 +74,7 @@
 		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out,
 		time_t &subkeycreationtime_out, time_t &subkeyexpirationtime_out,
-		tmcg_byte_t &keyusage_out,
+		tmcg_byte_t &keyusage_out, tmcg_byte_t &keystrength_out,
 		bool elg_required = true);
 	bool parse_private_key
 		(const std::string &in,

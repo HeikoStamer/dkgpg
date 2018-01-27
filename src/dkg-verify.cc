@@ -170,12 +170,18 @@ int main
 
 	// parse the signature
 	tmcg_octets_t trailer;
-	tmcg_byte_t hashalgo = 0;
+	tmcg_byte_t hashalgo = 0, sigstrength = 1;
 	time_t csigtime = 0, sigexptime = 0;
 	bool sigV3 = false;
-	if (!parse_signature(signature, 0x00, csigtime, sigexptime, hashalgo, trailer, sigV3))
+	if (!parse_signature(signature, 0x00, csigtime, sigexptime, hashalgo, trailer, sigV3, sigstrength))
 	{
 		std::cerr << "ERROR: cannot parse resp. use the provided signature" << std::endl;
+		release_mpis();
+		return -1;
+	}
+	if (!sigstrength)
+	{
+		std::cerr << "ERROR: provided signature is too weak" << std::endl;
 		release_mpis();
 		return -1;
 	}

@@ -642,7 +642,9 @@ bool decrypt_message
 
 bool parse_signature
 	(const std::string &in, tmcg_byte_t stype,
-	time_t &sigcreationtime_out, time_t &sigexpirationtime_out, tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out, bool &sigV3_out)
+	 time_t &sigcreationtime_out, time_t &sigexpirationtime_out,
+	 tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out,
+	 bool &sigV3_out, tmcg_byte_t &sigstrength_out)
 {
 	// decode ASCII armor and parse the signature according to OpenPGP
 	tmcg_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
@@ -693,8 +695,6 @@ bool parse_signature
 					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
-				if ((ctx.hashalgo < 8) || (ctx.hashalgo >= 11))
-					std::cerr << "WARNING: insecure hash algorithm " << (int)ctx.hashalgo << " used for signature" << std::endl;
 				issuer.clear();
 				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
 					issuer.push_back(ctx.issuer[i]);
@@ -708,6 +708,11 @@ bool parse_signature
 					time_t kmax = ctx.sigcreationtime + ctx.sigexpirationtime;
 					if (ctx.sigexpirationtime && (time(NULL) > kmax))
 						std::cerr << "WARNING: DSA signature is expired" << std::endl;
+					if ((ctx.hashalgo < 8) || (ctx.hashalgo >= 11))
+					{
+						std::cerr << "WARNING: insecure hash algorithm " << (int)ctx.hashalgo << " used for signature" << std::endl;
+						sigstrength_out = 0; // bad DSA hash algorithm
+					}
 					// construct the trailer
 					trailer_out.clear();
 					if (ctx.version == 3)

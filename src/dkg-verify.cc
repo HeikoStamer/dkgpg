@@ -27,6 +27,7 @@
 #include <map>
 #include <string>
 #include <algorithm>
+#include <ctime>
 
 #include <libTMCG.hh>
 
@@ -54,6 +55,7 @@ gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 int 					opt_verbose = 0;
 bool 					opt_binary = false;
 char					*opt_ifilename = NULL;
+char					*opt_sigfrom = NULL, *opt_sigto = NULL;
 
 int main
 	(int argc, char **argv)
@@ -61,6 +63,9 @@ int main
 	static const char *usage = "dkg-verify [OPTIONS] -i INPUTFILE KEYFILE";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
+	std::string sigfrom_str, sigto_str;
+	struct tm sigfrom_tm = { 0 }, sigto_tm = { 0 };
+	time_t sigfrom = 0, sigto = time(NULL);
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -76,6 +81,26 @@ int main
 			}
 			continue;
 		}
+		else if (arg.find("-f") == 0)
+		{
+			size_t idx = ++i;
+			if ((arg.find("-f") == 0) && (idx < (size_t)(argc - 1)) && (opt_sigfrom == NULL))
+			{
+				sigfrom_str = argv[i+1];
+				opt_sigfrom = (char*)sigfrom_str.c_str();
+			}
+			continue;
+		}
+		else if (arg.find("-t") == 0)
+		{
+			size_t idx = ++i;
+			if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) && (opt_sigto == NULL))
+			{
+				sigto_str = argv[i+1];
+				opt_sigto = (char*)sigto_str.c_str();
+			}
+			continue;
+		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
@@ -84,8 +109,10 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
 				std::cout << "  -b, --binary   consider KEYFILE as binary input" << std::endl;
+				std::cout << "  -f TIMESPEC    signatures made before TIMESPEC are not valid" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -i FILENAME    verify detached signature on FILENAME" << std::endl;
+				std::cout << "  -t TIMESPEC    signatures made after TIMESPEC are not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
 				return 0; // not continue
@@ -119,6 +146,26 @@ int main
 	{
 		std::cerr << "ERROR: some filename missing; usage: " << usage << std::endl;
 		return -1;
+	}
+	if (opt_sigfrom)
+	{
+		strptime(opt_sigfrom, "%Y-%m-%d %H:%M:%S", &sigfrom_tm);
+		sigfrom = mktime(&sigfrom_tm);
+		if (sigfrom == ((time_t) -1))
+		{
+			perror("dkg-verify (mktime)");
+			return -1;
+		}
+	}
+	if (opt_sigto)
+	{
+		strptime(opt_sigto, "%Y-%m-%d %H:%M:%S", &sigto_tm);
+		sigto = mktime(&sigto_tm);
+		if (sigto == ((time_t) -1))
+		{
+			perror("dkg-verify (mktime)");
+			return -1;
+		}
 	}
 
 	// initialize LibTMCG
@@ -217,7 +264,17 @@ int main
 		std::cout << "ERROR: corresponding key is expired" << std::endl;
 		return -2;
 	}
-// TODO: add some more checks suggested by dkg
+	// 5. signature time (signatures made before the sigfrom or after the sigto timespec are not valid)
+	if (csigtime < sigfrom)
+	{
+		std::cout << "ERROR: signature was made before given TIMESPEC" << std::endl;
+		return -2;
+	}
+	if (csigtime > sigto)
+	{
+		std::cout << "ERROR: signature was made after given TIMESPEC" << std::endl;
+		return -2;
+	}
 
 	// compute the hash of the input file
 	if (opt_verbose)

@@ -145,7 +145,7 @@ int main
 	// lock memory
 	if (!lock_memory())
 	{
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" << std::endl;
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required for memory protection" << std::endl;
 		// at least try to use libgcrypt's secure memory
 		if (!gcry_check_version(TMCG_LIBGCRYPT_VERSION))
 		{
@@ -153,6 +153,7 @@ int main
 			return -1;
 		}
 		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
+		gcry_control(GCRYCTL_USE_SECURE_RNDPOOL);
 		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);

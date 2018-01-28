@@ -55,7 +55,6 @@ gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 int 					opt_verbose = 0;
 bool 					opt_binary = false;
 char					*opt_ifilename = NULL;
-char					*opt_sigfrom = NULL, *opt_sigto = NULL;
 
 int main
 	(int argc, char **argv)
@@ -63,6 +62,7 @@ int main
 	static const char *usage = "dkg-verify [OPTIONS] -i INPUTFILE KEYFILE";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
+	char *opt_sigfrom = NULL, *opt_sigto = NULL;
 	std::string sigfrom_str, sigto_str;
 	struct tm sigfrom_tm = { 0 }, sigto_tm = { 0 };
 	time_t sigfrom = 1243810800, sigto = time(NULL);

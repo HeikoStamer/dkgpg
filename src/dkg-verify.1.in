@@ -15,6 +15,12 @@ Currently, only the primary key is considered as the corresponding signing key a
 is the only permitted public-key algorithm. The input file for which the signature is checked
 must be specified by the mandatory option "\-i".
 .PP
+By the options "\-f" and "\-t" the user can provide a validity period, i.e., signatures made
+before the TIMESPEC of option "\-f" or after the TIMESPEC of option "\-t" are not valid.
+The corresponding TIMESPEC must have the format "YYYY-MM-DD[_HH:MM:SS]". The default values
+are "2009-06-01 00:00:00 (publication date of FIPS 186-3)" and the current system date, respectively.
+
+.PP
 The program returns a non\-zero value on error, e.g., if the signature is invalid.
 
 .SH OPTIONS
@@ -23,11 +29,17 @@ Arguments mandatory for long options are also mandatory for short options.
 \fB\-b\fR, \fB\-\-binary\fR
 consider KEYFILE as binary input
 .TP
+\fB\-f\fR \fI\,TIMESPEC\/\fR
+signature made before given TIMESPEC is not valid
+.TP
 \fB\-h\fR, \fB\-\-help\fR
 print this list of options
 .TP
-\fB\-i\fR, \fB\-\-input\fR=\fI\,FILENAME\/\fR
+\fB\-i\fR \fI\,FILENAME\/\fR
 verify detached signature from FILENAME
+.TP
+\fB\-t\fR \fI\,TIMESPEC\/\fR
+signature made after given TIMESPEC is not valid
 .TP
 \fB\-v\fR, \fB\-\-version\fR
 print the version number of the program

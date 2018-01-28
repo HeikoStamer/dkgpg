@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-01-28] dkg-verify: added options "-f" and "-t" for a validity period
 * [2018-01-27] added simple initalization for memory locking
 * [2018-01-27] added a basic check on signature strength in parse_signature()
 * [2018-01-27] added some basic checks on key strength in parse_public_key()

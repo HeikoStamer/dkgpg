@@ -65,7 +65,7 @@ int main
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 	std::string sigfrom_str, sigto_str;
 	struct tm sigfrom_tm = { 0 }, sigto_tm = { 0 };
-	time_t sigfrom = 0, sigto = time(NULL);
+	time_t sigfrom = 1243810800, sigto = time(NULL);
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -109,10 +109,10 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
 				std::cout << "  -b, --binary   consider KEYFILE as binary input" << std::endl;
-				std::cout << "  -f TIMESPEC    signatures made before TIMESPEC are not valid" << std::endl;
+				std::cout << "  -f TIMESPEC    signature made before given TIMESPEC is not valid" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -i FILENAME    verify detached signature on FILENAME" << std::endl;
-				std::cout << "  -t TIMESPEC    signatures made after TIMESPEC are not valid" << std::endl;
+				std::cout << "  -t TIMESPEC    signature made after given TIMESPEC is not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
 				return 0; // not continue
@@ -149,21 +149,23 @@ int main
 	}
 	if (opt_sigfrom)
 	{
-		strptime(opt_sigfrom, "%Y-%m-%d %H:%M:%S", &sigfrom_tm);
+		strptime(opt_sigfrom, "%Y-%m-%d_%H:%M:%S", &sigfrom_tm);
 		sigfrom = mktime(&sigfrom_tm);
 		if (sigfrom == ((time_t) -1))
 		{
 			perror("dkg-verify (mktime)");
+			std::cerr << "ERROR: cannot convert TIMESPEC; required format: YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
 		}
 	}
 	if (opt_sigto)
 	{
-		strptime(opt_sigto, "%Y-%m-%d %H:%M:%S", &sigto_tm);
+		strptime(opt_sigto, "%Y-%m-%d_%H:%M:%S", &sigto_tm);
 		sigto = mktime(&sigto_tm);
 		if (sigto == ((time_t) -1))
 		{
 			perror("dkg-verify (mktime)");
+			std::cerr << "ERROR: cannot convert TIMESPEC; required format: YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
 		}
 	}

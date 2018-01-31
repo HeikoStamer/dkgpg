@@ -1111,6 +1111,8 @@ bool parse_public_key
 							std::cout << (int)subkeyid[i] << " ";
 						std::cout << std::dec << std::endl;
 					}
+					if (CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(subkeyid, keyid))
+						std::cerr << "WARNING: probably same key material used for subkey" << std::endl;
 					ignore_further_subkeys = true;
 					ignore_further_signatures = false;
 				}

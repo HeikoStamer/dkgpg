@@ -78,7 +78,7 @@ Overview
   compile-time of DKGPG. However, as alternative to GNUnet a simple TCP/IP
   based service for message exchange is included (option "-H <hostname>").
   With torsocks and some port forwarding rules for a hidden service (see manual
-  page for details) this allows running DKGPG programs over the TOR network.
+  page for details) this allows running DKGPG programs over the Tor network.
 
 Requirements
 ------------

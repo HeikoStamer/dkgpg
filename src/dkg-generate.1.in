@@ -1,4 +1,4 @@
-.TH DKG\-GENERATE "1" "December 2017" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-GENERATE "1" "January 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-generate \- distributed key generation for OpenPGP
@@ -220,7 +220,7 @@ dkg-generate -t 0 -P secret1/secret2/secret3/ -H supertapir evilsloth supertapir
 .RE
 .fi
 .PP
-You can start the program with torsocks to use TOR as underlying point\-to\-point network. Note that for this case the option
+You can start the program with torsocks to use Tor as underlying point\-to\-point network. Note that for this case the option
 "AllowInbound" must be enabled in torsocks.conf. Additionally, a hidden service with port redirection to localhost has to be
 configured in your torrc file:
 .nf
@@ -253,7 +253,7 @@ HiddenServicePort 35020 127.0.0.1:35020
 
 .SH "COPYRIGHT"
 .TP
-Copyright (C)  2017 Heiko Stamer <HeikoStamer@gmx.net>
+Copyright (C)  2017, 2018 Heiko Stamer <HeikoStamer@gmx.net>
 .PP
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later

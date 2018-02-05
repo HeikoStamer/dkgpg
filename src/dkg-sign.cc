@@ -73,6 +73,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 
 int 					opt_verbose = 0;
+bool					libgcrypt_secmem = false;
 char					*opt_ifilename = NULL;
 char					*opt_ofilename = NULL;
 char					*opt_passwords = NULL;
@@ -698,6 +699,7 @@ int main
 		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+		libgcrypt_secmem = true;
 	}
 
 	// initialize LibTMCG

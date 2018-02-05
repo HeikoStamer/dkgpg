@@ -73,6 +73,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 
 int 					opt_verbose = 0;
+bool					libgcrypt_secmem = false;
 bool					opt_binary = false;
 char					*opt_ifilename = NULL;
 char					*opt_ofilename = NULL;
@@ -1204,6 +1205,7 @@ int main
 		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+		libgcrypt_secmem = true;
 	}
 
 	// initialize LibTMCG
@@ -1293,7 +1295,7 @@ int main
 			dds_input.push_back(dds[i]);
 		std::string dds_radix;
 		CallasDonnerhackeFinneyShawThayerRFC4880::Radix64Encode(dds_input, dds_radix, false);
-		std::cout << "My decryption share (keep confidential): " << dds_radix << std::endl;
+		std::cout << "Your decryption share (keep confidential): " << dds_radix << std::endl;
 		mpz_init(r_i), mpz_init(c), mpz_init(r);
 		if (!verify_decryption_share(dkg, dds, idx, r_i, c, r))
 		{

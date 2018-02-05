@@ -71,6 +71,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 
 int 					opt_verbose = 0;
+bool					libgcrypt_secmem = false;
 char					*opt_crs = NULL;
 char					*opt_passwords = NULL;
 char					*opt_hostname = NULL;
@@ -400,7 +401,10 @@ void run_instance
 		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	x = gcry_mpi_new(2048);
+	if (libgcrypt_secmem)
+		x = gcry_mpi_snew(2048);
+	else	
+		x = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(x, dsa_x))
 	{
 		std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_x" << std::endl;
@@ -507,7 +511,10 @@ void run_instance
 				c_ik[j].push_back(tmp);
 			}
 		}
-		x_i = gcry_mpi_new(2048);
+		if (libgcrypt_secmem)
+			x_i = gcry_mpi_snew(2048);
+		else		
+			x_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(x_i, dss->x_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->x_i" << std::endl;
@@ -535,7 +542,10 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		xprime_i = gcry_mpi_new(2048);
+		if (libgcrypt_secmem)
+			xprime_i = gcry_mpi_snew(2048);
+		else
+			xprime_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->xprime_i" << std::endl;
@@ -825,7 +835,10 @@ void run_instance
 				c_ik[j].push_back(tmp);
 			}
 		}
-		x_i = gcry_mpi_new(2048);
+		if (libgcrypt_secmem)
+			x_i = gcry_mpi_snew(2048);
+		else
+			x_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(x_i, dkg->x_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->x_i" << std::endl;
@@ -851,7 +864,10 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		xprime_i = gcry_mpi_new(2048);
+		if (libgcrypt_secmem)
+			xprime_i = gcry_mpi_snew(2048);
+		else
+			xprime_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(xprime_i, dkg->xprime_i))
 		{
 			std::cerr << "P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->xprime_i" << std::endl;
@@ -1664,6 +1680,7 @@ int main
 		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+		libgcrypt_secmem = true;
 	}
 
 	// initialize LibTMCG

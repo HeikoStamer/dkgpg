@@ -50,6 +50,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 
 int 					opt_verbose = 0;
+bool					libgcrypt_secmem = false;
 bool					opt_binary = false;
 bool					opt_z = false;
 char					*opt_ifilename = NULL;

@@ -44,6 +44,7 @@ extern gcry_mpi_t 				gk, myk, sig_r, sig_s;
 extern gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 
 extern int					opt_verbose;
+extern bool					libgcrypt_secmem;
 
 bool get_passphrase
 	(const std::string &prompt, std::string &passphrase)
@@ -250,7 +251,10 @@ void init_mpis
 	dsa_q = gcry_mpi_new(2048);
 	dsa_g = gcry_mpi_new(2048);
 	dsa_y = gcry_mpi_new(2048);
-	dsa_x = gcry_mpi_new(2048);
+	if (libgcrypt_secmem)
+		dsa_x = gcry_mpi_snew(2048);
+	else
+		dsa_x = gcry_mpi_new(2048);
 	mpz_init(dkg_p);
 	mpz_init(dkg_q);
 	mpz_init(dkg_g);
@@ -262,7 +266,10 @@ void init_mpis
 	elg_q = gcry_mpi_new(2048);
 	elg_g = gcry_mpi_new(2048);
 	elg_y = gcry_mpi_new(2048);
-	elg_x = gcry_mpi_new(2048);
+	if (libgcrypt_secmem)
+		elg_x = gcry_mpi_snew(2048);
+	else
+		elg_x = gcry_mpi_new(2048);
 	dsa_r = gcry_mpi_new(2048);
 	dsa_s = gcry_mpi_new(2048);
 	elg_r = gcry_mpi_new(2048);

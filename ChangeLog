@@ -7,11 +7,12 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-02-05] added secure memory allocation from libgcrypt for some parts
 * [2018-01-28] dkg-verify: added options "-f" and "-t" for a validity period
-* [2018-01-27] added simple initalization for memory locking
-* [2018-01-27] added a basic check on signature strength in parse_signature()
+* [2018-01-27] added simple initalization procedure for memory locking
+* [2018-01-27] added basic check on signature strength in parse_signature()
 * [2018-01-27] added some basic checks on key strength in parse_public_key()
-* [2018-01-21] added a check for revocation signatures in parse_public_key()
+* [2018-01-21] added check for revocation signatures in parse_public_key()
 * [2018-01-20] dkg-encrypt: added option "-z" for improved privacy (zero key ID) 
 * [2018-01-19] dkg-verify: added validity checks on key and signature
 * [2018-01-17] dkg-keycheck: added ROCA vulnerability detector (Infineon RSALib)

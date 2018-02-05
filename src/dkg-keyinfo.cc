@@ -56,6 +56,7 @@ gcry_mpi_t 				gk, myk, sig_r, sig_s;
 gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
 
 int 					opt_verbose = 0;
+bool					libgcrypt_secmem = false;
 
 int main
 	(int argc, char *const *argv)
@@ -157,6 +158,7 @@ int main
 		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+		libgcrypt_secmem = true;
 	}
 
 	// initialize LibTMCG
@@ -521,7 +523,10 @@ int main
 				release_mpis();
 				return -1;
 			}
-			x_i = gcry_mpi_new(2048);
+			if (libgcrypt_secmem)
+				x_i = gcry_mpi_snew(2048);
+			else
+				x_i = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(x_i, dss->x_i))
 			{
 				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for x_i" << std::endl;
@@ -537,7 +542,10 @@ int main
 				release_mpis();
 				return -1;
 			}
-			xprime_i = gcry_mpi_new(2048);
+			if (libgcrypt_secmem)
+				xprime_i = gcry_mpi_snew(2048);
+			else
+				xprime_i = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 			{
 				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for xprime_i" << std::endl;

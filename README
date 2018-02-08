@@ -19,8 +19,8 @@ Introduction
   Using well-established multi-party protocols a shared private key and a
   common public key (DSA/ElGamal) is generated. Then further interactive
   protocols perform the private operations like decryption and signing of
-  files, provided that a previously defined threshold of parties/devices
-  take part in the distributed computation.
+  files or keys, provided that a previously defined threshold of parties/
+  devices take part in the distributed computation.
 
   The security is based on the well-established assumption that computing
   discrete logarithms in large prime order subgroups of Zp is hard. The
@@ -71,21 +71,22 @@ Overview
 
   Please consult the manual pages for detailed information on the programs.
 
-  Note that for building dkg-generate, dkg-sign, dkg-revoke, dkg-refresh and
-  the interactive version of dkg-decrypt with GNUnet support the development
-  files for a very recent version (at least v0.11.x, which is when writing
-  these lines still not yet released) must be present at configure-time resp.
-  compile-time of DKGPG. However, as alternative to GNUnet a simple TCP/IP
-  based service for message exchange is included (option "-H <hostname>").
-  With torsocks and some port forwarding rules for a hidden service (see manual
-  page for details) this allows running DKGPG programs over the Tor network.
+  Note that for building dkg-generate, dkg-sign, dkg-keysign, dkg-revoke,
+  dkg-refresh and the interactive version of dkg-decrypt with GNUnet support
+  the development files for a very recent version (at least v0.11.x, which is
+  when writing these lines still not yet released) must be present at
+  configure-time resp. compile-time of DKGPG. However, as alternative to
+  GNUnet a simple TCP/IP based service for message exchange is included
+  (option "-H <hostname>"). With torsocks and some port forwarding rules for
+  a hidden service (see manual page for details) this allows running DKGPG
+  programs over the Tor network.
 
 Requirements
 ------------
   You need the following programs, libraries and appropriate header files to
   build (GNU gcc/g++ >= 5.4.y or higher is recommended) DKGPG successfully:
 
-  * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.10
+  * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.11
     https://savannah.nongnu.org/projects/libtmcg
   * GNU Multiple Precision Arithmetic Library (libgmp), version >= 4.2.0,
     https://gmplib.org/

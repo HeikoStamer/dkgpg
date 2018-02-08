@@ -1,4 +1,4 @@
-Copyright (C)  2017 Heiko Stamer <HeikoStamer@gmx.net>
+Copyright (C)  2017, 2018 Heiko Stamer <HeikoStamer@gmx.net>
 
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later
@@ -7,6 +7,13 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.0.5   Major improvements have been achieved in this release: For signing
+        of a OpenPGP public key (certification) the program dkg-keysign was
+        added. With dkg-keycheck and the option "-r" some basic checks on
+        RSA keys can be performed. Two new options ("-f" and "-t") enhance
+        the prossiblilities of dkg-verify. A new option for dkg-encrypt make
+        use of zero key ID encryption privacy. Last but not least, memory
+        locking and secure memory allocation have been implemented.
 1.0.4   Since this release not required OpenPGP packets will be ignored.
 1.0.3   Only small bugfixes are included in this release. However, the most
         recent version of LibTMCG is required to recognize some important

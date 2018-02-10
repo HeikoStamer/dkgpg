@@ -294,7 +294,8 @@ bool verify_decryption_share
 		if (!dkg->CheckElement(r_i_out))
 			throw false;
 		// check the NIZK argument for sanity
-		if ((mpz_cmpabs(r_out, dkg->q) >= 0) || (mpz_sizeinbase(c_out, 2L) > 256)) // check the size of r and c (NOTE: output size of mpz_shash is fixed)
+		size_t c_len = mpz_shash_len() * 8; // (NOTE: output size of mpz_shash is fixed)
+		if ((mpz_cmpabs(r_out, dkg->q) >= 0) || (mpz_sizeinbase(c_out, 2L) > c_len)) // check the size of r and c
 			throw false;
 		// verify proof of knowledge (equality of discrete logarithms), e.g. see [CGS97]
 		mpz_powm(a, nizk_gk, r_out, dkg->p);

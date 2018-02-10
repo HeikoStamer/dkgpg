@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 	size_t factor = 0;
-	std::string fips;
+	std::string fips, prefix;
 	int opt_verbose = 0;
 
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -49,6 +49,13 @@ int main
 				fips = argv[i+1];
 			continue;
 		}
+		else if ((arg.find("-k") == 0))
+		{
+			size_t idx = ++i;
+			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (!prefix.length()))
+				prefix = argv[i+1];
+			continue;
+		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
@@ -58,6 +65,7 @@ int main
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -f SEED        generate domain parameters according to FIPS 186-4 with SEED" << std::endl;
+				std::cout << "  -k PREFIX      generate value k with given PREFIX (not in FIPS mode)" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
 				return 0; // not continue
@@ -330,21 +338,61 @@ int main
 	{
 		// create VTMF instance as a CRS (common reference string)
 		BarnettSmartVTMF_dlog *vtmf = NULL;
-		if (factor > 0)
+		if (prefix.length())
 		{
 			if (opt_verbose)
-				std::cout << "Generating primes p and q with factor = " << factor <<
+				std::cout << "Generating primes p and q with k-prefix = " << prefix << ", factor = " << factor <<
 					" and canonical generator g (by VTMF)" << std::endl;
-			// for each argument, sizes of underlying finite field and subgroup are increased by 1024 bit resp. 128 bit
-			vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE + (factor * 1024), TMCG_DLSE_SIZE + (factor * 128), true);
+			mpz_t p, q, g, k;
+			mpz_init(p), mpz_init(q), mpz_init(g), mpz_init(k);
+			if (mpz_set_str(k, prefix.c_str(), TMCG_MPZ_IO_BASE) < 0)
+			{
+				mpz_clear(p), mpz_clear(q), mpz_clear(g), mpz_clear(k);
+				std::cerr << "ERROR: cannot convert given PREFIX to MPI value (wrong base)" << std::endl;
+				return -1;
+			}
+			mpz_lprime_prefix(p, q, k, TMCG_DDH_SIZE + (factor * 1024), TMCG_DLSE_SIZE + (factor * 128), TMCG_MR_ITERATIONS);
+			mpz_t foo, bar;
+			mpz_init(foo), mpz_init(bar);
+			mpz_sub_ui(foo, p, 1L); // compute $p-1$
+			// We use a procedure similar to FIPS 186-3 A.2.3;
+			// it is supposed as verifiable generation of $g$.
+			std::stringstream U;
+			U << "LibTMCG|" << p << "|" << q << "|ggen|";
+			do
+			{
+				mpz_shash(bar, U.str());
+				mpz_powm(g, bar, k, p); // $g := [bar]^k \bmod p$
+				U << g << "|";
+				mpz_powm(bar, g, q, p);
+				// check $1 < g < p-1$ and $g^q \equiv 1 \pmod{p}$
+			}
+			while (!mpz_cmp_ui(g, 0L) || !mpz_cmp_ui(g, 1L) || 
+				!mpz_cmp(g, foo) || mpz_cmp_ui(bar, 1L));
+			mpz_clear(foo), mpz_clear(bar);
+			std::stringstream input;
+			input << p << std::endl << q << std::endl << g << std::endl << k << std::endl;
+			mpz_clear(p), mpz_clear(q), mpz_clear(g), mpz_clear(k);
+			vtmf = new BarnettSmartVTMF_dlog(input, TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true);
 		}
 		else
 		{
-			if (opt_verbose)
-				std::cout << "Generating primes p and q with default sizes" <<
-					" and canonical generator g (by VTMF)" << std::endl;
-			// use default security parameter from LibTMCG and verifiable generation of $g$
-			vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true);
+			if (factor > 0)
+			{
+				if (opt_verbose)
+					std::cout << "Generating primes p and q with factor = " << factor <<
+						" and canonical generator g (by VTMF)" << std::endl;
+				// for each argument, sizes of underlying finite field and subgroup are increased by 1024 bit resp. 128 bit
+				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE + (factor * 1024), TMCG_DLSE_SIZE + (factor * 128), true);
+			}
+			else
+			{
+				if (opt_verbose)
+					std::cout << "Generating primes p and q with default sizes" <<
+						" and canonical generator g (by VTMF)" << std::endl;
+				// use default security parameter from LibTMCG and verifiable generation of $g$
+				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true);
+			}
 		}
 
 		// check the instance for sanity

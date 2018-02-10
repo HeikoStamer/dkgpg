@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-02-10] new default domain parameter set (CRS) due to LibTMCG changes
 * [2018-02-10] raised the requirement of libgcrypt version to >= 1.7.0
 * [2018-02-08] release 1.0.5 of Distributed Privacy Guard (DKGPG)
 * [2018-02-05] added secure memory allocation from libgcrypt for some parts

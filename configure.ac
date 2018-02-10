@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180208])
+AC_REVISION([20180210])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.6], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -73,9 +73,9 @@ AC_SUBST(LIBGMP_CFLAGS)
 LDFLAGS="$backup_LDFLAGS"
 CPPFLAGS="$backup_CPPFLAGS"
 
-AM_PATH_LIBGCRYPT("1.6.0")
+AM_PATH_LIBGCRYPT("1.7.0")
 if test "x$LIBGCRYPT_LIBS" = "x"; then
-	AC_MSG_ERROR([libgcrypt >= 1.6.0 is needed])
+	AC_MSG_ERROR([libgcrypt >= 1.7.0 is needed])
 fi
 backup_CPPLAGS="$CPPFLAGS"
 CPPFLAGS="$LIBGCRYPT_CFLAGS $backup_CPPFLAGS"
@@ -87,9 +87,9 @@ if test "x$GPG_ERROR_LIBS" = "x"; then
 	AC_MSG_ERROR([libgpg-error >= 1.12 is needed])
 fi
 
-AM_PATH_LIBTMCG("1.3.11")
+AM_PATH_LIBTMCG("1.3.12")
 if test "x$LIBTMCG_LIBS" = "x"; then
-        AC_MSG_ERROR([libTMCG >= 1.3.11 is needed])
+        AC_MSG_ERROR([libTMCG >= 1.3.12 is needed])
 fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)

@@ -39,7 +39,7 @@
 std::vector<std::string>		peers;
 
 std::string				passphrase, userid, ifilename, kfilename;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -370,9 +370,14 @@ int main
 		return -1;
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
+
+// FIXME: use new parser from LibTMCG
+tmcg_openpgp_publickey_ctx_t primary;
+CallasDonnerhackeFinneyShawThayerRFC4880::ParsePublicKeyBlock(armored_pubkey, true, primary);
+
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_byte_t keyusage = 0, keystrength = 1;
+	tmcg_openpgp_byte_t keyusage = 0, keystrength = 1;
 	if (opt_rsa && !parse_public_key_for_certification(armored_pubkey, ckeytime, ekeytime))
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
@@ -419,7 +424,7 @@ int main
 	for (size_t i = 0; i < keyid.size(); i++)
 		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)keyid[i] << " ";
 	std::cout << std::dec << std::endl;
-	tmcg_octets_t pub_hashing, fpr;
+	tmcg_openpgp_octets_t pub_hashing, fpr;
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, fpr);
@@ -440,6 +445,7 @@ int main
 	std::cout << userid << std::endl;
 	if ((opt_rsa) && (mpz_sizeinbase(dss_p, 2L) > 1L))
 	{
+		std::cout << "Public-key algorithm: " << std::endl << "\tRSA" << std::endl;
 		std::cout << "Security level of public key: " << std::endl << "\t";
 		std::cout << "|n| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";
 		if (mpz_cmp_ui(dss_q, ULONG_MAX) < 0)
@@ -529,6 +535,7 @@ int main
 	}
 	else if (!opt_rsa)
 	{
+		std::cout << "Public-key algorithm: " << std::endl << "\tDSA" << std::endl;
 		std::cout << "Security level of DSA domain parameter set: " << std::endl << "\t";
 		std::cout << "|p| = " << mpz_sizeinbase(dss_p, 2L) << " bit, ";
 		std::cout << "|q| = " << mpz_sizeinbase(dss_q, 2L) << " bit, ";
@@ -663,7 +670,7 @@ int main
 			for (size_t i = 0; i < subkeyid.size(); i++)
 				std::cout << std::setfill('0') << std::setw(2) << std::right << (int)subkeyid[i] << " ";
 			std::cout << std::dec << std::endl;
-			tmcg_octets_t sub_hashing, sub_fpr;
+			tmcg_openpgp_octets_t sub_hashing, sub_fpr;
 			for (size_t i = 6; i < sub.size(); i++)
 				sub_hashing.push_back(sub[i]);
 			CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(sub_hashing, sub_fpr);
@@ -680,7 +687,6 @@ int main
 				esubkeytime += csubkeytime; // validity period of the subkey after key creation time
 				std::cout << ctime(&esubkeytime);
 			}
-
 			std::cout << "Security level of domain parameter set: " << std::endl << "\t";
 			std::cout << "|p| = " << mpz_sizeinbase(dkg_p, 2L) << " bit, ";
 			std::cout << "|g| = " << mpz_sizeinbase(dkg_g, 2L) << " bit" << std::endl << "\t";

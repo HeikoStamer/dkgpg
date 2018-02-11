@@ -56,7 +56,7 @@ std::vector<std::string>		peers;
 bool					instance_forked = false;
 
 std::string				passphrase, userid, ifilename, ofilename, passwords, hostname, port;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -218,7 +218,7 @@ void run_instance
 		std::cout << "S_" << whoami << ": canonicalized signature creation time = " << csigtime << std::endl;
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
-	tmcg_byte_t hashalgo = 0;
+	tmcg_openpgp_byte_t hashalgo = 0;
 	if (mpz_sizeinbase(dss_q, 2L) == 256)
 		hashalgo = 8; // SHA256 (alg 8)
 	else if (mpz_sizeinbase(dss_q, 2L) == 384)
@@ -236,7 +236,7 @@ void run_instance
 	// compute the hash of the input file
 	if (opt_verbose)
 		std::cout << "hashing the input file \"" << opt_ifilename << "\"" << std::endl;
-	tmcg_octets_t trailer, hash, left;
+	tmcg_openpgp_octets_t trailer, hash, left;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x00, hashalgo, csigtime, sigexptime, keyid, trailer);
 	if (!CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
 	{
@@ -299,7 +299,7 @@ void run_instance
 	}
 
 	// sign the hash
-	tmcg_byte_t buffer[1024];
+	tmcg_openpgp_byte_t buffer[1024];
 	gcry_mpi_t r, s, h;
 	mpz_t dsa_m, dsa_r, dsa_s;
 	size_t buflen = 0;
@@ -363,7 +363,7 @@ void run_instance
 		release_mpis();
 		exit(-1);
 	}
-	tmcg_octets_t sig;
+	tmcg_openpgp_octets_t sig;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(trailer, left, r, s, sig);
 	gcry_mpi_release(r), gcry_mpi_release(s);
 	mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);

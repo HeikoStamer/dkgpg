@@ -45,14 +45,14 @@
 	bool read_key_file
 		(const std::string &filename, std::string &result);
 	bool read_binary_key_file
-		(const std::string &filename, const tmcg_armor_t type,
+		(const std::string &filename, const tmcg_openpgp_armor_t type,
 		std::string &result);
 	bool read_message
 		(const std::string &filename, std::string &result);
 	bool read_binary_message
 		(const std::string &filename, std::string &result);
 	bool write_message
-		(const std::string &filename, const tmcg_octets_t &msg);
+		(const std::string &filename, const tmcg_openpgp_octets_t &msg);
 	bool write_message
 		(const std::string &filename, const std::string &msg);
 	bool lock_memory
@@ -60,21 +60,21 @@
 	void init_mpis
 		();
 	bool parse_message
-		(const std::string &in, tmcg_octets_t &enc_out,
+		(const std::string &in, tmcg_openpgp_octets_t &enc_out,
 		bool &have_seipd_out);
 	bool decrypt_message
-		(const bool have_seipd, const tmcg_octets_t &in,
-		tmcg_octets_t &key, tmcg_octets_t &out);
+		(const bool have_seipd, const tmcg_openpgp_octets_t &in,
+		tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out);
 	bool parse_signature
-		(const std::string &in, tmcg_byte_t stype,
+		(const std::string &in, tmcg_openpgp_byte_t stype,
 		time_t &sigcreationtime_out, time_t &sigexpirationtime_out,
-		tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out,
-		bool &sigV3_out, tmcg_byte_t &sigstrength_out);
+		tmcg_openpgp_byte_t &hashalgo_out, tmcg_openpgp_octets_t &trailer_out,
+		bool &sigV3_out, tmcg_openpgp_byte_t &sigstrength_out);
 	bool parse_public_key
 		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out,
 		time_t &subkeycreationtime_out, time_t &subkeyexpirationtime_out,
-		tmcg_byte_t &keyusage_out, tmcg_byte_t &keystrength_out,
+		tmcg_openpgp_byte_t &keyusage_out, tmcg_openpgp_byte_t &keystrength_out,
 		bool elg_required = true);
 	bool parse_private_key
 		(const std::string &in,

@@ -54,7 +54,7 @@ std::vector<std::string>		peers;
 bool					instance_forked = false;
 
 std::string				passphrase, userid, passwords, hostname, port;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -321,7 +321,7 @@ void run_instance
 		std::cout << "P_" << whoami << ": canonicalized key creation time = " << ckeytime << std::endl;
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
-	tmcg_byte_t hashalgo = 0;
+	tmcg_openpgp_byte_t hashalgo = 0;
 	if (mpz_sizeinbase(vtmf->q, 2L) == 256)
 		hashalgo = 8; // SHA256 (alg 8)
 	else if (mpz_sizeinbase(vtmf->q, 2L) == 384)
@@ -337,10 +337,10 @@ void run_instance
 
 	// create an OpenPGP DSA-based primary key resp. ElGamal-based subkey using computed values from tDSS resp. DKG protocols
 	std::string out, crcout, armor;
-	tmcg_octets_t all, pub, sec, uid, uidsig, sub, ssb, subsig, keyid, dsaflags, elgflags;
-	tmcg_octets_t pub_hashing, sub_hashing;
-	tmcg_octets_t uidsig_hashing, subsig_hashing, uidsig_left, subsig_left;
-	tmcg_octets_t hash;
+	tmcg_openpgp_octets_t all, pub, sec, uid, uidsig, sub, ssb, subsig, keyid, dsaflags, elgflags;
+	tmcg_openpgp_octets_t pub_hashing, sub_hashing;
+	tmcg_openpgp_octets_t uidsig_hashing, subsig_hashing, uidsig_left, subsig_left;
+	tmcg_openpgp_octets_t hash;
 	time_t sigtime;
 	gcry_sexp_t key;
 	gcry_mpi_t p, q, g, y, x, r, s;
@@ -615,7 +615,7 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, uidsig_hashing, hashalgo, hash, uidsig_left);
 	if (S > 0)
 	{
-		tmcg_byte_t buffer[1024];
+		tmcg_openpgp_byte_t buffer[1024];
 		gcry_mpi_t h;
 		size_t buflen = 0;
 		memset(buffer, 0, sizeof(buffer));
@@ -924,7 +924,7 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash, subsig_left);
 		if (S > 0)
 		{
-			tmcg_byte_t buffer[1024];
+			tmcg_openpgp_byte_t buffer[1024];
 			gcry_mpi_t h;
 			size_t buflen = 0;
 			memset(buffer, 0, sizeof(buffer));

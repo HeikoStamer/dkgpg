@@ -36,7 +36,7 @@
 std::vector<std::string>		peers;
 
 std::string				passphrase, userid, ifilename, kfilename;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -188,7 +188,7 @@ int main
 		return -1;
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_byte_t keyusage = 0, keystrength = 1;
+	tmcg_openpgp_byte_t keyusage = 0, keystrength = 1;
 	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength, false))
 	{
 		std::cerr << "ERROR: cannot parse resp. use the provided public key" << std::endl;
@@ -219,8 +219,8 @@ int main
 #endif
 
 	// parse the signature
-	tmcg_octets_t trailer;
-	tmcg_byte_t hashalgo = 0, sigstrength = 1;
+	tmcg_openpgp_octets_t trailer;
+	tmcg_openpgp_byte_t hashalgo = 0, sigstrength = 1;
 	time_t csigtime = 0, sigexptime = 0;
 	bool sigV3 = false;
 	if (!parse_signature(signature, 0x00, csigtime, sigexptime, hashalgo, trailer, sigV3, sigstrength))
@@ -282,7 +282,7 @@ int main
 	// compute the hash of the input file
 	if (opt_verbose)
 		std::cout << "INFO: hashing the input file \"" << opt_ifilename << "\"" << std::endl;
-	tmcg_octets_t hash, left;
+	tmcg_openpgp_octets_t hash, left;
 	bool hashret = false;
 	if (sigV3)
 		hashret = CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHashV3(opt_ifilename, trailer, hashalgo, hash, left);

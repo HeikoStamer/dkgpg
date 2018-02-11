@@ -33,7 +33,7 @@
 std::vector<std::string>		peers;
 
 std::string				passphrase, userid, ifilename, ofilename;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -157,7 +157,7 @@ int main
 		return -1;
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_byte_t keyusage = 0, keystrength = 1;
+	tmcg_openpgp_byte_t keyusage = 0, keystrength = 1;
 	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength))
 	{
 		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
@@ -172,7 +172,7 @@ int main
 	}
 
 	// read message from stdin or file
-	tmcg_octets_t msg;
+	tmcg_openpgp_octets_t msg;
 #ifdef DKGPG_TESTSUITE
 	std::string test_msg = "This is just a simple test message.";
 	for (size_t i = 0; i < test_msg.length(); i++)
@@ -200,7 +200,7 @@ int main
 
 	// encrypt the provided message
 	gcry_error_t ret;
-	tmcg_octets_t lit, seskey, prefix, enc, mdc_hashing, hash, mdc, seipd, pkesk;
+	tmcg_openpgp_octets_t lit, seskey, prefix, enc, mdc_hashing, hash, mdc, seipd, pkesk;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit, seskey, prefix, true, enc); // seskey and prefix only
 	if (ret)
@@ -255,7 +255,7 @@ int main
 		// or "speculative" Key ID. In this case, the receiving implementation
 		// would try all available private keys, checking for a valid decrypted
 		// session key. This format helps reduce traffic analysis of messages. [RFC4880]
-		tmcg_octets_t wildcard;
+		tmcg_openpgp_octets_t wildcard;
 		for (size_t i = 0; i < 8; i++)
 			wildcard.push_back(0x00);
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(wildcard, gk, myk, pkesk);
@@ -265,7 +265,7 @@ int main
 
 	// concatenate and encode the packages in ASCII armor and finally print result to stdout
 	std::string armored_message;
-	tmcg_octets_t all;
+	tmcg_openpgp_octets_t all;
 	all.insert(all.end(), pkesk.begin(), pkesk.end());
 	all.insert(all.end(), seipd.begin(), seipd.end());
 	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);

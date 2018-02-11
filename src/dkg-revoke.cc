@@ -56,7 +56,7 @@ std::vector<std::string>		peers;
 bool					instance_forked = false;
 
 std::string				passphrase, userid, passwords, hostname, port;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -216,7 +216,7 @@ void run_instance
 		std::cout << "R_" << whoami << ": canonicalized signature creation time = " << csigtime << std::endl;
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
-	tmcg_byte_t hashalgo = 0;
+	tmcg_openpgp_byte_t hashalgo = 0;
 	if (mpz_sizeinbase(dss_q, 2L) == 256)
 		hashalgo = 8; // SHA256 (alg 8)
 	else if (mpz_sizeinbase(dss_q, 2L) == 384)
@@ -284,12 +284,12 @@ void run_instance
 	}
 	
 	// reason for revocation
-	tmcg_byte_t revcode = 0x00;
+	tmcg_openpgp_byte_t revcode = 0x00;
 	if (reason < 255)
 		revcode = reason;
 
 	// compute a hash of pub and sub, respectively
-	tmcg_octets_t trailer_pub, pub_hashing, hash_pub, left_pub, trailer_sub, sub_hashing, hash_sub, left_sub;
+	tmcg_openpgp_octets_t trailer_pub, pub_hashing, hash_pub, left_pub, trailer_sub, sub_hashing, hash_sub, left_sub;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareRevocationSignature(0x20, hashalgo, csigtime, revcode, "", keyid, trailer_pub);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareRevocationSignature(0x28, hashalgo, csigtime, revcode, "", keyid, trailer_sub);
 	for (size_t i = 6; i < pub.size(); i++)
@@ -300,8 +300,8 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, sub_hashing, trailer_sub, hashalgo, hash_sub, left_sub);
 
 	// sign the hashes
-	tmcg_octets_t revsig_pub, revsig_sub;
-	tmcg_byte_t buffer[1024];
+	tmcg_openpgp_octets_t revsig_pub, revsig_sub;
+	tmcg_openpgp_byte_t buffer[1024];
 	gcry_mpi_t r, s, h;
 	mpz_t dsa_m, dsa_r, dsa_s;
 	size_t buflen = 0;
@@ -437,7 +437,7 @@ void run_instance
 	std::stringstream pubfilename;
 	pubfilename << peers[whoami] << "_dkg-pub.asc";
 	std::string armor = "";
-	tmcg_octets_t all, uid;
+	tmcg_openpgp_octets_t all, uid;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 	all.insert(all.end(), pub.begin(), pub.end());
 	all.insert(all.end(), revsig_pub.begin(), revsig_pub.end());

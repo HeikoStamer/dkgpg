@@ -27,7 +27,7 @@
 extern std::vector<std::string>			peers;
 
 extern std::string				passphrase, userid;
-extern tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+extern tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 extern std::map<size_t, size_t>			idx2dkg, dkg2idx;
 extern mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 extern size_t					dss_n, dss_t, dss_i;
@@ -104,10 +104,10 @@ bool read_key_file
 }
 
 bool read_binary_key_file
-	(const std::string &filename, const tmcg_armor_t type, std::string &result)
+	(const std::string &filename, const tmcg_openpgp_armor_t type, std::string &result)
 {
 	// read the public/private key from file and convert to ASCII armor
-	tmcg_octets_t input;
+	tmcg_openpgp_octets_t input;
 	std::ifstream ifs(filename.c_str(), std::ifstream::in);
 	if (!ifs.is_open())
 	{
@@ -157,7 +157,7 @@ bool read_binary_message
 	(const std::string &filename, std::string &result)
 {
 	// read the (encrypted) message from file and convert to ASCII armor
-	tmcg_octets_t input;
+	tmcg_openpgp_octets_t input;
 	std::ifstream ifs(filename.c_str(), std::ifstream::in);
 	if (!ifs.is_open())
 	{
@@ -179,7 +179,7 @@ bool read_binary_message
 }
 
 bool write_message
-	(const std::string &filename, const tmcg_octets_t &msg)
+	(const std::string &filename, const tmcg_openpgp_octets_t &msg)
 {
 	// write out the (decrypted) message to file
 	std::ofstream ofs(filename.c_str(), std::ofstream::out);
@@ -289,7 +289,7 @@ void init_mpis
 }
 
 void cleanup_ctx
-	(tmcg_openpgp_packet_ctx &ctx)
+	(tmcg_openpgp_packet_ctx_t &ctx)
 {
 	gcry_mpi_release(ctx.me);
 	gcry_mpi_release(ctx.gk);
@@ -351,11 +351,11 @@ void cleanup_containers
 }
 
 bool parse_message
-	(const std::string &in, tmcg_octets_t &enc_out, bool &have_seipd_out)
+	(const std::string &in, tmcg_openpgp_octets_t &enc_out, bool &have_seipd_out)
 {
 	// decode ASCII armor and parse encrypted message
-	tmcg_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
-	tmcg_octets_t pkts;
+	tmcg_openpgp_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
+	tmcg_openpgp_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
@@ -365,13 +365,13 @@ bool parse_message
 		return false;
 	}
 	bool have_pkesk = false, have_sed = false;
-	tmcg_byte_t ptag = 0xFF;
+	tmcg_openpgp_byte_t ptag = 0xFF;
 	size_t pnum = 0;
 	while (pkts.size() && ptag)
 	{
-		tmcg_octets_t pkesk_keyid;
-		tmcg_openpgp_packet_ctx ctx;
-		tmcg_octets_t current_packet;
+		tmcg_openpgp_octets_t pkesk_keyid;
+		tmcg_openpgp_packet_ctx_t ctx;
+		tmcg_openpgp_octets_t current_packet;
 		std::vector<gcry_mpi_t> qual, v_i;
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
@@ -514,10 +514,10 @@ bool parse_message
 }
 
 bool decrypt_message
-	(const bool have_seipd, const tmcg_octets_t &in, tmcg_octets_t &key, tmcg_octets_t &out)
+	(const bool have_seipd, const tmcg_openpgp_octets_t &in, tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out)
 {
 	// decrypt the given message
-	tmcg_byte_t symalgo = 0;
+	tmcg_openpgp_byte_t symalgo = 0;
 	if (opt_verbose)
 		std::cout << "symmetric decryption of message ..." << std::endl;
 	if (key.size() > 0)
@@ -532,7 +532,7 @@ bool decrypt_message
 		return false;
 	}
 	gcry_error_t ret;
-	tmcg_octets_t prefix, pkts;
+	tmcg_openpgp_octets_t prefix, pkts;
 	if (have_seipd)
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, false, symalgo, pkts);
 	else
@@ -546,19 +546,19 @@ bool decrypt_message
 		return false;
 	}
 	// parse the content of decrypted message
-	tmcg_openpgp_packet_ctx ctx;
+	tmcg_openpgp_packet_ctx_t ctx;
 	std::vector<gcry_mpi_t> qual, v_i;
 	std::vector<std::string> capl;
 	std::vector< std::vector<gcry_mpi_t> > c_ik;
 	bool have_lit = false, have_mdc = false;
-	tmcg_octets_t lit, mdc_hash;
-	tmcg_byte_t ptag = 0xFF;
+	tmcg_openpgp_octets_t lit, mdc_hash;
+	tmcg_openpgp_byte_t ptag = 0xFF;
 	size_t pnum = 0, mdc_len = sizeof(ctx.mdc_hash) + 2;
 	if (pkts.size() > mdc_len)
 		lit.insert(lit.end(), pkts.begin(), pkts.end() - mdc_len); // store literal data
 	while (pkts.size() && ptag)
 	{
-		tmcg_octets_t current_packet;
+		tmcg_openpgp_octets_t current_packet;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, capl, v_i, c_ik);
 		++pnum;
 		if (opt_verbose)
@@ -632,7 +632,7 @@ bool decrypt_message
 	}
 	if (have_mdc)
 	{
-		tmcg_octets_t mdc_hashing, hash;
+		tmcg_openpgp_octets_t mdc_hashing, hash;
 		mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end()); // "it includes the prefix data described above" [RFC4880]
 		mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end()); // "it includes all of the plaintext" [RFC4880]
 		mdc_hashing.push_back(0xD3); // "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
@@ -648,14 +648,14 @@ bool decrypt_message
 }
 
 bool parse_signature
-	(const std::string &in, tmcg_byte_t stype,
+	(const std::string &in, tmcg_openpgp_byte_t stype,
 	 time_t &sigcreationtime_out, time_t &sigexpirationtime_out,
-	 tmcg_byte_t &hashalgo_out, tmcg_octets_t &trailer_out,
-	 bool &sigV3_out, tmcg_byte_t &sigstrength_out)
+	 tmcg_openpgp_byte_t &hashalgo_out, tmcg_openpgp_octets_t &trailer_out,
+	 bool &sigV3_out, tmcg_openpgp_byte_t &sigstrength_out)
 {
 	// decode ASCII armor and parse the signature according to OpenPGP
-	tmcg_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
-	tmcg_octets_t pkts;
+	tmcg_openpgp_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
+	tmcg_openpgp_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
@@ -665,12 +665,12 @@ bool parse_signature
 		return false;
 	}
 	bool sig = false;
-	tmcg_byte_t ptag = 0xFF;
+	tmcg_openpgp_byte_t ptag = 0xFF;
 	size_t pnum = 0;
 	while (pkts.size() && ptag)
 	{
-		tmcg_openpgp_packet_ctx ctx;
-		tmcg_octets_t current_packet, issuer;
+		tmcg_openpgp_packet_ctx_t ctx;
+		tmcg_openpgp_octets_t current_packet, issuer;
 		std::vector<gcry_mpi_t> qual, v_i;
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
@@ -724,7 +724,7 @@ bool parse_signature
 					trailer_out.clear();
 					if (ctx.version == 3)
 					{
-						tmcg_octets_t sigtime_octets; // V3 format
+						tmcg_openpgp_octets_t sigtime_octets; // V3 format
 						std::cerr << "WARNING: V3 signature packet detected; verification may fail" << std::endl;
 						sig = true;
 						sigV3_out = true;
@@ -773,12 +773,12 @@ bool parse_public_key
 	(const std::string &in,
 	 time_t &keycreationtime_out, time_t &keyexpirationtime_out,
 	 time_t &subkeycreationtime_out, time_t &subkeyexpirationtime_out,
-	 tmcg_byte_t &keyusage_out, tmcg_byte_t &keystrength_out,
+	 tmcg_openpgp_byte_t &keyusage_out, tmcg_openpgp_byte_t &keystrength_out,
 	 bool elg_required)
 {
 	// decode ASCII Armor
-	tmcg_octets_t pkts;
-	tmcg_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	tmcg_openpgp_octets_t pkts;
+	tmcg_openpgp_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK)
@@ -790,19 +790,19 @@ bool parse_public_key
 	bool pubdsa = false, sigdsa = false, sigdsaV3 = false, subelg = false, sigelg = false, sigelgV3 = false, uid = false, uat = false;
 	bool revdsa = false, revdsaV3 = false, revelg = false, revelgV3 = false;
 	bool ignore_further_subkeys = false, ignore_further_signatures = false;
-	tmcg_byte_t ptag = 0xFF;
-	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], revdsa_sigtype, revdsa_pkalgo, revdsa_hashalgo;
-	tmcg_byte_t elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32], revelg_sigtype, revelg_pkalgo, revelg_hashalgo;
-	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
-	tmcg_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, revdsa_hspd, elg_hspd, revelg_hspd, hash;
+	tmcg_openpgp_byte_t ptag = 0xFF;
+	tmcg_openpgp_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], revdsa_sigtype, revdsa_pkalgo, revdsa_hashalgo;
+	tmcg_openpgp_byte_t elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32], revelg_sigtype, revelg_pkalgo, revelg_hashalgo;
+	tmcg_openpgp_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
+	tmcg_openpgp_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, revdsa_hspd, elg_hspd, revelg_hspd, hash;
 	time_t dsa_creation = 0, dsa_sigtime = 0, revdsa_sigtime = 0, elg_creation = 0, elg_sigtime = 0, revelg_sigtime = 0;
 	gcry_sexp_t dsakey;
 	gcry_error_t ret;
 	size_t erroff, pnum = 0;
 	while (pkts.size() && ptag)
 	{
-		tmcg_openpgp_packet_ctx ctx;
-		tmcg_octets_t current_packet;
+		tmcg_openpgp_packet_ctx_t ctx;
+		tmcg_openpgp_octets_t current_packet;
 		std::vector<gcry_mpi_t> qual, v_i;
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
@@ -1208,11 +1208,11 @@ bool parse_public_key
 		keystrength_out = 0; // bad DSA key strength
 	if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
 		keystrength_out = 0; // bad DSA hash algorithm
-	tmcg_octets_t dsa_trailer, dsa_left;
+	tmcg_openpgp_octets_t dsa_trailer, dsa_left;
 	hash.clear();
 	if (sigdsaV3)
 	{
-		tmcg_octets_t dsa_sigtime_octets;
+		tmcg_openpgp_octets_t dsa_sigtime_octets;
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(dsa_sigtime, dsa_sigtime_octets);
 		// The concatenation of the data to be signed, the signature type, and
 		// creation time from the Signature packet (5 additional octets) is
@@ -1254,11 +1254,11 @@ bool parse_public_key
 			std::cout << "INFO: revdsa_sigtype = 0x" << std::hex << (int)revdsa_sigtype << std::dec << 
 				" revdsa_pkalgo = " << (int)revdsa_pkalgo << " revdsa_hashalgo = " << (int)revdsa_hashalgo <<
 				" revdsa_hspd.size() = " << revdsa_hspd.size() << std::endl;
-		tmcg_octets_t revdsa_trailer, revdsa_left;
+		tmcg_openpgp_octets_t revdsa_trailer, revdsa_left;
 		hash.clear();
 		if (revdsaV3)
 		{
-			tmcg_octets_t revdsa_sigtime_octets;
+			tmcg_openpgp_octets_t revdsa_sigtime_octets;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(revdsa_sigtime, revdsa_sigtime_octets);
 			// The concatenation of the data to be signed, the signature type, and
 			// creation time from the Signature packet (5 additional octets) is
@@ -1344,11 +1344,11 @@ bool parse_public_key
 			keystrength_out = 0; // bad Elgamal key strength
 		if (elg_required && ((elg_hashalgo < 8) || (elg_hashalgo >= 11)))
 			keystrength_out = 0; // bad Elgamal hash algorithm
-		tmcg_octets_t elg_trailer, elg_left;
+		tmcg_openpgp_octets_t elg_trailer, elg_left;
 		hash.clear();
 		if (sigelgV3)
 		{
-			tmcg_octets_t elg_sigtime_octets;
+			tmcg_openpgp_octets_t elg_sigtime_octets;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(elg_sigtime, elg_sigtime_octets);
 			// The concatenation of the data to be signed, the signature type, and
 			// creation time from the Signature packet (5 additional octets) is
@@ -1390,11 +1390,11 @@ bool parse_public_key
 				std::cout << "INFO: revelg_sigtype = 0x" << std::hex << (int)revelg_sigtype << std::dec << 
 					" revelg_pkalgo = " << (int)revelg_pkalgo << " revelg_hashalgo = " << (int)revelg_hashalgo <<
 					" revelg_hspd.size() = " << revelg_hspd.size() << std::endl;
-			tmcg_octets_t revelg_trailer, revelg_left;
+			tmcg_openpgp_octets_t revelg_trailer, revelg_left;
 			hash.clear();
 			if (revelgV3)
 			{
-				tmcg_octets_t revelg_sigtime_octets;
+				tmcg_openpgp_octets_t revelg_sigtime_octets;
 				CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(revelg_sigtime, revelg_sigtime_octets);
 				// The concatenation of the data to be signed, the signature type, and
 				// creation time from the Signature packet (5 additional octets) is
@@ -1450,8 +1450,8 @@ bool parse_private_key
 	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out, std::vector<std::string> &capl_out)
 {
 	// decode ASCII Armor
-	tmcg_octets_t pkts;
-	tmcg_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	tmcg_openpgp_octets_t pkts;
+	tmcg_openpgp_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK)
@@ -1461,22 +1461,22 @@ bool parse_private_key
 	}
 	// parse the private key according to OpenPGP
 	bool secdsa = false, sigdsa = false, ssbelg = false, sigelg = false;
-	tmcg_byte_t ptag = 0xFF;
-	tmcg_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
-	tmcg_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
-	tmcg_byte_t *key, *iv;
-	tmcg_octets_t seskey, salt, mpis, hash_input, hash, pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
+	tmcg_openpgp_byte_t ptag = 0xFF;
+	tmcg_openpgp_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
+	tmcg_openpgp_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
+	tmcg_openpgp_byte_t *key, *iv;
+	tmcg_openpgp_octets_t seskey, salt, mpis, hash_input, hash, pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
 	gcry_cipher_hd_t hd;
 	gcry_error_t ret;
 	size_t erroff, keylen, ivlen, chksum, mlen, chksum2;
 	int algo;
-	tmcg_openpgp_packet_ctx ctx;
+	tmcg_openpgp_packet_ctx_t ctx;
 	std::vector<gcry_mpi_t> qual, v_i, x_rvss_qual;
 	std::vector<std::string> capl;
 	std::vector< std::vector<gcry_mpi_t> > c_ik;
 	while (pkts.size() && ptag)
 	{
-		tmcg_octets_t current_packet;
+		tmcg_openpgp_octets_t current_packet;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, ctx, current_packet, qual, x_rvss_qual, capl, v_i, c_ik);
 		if (opt_verbose)
 			std::cout << "PacketDecode(pkts.size = " << pkts.size() << ") = " << (int)ptag;
@@ -1768,10 +1768,10 @@ bool parse_private_key
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							return false;
 						}
-						key = new tmcg_byte_t[keylen];
+						key = new tmcg_openpgp_byte_t[keylen];
 						for (size_t i = 0; i < keylen; i++)
 							key[i] = seskey[i];
-						iv = new tmcg_byte_t[ivlen];
+						iv = new tmcg_openpgp_byte_t[ivlen];
 						for (size_t i = 0; i < ivlen; i++)
 							iv[i] = ctx.iv[i];
 						ret = gcry_cipher_open(&hd, algo, GCRY_CIPHER_MODE_CFB, 0);
@@ -2059,10 +2059,10 @@ bool parse_private_key
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							return false;
 						}
-						key = new tmcg_byte_t[keylen];
+						key = new tmcg_openpgp_byte_t[keylen];
 						for (size_t i = 0; i < keylen; i++)
 							key[i] = seskey[i];
-						iv = new tmcg_byte_t[ivlen];
+						iv = new tmcg_openpgp_byte_t[ivlen];
 						for (size_t i = 0; i < ivlen; i++)
 							iv[i] = ctx.iv[i];
 						ret = gcry_cipher_open(&hd, algo, GCRY_CIPHER_MODE_CFB, 0);
@@ -2375,10 +2375,10 @@ bool parse_private_key
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 							return false;
 						}
-						key = new tmcg_byte_t[keylen];
+						key = new tmcg_openpgp_byte_t[keylen];
 						for (size_t i = 0; i < keylen; i++)
 							key[i] = seskey[i];
-						iv = new tmcg_byte_t[ivlen];
+						iv = new tmcg_openpgp_byte_t[ivlen];
 						for (size_t i = 0; i < ivlen; i++)
 							iv[i] = ctx.iv[i];
 						ret = gcry_cipher_open(&hd, (int)ctx.symalgo, GCRY_CIPHER_MODE_CFB, 0);
@@ -2544,7 +2544,7 @@ bool parse_private_key
 
 	// build keys, check key usage and self-signatures
 	gcry_sexp_t dsakey;
-	tmcg_octets_t dsa_trailer, elg_trailer, dsa_left, elg_left;
+	tmcg_openpgp_octets_t dsa_trailer, elg_trailer, dsa_left, elg_left;
 	if (opt_verbose)
 		std::cout << "Primary User ID: " << userid << std::endl;
 	ret = gcry_sexp_build(&dsakey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
@@ -2664,8 +2664,8 @@ bool parse_public_key_for_certification
 	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out)
 {
 	// decode ASCII Armor
-	tmcg_octets_t pkts;
-	tmcg_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	tmcg_openpgp_octets_t pkts;
+	tmcg_openpgp_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
 		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK)
@@ -2675,15 +2675,15 @@ bool parse_public_key_for_certification
 	}
 	// parse the public key according to OpenPGP
 	bool primary = false, sig = false, sigV3 = false, uid_flag = false, uat_flag = false, rev = false, revV3 = false;
-	tmcg_byte_t ptag = 0xFF;
-	tmcg_byte_t sigtype, pkalgo, hashalgo, keyflags[4], rev_sigtype, rev_pkalgo, rev_hashalgo;
-	tmcg_octets_t pub_hashing, issuer, hspd, rev_hspd;
+	tmcg_openpgp_byte_t ptag = 0xFF;
+	tmcg_openpgp_byte_t sigtype, pkalgo, hashalgo, keyflags[4], rev_sigtype, rev_pkalgo, rev_hashalgo;
+	tmcg_openpgp_octets_t pub_hashing, issuer, hspd, rev_hspd;
 	time_t creation = 0, sigtime = 0, rev_sigtime = 0;
 	size_t erroff, pnum = 0;
 	while (pkts.size() && ptag)
 	{
-		tmcg_openpgp_packet_ctx ctx;
-		tmcg_octets_t current_packet;
+		tmcg_openpgp_packet_ctx_t ctx;
+		tmcg_openpgp_octets_t current_packet;
 		std::vector<gcry_mpi_t> qual, v_i;
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
@@ -2981,10 +2981,10 @@ bool parse_public_key_for_certification
 			" pkalgo = " << (int)pkalgo << " hashalgo = " << (int)hashalgo <<
 			" hspd.size() = " << hspd.size() << std::endl;
 	}
-	tmcg_octets_t trailer, left, hash;
+	tmcg_openpgp_octets_t trailer, left, hash;
 	if (sigV3)
 	{
-		tmcg_octets_t sigtime_octets;
+		tmcg_openpgp_octets_t sigtime_octets;
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(sigtime, sigtime_octets);
 		// The concatenation of the data to be signed, the signature type, and
 		// creation time from the Signature packet (5 additional octets) is
@@ -3029,11 +3029,11 @@ bool parse_public_key_for_certification
 			std::cout << "INFO: rev_sigtype = 0x" << std::hex << (int)rev_sigtype << std::dec << 
 			" rev_pkalgo = " << (int)rev_pkalgo << " rev_hashalgo = " << (int)rev_hashalgo <<
 			" rev_hspd.size() = " << rev_hspd.size() << std::endl;
-		tmcg_octets_t rev_trailer, rev_left;
+		tmcg_openpgp_octets_t rev_trailer, rev_left;
 		hash.clear();
 		if (revV3)
 		{
-			tmcg_octets_t rev_sigtime_octets;
+			tmcg_openpgp_octets_t rev_sigtime_octets;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(rev_sigtime, rev_sigtime_octets);
 			// The concatenation of the data to be signed, the signature type, and
 			// creation time from the Signature packet (5 additional octets) is

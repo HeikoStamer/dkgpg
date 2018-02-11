@@ -56,7 +56,7 @@ std::vector<std::string>		peers;
 bool					instance_forked = false;
 
 std::string				passphrase, userid, passwords, hostname, port;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -420,7 +420,7 @@ void run_instance
 			gcry_mpi_release(c_ik[j][k]);
 	
 	// export updated private keys in OpenPGP armor format
-	tmcg_octets_t all;
+	tmcg_openpgp_octets_t all;
 	std::string armor;
 	std::stringstream secfilename;
 	secfilename << peers[whoami] << "_dkg-sec.asc";
@@ -747,7 +747,7 @@ int main
 	}
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_byte_t keyusage = 0, keystrength = 1;
+	tmcg_openpgp_byte_t keyusage = 0, keystrength = 1;
 	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength))
 	{
 		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;

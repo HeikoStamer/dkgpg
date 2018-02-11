@@ -56,7 +56,7 @@ std::vector<std::string>		peers;
 bool					instance_forked = false;
 
 std::string				passphrase, userid, ifilename, ofilename, passwords, hostname, port;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -85,7 +85,7 @@ std::string				armored_message;
 
 
 void print_message
-	(const tmcg_octets_t &msg)
+	(const tmcg_openpgp_octets_t &msg)
 {
 	// print out the decrypted message
 	std::cout << "Decrypted message:" << std::endl;
@@ -505,7 +505,7 @@ bool combine_decryption_shares
 }
 
 bool decrypt_session_key
-	(tmcg_octets_t &out)
+	(tmcg_openpgp_octets_t &out)
 {
 	// decrypt the session key
 	gcry_sexp_t elgkey;
@@ -567,7 +567,7 @@ void run_instance
 			exit(-1);
 		}
 	}
-	tmcg_octets_t enc;
+	tmcg_openpgp_octets_t enc;
 	bool have_seipd = false;
 	GennaroJareckiKrawczykRabinDKG *dkg = NULL;
 	init_dkg(dkg);
@@ -876,7 +876,7 @@ void run_instance
 	delete aiou, delete aiou2;
 
 	// do remaining decryption work
-	tmcg_octets_t msg, seskey;
+	tmcg_openpgp_octets_t msg, seskey;
 	if (res)
 	{
 		if (!decrypt_session_key(seskey))
@@ -1245,7 +1245,7 @@ int main
 	if (nonint)
 	{
 		size_t idx;
-		tmcg_octets_t msg, seskey;
+		tmcg_openpgp_octets_t msg, seskey;
 		std::string dds, armored_seckey, thispeer = peers[0];
 		mpz_t r_i, c, r;
 		std::vector<size_t> interpol_parties;
@@ -1275,7 +1275,7 @@ int main
 				return -1;
 			}
 		}
-		tmcg_octets_t enc;
+		tmcg_openpgp_octets_t enc;
 		bool have_seipd = false;
 		GennaroJareckiKrawczykRabinDKG *dkg = NULL;
 		init_dkg(dkg);
@@ -1286,12 +1286,12 @@ int main
 			return -1;
 		}
 		compute_decryption_share(dkg, dds);
-		tmcg_octets_t dds_input;
-		dds_input.push_back((tmcg_byte_t)(mpz_wrandom_ui() % 256)); // bluring the decryption share
-		dds_input.push_back((tmcg_byte_t)(mpz_wrandom_ui() % 256)); // make NSA's spying a bit harder
-		dds_input.push_back((tmcg_byte_t)(mpz_wrandom_ui() % 256));
-		dds_input.push_back((tmcg_byte_t)(mpz_wrandom_ui() % 256));
-		dds_input.push_back((tmcg_byte_t)(mpz_wrandom_ui() % 256));
+		tmcg_openpgp_octets_t dds_input;
+		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256)); // bluring the decryption share
+		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256)); // make NSA's spying a bit harder
+		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
+		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
+		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
 		for (size_t i = 0; i < dds.length(); i++)
 			dds_input.push_back(dds[i]);
 		std::string dds_radix;
@@ -1311,7 +1311,7 @@ int main
 		std::cout << "Enter decryption shares (one per line; ^D for EOF) from other parties/devices:" << std::endl;
 		while (std::getline(std::cin, dds_radix))
 		{
-			tmcg_octets_t dds_output;
+			tmcg_openpgp_octets_t dds_output;
 			dds = "", idx = 0;
 			CallasDonnerhackeFinneyShawThayerRFC4880::Radix64Decode(dds_radix, dds_output);
 			for (size_t i = 5; i < dds_output.size(); i++)

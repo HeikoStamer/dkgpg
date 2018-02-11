@@ -39,7 +39,7 @@
 std::vector<std::string>		peers;
 
 std::string				passphrase, userid;
-tmcg_octets_t				keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
@@ -306,7 +306,7 @@ int main
 	for (size_t i = 0; i < keyid.size(); i++)
 		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)keyid[i] << " ";
 	std::cout << std::dec << std::endl;
-	tmcg_octets_t pub_hashing, fpr;
+	tmcg_openpgp_octets_t pub_hashing, fpr;
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, fpr);
@@ -365,7 +365,7 @@ int main
 		for (size_t i = 0; i < subkeyid.size(); i++)
 			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)subkeyid[i] << " ";
 		std::cout << std::dec << std::endl;
-		tmcg_octets_t sub_hashing, sub_fpr;
+		tmcg_openpgp_octets_t sub_hashing, sub_fpr;
 		for (size_t i = 6; i < sub.size(); i++)
 			sub_hashing.push_back(sub[i]);
 		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(sub_hashing, sub_fpr);
@@ -639,7 +639,7 @@ int main
 				for (size_t k = 0; k < c_ik[j].size(); k++)
 					gcry_mpi_release(c_ik[j][k]);
 			// export updated private key in OpenPGP armor format
-			tmcg_octets_t all;
+			tmcg_openpgp_octets_t all;
 			std::string armor;
 			std::stringstream secfilename;
 			secfilename << thispeer << "_dkg-sec.asc";

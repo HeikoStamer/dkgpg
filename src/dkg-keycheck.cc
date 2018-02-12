@@ -372,8 +372,10 @@ int main
 		return -1;
 
 // FIXME: use new parser from LibTMCG
-tmcg_openpgp_publickey_ctx_t primary;
+TMCG_OpenPGP_Pubkey *primary = NULL;
 CallasDonnerhackeFinneyShawThayerRFC4880::ParsePublicKeyBlock(armored_pubkey, true, primary);
+if (primary)
+	delete primary;
 
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;

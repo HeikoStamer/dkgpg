@@ -373,8 +373,12 @@ int main
 
 // FIXME: use new parser from LibTMCG
 TMCG_OpenPGP_Pubkey *primary = NULL;
-CallasDonnerhackeFinneyShawThayerRFC4880::ParsePublicKeyBlock(armored_pubkey, 2, primary);
-primary->CheckSelfSignatures(3);
+bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::ParsePublicKeyBlock(armored_pubkey, 2, primary);
+if (parse_ok)
+{
+	primary->CheckSelfSignatures(3);
+	primary->Reduce();
+}
 if (primary)
 	delete primary;
 return -1;

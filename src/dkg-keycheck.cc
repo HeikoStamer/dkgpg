@@ -377,7 +377,9 @@ bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::ParsePublicKeyBlock(ar
 if (parse_ok)
 {
 	primary->CheckSelfSignatures(3);
+	primary->CheckSubkeys(3);
 	primary->Reduce();
+	primary->CheckSelfSignatures(3);
 }
 if (primary)
 	delete primary;

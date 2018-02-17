@@ -758,7 +758,7 @@ bool parse_public_key
 	tmcg_openpgp_byte_t ptag = 0xFF;
 	tmcg_openpgp_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], revdsa_sigtype, revdsa_pkalgo, revdsa_hashalgo;
 	tmcg_openpgp_byte_t elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32], revelg_sigtype, revelg_pkalgo, revelg_hashalgo;
-	tmcg_openpgp_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
+	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32], elg_psa[32], elg_pha[32], elg_pca[32];
 	tmcg_openpgp_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, revdsa_hspd, elg_hspd, revelg_hspd, hash;
 	time_t dsa_creation = 0, dsa_sigtime = 0, revdsa_sigtime = 0, elg_creation = 0, elg_sigtime = 0, revelg_sigtime = 0;
 	gcry_sexp_t dsakey;
@@ -1428,7 +1428,7 @@ bool parse_private_key
 	bool secdsa = false, sigdsa = false, ssbelg = false, sigelg = false;
 	tmcg_openpgp_byte_t ptag = 0xFF;
 	tmcg_openpgp_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
-	tmcg_openpgp_byte_t dsa_psa[255], dsa_pha[255], dsa_pca[255], elg_psa[255], elg_pha[255], elg_pca[255];
+	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32], elg_psa[32], elg_pha[32], elg_pca[32];
 	tmcg_openpgp_byte_t *key, *iv;
 	tmcg_openpgp_octets_t seskey, salt, mpis, hash_input, hash, pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
 	gcry_cipher_hd_t hd;

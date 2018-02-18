@@ -921,7 +921,7 @@ void run_instance
 		for (size_t i = 6; i < sub.size(); i++)
 			sub_hashing.push_back(sub[i]);
 		hash.clear();
-		CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash, subsig_left);
+		CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash, subsig_left);
 		if (S > 0)
 		{
 			tmcg_openpgp_byte_t buffer[1024];

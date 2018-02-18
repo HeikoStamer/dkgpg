@@ -1236,7 +1236,7 @@ bool parse_public_key
 			// by the four-octet signature time.
 			revdsa_trailer.push_back(revdsa_sigtype);
 			revdsa_trailer.insert(revdsa_trailer.end(), revdsa_sigtime_octets.begin(), revdsa_sigtime_octets.end());
-			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHashV3(pub_hashing, revdsa_trailer, revdsa_hashalgo, hash, revdsa_left);
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHashV3(pub_hashing, revdsa_trailer, revdsa_hashalgo, hash, revdsa_left);
 		}
 		else
 		{
@@ -1247,7 +1247,7 @@ bool parse_public_key
 			revdsa_trailer.push_back(revdsa_hspd.size() >> 8); // length of hashed subpacket data
 			revdsa_trailer.push_back(revdsa_hspd.size());
 			revdsa_trailer.insert(revdsa_trailer.end(), revdsa_hspd.begin(), revdsa_hspd.end());
-			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, revdsa_trailer, revdsa_hashalgo, hash, revdsa_left);
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, revdsa_trailer, revdsa_hashalgo, hash, revdsa_left);
 		}
 		if (opt_verbose)
 			std::cout << "INFO: revdsa_left = " << std::hex << (int)revdsa_left[0] << " " << (int)revdsa_left[1] << std::dec << std::endl;
@@ -1326,7 +1326,7 @@ bool parse_public_key
 			// by the four-octet signature time.
 			elg_trailer.push_back(elg_sigtype);
 			elg_trailer.insert(elg_trailer.end(), elg_sigtime_octets.begin(), elg_sigtime_octets.end());
-			CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHashV3(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHashV3(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
 		}
 		else
 		{
@@ -1337,7 +1337,7 @@ bool parse_public_key
 			elg_trailer.push_back(elg_hspd.size() >> 8); // length of hashed subpacket data
 			elg_trailer.push_back(elg_hspd.size());
 			elg_trailer.insert(elg_trailer.end(), elg_hspd.begin(), elg_hspd.end());
-			CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
 		}
 		if (opt_verbose)
 			std::cout << "INFO: elg_left = " << std::hex << (int)elg_left[0] << " " << (int)elg_left[1] << std::dec << std::endl;
@@ -1372,7 +1372,7 @@ bool parse_public_key
 				// by the four-octet signature time.
 				revelg_trailer.push_back(revelg_sigtype);
 				revelg_trailer.insert(revelg_trailer.end(), revelg_sigtime_octets.begin(), revelg_sigtime_octets.end());
-				CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHashV3(pub_hashing, sub_hashing, revelg_trailer, revelg_hashalgo, hash, revelg_left);
+				CallasDonnerhackeFinneyShawThayerRFC4880::KeyHashV3(pub_hashing, sub_hashing, revelg_trailer, revelg_hashalgo, hash, revelg_left);
 			}
 			else
 			{
@@ -1383,7 +1383,7 @@ bool parse_public_key
 				revelg_trailer.push_back(revelg_hspd.size() >> 8); // length of hashed subpacket data
 				revelg_trailer.push_back(revelg_hspd.size());
 				revelg_trailer.insert(revelg_trailer.end(), revelg_hspd.begin(), revelg_hspd.end());
-				CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, sub_hashing, revelg_trailer, revelg_hashalgo, hash, revelg_left);
+				CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, revelg_trailer, revelg_hashalgo, hash, revelg_left);
 			}
 			if (opt_verbose)
 				std::cout << "INFO: revelg_left = " << std::hex << (int)revelg_left[0] << " " << (int)revelg_left[1] << std::dec << std::endl;
@@ -2611,7 +2611,7 @@ bool parse_private_key
 		elg_trailer.push_back(elg_hspd.size());
 		elg_trailer.insert(elg_trailer.end(), elg_hspd.begin(), elg_hspd.end());
 		hash.clear();
-		CallasDonnerhackeFinneyShawThayerRFC4880::SubkeyBindingHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
+		CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);
 		if (ret)
 		{
@@ -3011,7 +3011,7 @@ bool parse_public_key_for_certification
 			// by the four-octet signature time.
 			rev_trailer.push_back(rev_sigtype);
 			rev_trailer.insert(rev_trailer.end(), rev_sigtime_octets.begin(), rev_sigtime_octets.end());
-			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHashV3(pub_hashing, rev_trailer, rev_hashalgo, hash, rev_left);
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHashV3(pub_hashing, rev_trailer, rev_hashalgo, hash, rev_left);
 		}
 		else
 		{
@@ -3022,7 +3022,7 @@ bool parse_public_key_for_certification
 			rev_trailer.push_back(rev_hspd.size() >> 8); // length of hashed subpacket data
 			rev_trailer.push_back(rev_hspd.size());
 			rev_trailer.insert(rev_trailer.end(), rev_hspd.begin(), rev_hspd.end());
-			CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, rev_trailer, rev_hashalgo, hash, rev_left);
+			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, rev_trailer, rev_hashalgo, hash, rev_left);
 		}
 		if (opt_verbose)
 			std::cout << "INFO: rev_left = " << std::hex << (int)rev_left[0] << " " << (int)rev_left[1] << std::dec << std::endl;

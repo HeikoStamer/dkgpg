@@ -296,8 +296,12 @@ void run_instance
 		pub_hashing.push_back(pub[i]);
 	for (size_t i = 6; i < sub.size(); i++)
 		sub_hashing.push_back(sub[i]);
-	CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, trailer_pub, hashalgo, hash_pub, left_pub);
-	CallasDonnerhackeFinneyShawThayerRFC4880::KeyRevocationHash(pub_hashing, sub_hashing, trailer_sub, hashalgo, hash_sub, left_sub);
+	// RFC 4880 ERRATA:
+	// Primary key revocation signatures (type 0x20) hash only the key being revoked.
+	// Subkey revocation signature (type 0x28) hash first the primary key and then the
+	// subkey being revoked.
+	CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, trailer_pub, hashalgo, hash_pub, left_pub);
+	CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, trailer_sub, hashalgo, hash_sub, left_sub);
 
 	// sign the hashes
 	tmcg_openpgp_octets_t revsig_pub, revsig_sub;

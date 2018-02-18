@@ -606,9 +606,10 @@ void run_instance
 	}
 	else
 	{
-		dsaflags.push_back(0x01 | 0x02 | 0x20); // key may be used to certify other keys, to sign data, and for authentication
+		dsaflags.push_back(0x01 | 0x02); // key may be used to certify other keys and to sign data
 		sigtime = time(NULL); // current time
 	}
+	// TODO: create a direct-key signature (0x1f) with the above key flags
 	// positive certification (0x13) of uid and pub
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareSelfSignature(0x13, hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
 	hash.clear();

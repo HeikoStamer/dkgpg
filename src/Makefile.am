@@ -37,7 +37,7 @@ dkg_keyinfo_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIB
 dkg_refresh_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc dkg-refresh.cc
 dkg_verify_SOURCES = dkg-common.hh dkg-common.cc dkg-verify.cc
 dkg_verify_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
-dkg_keycheck_SOURCES = dkg-common.hh dkg-common.cc dkg-keycheck.cc
+dkg_keycheck_SOURCES = dkg-keycheck.cc
 dkg_keycheck_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 dkg_keysign_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc dkg-keysign.cc
 

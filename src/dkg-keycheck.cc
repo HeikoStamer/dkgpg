@@ -313,7 +313,9 @@ int main
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
-		if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-r") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		if ((arg.find("--") == 0) || (arg.find("-b") == 0) || 
+			(arg.find("-r") == 0) || (arg.find("-v") == 0) || 
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -364,26 +366,63 @@ int main
 	if (opt_verbose)
 		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
-	// read and parse the public key (an ElGamal subkey is not required)
+	// read the key file
 	std::string armored_pubkey;
 	if (opt_binary && !read_binary_key_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
 		return -1;
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
 
-// FIXME: use new parser from LibTMCG
-TMCG_OpenPGP_Pubkey *primary = NULL;
-bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::ParsePublicKeyBlock(armored_pubkey, 2, primary);
-if (parse_ok)
-{
-	primary->CheckSelfSignatures(3);
-	primary->CheckSubkeys(3);
-	primary->Reduce();
-}
-if (primary)
-	delete primary;
-return -1;
+	// parse the public key and corresponding signatures
+	TMCG_OpenPGP_Pubkey *primary = NULL;
+	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		ParsePublicKeyBlock(armored_pubkey, opt_verbose, primary);
+	if (parse_ok)
+	{
+		primary->CheckSelfSignatures(opt_verbose);
+		primary->CheckSubkeys(opt_verbose);
+		primary->Reduce();
+	}
+	else
+	{
+		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+		if (primary)
+			delete primary;
+		return -1;
+	}
 
+	// show information
+	std::ios oldcoutstate(NULL);
+	oldcoutstate.copyfmt(std::cout);
+	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << std::hex << std::uppercase << "\t";
+	for (size_t i = 0; i < primary->id.size(); i++)
+		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)primary->id[i] << " ";
+	std::cout << std::dec << std::endl;
+	tmcg_openpgp_octets_t fpr;
+	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
+	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << std::hex << std::uppercase << "\t";
+	for (size_t i = 0; i < fpr.size(); i++)
+		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)fpr[i] << " ";
+	std::cout << std::dec << std::endl;
+	std::cout << "OpenPGP Key Creation Time: " << std::endl << "\t" << ctime(&primary->creationtime);
+	std::cout << "OpenPGP Key Expiration Time: " << std::endl << "\t";
+	if (primary->expirationtime == 0)
+		std::cout << "undefined" << std::endl;
+	else
+	{
+		// compute validity period of the primary key after key creation time
+		time_t ekeytime = primary->creationtime + primary->expirationtime;
+		std::cout << ctime(&ekeytime);
+	}
+	for (size_t i = 0; i < primary->userids.size(); i++)
+	{
+		std::cout << "OpenPGP User ID: " << std::endl << "\t";
+		std::cout << primary->userids[i]->userid << std::endl;
+	}
+
+
+std::cout << "---------------------------------" << std::endl;
+// FIXME: use new parser from LibTMCG
 	init_mpis();
 	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
 	tmcg_openpgp_byte_t keyusage = 0, keystrength = 1;
@@ -391,12 +430,14 @@ return -1;
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		release_mpis();
+		delete primary;
 		return -1;
 	}
 	if (!opt_rsa && !parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength, false))
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		release_mpis();
+		delete primary;
 		return -1;
 	}
 
@@ -407,6 +448,7 @@ return -1;
 		{
 			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
 			release_mpis();
+			delete primary;
 			return -1;
 		}
 	}
@@ -416,24 +458,26 @@ return -1;
 		{
 			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
 			release_mpis();
+			delete primary;
 			return -1;
 		}
 		if (!mpz_set_gcry_mpi(elg_p, dkg_p) || !mpz_set_gcry_mpi(elg_g, dkg_g) || !mpz_set_gcry_mpi(elg_y, dkg_y))
 		{
 			std::cerr << "ERROR: cannot convert ElGamal key material" << std::endl;
 			release_mpis();
+			delete primary;
 			return -1;
 		}
 	}
 
 	// show information
-	std::ios oldcoutstate(NULL);
 	oldcoutstate.copyfmt(std::cout);
 	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << std::hex << std::uppercase << "\t";
 	for (size_t i = 0; i < keyid.size(); i++)
 		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)keyid[i] << " ";
 	std::cout << std::dec << std::endl;
-	tmcg_openpgp_octets_t pub_hashing, fpr;
+	fpr.clear();
+	tmcg_openpgp_octets_t pub_hashing;
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, fpr);
@@ -779,6 +823,9 @@ return -1;
 
 	// release mpis and keys
 	release_mpis();
+
+	// release primary key structure
+	delete primary;
 	
 	return 0;
 }

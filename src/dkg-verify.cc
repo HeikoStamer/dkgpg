@@ -32,6 +32,7 @@
 #include <libTMCG.hh>
 
 #include "dkg-common.hh"
+#include "dkg-io.hh"
 
 std::vector<std::string>		peers;
 

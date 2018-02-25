@@ -45,6 +45,7 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include <aiounicast_select.hh>
 
 #include "dkg-common.hh"
+#include "dkg-io.hh"
 #include "dkg-tcpip-common.hh"
 #include "dkg-gnunet-common.hh"
 

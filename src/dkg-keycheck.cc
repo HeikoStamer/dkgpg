@@ -36,6 +36,7 @@
 #include <climits>
 
 #include <libTMCG.hh>
+#include "dkg-io.hh"
 
 #define TRIVIAL_SIZE 1024
 #define PRIMES_SIZE 669
@@ -597,56 +598,6 @@ void sig_check_dsa
 	if (suspicious)
 		std::cout << "r is SUSPICIOUS (small k used)" << std::endl << "\t";
 	mpz_clear(pm1), mpz_clear(tmp);
-}
-
-bool read_key_file
-	(const std::string &filename, std::string &result)
-{
-	// read the public/private key from file
-	std::string line;
-	std::stringstream key;
-	std::ifstream ifs(filename.c_str(), std::ifstream::in);
-	if (!ifs.is_open())
-	{
-		std::cerr << "ERROR: cannot open public/private key file" << std::endl;
-		return false;
-	}
-	while (std::getline(ifs, line))
-		key << line << std::endl;
-	if (!ifs.eof())
-	{
-		ifs.close();
-		std::cerr << "ERROR: reading public/private key file until EOF failed" << std::endl;
-		return false;
-	}
-	ifs.close();
-	result = key.str();
-	return true;
-}
-
-bool read_binary_key_file
-	(const std::string &filename, const tmcg_openpgp_armor_t type, std::string &result)
-{
-	// read the public/private key from file and convert to ASCII armor
-	tmcg_openpgp_octets_t input;
-	std::ifstream ifs(filename.c_str(), std::ifstream::in);
-	if (!ifs.is_open())
-	{
-		std::cerr << "ERROR: cannot open public/private key file" << std::endl;
-		return false;
-	}
-	char c;
-	while (ifs.get(c))
-		input.push_back(c);
-	if (!ifs.eof())
-	{
-		ifs.close();
-		std::cerr << "ERROR: reading public/private key file until EOF failed" << std::endl;
-		return false;
-	}
-	ifs.close();
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(type, input, result);
-	return true;
 }
 
 int main

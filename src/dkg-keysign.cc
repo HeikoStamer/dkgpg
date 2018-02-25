@@ -49,6 +49,7 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include "dkg-tcpip-common.hh"
 #include "dkg-gnunet-common.hh"
 #include "dkg-common.hh"
+#include "dkg-io.hh"
 
 int 					pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
 pid_t 					pid[DKGPG_MAX_N];

@@ -760,6 +760,7 @@ int main
 		if (!mpz_set_gcry_mpi(primary->rsa_n, rsa_n) || !mpz_set_gcry_mpi(primary->rsa_e, rsa_e))
 		{
 			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
+			mpz_clear(rsa_n), mpz_clear(rsa_e);
 			delete primary;
 			return -1;
 		}
@@ -774,6 +775,7 @@ int main
 		    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) || !mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
 		{
 			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
+			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
 			delete primary;
 			return -1;
 		}
@@ -921,6 +923,7 @@ int main
 			if (!mpz_set_gcry_mpi(primary->subkeys[j]->rsa_n, rsa_n) || !mpz_set_gcry_mpi(primary->subkeys[j]->rsa_e, rsa_e))
 			{
 				std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
+				mpz_clear(rsa_n), mpz_clear(rsa_e);
 				delete primary;
 				return -1;
 			}
@@ -935,6 +938,7 @@ int main
 			    !mpz_set_gcry_mpi(primary->subkeys[j]->elg_y, elg_y))
 			{
 				std::cerr << "ERROR: cannot convert ElGamal key material" << std::endl;
+				mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
 				delete primary;
 				return -1;
 			}
@@ -943,6 +947,7 @@ int main
 				if (!mpz_set_gcry_mpi(primary->dsa_q, dsa_q))
 				{
 					std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
+					mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
 					delete primary;
 					return -1;
 				}
@@ -960,6 +965,7 @@ int main
 			    !mpz_set_gcry_mpi(primary->subkeys[j]->dsa_g, dsa_g) || !mpz_set_gcry_mpi(primary->subkeys[j]->dsa_y, dsa_y))
 			{
 				std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
+				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y);
 				delete primary;
 				return -1;
 			}
@@ -981,6 +987,7 @@ int main
 			    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) || !mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
 			{
 				std::cerr << "ERROR: cannot convert DSA primary key material" << std::endl;
+				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
 				delete primary;
 				return -1;
 			}

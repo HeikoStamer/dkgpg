@@ -8,10 +8,10 @@ included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
 1.0.5   Major improvements have been achieved in this release: For signing
-        of a OpenPGP public key (certification) the program dkg-keysign was
-        added. With dkg-keycheck and the option "-r" some basic checks on
+        of an OpenPGP public key (certification) the program dkg-keysign is
+        contained. With dkg-keycheck and the option "-r" some basic checks on
         RSA keys can be performed. Two new options ("-f" and "-t") enhance
-        the prossiblilities of dkg-verify. A new option for dkg-encrypt make
+        the possibilities of dkg-verify. A new option for dkg-encrypt make
         use of zero key ID encryption privacy. Last but not least, memory
         locking and secure memory allocation have been implemented.
 1.0.4   Since this release not required OpenPGP packets will be ignored.

@@ -685,6 +685,8 @@ int main
 		primary->CheckSubkeys(opt_verbose);
 		if (opt_reduce)
 			primary->Reduce();
+		if (primary->weak(opt_verbose) && opt_verbose)
+			std::cerr << "WARNING: weak primary key detected" << std::endl;
 	}
 	else
 	{
@@ -861,6 +863,8 @@ int main
 	// show information w.r.t. (valid) subkeys
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
+		if (primary->subkeys[j]->weak(opt_verbose) && opt_verbose)
+			std::cerr << "WARNING: weak subkey detected" << std::endl;
 		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << std::hex << std::uppercase << "\t";
 		for (size_t i = 0; i < primary->subkeys[j]->id.size(); i++)
 			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)primary->subkeys[j]->id[i] << " ";

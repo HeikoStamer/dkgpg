@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* dkg-keysign, dkg-verify, dkg-encrypt: use PublicKeyBlockParse()
 * dkg-generate: create a direct-key signature (0x1f) with key flags
 + dkg-tools: use own getopt parser with long options
 

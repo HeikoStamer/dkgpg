@@ -344,7 +344,7 @@ bool decrypt_message
 			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
 		}
-		else if (ptag == 0xFE)
+		else if ((ptag == 0xFE) || (ptag == 0xFA) || (ptag == 0xFB) || (ptag == 0xFC))
 		{
 			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -458,6 +458,36 @@ bool parse_signature
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
+		}
+		else if (ptag == 0xFA)
+		{
+			if (opt_verbose)
+				std::cerr << "WARNING: unrecognized critical OpenPGP subpacket found at #" << pnum << std::endl;
+			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore signature with critical subpacket
+		}
+		else if (ptag == 0xFB)
+		{
+			if (opt_verbose)
+				std::cerr << "WARNING: unrecognized OpenPGP subpacket found at #" << pnum << std::endl;
+			ptag = 0x02; // process signature
+		}
+		else if (ptag == 0xFC)
+		{
+			if (opt_verbose)
+				std::cerr << "WARNING: unrecognized OpenPGP signature packet found at #" << pnum << std::endl;
+			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore packet
+		}
+		else if (ptag == 0xFD)
+		{
+			if (opt_verbose)
+				std::cerr << "WARNING: unrecognized OpenPGP key packet found at #" << pnum << std::endl;
+			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+			cleanup_containers(qual, v_i, c_ik);
+			continue; // ignore packet
 		}
 		else if (ptag == 0xFE)
 		{

@@ -1053,7 +1053,7 @@ int main
 			if (i >= ii)
 				continue;
 			if (!gcry_mpi_cmp(sigs[i]->dsa_r, sigs[ii]->dsa_r) && gcry_mpi_cmp(sigs[i]->dsa_s, sigs[ii]->dsa_s))
-				std::cout << "DSA: r is EQUAL for both signatures (e.g. same k used)" << std::endl;
+				std::cout << "WEAKNESS: DSA value r is EQUAL for both signatures (e.g. same k used)" << std::endl;
 		}
 	}
 

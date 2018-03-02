@@ -1,7 +1,7 @@
-.TH DKG\-ENCRYPT "1" "January 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "March 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
-dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
+dkg\-encrypt \- simple encryption of a message with AES\-256 according to OpenPGP
 
 .SH SYNOPSIS
 .B dkg\-encrypt
@@ -10,20 +10,19 @@ dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
 
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN or a file according to the OpenPGP
-standard (RFC 4880). KEYFILE must contain the ASCII\-armored public key, for which the
-encryption is performed.
+standard (RFC 4880). KEYFILE must contain the ASCII\-armored public key block with either
+some encryption-capable subkey (recommended) or an encryption-capable primary key, for which
+the actual encryption is performed. If more than one valid admissible encryption key is found,
+than the generated symmetric session key is encrypted for all of these keys. 
 .PP
 First, AES\-256 is applied as symmetric cipher with a randomly chosen 256\-bit session key.
 Finally, the session key is transformed by PKCS#1 v1.5 block encoding and encrypted with
-the ElGamal public\-key algorithm. Note that an integrity protection packet (MDC) is always
-appended.
+the public\-key algorithm. Note that an integrity protection packet (MDC) is always appended.
 .PP
 With the option "\-z" the included key ID is set to zero, i.e., a "wild card" or
 "speculative" key ID. This format helps to reduce traffic analysis of messages. 
 .PP
-Currently, as public\-key algorithm only ElGamal is supported and all certification and
-subkey binding self-signatures in the corresponding subkey packet of the public key must
-be DSA signatures. This is due to the limited OpenPGP support in LibTMCG.
+Currently, as public\-key encryption algorithms only RSA and ElGamal are supported.
 .PP
 The encrypted message in ASCII\-armored is written to STDOUT or to an output file and can
 later be processed with
@@ -51,6 +50,9 @@ print the version number of the program
 .TP
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
+.TP
+\fB\-w\fR, \fB\-\-weak\fR
+allow usage of weak keys
 .TP
 \fB\-z\fR, \fB\-\-zero\-keyid\fR
 set the included key ID to zero for improved privacy

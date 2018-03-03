@@ -97,7 +97,7 @@ int main
 				std::cout << "  -t TIMESPEC    signature made after given TIMESPEC is not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -w, --weak     allow usage of weak keys" << std::endl;
+				std::cout << "  -w, --weak     allow usage of weak or expired keys" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
@@ -178,7 +178,7 @@ int main
 	if (parse_ok)
 	{
 		primary->CheckSelfSignatures(opt_verbose);
-		if (!primary->valid)
+		if (!primary->valid && !opt_weak)
 		{
 			std::cerr << "ERROR: primary key is not valid" << std::endl;
 			delete primary;
@@ -321,7 +321,7 @@ int main
 		return -2;
 	}
 	// 4. key validity time (expired keys are not valid)
-	if (ekeytime && (current_time > (ckeytime + ekeytime)))
+	if (!opt_weak && ekeytime && (current_time > (ckeytime + ekeytime)))
 	{
 		std::cerr << "ERROR: corresponding key is expired" << std::endl;
 		delete signature;

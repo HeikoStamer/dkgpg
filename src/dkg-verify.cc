@@ -30,33 +30,7 @@
 #include <ctime>
 
 #include <libTMCG.hh>
-
-#include "dkg-common.hh"
 #include "dkg-io.hh"
-
-std::vector<std::string>		peers;
-
-std::string				passphrase, userid, ifilename, kfilename;
-tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
-std::map<size_t, size_t>		idx2dkg, dkg2idx;
-mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
-size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual, dss_x_rvss_qual;
-std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
-size_t					dkg_n, dkg_t, dkg_i;
-std::vector<size_t>			dkg_qual;
-std::vector<mpz_ptr>			dkg_v_i;
-std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
-gcry_mpi_t 				gk, myk, sig_r, sig_s;
-gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
-
-int 					opt_verbose = 0;
-bool					libgcrypt_secmem = false;
-bool 					opt_binary = false;
-char					*opt_ifilename = NULL;
 
 int main
 	(int argc, char **argv)
@@ -64,10 +38,15 @@ int main
 	static const char *usage = "dkg-verify [OPTIONS] -i INPUTFILE KEYFILE";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
-	char *opt_sigfrom = NULL, *opt_sigto = NULL;
-	std::string sigfrom_str, sigto_str;
-	struct tm sigfrom_tm = { 0 }, sigto_tm = { 0 };
-	time_t sigfrom = 1243810800, sigto = time(NULL);
+
+	std::string	ifilename, kfilename;
+	int 		opt_verbose = 0;
+	bool		opt_binary = false, opt_weak = false;
+	char		*opt_ifilename = NULL;
+	char		*opt_sigfrom = NULL, *opt_sigto = NULL;
+	std::string	sigfrom_str, sigto_str;
+	struct tm	sigfrom_tm = { 0 }, sigto_tm = { 0 };
+	time_t		sigfrom = 1243810800, sigto = time(NULL);
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -103,7 +82,8 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || 
+		         (arg.find("-h") == 0) || (arg.find("-V") == 0) || (arg.find("-w") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -117,6 +97,7 @@ int main
 				std::cout << "  -t TIMESPEC    signature made after given TIMESPEC is not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				std::cout << "  -w, --weak     allow usage of weak keys" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
@@ -128,6 +109,8 @@ int main
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
+			if ((arg.find("-w") == 0) || (arg.find("--weak") == 0))
+				opt_weak = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -179,151 +162,211 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
-	// read and parse the public key (no ElGamal subkey required)
+	// read the public key
 	std::string armored_pubkey;
 	if (opt_binary && !read_binary_key_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
 		return -1;
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
-	init_mpis();
-	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_openpgp_byte_t keyusage = 0, keystrength = 1;
-	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength, false))
+
+	// parse the public key block and corresponding signatures
+	TMCG_OpenPGP_Pubkey *primary = NULL;
+	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+	if (parse_ok)
 	{
-		std::cerr << "ERROR: cannot parse resp. use the provided public key" << std::endl;
-		release_mpis();
-		return -1;
+		primary->CheckSelfSignatures(opt_verbose);
+		if (!primary->valid)
+		{
+			std::cerr << "ERROR: primary key is not valid" << std::endl;
+			delete primary;
+			return -1;
+		}
+		primary->CheckSubkeys(opt_verbose);
+		primary->Reduce(); // keep only valid subkeys
+		if (primary->weak(opt_verbose) && !opt_weak)
+		{
+			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
+			delete primary;
+			return -1;
+		}
 	}
-	if (!keystrength)
+	else
 	{
-		std::cerr << "ERROR: provided public key is too weak" << std::endl;
-		release_mpis();
+		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+		if (primary)
+			delete primary;
 		return -1;
 	}
 
 	// read the signature from stdin
-	std::string signature;
+	std::string armored_signature;
 #ifdef DKGPG_TESTSUITE
 	std::string sigfilename = "Test1_output.sig";
-	if (!read_message(sigfilename, signature))
+	if (!read_message(sigfilename, armored_signature))
 	{
-		release_mpis();
+		delete primary;
 		return -1;
 	}
 #else
 	char c;
 	while (std::cin.get(c))
-		signature += c;
+		armored_signature += c;
 	std::cin.clear();
 #endif
 
 	// parse the signature
-	tmcg_openpgp_octets_t trailer;
-	tmcg_openpgp_byte_t hashalgo = 0, sigstrength = 1;
-	time_t csigtime = 0, sigexptime = 0;
-	bool sigV3 = false;
-	if (!parse_signature(signature, 0x00, csigtime, sigexptime, hashalgo, trailer, sigV3, sigstrength))
+	TMCG_OpenPGP_Signature *signature = NULL;
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		SignatureParse(armored_signature, opt_verbose, signature);
+	if (parse_ok)
+	{
+		if (signature->type != 0x00)
+		{
+			std::cerr << "ERROR: wrong signature type " << (int)signature->type << std::endl;
+			delete signature;
+			delete primary;
+			return -1;
+		}
+	}
+	else
 	{
 		std::cerr << "ERROR: cannot parse resp. use the provided signature" << std::endl;
-		release_mpis();
+		delete primary;
 		return -1;
 	}
-	if (!sigstrength)
+	if (opt_verbose)
+		signature->PrintInfo();
+
+	// select corresponding key of the issuer from subkeys
+	bool subkey_selected = false;
+	size_t subkey_idx = 0, keyusage = 0;
+	time_t ckeytime = 0, ekeytime = 0;
+	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
-		std::cerr << "ERROR: provided signature is too weak" << std::endl;
-		release_mpis();
-		return -1;
+		if (((primary->subkeys[j]->AccumulateFlags() & 0x02) == 0x02) ||
+		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == 1) || 
+				(primary->subkeys[j]->pkalgo == 3) || (primary->subkeys[j]->pkalgo == 17))))
+		{
+			if (CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(signature->issuer, primary->subkeys[j]->id))
+			{
+				subkey_selected = true;
+				subkey_idx = j;
+				keyusage = primary->subkeys[j]->AccumulateFlags();
+				ckeytime = primary->subkeys[j]->creationtime;
+				ekeytime = primary->subkeys[j]->expirationtime;
+				break;
+			}
+		}
+	}
+
+	// check the primary key, if no admissible subkey has been selected
+	if (!subkey_selected)
+	{
+
+		if (((primary->AccumulateFlags() & 0x02) != 0x02) &&
+		    (!primary->AccumulateFlags() && (primary->pkalgo != 1) &&
+			(primary->pkalgo != 3) && (primary->pkalgo != 17)))
+		{
+			std::cerr << "ERROR: no admissible public key found" << std::endl;
+			delete signature;
+			delete primary;
+			return -1;
+		}
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(signature->issuer, primary->id))
+		{
+			std::cerr << "ERROR: no admissible public key found" << std::endl;
+			delete signature;
+			delete primary;
+			return -1;
+		}
+		keyusage = primary->AccumulateFlags();
+		ckeytime = primary->creationtime;
+		ekeytime = primary->expirationtime;
 	}
 
 	// additional validity checks on key and signature
 	time_t current_time = time(NULL);
 	// 1. key validity time (signatures made before key creation or after key expiry are not valid)
-	if (csigtime < ckeytime)
+	if (signature->creationtime < ckeytime)
 	{
-		std::cout << "ERROR: signature was made before key creation" << std::endl;
+		std::cerr << "ERROR: signature was made before key creation" << std::endl;
+		delete signature;
+		delete primary;
 		return -2;
 	}
-	if (ekeytime && (csigtime > (ckeytime + ekeytime)))
+	if (ekeytime && (signature->creationtime > (ckeytime + ekeytime)))
 	{
-		std::cout << "ERROR: signature was made after key expiry" << std::endl;
+		std::cerr << "ERROR: signature was made after key expiry" << std::endl;
+		delete signature;
+		delete primary;
 		return -2;
 	}
 	// 2. signature validity time (expired signatures are not valid)
-	if (sigexptime && (current_time > (csigtime + sigexptime)))
+	if (signature->expirationtime && (current_time > (signature->creationtime + signature->expirationtime)))
 	{
-		std::cout << "ERROR: signature is expired" << std::endl;
+		std::cerr << "ERROR: signature is expired" << std::endl;
+		delete signature;
+		delete primary;
 		return -2;
 	}
 	// 3. key usage flags (signatures made by keys not with the "signing" capability are not valid)
-	if ((keyusage & 0x02) != 0x02)
+	if (!opt_weak && ((keyusage & 0x02) != 0x02))
 	{
-		std::cout << "ERROR: corresponding key was not intented for signing" << std::endl;
+		std::cerr << "ERROR: corresponding key was not intented for signing" << std::endl;
+		delete signature;
+		delete primary;
 		return -2;
 	}
 	// 4. key validity time (expired keys are not valid)
 	if (ekeytime && (current_time > (ckeytime + ekeytime)))
 	{
-		std::cout << "ERROR: corresponding key is expired" << std::endl;
+		std::cerr << "ERROR: corresponding key is expired" << std::endl;
+		delete signature;
+		delete primary;
 		return -2;
 	}
 	// 5. signature time (signatures made before the sigfrom or after the sigto timespec are not valid)
-	if (csigtime < sigfrom)
+	if (signature->creationtime < sigfrom)
 	{
-		std::cout << "ERROR: signature was made before given TIMESPEC" << std::endl;
+		std::cerr << "ERROR: signature was made before given TIMESPEC" << std::endl;
+		delete signature;
+		delete primary;
 		return -2;
 	}
-	if (csigtime > sigto)
+	if (signature->creationtime > sigto)
 	{
-		std::cout << "ERROR: signature was made after given TIMESPEC" << std::endl;
+		std::cerr << "ERROR: signature was made after given TIMESPEC" << std::endl;
+		delete signature;
+		delete primary;
 		return -2;
 	}
 
-	// compute the hash of the input file
-	if (opt_verbose)
-		std::cout << "INFO: hashing the input file \"" << opt_ifilename << "\"" << std::endl;
-	tmcg_openpgp_octets_t hash, left;
-	bool hashret = false;
-	if (sigV3)
-		hashret = CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHashV3(opt_ifilename, trailer, hashalgo, hash, left);
+	// verify signature cryptographically
+	bool verify_ok = false;
+	if (subkey_selected)
+		verify_ok = signature->Verify(primary->subkeys[subkey_idx]->key, opt_ifilename, opt_verbose);
 	else
-		hashret = CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left);
-	if (!hashret)
-	{
-		std::cerr << "ERROR: BinaryDocumentHash() failed; cannot process input file \"" << opt_ifilename << "\"" << std::endl;
-		release_mpis();
-		return -1;
-	}
+		verify_ok = signature->Verify(primary->key, opt_ifilename, opt_verbose);
 
-	// verify the signature
-	gcry_error_t ret;
-	gcry_sexp_t dsakey;
-	size_t erroff;
-	ret = gcry_sexp_build(&dsakey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
-	if (ret)
-	{
-		std::cerr << "ERROR: parsing DSA key material failed (rc = " << gcry_err_code(ret) << ", str = " <<
-			gcry_strerror(ret) << ")" << std::endl;
-		release_mpis();
-		return ret;
-	}
-	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, sig_r, sig_s);
-	if (ret)
-	{
-		std::cerr << "ERROR: AsymmetricVerifyDSA() failed (rc = " << gcry_err_code(ret) << ", str = " <<
-			gcry_strerror(ret) << ")" << std::endl;
-		release_mpis();
-		gcry_sexp_release(dsakey);
-		return ret;
-	}
+	// release signature
+	delete signature;
 
-	// release mpis and keys
-	release_mpis();
-	gcry_sexp_release(dsakey);
+	// release primary key structure
+	delete primary;
 
-	if (opt_verbose)
-		std::cout << "INFO: Good signature for input file \"" << opt_ifilename << "\"" << std::endl;
-	
+	if (!verify_ok)
+	{
+		if (opt_verbose)
+			std::cerr << "INFO: Bad signature for input file \"" << opt_ifilename << "\"" << std::endl;
+		return -3;
+	}
+	else
+	{
+		if (opt_verbose)
+			std::cerr << "INFO: Good signature for input file \"" << opt_ifilename << "\"" << std::endl;
+	}
 	return 0;
 }

@@ -125,14 +125,14 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	// read the public key
 	std::string armored_pubkey;
 	if (!read_key_file(kfilename, armored_pubkey))
 		return -1;
 
-	// parse the public key and corresponding signatures
+	// parse the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
 	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
@@ -205,7 +205,8 @@ int main
 	{	
 		if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
 		    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
-		    (primary->pkalgo != 1) && (primary->pkalgo != 2) && (primary->pkalgo != 16))
+		    (!primary->AccumulateFlags() && (primary->pkalgo != 1) &&
+			(primary->pkalgo != 2) && (primary->pkalgo != 16)))
 		{
 			std::cerr << "ERROR: no encryption-capable public key found" << std::endl;
 			delete primary;

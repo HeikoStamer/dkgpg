@@ -1,7 +1,7 @@
 .TH DKG\-VERIFY "1" "March 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
-dkg\-verify \- verifies a detached signature according to OpenPGP (only DSA/DSS)
+dkg\-verify \- verifies a detached signature of a file according to OpenPGP
 
 .SH SYNOPSIS
 .B dkg\-verify
@@ -11,17 +11,18 @@ dkg\-verify \- verifies a detached signature according to OpenPGP (only DSA/DSS)
 .SH DESCRIPTION
 This program verifies a detached signature read from STDIN according to the OpenPGP standard.
 KEYFILE must contain the ASCII\-armored public key, for which the verification is performed.
-Currently, only the primary key is considered as the corresponding signing key and DSA/DSS
-is the only permitted public-key algorithm. The input file for which the signature is checked
-must be specified by the mandatory option "\-i".
+That means, KEYFILE must contain the corresponding public key of the signature issuer.
+Currently, only DSA/DSS and RSA are permitted as public-key algorithms. The input file for
+which the signature is checked must be specified by the mandatory option "\-i".
 .PP
-By the options "\-f" and "\-t" the user can provide a validity period, i.e., signatures made
-before the TIMESPEC of option "\-f" or after the TIMESPEC of option "\-t" are not valid.
-The corresponding TIMESPEC must have the format "YYYY-MM-DD[_HH:MM:SS]". The default values
-are "2009-06-01 00:00:00 (publication date of FIPS 186-3)" and the current system date, respectively.
+By "\-f" and "\-t" the user can provide a validity period, i.e., signatures made before the
+TIMESPEC of option "\-f" or after the TIMESPEC of option "\-t" are not valid. The corresponding
+TIMESPEC must be of the format "YYYY-MM-DD[_HH:MM:SS]". The default values are
+"2009-06-01 00:00:00 (publication date of FIPS 186-3)" and the current system date, respectively.
 
 .PP
-The program returns a non\-zero value on error, e.g., if the signature is invalid.
+The program returns a non\-zero value on error, e.g., if the detached signature is invalid or
+no admissible public key is found in KEYFILE.
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
@@ -46,6 +47,9 @@ print the version number of the program
 .TP
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
+.TP
+\fB\-w\fR, \fB\-\-weak\fR
+allow usage of weak keys
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT be used in

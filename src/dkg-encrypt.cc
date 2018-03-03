@@ -27,35 +27,7 @@
 #include <string>
 
 #include <libTMCG.hh>
-
 #include "dkg-io.hh"
-
-std::vector<std::string>		peers;
-
-std::string				passphrase, userid, ifilename, ofilename;
-tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
-std::map<size_t, size_t>		idx2dkg, dkg2idx;
-mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
-size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual, dss_x_rvss_qual;
-std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
-size_t					dkg_n, dkg_t, dkg_i;
-std::vector<size_t>			dkg_qual;
-std::vector<mpz_ptr>			dkg_v_i;
-std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
-gcry_mpi_t 				gk, myk, sig_r, sig_s;
-gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
-
-int 					opt_verbose = 0;
-bool					libgcrypt_secmem = false;
-bool					opt_binary = false;
-bool					opt_weak = false;
-bool					opt_z = false;
-char					*opt_ifilename = NULL;
-char					*opt_ofilename = NULL;
 
 int main
 	(int argc, char **argv)
@@ -64,6 +36,11 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
+	std::string	kfilename, ifilename, ofilename;
+	int		opt_verbose = 0;
+	bool		opt_binary = false, opt_weak = false, opt_z = false;
+	char		*opt_ifilename = NULL;
+	char		*opt_ofilename = NULL;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -124,11 +101,10 @@ int main
 			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
 			return -1;
 		}
-		// store argument
-		peers.push_back(arg);
+		kfilename = arg;
 	}
 #ifdef DKGPG_TESTSUITE
-	peers.push_back("Test1_dkg-pub.asc");
+	kfilename = "Test1_dkg-pub.asc";
 	opt_binary = true;
 	ofilename = "Test1_output.bin";
 	opt_ofilename = (char*)ofilename.c_str();
@@ -136,14 +112,9 @@ int main
 #endif
 
 	// check command line arguments
-	if (peers.size() < 1)
+	if (kfilename.length() == 0)
 	{
-		std::cerr << "ERROR: no KEYFILE given as argument; usage: " << argv[0] << " KEYFILE" << std::endl;
-		return -1;
-	}
-	if (peers.size() != 1)
-	{
-		std::cerr << "ERROR: too many arguments given" << std::endl;
+		std::cerr << "ERROR: argument KEYFILE is missing; usage: " << usage << std::endl;
 		return -1;
 	}
 
@@ -158,7 +129,7 @@ int main
 
 	// read the public key
 	std::string armored_pubkey;
-	if (!read_key_file(peers[0], armored_pubkey))
+	if (!read_key_file(kfilename, armored_pubkey))
 		return -1;
 
 	// parse the public key and corresponding signatures

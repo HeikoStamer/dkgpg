@@ -11,9 +11,10 @@ dkg\-encrypt \- simple encryption of a message with AES\-256 according to OpenPG
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN or a file according to the OpenPGP
 standard (RFC 4880). KEYFILE must contain the ASCII\-armored public key block with either
-some encryption-capable subkey (recommended) or an encryption-capable primary key, for which
-the actual encryption is performed. If more than one valid admissible encryption key is found,
-than the generated symmetric session key is encrypted for all of these keys. 
+any encryption-capable subkey (recommended) or an encryption-capable primary key (last
+resort), for which the actual encryption is performed. If more than one valid admissible
+encryption subkey is found in the key block, than the generated symmetric session key is
+encrypted for each of these keys. 
 .PP
 First, AES\-256 is applied as symmetric cipher with a randomly chosen 256\-bit session key.
 Finally, the session key is transformed by PKCS#1 v1.5 block encoding and encrypted with

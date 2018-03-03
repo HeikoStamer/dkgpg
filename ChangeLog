@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-03-03] dkg-encrypt: support generic encryption and public key parsing
 * [2018-02-27] dkg-generate: added no-modify key server preferences (0x80)
 * [2018-02-24] improved error handling for unrecognized OpenPGP (sub)packets
 * [2018-02-24] dkg-keycheck: changed semantics of option "-r" (reduce subkeys)

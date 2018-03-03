@@ -196,7 +196,8 @@ int main
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
-		    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08))
+		    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08) ||
+		    (primary->subkeys[j]->pkalgo == 1) || (primary->subkeys[j]->pkalgo == 2) || (primary->subkeys[j]->pkalgo == 16))
 		{
 			if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
 			{
@@ -206,7 +207,7 @@ int main
 			else if ((primary->subkeys[j]->pkalgo != 1) && (primary->subkeys[j]->pkalgo != 2) && (primary->subkeys[j]->pkalgo != 16))
 			{
 				if (opt_verbose)
-					std::cerr << "WARNING: unsupported public-key algoritm for encryption ignored" << std::endl;
+					std::cerr << "WARNING: subkey with unsupported public-key algorithm for encryption ignored" << std::endl;
 			}
 			else
 			{
@@ -231,7 +232,8 @@ int main
 	if (!selected.size())
 	{	
 		if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
-		    ((primary->AccumulateFlags() & 0x08) != 0x08))
+		    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
+		    (primary->pkalgo != 1) && (primary->pkalgo != 2) && (primary->pkalgo != 16))
 		{
 			std::cerr << "ERROR: no encryption-capable public key found" << std::endl;
 			delete primary;

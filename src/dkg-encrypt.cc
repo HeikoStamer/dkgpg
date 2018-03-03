@@ -197,7 +197,8 @@ int main
 	{
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
 		    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08) ||
-		    (primary->subkeys[j]->pkalgo == 1) || (primary->subkeys[j]->pkalgo == 2) || (primary->subkeys[j]->pkalgo == 16))
+		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == 1) || 
+				(primary->subkeys[j]->pkalgo == 2) || (primary->subkeys[j]->pkalgo == 16))))
 		{
 			if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
 			{
@@ -228,7 +229,7 @@ int main
 		}
 	}
 
-	// check the primary key, if no encryption-capable subkeys are selected
+	// check the primary key, if no encryption-capable subkeys have been selected
 	if (!selected.size())
 	{	
 		if (((primary->AccumulateFlags() & 0x04) != 0x04) &&

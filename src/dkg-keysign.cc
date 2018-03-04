@@ -236,14 +236,14 @@ void run_instance
 		exit(-1);
 	}
 
-	// prepare the trailer of the certification (revocation) signature
+	// prepare the trailer of the certification (revocation) signatures
 	tmcg_openpgp_octets_t trailer;
 	if (opt_r)
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x10, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 
-	// read and parse the public key including user ID to sign
+	// read the public key
 	std::string armored_pubkey;
 	if (!read_key_file(opt_ifilename, armored_pubkey))
 	{
@@ -252,11 +252,50 @@ void run_instance
 		release_mpis();
 		exit(-1);
 	}
+
+	// parse the public key block and corresponding signatures
+	TMCG_OpenPGP_Pubkey *primary = NULL;
+	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+	if (parse_ok)
+	{
+		primary->CheckSelfSignatures(opt_verbose);
+		if (!primary->valid)
+		{
+			std::cerr << "ERROR: primary key to sign is not valid" << std::endl;
+			delete primary;
+			delete rbc, delete aiou, delete aiou2;
+			release_mpis();
+			exit(-1);
+		}
+		if (primary->weak(opt_verbose))
+		{
+			std::cerr << "ERROR: weak primary key to sign is not allowed" << std::endl;
+			delete primary;
+			delete rbc, delete aiou, delete aiou2;
+			release_mpis();
+			exit(-1);
+		}
+		primary->Reduce(); // keep only valid user IDs
+	}
+	else
+	{
+		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+		if (primary)
+			delete primary;
+		delete rbc, delete aiou, delete aiou2;
+		release_mpis();
+		exit(-1);
+	}
+
+
+// TODO: loop for all valid user IDs
 	ckeytime = 0, ekeytime = 0;
 	keyid.clear(), pub.clear(), uidsig.clear();
 	if (!parse_public_key_for_certification(armored_pubkey, ckeytime, ekeytime))
 	{
 		std::cerr << "ERROR: S_" << whoami << ": parse_public_key_for_certification() failed" << std::endl;
+		delete primary;
 		delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -324,6 +363,7 @@ void run_instance
 	if (!dss->CheckGroup())
 	{
 		std::cerr << "ERROR: S_" << whoami << ": " << "tDSS domain parameters are not correctly generated!" << std::endl;
+		delete primary;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -347,6 +387,7 @@ void run_instance
 		std::cerr << "ERROR: S_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		delete primary;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -356,6 +397,7 @@ void run_instance
 		std::cerr << "ERROR: S_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		delete primary;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -371,6 +413,7 @@ void run_instance
 			std::cerr << "INFO: S_" << whoami << ": log follows " << std::endl << err_log_sign.str();
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		delete primary;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -382,6 +425,7 @@ void run_instance
 		std::cerr << "ERROR: S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		delete primary;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -391,6 +435,7 @@ void run_instance
 		std::cerr << "ERROR: S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		delete primary;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -408,6 +453,9 @@ void run_instance
 
 	// release tDSS
 	delete dss;
+
+	// release primary key structures
+	delete primary;
 
 	// release RBC
 	delete rbc;

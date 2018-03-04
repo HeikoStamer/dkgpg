@@ -67,7 +67,9 @@ Overview
   interactive signing protocol. Such a detached signature can be verified with
   any OpenPGP-compatible implementation. Thus DKGPG solves the problem of
   distributed code-signing without secret key splitting (e.g. libgfshare) and
-  laborious reconstruction ceremonies (e.g. DNSSEC root signing key).
+  laborious reconstruction ceremonies (e.g. DNSSEC root signing key). Last
+  but not least, the program dkg-keysign generates certification signatures
+  in a similar manner for each valid user ID of a given public key.
 
   Please consult the manual pages for detailed information on the programs.
 

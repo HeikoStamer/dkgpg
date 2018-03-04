@@ -185,7 +185,8 @@ int main
 			return -1;
 		}
 		primary->CheckSubkeys(opt_verbose);
-		primary->Reduce(); // keep only valid subkeys
+		if (!opt_weak)
+			primary->Reduce(); // keep only valid subkeys
 		if (primary->weak(opt_verbose) && !opt_weak)
 		{
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
@@ -225,7 +226,7 @@ int main
 	{
 		if (signature->type != 0x00)
 		{
-			std::cerr << "ERROR: wrong signature type " << (int)signature->type << std::endl;
+			std::cerr << "ERROR: wrong signature type " << (int)signature->type << " found" << std::endl;
 			delete signature;
 			delete primary;
 			return -1;

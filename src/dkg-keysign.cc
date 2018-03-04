@@ -236,13 +236,6 @@ void run_instance
 		exit(-1);
 	}
 
-	// prepare the trailer of the certification (revocation) signatures
-	tmcg_openpgp_octets_t trailer;
-	if (opt_r)
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
-	else
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x10, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
-
 	// read the public key
 	std::string armored_pubkey;
 	if (!read_key_file(opt_ifilename, armored_pubkey))
@@ -288,33 +281,14 @@ void run_instance
 		exit(-1);
 	}
 
-
-// TODO: loop for all valid user IDs
-	ckeytime = 0, ekeytime = 0;
-	keyid.clear(), pub.clear(), uidsig.clear();
-	if (!parse_public_key_for_certification(armored_pubkey, ckeytime, ekeytime))
-	{
-		std::cerr << "ERROR: S_" << whoami << ": parse_public_key_for_certification() failed" << std::endl;
-		delete primary;
-		delete rbc, delete aiou, delete aiou2;
-		release_mpis();
-		exit(-1);
-	}
-
-	// compute the hash of the certified key resp. user ID
-	tmcg_openpgp_octets_t pub_hashing, fpr, hash, left;
-	for (size_t i = 6; i < pub.size(); i++)
-		pub_hashing.push_back(pub[i]);
-	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, fpr);
-	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, trailer, hashalgo, hash, left);
-	char *hex_digest = new char[(3 * fpr.size()) + 1];
-	for (size_t i = 0; i < (fpr.size() / 2); i++)
-                snprintf(hex_digest + (5 * i), 6, "%02X%02X ", fpr[2*i], fpr[(2*i)+1]);
+	// prepare the fingerprint, trailer, and accumulator of the certification (revocation) signatures
+	tmcg_openpgp_octets_t fpr, trailer, all;
+	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
 	if (opt_r)
-		std::cerr << "INFO: going to revoke signature on key of \"" << userid << "\" with fingerprint " << hex_digest << std::endl;
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else
-		std::cerr << "INFO: going to sign key of \"" << userid << "\" with fingerprint " << hex_digest << std::endl;
-	delete [] hex_digest;
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x10, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+	all.insert(all.end(), primary->packet.begin(), primary->packet.end());
 
 	// create an instance of tDSS by stored parameters from private key
 	std::stringstream dss_in;
@@ -369,81 +343,102 @@ void run_instance
 		exit(-1);
 	}
 
-	// sign the hash
-	tmcg_openpgp_byte_t buffer[1024];
-	gcry_mpi_t r, s, h;
-	mpz_t dsa_m, dsa_r, dsa_s;
-	size_t buflen = 0;
-	gcry_error_t ret;
-	memset(buffer, 0, sizeof(buffer));
-	for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer))); i++, buflen++)
-		buffer[i] = hash[i];
-	r = gcry_mpi_new(2048);
-	s = gcry_mpi_new(2048);
-	mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
-	ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
-	if (ret)
+// TODO: loop for all valid user IDs	
+	for (size_t j = 0; j < primary->userids.size(); j++)
 	{
-		std::cerr << "ERROR: S_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete primary;
-		delete dss, delete rbc, delete aiou, delete aiou2;
-		release_mpis();
-		exit(-1);
-	}
-	if (!mpz_set_gcry_mpi(h, dsa_m))
-	{
-		std::cerr << "ERROR: S_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete primary;
-		delete dss, delete rbc, delete aiou, delete aiou2;
-		release_mpis();
-		exit(-1);
-	}
-	gcry_mpi_release(h);
-	std::stringstream err_log_sign;
-	if (opt_verbose)
-		std::cerr << "INFO: S_" << whoami << ": dss.Sign()" << std::endl;
-	if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, idx2dkg, dkg2idx, aiou, rbc, err_log_sign))
-	{
-		std::cerr << "ERROR: S_" << whoami << ": " << "tDSS Sign() failed" << std::endl;
+		// compute the hash of the certified key resp. user ID
+		tmcg_openpgp_octets_t hash, left;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			CertificationHash(primary->pub_hashing, primary->userids[j]->userid, trailer, hashalgo, hash, left);
+		char *hex_digest = new char[(3 * fpr.size()) + 1];
+		for (size_t i = 0; i < (fpr.size() / 2); i++)
+        	        snprintf(hex_digest + (5 * i), 6, "%02X%02X ", fpr[2*i], fpr[(2*i)+1]);
+		if (opt_r)
+			std::cerr << "INFO: going to revoke signature on user ID \"" << primary->userids[j]->userid << "\" on key with fingerprint " << hex_digest << std::endl;
+		else
+			std::cerr << "INFO: going to sign user ID \"" << primary->userids[j]->userid << "\" on key with fingerprint " << hex_digest << std::endl;
+		delete [] hex_digest;
+		// sign the hash
+		tmcg_openpgp_byte_t buffer[1024];
+		gcry_mpi_t r, s, h;
+		mpz_t dsa_m, dsa_r, dsa_s;
+		size_t buflen = 0;
+		gcry_error_t ret;
+		memset(buffer, 0, sizeof(buffer));
+		for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer))); i++, buflen++)
+			buffer[i] = hash[i];
+		r = gcry_mpi_new(2048);
+		s = gcry_mpi_new(2048);
+		mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
+		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
+		if (ret)
+		{
+			std::cerr << "ERROR: S_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete primary;
+			delete dss, delete rbc, delete aiou, delete aiou2;
+			release_mpis();
+			exit(-1);
+		}
+		if (!mpz_set_gcry_mpi(h, dsa_m))
+		{
+			std::cerr << "ERROR: S_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete primary;
+			delete dss, delete rbc, delete aiou, delete aiou2;
+			release_mpis();
+			exit(-1);
+		}
+		gcry_mpi_release(h);
+		std::stringstream err_log_sign;
+		if (opt_verbose)
+			std::cerr << "INFO: S_" << whoami << ": dss.Sign()" << std::endl;
+		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, idx2dkg, dkg2idx, aiou, rbc, err_log_sign))
+		{
+			std::cerr << "ERROR: S_" << whoami << ": " << "tDSS Sign() failed" << std::endl;
+			if (opt_verbose > 1)
+				std::cerr << "INFO: S_" << whoami << ": log follows " << std::endl << err_log_sign.str();
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete primary;
+			delete dss, delete rbc, delete aiou, delete aiou2;
+			release_mpis();
+			exit(-1);
+		}
 		if (opt_verbose > 1)
-			std::cerr << "INFO: S_" << whoami << ": log follows " << std::endl << err_log_sign.str();
+			std::cerr << "INFO: S_" << whoami << ": log follows " << std::endl << err_log_sign.str(); 
+		if (!mpz_get_gcry_mpi(r, dsa_r))
+		{
+			std::cerr << "ERROR: S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete primary;
+			delete dss, delete rbc, delete aiou, delete aiou2;
+			release_mpis();
+			exit(-1);
+		}
+		if (!mpz_get_gcry_mpi(s, dsa_s))
+		{
+			std::cerr << "ERROR: S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete primary;
+			delete dss, delete rbc, delete aiou, delete aiou2;
+			release_mpis();
+			exit(-1);
+		}
+		tmcg_openpgp_octets_t sig;
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(trailer, left, r, s, sig);
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete primary;
-		delete dss, delete rbc, delete aiou, delete aiou2;
-		release_mpis();
-		exit(-1);
+		// attach certification (revocation) signature to given public key and output all together (pub, uidsig, sig)
+		all.insert(all.end(), primary->userids[j]->packet.begin(), primary->userids[j]->packet.end());
+		for (size_t i = 0; i < primary->userids[j]->selfsigs.size(); i++)
+			all.insert(all.end(), primary->userids[j]->selfsigs[i]->packet.begin(), primary->userids[j]->selfsigs[i]->packet.end());
+		all.insert(all.end(), sig.begin(), sig.end());
 	}
-	if (opt_verbose > 1)
-		std::cerr << "INFO: S_" << whoami << ": log follows " << std::endl << err_log_sign.str(); 
-	if (!mpz_get_gcry_mpi(r, dsa_r))
-	{
-		std::cerr << "ERROR: S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete primary;
-		delete dss, delete rbc, delete aiou, delete aiou2;
-		release_mpis();
-		exit(-1);
-	}
-	if (!mpz_get_gcry_mpi(s, dsa_s))
-	{
-		std::cerr << "ERROR: S_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete primary;
-		delete dss, delete rbc, delete aiou, delete aiou2;
-		release_mpis();
-		exit(-1);
-	}
-	tmcg_openpgp_octets_t sig;
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(trailer, left, r, s, sig);
-	gcry_mpi_release(r), gcry_mpi_release(s);
-	mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_very_long;
@@ -477,13 +472,6 @@ void run_instance
 
 	// release
 	release_mpis();
-
-	// attach certification (revocation) signature to given public key and output all together (pub, uidsig, sig)
-	tmcg_openpgp_octets_t all;
-	all.insert(all.end(), pub.begin(), pub.end());
-	all.insert(all.end(), uid.begin(), uid.end());
-	all.insert(all.end(), uidsig.begin(), uidsig.end());
-	all.insert(all.end(), sig.begin(), sig.end());
 
 	// output the result
 	std::string signedkey;

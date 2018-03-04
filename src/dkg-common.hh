@@ -54,9 +54,6 @@
 		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out,
 		std::vector<std::string> &capl_out);
-	bool parse_public_key_for_certification
-		(const std::string &in,
-		time_t &keycreationtime_out, time_t &keyexpirationtime_out);
 	void release_mpis
 		();
 

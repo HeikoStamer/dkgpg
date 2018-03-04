@@ -133,7 +133,11 @@ Home page of Distributed Privacy Guard (DKGPG): <https://savannah.nongnu.org/pro
 
 .SH "EXAMPLES"
 .TP
-The following command creates a certification signature on the last user ID of the public key provided in input file foo.asc with three participants defined by their GNUnet peer identities (3PT1...4530, S41S...G3N0, WS3K...QKFG). The signature attached to the key is written in armored OpenPGP format to bar.asc and can be verified by any OpenPGP implementation.
+The following command creates certification signatures on all valid user IDs
+of the public key provided in input file "foo.asc" with three participants
+defined by their GNUnet peer identities ("3PT1...4530", "S41S...G3N0",
+"WS3K...QKFG"). The signatures attached to the key are written in armored
+OpenPGP format to "bar.asc" and can be verified by any OpenPGP implementation.
 .PP
 .nf
 .RS
@@ -141,8 +145,10 @@ dkg-keysign -i foo.asc -o bar.asc -w 10 3PT18Z2345NA6FM86BKVJ32DK88KXF0YWKTDPPQX
 .RE
 .fi
 .PP
-At least 2s+1 parties must run such a process on the same input, i.e., public key and user ID. The program waits ten minutes before the threshold signature
-protocol is started, because establishing a CADET channel with GNUnet may take some time.
+At least 2s+1 parties must run such a process on the same input, i.e., public
+key and user ID. The program waits ten minutes before the distributed signing
+protocol is started, because establishing a CADET channel with GNUnet may take
+some time.
 
 .SH "COPYRIGHT"
 .TP

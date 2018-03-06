@@ -221,13 +221,13 @@ void run_instance
 		std::cerr << "INFO: S_" << whoami << ": canonicalized signature creation time = " << csigtime << std::endl;
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
-	tmcg_openpgp_byte_t hashalgo = 0;
+	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
 	if (mpz_sizeinbase(dss_q, 2L) == 256)
-		hashalgo = 8; // SHA256 (alg 8)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
 	else if (mpz_sizeinbase(dss_q, 2L) == 384)
-		hashalgo = 9; // SHA384 (alg 9)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
 	else if (mpz_sizeinbase(dss_q, 2L) == 512)
-		hashalgo = 10; // SHA512 (alg 10)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 	else
 	{
 		std::cerr << "ERROR: S_" << whoami << ": selecting hash algorithm failed for |q| = " << mpz_sizeinbase(dss_q, 2L) << std::endl;

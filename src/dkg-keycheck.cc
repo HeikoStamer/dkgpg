@@ -755,7 +755,7 @@ int main
 		std::cout << "undefined";
 	std::cout << std::endl;
 	std::vector<TMCG_OpenPGP_Signature*> sigs;
-	if ((primary->pkalgo == 1) || (primary->pkalgo == 3))
+	if ((primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || (primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY))
 	{
 		mpz_t rsa_n, rsa_e;
 		mpz_init(rsa_n), mpz_init(rsa_e);
@@ -769,7 +769,7 @@ int main
 		rsa_check(rsa_n, rsa_e);
 		mpz_clear(rsa_n), mpz_clear(rsa_e);
 	}
-	else if (primary->pkalgo == 17)
+	else if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 	{
 		mpz_t dsa_p, dsa_q, dsa_g, dsa_y, dsa_r;
 		mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y), mpz_init(dsa_r);
@@ -785,7 +785,7 @@ int main
 		// additional part for checking DSA signatures
 		for (size_t i = 0; i < primary->selfsigs.size(); i++)
 		{
-			if (primary->selfsigs[i]->pkalgo == 17)
+			if (primary->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
 				if (!mpz_set_gcry_mpi(primary->selfsigs[i]->dsa_r, dsa_r))
 					std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
@@ -798,16 +798,31 @@ int main
 			else
 				std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
 		}
-		for (size_t i = 0; i < primary->revsigs.size(); i++)
+		for (size_t i = 0; i < primary->keyrevsigs.size(); i++)
 		{
-			if (primary->revsigs[i]->pkalgo == 17)
+			if (primary->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
-				if (!mpz_set_gcry_mpi(primary->revsigs[i]->dsa_r, dsa_r))
+				if (!mpz_set_gcry_mpi(primary->keyrevsigs[i]->dsa_r, dsa_r))
 					std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
 				else
 				{
 					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-					sigs.push_back(primary->revsigs[i]);
+					sigs.push_back(primary->keyrevsigs[i]);
+				}
+			}
+			else
+				std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+		}
+		for (size_t i = 0; i < primary->certrevsigs.size(); i++)
+		{
+			if (primary->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+			{
+				if (!mpz_set_gcry_mpi(primary->certrevsigs[i]->dsa_r, dsa_r))
+					std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+				else
+				{
+					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+					sigs.push_back(primary->certrevsigs[i]);
 				}
 			}
 			else
@@ -817,7 +832,7 @@ int main
 		{
 			for (size_t i = 0; i < primary->userids[j]->selfsigs.size(); i++)
 			{
-				if (primary->userids[j]->selfsigs[i]->pkalgo == 17)
+				if (primary->userids[j]->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
 					if (!mpz_set_gcry_mpi(primary->userids[j]->selfsigs[i]->dsa_r, dsa_r))
 						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
@@ -832,7 +847,7 @@ int main
 			}
 			for (size_t i = 0; i < primary->userids[j]->revsigs.size(); i++)
 			{
-				if (primary->userids[j]->revsigs[i]->pkalgo == 17)
+				if (primary->userids[j]->revsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
 					if (!mpz_set_gcry_mpi(primary->userids[j]->revsigs[i]->dsa_r, dsa_r))
 						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
@@ -920,7 +935,9 @@ int main
 		if (allflags == 0x00)
 			std::cout << "undefined";
 		std::cout << std::endl;
-		if ((primary->subkeys[j]->pkalgo >= 1) && (primary->subkeys[j]->pkalgo <= 3))
+		if ((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+		    (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
+		    (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY))
 		{
 			mpz_t rsa_n, rsa_e;
 			mpz_init(rsa_n), mpz_init(rsa_e);
@@ -934,7 +951,7 @@ int main
 			rsa_check(rsa_n, rsa_e);
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
 		}
-		else if (primary->subkeys[j]->pkalgo == 16)
+		else if (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
 		{
 			mpz_t elg_p, elg_g, elg_y, dsa_q;
 			mpz_init(elg_p), mpz_init(elg_g), mpz_init(elg_y), mpz_init(dsa_q);
@@ -946,7 +963,7 @@ int main
 				delete primary;
 				return -1;
 			}
-			if (primary->pkalgo == 17)
+			if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
 				if (!mpz_set_gcry_mpi(primary->dsa_q, dsa_q))
 				{
@@ -961,7 +978,7 @@ int main
 			elg_check(elg_p, elg_g, elg_y, dsa_q);
 			mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
 		}
-		else if (primary->subkeys[j]->pkalgo == 17)
+		else if (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 		{
 			mpz_t dsa_p, dsa_q, dsa_g, dsa_y;
 			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y);
@@ -983,7 +1000,7 @@ int main
 			return -1;
 		}
 		// additional part for checking DSA signatures
-		if (primary->pkalgo == 17)
+		if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 		{
 			mpz_t dsa_p, dsa_q, dsa_g, dsa_y, dsa_r;
 			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y), mpz_init(dsa_r);
@@ -997,7 +1014,7 @@ int main
 			}
 			for (size_t i = 0; i < primary->subkeys[j]->selfsigs.size(); i++)
 			{
-				if (primary->subkeys[j]->selfsigs[i]->pkalgo == 17)
+				if (primary->subkeys[j]->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
 					if (!mpz_set_gcry_mpi(primary->subkeys[j]->selfsigs[i]->dsa_r, dsa_r))
 						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
@@ -1012,7 +1029,7 @@ int main
 			}
 			for (size_t i = 0; i < primary->subkeys[j]->bindsigs.size(); i++)
 			{
-				if (primary->subkeys[j]->bindsigs[i]->pkalgo == 17)
+				if (primary->subkeys[j]->bindsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
 					if (!mpz_set_gcry_mpi(primary->subkeys[j]->bindsigs[i]->dsa_r, dsa_r))
 						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
@@ -1025,16 +1042,31 @@ int main
 				else
 					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
 			}
-			for (size_t i = 0; i < primary->subkeys[j]->revsigs.size(); i++)
+			for (size_t i = 0; i < primary->subkeys[j]->keyrevsigs.size(); i++)
 			{
-				if (primary->subkeys[j]->revsigs[i]->pkalgo == 17)
+				if (primary->subkeys[j]->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->subkeys[j]->revsigs[i]->dsa_r, dsa_r))
+					if (!mpz_set_gcry_mpi(primary->subkeys[j]->keyrevsigs[i]->dsa_r, dsa_r))
 						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->subkeys[j]->revsigs[i]);
+						sigs.push_back(primary->subkeys[j]->keyrevsigs[i]);
+					}
+				}
+				else
+					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+			}
+			for (size_t i = 0; i < primary->subkeys[j]->certrevsigs.size(); i++)
+			{
+				if (primary->subkeys[j]->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				{
+					if (!mpz_set_gcry_mpi(primary->subkeys[j]->certrevsigs[i]->dsa_r, dsa_r))
+						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					else
+					{
+						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						sigs.push_back(primary->subkeys[j]->certrevsigs[i]);
 					}
 				}
 				else

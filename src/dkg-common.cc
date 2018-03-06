@@ -172,7 +172,7 @@ bool parse_message
 			case 1: // Public-Key Encrypted Session Key
 				if (opt_verbose)
 					std::cout << " pkalgo = " << (int)ctx.pkalgo << std::endl;
-				if (ctx.pkalgo != 16)
+				if (ctx.pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL)
 				{
 					std::cerr << "WARNING: public-key algorithm not supported; packet #" << pnum << " ignored" << std::endl;
 					break;
@@ -291,12 +291,12 @@ bool decrypt_message
 	(const bool have_seipd, const tmcg_openpgp_octets_t &in, tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out)
 {
 	// decrypt the given message
-	tmcg_openpgp_byte_t symalgo = 0;
+	tmcg_openpgp_skalgo_t symalgo = TMCG_OPENPGP_SKALGO_PLAINTEXT;
 	if (opt_verbose)
 		std::cout << "symmetric decryption of message ..." << std::endl;
 	if (key.size() > 0)
 	{
-		symalgo = key[0];
+		symalgo = (tmcg_openpgp_skalgo_t)key[0];
 		if (opt_verbose)
 			std::cout << "symalgo = " << (int)symalgo << std::endl;
 	}
@@ -411,7 +411,7 @@ bool decrypt_message
 		mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end()); // "it includes all of the plaintext" [RFC4880]
 		mdc_hashing.push_back(0xD3); // "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
 		mdc_hashing.push_back(0x14);
-		CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(2, mdc_hashing, hash); // "passed through the SHA-1 hash function" [RFC4880]
+		CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash); // "passed through the SHA-1 hash function" [RFC4880]
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(mdc_hash, hash))
 		{
 			std::cerr << "ERROR: MDC hash does not match (security issue)" << std::endl;
@@ -443,8 +443,11 @@ bool parse_public_key
 	bool revdsa = false, revdsaV3 = false, revelg = false, revelgV3 = false;
 	bool ignore_further_subkeys = false, ignore_further_signatures = false;
 	tmcg_openpgp_byte_t ptag = 0xFF;
-	tmcg_openpgp_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], revdsa_sigtype, revdsa_pkalgo, revdsa_hashalgo;
-	tmcg_openpgp_byte_t elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32], revelg_sigtype, revelg_pkalgo, revelg_hashalgo;
+	tmcg_openpgp_pkalgo_t dsa_pkalgo, elg_pkalgo, revdsa_pkalgo, revelg_pkalgo;
+	tmcg_openpgp_hashalgo_t dsa_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN, elg_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+	tmcg_openpgp_hashalgo_t revdsa_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN, revelg_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+	tmcg_openpgp_byte_t dsa_sigtype, dsa_keyflags[32], revdsa_sigtype;
+	tmcg_openpgp_byte_t elg_sigtype, elg_keyflags[32], revelg_sigtype;
 	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32], elg_psa[32], elg_pha[32], elg_pca[32];
 	tmcg_openpgp_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, revdsa_hspd, elg_hspd, revelg_hspd, hash;
 	time_t dsa_creation = 0, dsa_sigtime = 0, revdsa_sigtime = 0, elg_creation = 0, elg_sigtime = 0, revelg_sigtime = 0;
@@ -557,7 +560,7 @@ bool parse_public_key
 					}
 					if (opt_verbose)
 						std::cout << std::dec << std::endl << "INFO: dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
-					if (dsa_pkalgo != 17)
+					if (dsa_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -571,7 +574,9 @@ bool parse_public_key
 					sbits = gcry_mpi_get_nbits(dsa_s);
 					if (opt_verbose)
 						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
-					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
+					if ((dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)dsa_hashalgo << " used for signatures" << std::endl;
 					time_t kmax = dsa_creation + ctx.keyexpirationtime;
 					if (ctx.keyexpirationtime && (time(NULL) > kmax))
@@ -613,7 +618,7 @@ bool parse_public_key
 						elg_hspd.push_back(ctx.hspd[i]);
 					if (opt_verbose)
 						std::cout << "INFO: elg_hspd.size() = " << elg_hspd.size() << std::endl;
-					if (elg_pkalgo != 17)
+					if (elg_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -627,7 +632,9 @@ bool parse_public_key
 					sbits = gcry_mpi_get_nbits(elg_s);
 					if (opt_verbose)
 						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
-					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
+					if ((elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)elg_hashalgo << " used for signatures" << std::endl;
 					time_t kmax = elg_creation + ctx.keyexpirationtime;
 					if (ctx.keyexpirationtime && (time(NULL) > kmax))
@@ -665,7 +672,7 @@ bool parse_public_key
 					}
 					if (opt_verbose)
 						std::cout << "INFO: revdsa_hspd.size() = " << revdsa_hspd.size() << std::endl;
-					if (revdsa_pkalgo != 17)
+					if (revdsa_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -679,7 +686,9 @@ bool parse_public_key
 					sbits = gcry_mpi_get_nbits(revdsa_s);
 					if (opt_verbose)
 						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
-					if ((revdsa_hashalgo < 8) || (revdsa_hashalgo >= 11))
+					if ((revdsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+					    (revdsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+					    (revdsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)revdsa_hashalgo << " used for signatures" << std::endl;
 				}
 				else if (pubdsa && subelg && (ctx.type == 0x28) && // Subkey revocation signature 
@@ -704,7 +713,7 @@ bool parse_public_key
 					}
 					if (opt_verbose)
 						std::cout << "INFO: revelg_hspd.size() = " << revelg_hspd.size() << std::endl;
-					if (revelg_pkalgo != 17)
+					if (revelg_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -718,14 +727,16 @@ bool parse_public_key
 					sbits = gcry_mpi_get_nbits(revelg_s);
 					if (opt_verbose)
 						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
-					if ((revelg_hashalgo < 8) || (revelg_hashalgo >= 11))
+					if ((revelg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+					    (revelg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+					    (revelg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)revelg_hashalgo << " used for signatures" << std::endl;
 				}
 				break;
 			case 6: // Public-Key Packet
 				if (ctx.version != 4)
 					std::cerr << "WARNING: public-key packet version " << (int)ctx.version << " not supported" << std::endl;
-				else if ((ctx.pkalgo == 17) && !pubdsa)
+				else if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_DSA) && !pubdsa)
 				{
 					pubdsa = true;
 					gcry_mpi_set(dsa_p, ctx.p);
@@ -750,7 +761,7 @@ bool parse_public_key
 						std::cout << std::dec << std::endl;
 					}
 				}
-				else if ((ctx.pkalgo == 17) && pubdsa)
+				else if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_DSA) && pubdsa)
 				{
 					std::cerr << "ERROR: more than one primary key not supported" << std::endl;
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -777,8 +788,8 @@ bool parse_public_key
 				ignore_further_signatures = true;
 				if (ctx.version != 4)
 					std::cerr << "WARNING: public-subkey packet version " << (int)ctx.version << " not supported" << std::endl;
-				else if ((!ignore_further_subkeys && (ctx.pkalgo == 16)) ||
-					 (ignore_further_subkeys && revelg && (ctx.pkalgo == 16)))
+				else if ((!ignore_further_subkeys && (ctx.pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)) ||
+					 (ignore_further_subkeys && revelg && (ctx.pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)))
 				{
 					subelg = true, sigelg = false, sigelgV3 = false, revelg = false, revelgV3 = false;
 					gcry_mpi_set(elg_p, ctx.p);
@@ -889,7 +900,9 @@ bool parse_public_key
 		std::cout << "INFO: |p| = " << pbits << " bits, |q| = " << qbits << " bits" << std::endl;
 	if ((pbits < 2048) || (qbits < 256))
 		keystrength_out = 0; // bad DSA key strength
-	if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
+	if ((dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+	    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+	    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
 		keystrength_out = 0; // bad DSA hash algorithm
 	tmcg_openpgp_octets_t dsa_trailer, dsa_left;
 	hash.clear();
@@ -1025,7 +1038,9 @@ bool parse_public_key
 			std::cout << "INFO: |p| = " << pbits << " bits" << std::endl;
 		if (elg_required && (pbits < 2048))
 			keystrength_out = 0; // bad Elgamal key strength
-		if (elg_required && ((elg_hashalgo < 8) || (elg_hashalgo >= 11)))
+		if (elg_required && ((elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+		    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+		    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512)))
 			keystrength_out = 0; // bad Elgamal hash algorithm
 		tmcg_openpgp_octets_t elg_trailer, elg_left;
 		hash.clear();
@@ -1145,7 +1160,9 @@ bool parse_private_key
 	// parse the private key according to OpenPGP
 	bool secdsa = false, sigdsa = false, ssbelg = false, sigelg = false;
 	tmcg_openpgp_byte_t ptag = 0xFF;
-	tmcg_openpgp_byte_t dsa_sigtype, dsa_pkalgo, dsa_hashalgo, dsa_keyflags[32], elg_sigtype, elg_pkalgo, elg_hashalgo, elg_keyflags[32];
+	tmcg_openpgp_pkalgo_t dsa_pkalgo, elg_pkalgo;
+	tmcg_openpgp_hashalgo_t dsa_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN, elg_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+	tmcg_openpgp_byte_t dsa_sigtype, dsa_keyflags[32], elg_sigtype, elg_keyflags[32];
 	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32], elg_psa[32], elg_pha[32], elg_pca[32];
 	tmcg_openpgp_byte_t *key, *iv;
 	tmcg_openpgp_octets_t seskey, salt, mpis, hash_input, hash, pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
@@ -1218,7 +1235,7 @@ bool parse_private_key
 					dsa_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						dsa_hspd.push_back(ctx.hspd[i]);
-					if (dsa_pkalgo != 17)
+					if (dsa_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -1227,7 +1244,9 @@ bool parse_private_key
 					}
 					gcry_mpi_set(dsa_r, ctx.r);
 					gcry_mpi_set(dsa_s, ctx.s);
-					if ((dsa_hashalgo < 8) || (dsa_hashalgo >= 11))
+					if ((dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)dsa_hashalgo << 
 							" used for signatures" << std::endl;
 					sigdsa = true;
@@ -1267,7 +1286,7 @@ bool parse_private_key
 					elg_hspd.clear();
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						elg_hspd.push_back(ctx.hspd[i]);
-					if (elg_pkalgo != 17)
+					if (elg_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -1276,7 +1295,9 @@ bool parse_private_key
 					}
 					gcry_mpi_set(elg_r, ctx.r);
 					gcry_mpi_set(elg_s, ctx.s);
-					if ((elg_hashalgo < 8) || (elg_hashalgo >= 11))
+					if ((elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
+					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
+					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
 						std::cerr << "WARNING: insecure hash algorithm " << (int)elg_hashalgo << 
 							" used for signatures" << std::endl;
 					sigelg = true;
@@ -1296,7 +1317,7 @@ bool parse_private_key
 					gcry_mpi_set(dsa_g, ctx.g);
 					gcry_mpi_set(dsa_y, ctx.y);
 					pub.clear();
-					CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, 17, // public-key is DSA 
+					CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, TMCG_OPENPGP_PKALGO_DSA,
 						dsa_p, dsa_q, dsa_g, dsa_y, pub);
 					pub_hashing.clear();
 					for (size_t i = 6; i < pub.size(); i++)
@@ -1570,7 +1591,7 @@ bool parse_private_key
 							hash_input.clear(), hash.clear();
 							for (size_t i = 0; i < (ctx.encdatalen - 20); i++)
 								hash_input.push_back(ctx.encdata[i]);
-							CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(2, hash_input, hash);
+							CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, hash_input, hash);
 							if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(hash, mpis))
 							{
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
@@ -1636,7 +1657,7 @@ bool parse_private_key
 					for (size_t i = 0; i < current_packet.size(); i++)
 						sec.push_back(current_packet[i]);
 				}
-				else if ((ctx.pkalgo == 17) && !secdsa)
+				else if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_DSA) && !secdsa)
 				{
 					secdsa = true;
 					keycreationtime_out = ctx.keycreationtime;
@@ -1645,7 +1666,7 @@ bool parse_private_key
 					gcry_mpi_set(dsa_g, ctx.g);
 					gcry_mpi_set(dsa_y, ctx.y);
 					pub.clear();
-					CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, 17, // public-key is DSA 
+					CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, TMCG_OPENPGP_PKALGO_DSA,
 						dsa_p, dsa_q, dsa_g, dsa_y, pub);
 					pub_hashing.clear();
 					for (size_t i = 6; i < pub.size(); i++)
@@ -1838,7 +1859,7 @@ bool parse_private_key
 							hash_input.clear(), hash.clear();
 							for (size_t i = 0; i < (ctx.encdatalen - 20); i++)
 								hash_input.push_back(ctx.encdata[i]);
-							CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(2, hash_input, hash);
+							CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, hash_input, hash);
 							if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(hash, mpis))
 							{
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
@@ -1860,7 +1881,7 @@ bool parse_private_key
 					for (size_t i = 0; i < current_packet.size(); i++)
 						sec.push_back(current_packet[i]);
 				}
-				else if (((ctx.pkalgo == 108) || (ctx.pkalgo == 17)) && secdsa)
+				else if (((ctx.pkalgo == 108) || (ctx.pkalgo == TMCG_OPENPGP_PKALGO_DSA)) && secdsa)
 				{
 					std::cerr << "ERROR: more than one primary key not supported" << std::endl;
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -1895,7 +1916,7 @@ bool parse_private_key
 					gcry_mpi_set(elg_g, ctx.g);
 					gcry_mpi_set(elg_y, ctx.y);
 					sub.clear();
-					CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ctx.keycreationtime, 16, // public-key is ElGamal 
+					CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ctx.keycreationtime, TMCG_OPENPGP_PKALGO_ELGAMAL,
 						elg_p, dsa_q, elg_g, elg_y, sub);
 					sub_hashing.clear();
 					for (size_t i = 6; i < sub.size(); i++)
@@ -2177,7 +2198,7 @@ bool parse_private_key
 							hash_input.clear(), hash.clear();
 							for (size_t i = 0; i < (ctx.encdatalen - 20); i++)
 								hash_input.push_back(ctx.encdata[i]);
-							CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(2, hash_input, hash);
+							CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, hash_input, hash);
 							if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(hash, mpis))
 							{
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
@@ -2408,5 +2429,4 @@ void release_mpis
 	gcry_mpi_release(revelg_s);
 	gcry_mpi_release(revrsa_md);
 }
-
 

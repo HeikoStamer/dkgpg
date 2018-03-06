@@ -322,13 +322,13 @@ void run_instance
 		std::cout << "P_" << whoami << ": canonicalized key creation time = " << ckeytime << std::endl;
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
-	tmcg_openpgp_byte_t hashalgo = 0;
+	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
 	if (mpz_sizeinbase(vtmf->q, 2L) == 256)
-		hashalgo = 8; // SHA256 (alg 8)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
 	else if (mpz_sizeinbase(vtmf->q, 2L) == 384)
-		hashalgo = 9; // SHA384 (alg 9)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
 	else if (mpz_sizeinbase(vtmf->q, 2L) == 512)
-		hashalgo = 10; // SHA512 (alg 10)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 	else
 	{
 		std::cerr << "P_" << whoami << ": selecting hash algorithm failed for |q| = " << mpz_sizeinbase(vtmf->q, 2L) << std::endl;
@@ -434,7 +434,7 @@ void run_instance
 		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ckeytime, 17, p, q, g, y, pub); // use common key creation time
+	CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ckeytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, pub); // use common key creation time
 	if (S > 0)
 	{
 		// create an OpenPGP private key as experimental algorithm ID 107 to store everything from tDSS
@@ -594,7 +594,7 @@ void run_instance
 		gcry_mpi_release(xprime_i);
 	}
 	else
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncode(ckeytime, 17, p, q, g, y, x, passphrase, sec);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncode(ckeytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, x, passphrase, sec);
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
 	CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
@@ -744,7 +744,7 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ckeytime, 16, p, q, g, y, sub); // use common key creation time and Elgamal algorithm id
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ckeytime, TMCG_OPENPGP_PKALGO_ELGAMAL, p, q, g, y, sub); // use common key creation time
 		// create an OpenPGP private subkey as experimental algorithm ID 109 to store everything from DKG
 		gcry_mpi_t h, n, t, i, qualsize, x_i, xprime_i;
 		std::vector<gcry_mpi_t> qual, v_i;

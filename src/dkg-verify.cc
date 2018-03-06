@@ -248,8 +248,8 @@ int main
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x02) == 0x02) ||
-		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == 1) || 
-				(primary->subkeys[j]->pkalgo == 3) || (primary->subkeys[j]->pkalgo == 17))))
+		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+				(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) || (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA))))
 		{
 			if (CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(signature->issuer, primary->subkeys[j]->id))
 			{
@@ -268,8 +268,8 @@ int main
 	{
 
 		if (((primary->AccumulateFlags() & 0x02) != 0x02) &&
-		    (!primary->AccumulateFlags() && (primary->pkalgo != 1) &&
-			(primary->pkalgo != 3) && (primary->pkalgo != 17)))
+		    (!primary->AccumulateFlags() && (primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) && (primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA)))
 		{
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
 			delete signature;

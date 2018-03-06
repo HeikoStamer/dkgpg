@@ -168,15 +168,17 @@ int main
 	{
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
 		    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08) ||
-		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == 1) || 
-				(primary->subkeys[j]->pkalgo == 2) || (primary->subkeys[j]->pkalgo == 16))))
+		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+				(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) || (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))))
 		{
 			if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
 			{
 				if (opt_verbose)
 					std::cerr << "WARNING: weak subkey for encryption ignored" << std::endl;
 			}
-			else if ((primary->subkeys[j]->pkalgo != 1) && (primary->subkeys[j]->pkalgo != 2) && (primary->subkeys[j]->pkalgo != 16))
+			else if ((primary->subkeys[j]->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+			         (primary->subkeys[j]->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) &&
+			         (primary->subkeys[j]->pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL))
 			{
 				if (opt_verbose)
 					std::cerr << "WARNING: subkey with unsupported public-key algorithm for encryption ignored" << std::endl;
@@ -205,14 +207,14 @@ int main
 	{	
 		if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
 		    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
-		    (!primary->AccumulateFlags() && (primary->pkalgo != 1) &&
-			(primary->pkalgo != 2) && (primary->pkalgo != 16)))
+		    (!primary->AccumulateFlags() && (primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) && (primary->pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL)))
 		{
 			std::cerr << "ERROR: no encryption-capable public key found" << std::endl;
 			delete primary;
 			return -1;
 		}
-		if (std::find(primary->psa.begin(), primary->psa.end(), 9) == primary->psa.end())
+		if (std::find(primary->psa.begin(), primary->psa.end(), TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
 		{
 			if (opt_verbose)
 				std::cerr << "WARNING: AES-256 is none of the preferred symmetric algorithms" << std::endl;
@@ -268,7 +270,7 @@ int main
 	mdc_hashing.push_back(0xD3); // "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
 	mdc_hashing.push_back(0x14);
 	hash.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(2, mdc_hashing, hash); // "passed through the SHA-1 hash function" [RFC4880]
+	CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash); // "passed through the SHA-1 hash function" [RFC4880]
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketMdcEncode(hash, mdc);
 	lit.insert(lit.end(), mdc.begin(), mdc.end()); // append Modification Detection Code packet
 	seskey.clear(); // generate a fresh session key, but keep the previous prefix
@@ -299,7 +301,8 @@ int main
 		}
 		else
 			subkeyid.insert(subkeyid.end(), selected[j]->id.begin(), selected[j]->id.end());
-		if ((selected[j]->pkalgo == 1) || (selected[j]->pkalgo == 2))
+		if ((selected[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+		    (selected[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY))
 		{
 			gcry_mpi_t me;
 			me = gcry_mpi_new(2048);
@@ -313,7 +316,7 @@ int main
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(subkeyid, me, pkesk);
 			gcry_mpi_release(me);
 		}
-		else if (selected[j]->pkalgo == 16)
+		else if (selected[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
 		{	
 			// Note that OpenPGP ElGamal encryption in $Z^*_p$ provides only OW-CPA security under the CDH assumption. In
 			// order to achieve at least IND-CPA (aka semantic) security under DDH assumption the encoded message $m$ must
@@ -352,7 +355,8 @@ int main
 		}
 		else
 			keyid.insert(keyid.end(), primary->id.begin(), primary->id.end()); 
-		if ((primary->pkalgo == 1) || (primary->pkalgo == 2))
+		if ((primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+		    (primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY))
 		{
 			gcry_mpi_t me;
 			me = gcry_mpi_new(2048);
@@ -366,7 +370,7 @@ int main
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(keyid, me, pkesk);
 			gcry_mpi_release(me);
 		}
-		else if (primary->pkalgo == 16)
+		else if (primary->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
 		{	
 			// Note that OpenPGP ElGamal encryption in $Z^*_p$ provides only OW-CPA security under the CDH assumption. In
 			// order to achieve at least IND-CPA (aka semantic) security under DDH assumption the encoded message $m$ must

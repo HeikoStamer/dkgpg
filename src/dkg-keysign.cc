@@ -358,9 +358,9 @@ void run_instance
 		for (size_t i = 0; i < (fpr.size() / 2); i++)
         	        snprintf(hex_digest + (5 * i), 6, "%02X%02X ", fpr[2*i], fpr[(2*i)+1]);
 		if (opt_r)
-			std::cerr << "INFO: going to revoke signature on user ID \"" << primary->userids[j]->userid << "\" on key with fingerprint " << hex_digest << std::endl;
+			std::cerr << "INFO: going to revoke signature on user ID \"" << primary->userids[j]->userid << "\" of key with fingerprint " << hex_digest << std::endl;
 		else
-			std::cerr << "INFO: going to sign user ID \"" << primary->userids[j]->userid << "\" on key with fingerprint " << hex_digest << std::endl;
+			std::cerr << "INFO: going to sign user ID \"" << primary->userids[j]->userid << "\" of key with fingerprint " << hex_digest << std::endl;
 		delete [] hex_digest;
 		// sign the hash
 		tmcg_openpgp_byte_t buffer[1024];

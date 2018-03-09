@@ -9,14 +9,17 @@ dkg\-keysign \- threshold signature scheme for OpenPGP (only DSA/DSS)
 .IR PEERS
 
 .SH DESCRIPTION
-This program generates certification signatures for all valid user IDs of a
-given OpenPGP public key. The private DSA key for the signature scheme of the
-issuer has been shared between multiple parties by
+This program generates certification signatures for all or selected valid user
+IDs of a given OpenPGP public key. Note that the private DSA key for the
+signature scheme of the issuer has been shared between multiple parties by
 .BR dkg\-generate (1).
-That means, for successful signing at least 2s+1 different participants must
-join the protocol and provide their corresponding shares. The threshold
-parameter s has been fixed during distributed key generation and cannot changed
-at this stage of processing.
+Thus, for successful signing at least 2s+1 different participants must join
+the protocol and provide their corresponding shares. The threshold parameter s
+has been fixed during distributed key generation and cannot changed at this
+stage of processing.
+.PP
+If option "\-u" is added to command line, then only those valid user IDs will
+be signed that contain the given selector string.
 .PP
 By the option "\-r" certification revocation signatures are generated, and with
 the option "\-U" a policy URI for all generated signatures can be specified.
@@ -73,7 +76,7 @@ Arguments mandatory for long options are also mandatory for short options.
 use GNUnet configuration file FILENAME
 .TP
 \fB\-e\fR, \fB\-\-expiration\fR=\fI\,TIME\/\fR
-expiration time of generated signature in seconds
+expiration time of generated signatures in seconds
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 print this list of options
@@ -82,7 +85,7 @@ print this list of options
 hostname (e.g. onion address) of this peer within PEERS
 .TP
 \fB\-i\fR, \fB\-\-input\fR=\fI\,FILENAME\/\fR
-create certification signature on key resp. user ID from FILENAME
+create certification signatures on key from FILENAME
 .TP
 \fB\-L\fR, \fB\-\-log\fR=\fI\,LOGLEVEL\/\fR
 configure logging to use LOGLEVEL
@@ -91,7 +94,7 @@ configure logging to use LOGLEVEL
 configure logging to write logs to FILENAME
 .TP
 \fB\-o\fR, \fB\-\-output\fR=\fI\,FILENAME\/\fR
-write key with certification signature attached to FILENAME
+write key with certification signatures attached to FILENAME
 .TP
 \fB\-p\fR, \fB\-\-port\fR=\fI\,STRING\/\fR
 GNUnet CADET port to listen/connect
@@ -100,10 +103,13 @@ GNUnet CADET port to listen/connect
 exchanged passwords to protect private and broadcast channels
 .TP
 \fB\-r\fR, \fB\-\-revocation\fR
-create a certification revocation signature
+create certification revocation signatures
+.TP
+\fB\-u\fR, \fB\-\-userid\fR=\fI\,STRING\/\fR
+sign only valid user IDs containing STRING
 .TP
 \fB\-U\fR, \fB\-\-URI\fR=\fI\,STRING\/\fR
-policy URI tied to generated signature
+policy URI tied to generated signatures
 .TP
 \fB\-v\fR, \fB\-\-version\fR
 print the version number of the program

@@ -17,7 +17,7 @@ Introduction
   on private key material.
 
   Using well-established multi-party protocols a shared private key and a
-  common public key (DSA/ElGamal) is generated. Then further interactive
+  common public key (DSA/ElGamal) are generated. Then further interactive
   protocols perform the private operations like decryption and signing of
   files or keys, provided that a previously defined threshold of parties/
   devices take part in the distributed computation.

@@ -83,6 +83,7 @@ char					*opt_URI = NULL;
 char					*opt_u = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
 bool					opt_r = false;
+bool					opt_1 = false, opt_2 = false, opt_3 = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime, const size_t num_xtests)
@@ -287,6 +288,12 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
 	if (opt_r)
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+	else if (opt_1)
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x11, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+	else if (opt_2)
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x12, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+	else if (opt_3)
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x13, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x10, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	all.insert(all.end(), primary->packet.begin(), primary->packet.end());
@@ -503,6 +510,7 @@ unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
 int gnunet_opt_r = 0;
+int gnunet_opt_1 = 0, gnunet_opt_2 = 0, gnunet_opt_3 = 0;
 #endif
 
 void fork_instance
@@ -546,6 +554,21 @@ int main
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_help(about),
+		GNUNET_GETOPT_option_flag('1',
+			"",
+			"issuer has not done any verification of claim of identity",
+			&gnunet_opt_1
+		),
+		GNUNET_GETOPT_option_flag('2',
+			"",
+			"issuer has done some casual verification of claim of identity",
+			&gnunet_opt_2
+		),
+		GNUNET_GETOPT_option_flag('3',
+			"",
+			"issuer has done substantial verification of claim of identity",
+			&gnunet_opt_3
+		),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
 			"TIME",
@@ -710,7 +733,8 @@ int main
 				opt_W = strtoul(argv[i+1], NULL, 10);
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-r") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-r") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) ||
+		         (arg.find("-V") == 0) || (arg.find("-1") == 0) || (arg.find("-2") == 0) || (arg.find("-3") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -719,6 +743,9 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
 				std::cout << "  -h, --help       print this help" << std::endl;
+				std::cout << "  -1               issuer has not done any verification of claim of identity" << std::endl;
+				std::cout << "  -2               issuer has done some casual verification of claim of identity" << std::endl;
+				std::cout << "  -3               issuer has done substantial verification of claim of identity" << std::endl;
 				std::cout << "  -e TIME          expiration time of generated signatures in seconds" << std::endl;
 				std::cout << "  -H STRING        hostname (e.g. onion address) of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME      create certification signatures on key from FILENAME" << std::endl;
@@ -745,6 +772,12 @@ int main
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
+			if (arg.find("-1") == 0)
+				opt_1 = true, opt_2 = false, opt_3 = false;
+			if (arg.find("-2") == 0)
+				opt_1 = false, opt_2 = true, opt_3 = false;
+			if (arg.find("-3") == 0)
+				opt_1 = false, opt_2 = false, opt_3 = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -862,6 +895,21 @@ int main
 	// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+		GNUNET_GETOPT_option_flag('1',
+			"",
+			"issuer has not done any verification of claim of identity",
+			&gnunet_opt_1
+		),
+		GNUNET_GETOPT_option_flag('2',
+			"",
+			"issuer has done some casual verification of claim of identity",
+			&gnunet_opt_2
+		),
+		GNUNET_GETOPT_option_flag('3',
+			"",
+			"issuer has done substantial verification of claim of identity",
+			&gnunet_opt_3
+		),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
 			"TIME",

@@ -19,7 +19,9 @@ has been fixed during distributed key generation and cannot changed at this
 stage of processing.
 .PP
 If option "\-u" is added to command line, then only those valid user IDs will
-be signed that contain the given selector string.
+be signed that contain the given selector string. With "\-1" through "\-3" the
+level of identity validation is encoded in the corresponding signature type
+(i.e. either 0x11 through 0x13 or 0x10, if omitted).
 .PP
 By the option "\-r" certification revocation signatures are generated, and with
 the option "\-U" a policy URI for all generated signatures can be specified.

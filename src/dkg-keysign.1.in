@@ -74,6 +74,15 @@ the option "\-P" is mandatory in that case.
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
 .TP
+\fB\-1\fR
+issuer has not done any verification of claim of identity
+.TP
+\fB\-2\fR
+issuer has done some casual verification of claim of identity
+.TP
+\fB\-3\fR
+issuer has done substantial verification of claim of identity
+.TP
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME
 .TP

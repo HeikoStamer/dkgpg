@@ -555,18 +555,18 @@ int main
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_help(about),
 		GNUNET_GETOPT_option_flag('1',
-			"",
-			"issuer has not done any verification of claim of identity",
+			"one",
+			"issuer has not done any verification of the claim of identity",
 			&gnunet_opt_1
 		),
 		GNUNET_GETOPT_option_flag('2',
-			"",
-			"issuer has done some casual verification of claim of identity",
+			"two",
+			"issuer has done some casual verification of the claim of identity",
 			&gnunet_opt_2
 		),
 		GNUNET_GETOPT_option_flag('3',
-			"",
-			"issuer has done substantial verification of claim of identity",
+			"three",
+			"issuer has done substantial verification of the claim of identity",
 			&gnunet_opt_3
 		),
 		GNUNET_GETOPT_option_uint('e',
@@ -743,9 +743,9 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
 				std::cout << "  -h, --help       print this help" << std::endl;
-				std::cout << "  -1               issuer has not done any verification of claim of identity" << std::endl;
-				std::cout << "  -2               issuer has done some casual verification of claim of identity" << std::endl;
-				std::cout << "  -3               issuer has done substantial verification of claim of identity" << std::endl;
+				std::cout << "  -1, --one        issuer has not done any verification of claim of identity" << std::endl;
+				std::cout << "  -2, --two        issuer has done some casual verification of claim of identity" << std::endl;
+				std::cout << "  -3, --three      issuer has done substantial verification of claim of identity" << std::endl;
 				std::cout << "  -e TIME          expiration time of generated signatures in seconds" << std::endl;
 				std::cout << "  -H STRING        hostname (e.g. onion address) of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME      create certification signatures on key from FILENAME" << std::endl;
@@ -772,11 +772,11 @@ int main
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
-			if (arg.find("-1") == 0)
+			if ((arg.find("-1") == 0) || (arg.find("--one") == 0))
 				opt_1 = true, opt_2 = false, opt_3 = false;
-			if (arg.find("-2") == 0)
+			if ((arg.find("-2") == 0) || (arg.find("--two") == 0))
 				opt_1 = false, opt_2 = true, opt_3 = false;
-			if (arg.find("-3") == 0)
+			if ((arg.find("-3") == 0) || (arg.find("--three") == 0))
 				opt_1 = false, opt_2 = false, opt_3 = true;
 			continue;
 		}
@@ -896,18 +896,18 @@ int main
 #ifdef GNUNET
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
 		GNUNET_GETOPT_option_flag('1',
-			"",
-			"issuer has not done any verification of claim of identity",
+			"one",
+			"issuer has not done any verification of the claim of identity",
 			&gnunet_opt_1
 		),
 		GNUNET_GETOPT_option_flag('2',
-			"",
-			"issuer has done some casual verification of claim of identity",
+			"two",
+			"issuer has done some casual verification of the claim of identity",
 			&gnunet_opt_2
 		),
 		GNUNET_GETOPT_option_flag('3',
-			"",
-			"issuer has done substantial verification of claim of identity",
+			"three",
+			"issuer has done substantial verification of the claim of identity",
 			&gnunet_opt_3
 		),
 		GNUNET_GETOPT_option_uint('e',

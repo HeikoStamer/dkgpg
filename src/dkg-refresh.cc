@@ -726,7 +726,7 @@ int main
 	if (opt_verbose)
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
-	// initialize cache
+	// read the public key
 	std::string armored_pubkey = "undefined";
 	if (opt_hostname != NULL)
 	{
@@ -746,34 +746,42 @@ int main
 		std::cerr << "ERROR: no corresponding public key file found" << std::endl;
 		return -1;
 	}
-	init_mpis();
-	time_t ckeytime = 0, ekeytime = 0, csubkeytime = 0, esubkeytime = 0;
-	tmcg_openpgp_byte_t keyusage = 0, keystrength = 1;
-	if (!parse_public_key(armored_pubkey, ckeytime, ekeytime, csubkeytime, esubkeytime, keyusage, keystrength))
+
+	// parse the public key block and corresponding signatures
+	TMCG_OpenPGP_Pubkey *primary = NULL;
+	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+	if (parse_ok)
 	{
-		std::cerr << "ERROR: cannot parse the provided public key" << std::endl;
-		release_mpis();
+		if (primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA)
+		{
+			std::cerr << "ERROR: primary key is not DSA" << std::endl;
+			delete primary;
+			return -1;
+		}
+	}
+	else
+	{
+		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+		if (primary)
+			delete primary;
 		return -1;
 	}
-	if (!keystrength)
-	{
-		std::cerr << "ERROR: provided public key is too weak" << std::endl;
-		release_mpis();
-		return -1;
-	}
-	if (!mpz_set_gcry_mpi(dsa_q, dss_q))
+
+	// initialize cache
+	mpz_init(dss_q);
+	if (!mpz_set_gcry_mpi(primary->dsa_q, dss_q))
 	{
 		std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_q" << std::endl;
 		release_mpis();
 		return -1;
 	}
+	delete primary;
 	std::cerr << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
 	std::cerr << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
 	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * peers.size()), dss_q);
 	std::cerr << "Thank you!" << std::endl;
-	keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
-	dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
-	release_mpis();
+	mpz_clear(dss_q);
 
 	// initialize return code
 	int ret = 0;

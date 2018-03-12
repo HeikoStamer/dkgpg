@@ -110,7 +110,7 @@ void run_instance
 #endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{
-			std::cerr << "R_" << whoami << ": wrong passphrase to unlock private key" << std::endl;
+			std::cerr << "ERROR: R_" << whoami << ": wrong passphrase to unlock private key" << std::endl;
 			release_mpis();
 			exit(-1);
 		}
@@ -127,14 +127,14 @@ void run_instance
 			std::string pwd;
 			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 			{
-				std::cerr << "R_" << whoami << ": " << "cannot read password for protecting channel to R_" << i << std::endl;
+				std::cerr << "ERROR: R_" << whoami << ": " << "cannot read password for protecting channel to R_" << i << std::endl;
 				release_mpis();
 				exit(-1);
 			}
 			key << pwd;
 			if (((i + 1) < peers.size()) && !TMCG_ParseHelper::nx(passwords, '/'))
 			{
-				std::cerr << "R_" << whoami << ": " << "cannot skip to next password for protecting channel to R_" << (i + 1) << std::endl;
+				std::cerr << "ERROR: R_" << whoami << ": " << "cannot skip to next password for protecting channel to R_" << (i + 1) << std::endl;
 				release_mpis();
 				exit(-1);
 			}
@@ -168,16 +168,16 @@ void run_instance
 	{
 		mpz_t xtest;
 		mpz_init_set_ui(xtest, i);
-		std::cout << "R_" << whoami << ": xtest = " << xtest << " <-> ";
+		std::cerr << "INFO: R_" << whoami << ": xtest = " << xtest << " <-> ";
 		rbc->Broadcast(xtest);
 		for (size_t ii = 0; ii < peers.size(); ii++)
 		{
 			if (!rbc->DeliverFrom(xtest, ii))
-				std::cout << "<X> ";
+				std::cerr << "<X> ";
 			else
-				std::cout << xtest << " ";
+				std::cerr << xtest << " ";
 		}
-		std::cout << std::endl;
+		std::cerr << std::endl;
 		mpz_clear(xtest);
 	}
 
@@ -223,11 +223,11 @@ void run_instance
 			dss_in << dss_c_ik[i][k] << std::endl;
 	}
 	if (opt_verbose)
-		std::cout << "CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" << std::endl;
+		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" << std::endl;
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = new CanettiGennaroJareckiKrawczykRabinDSS(dss_in);
 	if (!dss->CheckGroup())
 	{
-		std::cerr << "R_" << whoami << ": " << "tDSS domain parameters are not correctly generated!" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": " << "tDSS domain parameters are not correctly generated!" << std::endl;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -235,21 +235,21 @@ void run_instance
 	// update the tDSS keys (proactive security against mobile adversary)
 	std::stringstream err_log;
 	if (opt_verbose)
-		std::cout << "R_" << whoami << ": dss.Refresh()" << std::endl;
+		std::cerr << "INFO: R_" << whoami << ": dss.Refresh()" << std::endl;
 	if (!dss->Refresh(peers.size(), whoami, idx2dkg, dkg2idx, aiou, rbc, err_log, false, cache, cache_mod, &cache_avail))
 	{
-		std::cerr << "R_" << whoami << ": " << "tDSS Refresh() failed" << std::endl;
-		std::cerr << "R_" << whoami << ": log follows " << std::endl << err_log.str();
+		std::cerr << "ERROR: R_" << whoami << ": " << "tDSS Refresh() failed" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": log follows " << std::endl << err_log.str();
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
 	}
 	if (opt_verbose > 1)
-		std::cout << "R_" << whoami << ": log follows " << std::endl << err_log.str();
+		std::cerr << "INFO: R_" << whoami << ": log follows " << std::endl << err_log.str();
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_very_long;
 	if (opt_verbose)
-		std::cout << "R_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
+		std::cerr << "INFO: R_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
 	rbc->Sync(synctime);
 	// create an OpenPGP DSA-based primary key using refreshed values from tDSS
 	gcry_mpi_t p, q, g, h, y, n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
@@ -258,7 +258,7 @@ void run_instance
 	p = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(p, dss->p))
 	{
-		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for p" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for p" << std::endl;
 		gcry_mpi_release(p);
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
@@ -267,7 +267,7 @@ void run_instance
 	q = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(q, dss->q))
 	{
-		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for q" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for q" << std::endl;
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		delete dss, delete rbc, delete aiou, delete aiou2;
@@ -277,7 +277,7 @@ void run_instance
 	g = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(g, dss->g))
 	{
-		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for g" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for g" << std::endl;
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
@@ -288,7 +288,7 @@ void run_instance
 	h = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(h, dss->h))
 	{
-		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for h" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for h" << std::endl;
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
@@ -300,7 +300,7 @@ void run_instance
 	y = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(y, dss->y))
 	{
-		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for y" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for y" << std::endl;
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
@@ -316,7 +316,7 @@ void run_instance
 		x_i = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(x_i, dss->x_i))
 	{
-		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for x_i" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for x_i" << std::endl;
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
@@ -333,7 +333,7 @@ void run_instance
 		xprime_i = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 	{
-		std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for xprime_i" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for xprime_i" << std::endl;
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
@@ -369,7 +369,7 @@ void run_instance
 			tmp = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
 			{
-				std::cerr << "R_" << whoami << ": mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
+				std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
@@ -436,7 +436,7 @@ void run_instance
 	std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out | std::ofstream::trunc);
 	if (!secofs.good())
 	{
-		std::cerr << "R_" << whoami << ": opening private key file failed" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": opening private key file failed" << std::endl;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -444,7 +444,7 @@ void run_instance
 	secofs << armor;
 	if (!secofs.good())
 	{
-		std::cerr << "R_" << whoami << ": writing private key file failed" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": writing private key file failed" << std::endl;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -460,13 +460,13 @@ void run_instance
 	// release handles (unicast channel)
 	uP_in.clear(), uP_out.clear(), uP_key.clear();
 	if (opt_verbose)
-		std::cout << "R_" << whoami << ": aiou.numRead = " << aiou->numRead <<
+		std::cerr << "INFO: R_" << whoami << ": aiou.numRead = " << aiou->numRead <<
 			" aiou.numWrite = " << aiou->numWrite << std::endl;
 
 	// release handles (broadcast channel)
 	bP_in.clear(), bP_out.clear(), bP_key.clear();
 	if (opt_verbose)
-		std::cout << "R_" << whoami << ": aiou2.numRead = " << aiou2->numRead <<
+		std::cerr << "INFO: R_" << whoami << ": aiou2.numRead = " << aiou2->numRead <<
 			" aiou2.numWrite = " << aiou2->numWrite << std::endl;
 
 	// release asynchronous unicast and broadcast
@@ -490,7 +490,7 @@ void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("dkg-refresh (fork)");
+		perror("ERROR: dkg-refresh (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
@@ -502,14 +502,14 @@ void fork_instance
 			run_instance(whoami, 0);
 #endif
 			if (opt_verbose)
-				std::cout << "R_" << whoami << ": exit(0)" << std::endl;
+				std::cerr << "INFO: R_" << whoami << ": exit(0)" << std::endl;
 			exit(0);
 			/* END child code: participant R_i */
 		}
 		else
 		{
 			if (opt_verbose)
-				std::cout << "fork() = " << pid[whoami] << std::endl;
+				std::cerr << "INFO: fork() = " << pid[whoami] << std::endl;
 			instance_forked = true;
 		}
 	}
@@ -694,9 +694,9 @@ int main
 	}
 	if (opt_verbose)
 	{
-		std::cout << "INFO: canonicalized peer list = " << std::endl;
+		std::cerr << "INFO: canonicalized peer list = " << std::endl;
 		for (size_t i = 0; i < peers.size(); i++)
-			std::cout << peers[i] << std::endl;
+			std::cerr << peers[i] << std::endl;
 	}
 
 	// lock memory
@@ -724,7 +724,7 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	// initialize cache
 	std::string armored_pubkey = "undefined";
@@ -767,10 +767,10 @@ int main
 		release_mpis();
 		return -1;
 	}
-	std::cout << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
-	std::cout << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
+	std::cerr << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
+	std::cerr << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
 	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * peers.size()), dss_q);
-	std::cout << "Thank you!" << std::endl;
+	std::cerr << "Thank you!" << std::endl;
 	keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
 	dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 	release_mpis();
@@ -857,7 +857,7 @@ int main
 	std::cerr << "WARNING: GNUnet CADET is required for the message exchange of this program" << std::endl;
 #endif
 
-	std::cout << "INFO: running local test with " << peers.size() << " participants" << std::endl;
+	std::cerr << "INFO: running local test with " << peers.size() << " participants" << std::endl;
 	std::cerr << "WARNING: due to cache issues the generated shares are identical, don't use them!" << std::endl;
 	// open pipes
 	for (size_t i = 0; i < peers.size(); i++)
@@ -865,9 +865,9 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if (pipe(pipefd[i][j]) < 0)
-				perror("dkg-refresh (pipe)");
+				perror("ERROR: dkg-refresh (pipe)");
 			if (pipe(broadcast_pipefd[i][j]) < 0)
-				perror("dkg-refresh (pipe)");
+				perror("ERROR: dkg-refresh (pipe)");
 		}
 	}
 	
@@ -883,9 +883,9 @@ int main
 	{
 		int wstatus = 0;
 		if (opt_verbose)
-			std::cout << "waitpid(" << pid[i] << ")" << std::endl;
+			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
 		if (waitpid(pid[i], &wstatus, 0) != pid[i])
-			perror("dkg-refresh (waitpid)");
+			perror("ERROR: dkg-refresh (waitpid)");
 		if (!WIFEXITED(wstatus))
 		{
 			std::cerr << "ERROR: protocol instance ";
@@ -898,16 +898,16 @@ int main
 		else if (WIFEXITED(wstatus))
 		{
 			if (opt_verbose)
-				std::cout << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+				std::cerr << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
 			if (WEXITSTATUS(wstatus))
 				ret = -2; // error
 		}
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("dkg-refresh (close)");
+				perror("ERROR: dkg-refresh (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) || (close(broadcast_pipefd[i][j][1]) < 0))
-				perror("dkg-refresh (close)");
+				perror("ERROR: dkg-refresh (close)");
 		}
 	}
 	

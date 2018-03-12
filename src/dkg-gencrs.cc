@@ -101,7 +101,7 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	if (fips.length()) // generate primes and generator according to FIPS 186-4?
 	{
@@ -111,13 +111,13 @@ int main
 		if (factor > 0)
 		{
 			if (opt_verbose)
-				std::cout << "Generating primes p and q according to FIPS 186-4 with factor = " << factor << std::endl;
+				std::cerr << "INFO: Generating primes p and q according to FIPS 186-4 with factor = " << factor << std::endl;
 			L = TMCG_DDH_SIZE + (factor * 1024), N = TMCG_DLSE_SIZE + ((factor - 1) * 128);
 		}
 		else
 		{
 			if (opt_verbose)
-				std::cout << "Generating primes p and q according to FIPS 186-4 with default sizes" << std::endl;
+				std::cerr << "INFO: Generating primes p and q according to FIPS 186-4 with default sizes" << std::endl;
 			L = TMCG_DDH_SIZE, N = TMCG_DLSE_SIZE;
 		}
 		int hash_algo = 0, mr_iterations = 0;
@@ -172,7 +172,7 @@ int main
 				mpz_fhash(U, hash_algo, domain_parameter_seed);
 				mpz_tdiv_r_2exp(U, U, N - 1);
 				if (opt_verbose)
-					std::cout << "U = " << U << std::endl;
+					std::cerr << "INFO: U = " << U << std::endl;
 				// 7. $q = 2^{N-1} + U + 1 - (U \bmod 2)$.
 				mpz_set_ui(q, 1L);
 				mpz_mul_2exp(q, q, N - 1);
@@ -181,7 +181,7 @@ int main
 				if (mpz_odd_p(U))
 					mpz_sub_ui(q, q, 1L);
 				if (opt_verbose)
-					std::cout << "q = " << q << std::endl;
+					std::cerr << "INFO: q = " << q << std::endl;
 				// 8. Test whether or not $q$ is prime as specified in Appendix C.3.
 				// 9. If $q$ is not a prime, then go to step 5.
 				if (!mpz_probab_prime_p(q, mr_iterations))
@@ -205,8 +205,8 @@ int main
 					mpz_add_ui(tmp, tmp, j);
 					mpz_tdiv_r_2exp(tmp, tmp, seedlen);
 					mpz_fhash(V_j[j], hash_algo, tmp);
-					if (opt_verbose)
-						std::cout << "V_j[" << j << "] = " << V_j[j] << std::endl;
+					if (opt_verbose > 1)
+						std::cerr << "INFO: V_j[" << j << "] = " << V_j[j] << std::endl;
 					mpz_clear(tmp);
 				}
 				// 11.2 $W = V_0 + (V_1 * 2^{outlen}) + \cdots + (V_{n-1} * 2^{(n-1)*outlen}) + ((V_n \bmod 2^b) * 2^{n*outlen})$.
@@ -222,7 +222,7 @@ int main
 					mpz_clear(tmp);
 				}
 				if (opt_verbose)
-					std::cout << "W = " << W << std::endl;
+					std::cerr << "INFO: W = " << W << std::endl;
 				// 11.3 $X = W + 2^{L-1}$.
 				mpz_set_ui(X, 1L);
 				mpz_mul_2exp(X, X, L - 1);
@@ -251,11 +251,11 @@ int main
 				break;
 		}
 		if (opt_verbose)
-			std::cout << "p = " << p << std::endl;
+			std::cerr << "INFO: p = " << p << std::endl;
 		if (opt_verbose)
-			std::cout << "counter = " << counter << std::endl;
+			std::cerr << "INFO: counter = " << counter << std::endl;
 		if (opt_verbose)
-			std::cout << "Computing generator g according to FIPS 186-4" << std::endl;
+			std::cerr << "INFO: Computing generator g according to FIPS 186-4" << std::endl;
 		// 1. If ($index$ is incorrect), then return INVALID.
 		mpz_t index;
 		mpz_init_set_ui(index, 108L); // fixed index value for DKG-tools
@@ -302,7 +302,7 @@ int main
 			break;
 		}
 		if (opt_verbose)
-			std::cout << "g = " << p << std::endl;		
+			std::cerr << "INFO: g = " << p << std::endl;		
 
 		// export group parameters to stdout
 		mpz_t hash_algo_mpz, counter_mpz;
@@ -341,7 +341,7 @@ int main
 		if (prefix.length())
 		{
 			if (opt_verbose)
-				std::cout << "Generating primes p and q with k-prefix = " << prefix << ", factor = " << factor <<
+				std::cerr << "INFO: Generating primes p and q with k-prefix = " << prefix << ", factor = " << factor <<
 					" and canonical generator g (by VTMF)" << std::endl;
 			mpz_t p, q, g, k;
 			mpz_init(p), mpz_init(q), mpz_init(g), mpz_init(k);
@@ -380,7 +380,7 @@ int main
 			if (factor > 0)
 			{
 				if (opt_verbose)
-					std::cout << "Generating primes p and q with factor = " << factor <<
+					std::cerr << "INFO: Generating primes p and q with factor = " << factor <<
 						" and canonical generator g (by VTMF)" << std::endl;
 				// for each argument, sizes of underlying finite field and subgroup are increased by 1024 bit resp. 128 bit
 				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE + (factor * 1024), TMCG_DLSE_SIZE + (factor * 128), true);
@@ -388,7 +388,7 @@ int main
 			else
 			{
 				if (opt_verbose)
-					std::cout << "Generating primes p and q with default sizes" <<
+					std::cerr << "INFO: Generating primes p and q with default sizes" <<
 						" and canonical generator g (by VTMF)" << std::endl;
 				// use default security parameter from LibTMCG and verifiable generation of $g$
 				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true);

@@ -517,7 +517,7 @@ void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("dkg-keysign (fork)");
+		perror("ERROR: dkg-keysign (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
@@ -1005,9 +1005,9 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if (pipe(pipefd[i][j]) < 0)
-				perror("dkg-keysign (pipe)");
+				perror("ERROR: dkg-keysign (pipe)");
 			if (pipe(broadcast_pipefd[i][j]) < 0)
-				perror("dkg-keysign (pipe)");
+				perror("ERROR: dkg-keysign (pipe)");
 		}
 	}
 	
@@ -1025,7 +1025,7 @@ int main
 		if (opt_verbose)
 			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
 		if (waitpid(pid[i], &wstatus, 0) != pid[i])
-			perror("dkg-keysign (waitpid)");
+			perror("ERROR: dkg-keysign (waitpid)");
 		if (!WIFEXITED(wstatus))
 		{
 			std::cerr << "ERROR: protocol instance ";
@@ -1045,9 +1045,9 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("dkg-keysign (close)");
+				perror("ERROR: dkg-keysign (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) || (close(broadcast_pipefd[i][j][1]) < 0))
-				perror("dkg-keysign (close)");
+				perror("ERROR: dkg-keysign (close)");
 		}
 	}
 	

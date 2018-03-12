@@ -32,7 +32,7 @@ bool get_passphrase
 	// disable echo on stdin
 	if (tcgetattr(fileno(stdin), &old_term) < 0)
 	{
-		perror("get_passphrase (tcgetattr)");
+		perror("ERROR: get_passphrase (tcgetattr)");
 		return false;
 	}
 	new_term = old_term;
@@ -40,17 +40,17 @@ bool get_passphrase
 	new_term.c_lflag |= ECHONL;
 	if (tcsetattr(fileno(stdin), TCSANOW, &new_term) < 0)
 	{
-		perror("get_passphrase (tcsetattr)");
+		perror("ERROR: get_passphrase (tcsetattr)");
 		return false;
 	}
 	// read the passphrase
-	std::cout << prompt.c_str() << ": ";
+	std::cerr << prompt.c_str() << ": ";
 	std::getline(std::cin, passphrase);
 	std::cin.clear();
 	// enable echo on stdin
 	if (tcsetattr(fileno(stdin), TCSANOW, &old_term) < 0)
 	{
-		perror("get_passphrase (tcsetattr)");
+		perror("ERROR: get_passphrase (tcsetattr)");
 		return false;
 	}
 	return true;
@@ -209,7 +209,7 @@ bool lock_memory
 {
 	if (mlockall(MCL_CURRENT | MCL_FUTURE) < 0)
 	{
-		perror("lock_memory (mlockall)");
+		perror("ERROR: lock_memory (mlockall)");
 		return false;
 	}
 	return true;
@@ -220,7 +220,7 @@ bool unlock_memory
 {
 	if (munlockall() < 0)
 	{
-		perror("unlock_memory (munlockall)");
+		perror("ERROR: unlock_memory (munlockall)");
 		return false;
 	}
 	return true;

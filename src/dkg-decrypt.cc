@@ -89,7 +89,8 @@ void print_message
 	(const tmcg_openpgp_octets_t &msg)
 {
 	// print out the decrypted message
-	std::cout << "Decrypted message:" << std::endl;
+	if (opt_verbose)
+		std::cerr << "INFO: decrypted message:" << std::endl;
 	for (size_t i = 0; i < msg.size(); i++)
 		std::cout << msg[i];
 }
@@ -122,7 +123,7 @@ void init_dkg
 			dkg_in << dkg_c_ik[i][k] << std::endl;
 	}
 	if (opt_verbose)
-		std::cout << "GennaroJareckiKrawczykRabinDKG(in, ...)" << std::endl;
+		std::cerr << "INFO: GennaroJareckiKrawczykRabinDKG(in, ...)" << std::endl;
 	dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
 	if (!dkg->CheckGroup())
 	{
@@ -447,10 +448,10 @@ bool combine_decryption_shares
 			parties.resize(dkg->t + 1); // we need exactly $t + 1$ decryption shares
 		if (opt_verbose)
 		{
-			std::cout << "combine_decryption_shares(): Lagrange interpolation with ";
+			std::cerr << "INFO: combine_decryption_shares(): Lagrange interpolation with ";
 			for (std::vector<size_t>::iterator jt = parties.begin(); jt != parties.end(); ++jt)
-				std::cout << "P_" << *jt << " ";
-			std::cout << std::endl;
+				std::cerr << "P_" << *jt << " ";
+			std::cerr << std::endl;
 		}
 
 		// compute $R = \prod_{i\in\Lambda} r_i^\lambda_{i,\Lambda} \bmod p$ where $\lambda_{i, \Lambda} = \prod_{l\in\Lambda\setminus\{i\}\frac{l}{l-i}}$
@@ -590,7 +591,7 @@ void run_instance
 			std::string pwd;
 			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 			{
-				std::cerr << "D_" << whoami << ": " << "cannot read password for protecting channel to D_" << i << std::endl;
+				std::cerr << "ERROR: D_" << whoami << ": " << "cannot read password for protecting channel to D_" << i << std::endl;
 				release_mpis();
 				done_dkg(dkg);
 				exit(-1);
@@ -598,7 +599,7 @@ void run_instance
 			key << pwd;
 			if (((i + 1) < peers.size()) && !TMCG_ParseHelper::nx(passwords, '/'))
 			{
-				std::cerr << "D_" << whoami << ": " << "cannot skip to next password for protecting channel to D_" << (i + 1) << std::endl;
+				std::cerr << "ERROR: D_" << whoami << ": " << "cannot skip to next password for protecting channel to D_" << (i + 1) << std::endl;
 				release_mpis();
 				done_dkg(dkg);
 				exit(-1);
@@ -634,16 +635,16 @@ void run_instance
 	{
 		mpz_t xtest;
 		mpz_init_set_ui(xtest, i);
-		std::cout << "D_" << whoami << ": xtest = " << xtest << " <-> ";
+		std::cerr << "INFO: D_" << whoami << ": xtest = " << xtest << " <-> ";
 		rbc->Broadcast(xtest);
 		for (size_t ii = 0; ii < peers.size(); ii++)
 		{
 			if (!rbc->DeliverFrom(xtest, ii))
-				std::cout << "<X> ";
+				std::cerr << "<X> ";
 			else
-				std::cout << xtest << " ";
+				std::cerr << xtest << " ";
 		}
-		std::cout << std::endl;
+		std::cerr << std::endl;
 		mpz_clear(xtest);
 	}
 
@@ -695,7 +696,7 @@ void run_instance
 	BarnettSmartVTMF_dlog *vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false); // without verifiable generation of $g$ due to possible FIPS-CRS
 	if (!vtmf->CheckGroup())
 	{
-		std::cout << "D_" << whoami << ": " << "VTMF: Group G was not correctly generated!" << std::endl;
+		std::cerr << "ERROR: D_" << whoami << ": " << "VTMF: Group G was not correctly generated!" << std::endl;
 		delete vtmf;
 		mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
 		delete aiou, delete aiou2, delete rbc;
@@ -707,7 +708,7 @@ void run_instance
 	// create and exchange keys in order to bootstrap the $h$-generation for EDCF [JL00]
 	// TODO: replace N-time NIZK by one interactive (distributed) zero-knowledge proof of knowledge
 	if (opt_verbose)
-		std::cout << "INFO: generate h for EDCF by using VTMF key generation protocol" << std::endl;
+		std::cerr << "INFO: generate h for EDCF by using VTMF key generation protocol" << std::endl;
 	mpz_t nizk_c, nizk_r, h_j;
 	mpz_init(nizk_c), mpz_init(nizk_r), mpz_init(h_j);
 	vtmf->KeyGenerationProtocol_GenerateKey();
@@ -721,21 +722,21 @@ void run_instance
 		{
 			if (!rbc->DeliverFrom(h_j, i))
 			{
-				std::cerr << "D_" << whoami << ": WARNING - no VTMF key received from " << i << std::endl;
+				std::cerr << "WARNING: D_" << whoami << ": no VTMF key received from D_" << i << std::endl;
 			}
 			if (!rbc->DeliverFrom(nizk_c, i))
 			{
-				std::cerr << "D_" << whoami << ": WARNING - no NIZK c received from " << i << std::endl;
+				std::cerr << "WARNING: D_" << whoami << ": no NIZK c received from D_" << i << std::endl;
 			}
 			if (!rbc->DeliverFrom(nizk_r, i))
 			{
-				std::cerr << "D_" << whoami << ": WARNING - no NIZK r received from " << i << std::endl;
+				std::cerr << "WARNING: D_" << whoami << ": no NIZK r received from D_" << i << std::endl;
 			}
 			std::stringstream lej;
 			lej << h_j << std::endl << nizk_c << std::endl << nizk_r << std::endl;
 			if (!vtmf->KeyGenerationProtocol_UpdateKey(lej))
 			{
-				std::cerr << "D_" << whoami << ": WARNING - VTMF public key of D_" << i <<
+				std::cerr << "WARNING: D_" << whoami << ": VTMF public key of D_" << i <<
 					" was not correctly generated!" << std::endl;
 			}
 		}
@@ -746,7 +747,7 @@ void run_instance
 	// create an instance of the distributed coin-flip protocol (EDCF)
 	size_t T_EDCF = (peers.size() - 1) / 2; // assume maximum synchronous t-resilience for EDCF
 	if (opt_verbose)
-		std::cout << "JareckiLysyanskayaEDCF(" << peers.size() << ", " << T_EDCF << ", ...)" << std::endl;
+		std::cerr << "INFO: JareckiLysyanskayaEDCF(" << peers.size() << ", " << T_EDCF << ", ...)" << std::endl;
 	JareckiLysyanskayaEDCF *edcf = new JareckiLysyanskayaEDCF(peers.size(), T_EDCF, vtmf->p, vtmf->q, vtmf->g, vtmf->h);
 
 	// initialize
@@ -772,7 +773,7 @@ void run_instance
 
 	// collect other decryption shares
 	if (opt_verbose)
-		std::cout << "INFO: start collecting other decryption shares" << std::endl;
+		std::cerr << "INFO: start collecting other decryption shares" << std::endl;
 	std::vector<size_t> complaints;
 	for (size_t i = 0; i < peers.size(); i++)
 	{
@@ -804,8 +805,7 @@ void run_instance
 			if (std::find(complaints.begin(), complaints.end(), i) == complaints.end())
 			{
 				if (opt_verbose)
-					std::cout << "D_" << whoami << ": good decryption share of P_" << idx_dkg << " received from D_" <<
-						i << std::endl;
+					std::cerr << "INFO: D_" << whoami << ": good decryption share of P_" << idx_dkg << " received from D_" << i << std::endl;
 				if (opt_verbose > 1)
 					std::cerr << err_log.str() << std::endl;
 				// collect only verified decryption shares
@@ -827,9 +827,9 @@ void run_instance
 			std::stringstream err_log;
 			prove_decryption_share_interactive_publiccoin(dkg, r_i, aiou, rbc, edcf, err_log);
 			if (opt_verbose)
-				std::cout << "prove_decryption_share_interactive_publiccoin() finished" << std::endl;
+				std::cerr << "INFO: prove_decryption_share_interactive_publiccoin() finished" << std::endl;
 			if (opt_verbose > 1)
-				std::cout << "D_" << whoami << ": log follows" << std::endl << err_log.str();
+				std::cerr << "INFO: D_" << whoami << ": log follows" << std::endl << err_log.str();
 		}
 	}
 
@@ -849,7 +849,7 @@ void run_instance
 	// at the end: deliver some more rounds for waiting parties
 	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
-		std::cout << "D_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
+		std::cerr << "INFO: D_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
 	rbc->Sync(synctime);
 
 	// release EDCF
@@ -864,13 +864,13 @@ void run_instance
 	// release handles (unicast channel)
 	uP_in.clear(), uP_out.clear(), uP_key.clear();
 	if (opt_verbose)
-		std::cout << "D_" << whoami << ": aiou.numRead = " << aiou->numRead <<
+		std::cerr << "INFO: D_" << whoami << ": aiou.numRead = " << aiou->numRead <<
 			" aiou.numWrite = " << aiou->numWrite << std::endl;
 
 	// release handles (broadcast channel)
 	bP_in.clear(), bP_out.clear(), bP_key.clear();
 	if (opt_verbose)
-		std::cout << "D_" << whoami << ": aiou2.numRead = " << aiou2->numRead <<
+		std::cerr << "INFO: D_" << whoami << ": aiou2.numRead = " << aiou2->numRead <<
 			" aiou2.numWrite = " << aiou2->numWrite << std::endl;
 
 	// release asynchronous unicast and broadcast
@@ -929,7 +929,7 @@ void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("dkg-decrypt (fork)");
+		perror("ERROR: dkg-decrypt (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
@@ -941,14 +941,14 @@ void fork_instance
 			run_instance(whoami, 0);
 #endif
 			if (opt_verbose)
-				std::cout << "D_" << whoami << ": exit(0)" << std::endl;
+				std::cerr << "INFO: D_" << whoami << ": exit(0)" << std::endl;
 			exit(0);
 			/* END child code: participant D_i */
 		}
 		else
 		{
 			if (opt_verbose)
-				std::cout << "fork() = " << pid[whoami] << std::endl;
+				std::cerr << "INFO: fork() = " << pid[whoami] << std::endl;
 			instance_forked = true;
 		}
 	}
@@ -1187,9 +1187,9 @@ int main
 	}
 	if (opt_verbose)
 	{
-		std::cout << "INFO: canonicalized peer list = " << std::endl;
+		std::cerr << "INFO: canonicalized peer list = " << std::endl;
 		for (size_t i = 0; i < peers.size(); i++)
-			std::cout << peers[i] << std::endl;
+			std::cerr << peers[i] << std::endl;
 	}
 
 	// lock memory
@@ -1217,7 +1217,7 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	// read message
 	if (opt_ifilename != NULL)
@@ -1235,7 +1235,7 @@ int main
 	}
 	else
 	{
-		std::cout << "Please enter the encrypted message (in ASCII Armor; ^D for EOF): " << std::endl;
+		std::cerr << "Please enter the encrypted message (in ASCII Armor; ^D for EOF): " << std::endl;
 		std::string line;
 		while (std::getline(std::cin, line))
 			armored_message += line + "\r\n";
@@ -1297,7 +1297,7 @@ int main
 			dds_input.push_back(dds[i]);
 		std::string dds_radix;
 		CallasDonnerhackeFinneyShawThayerRFC4880::Radix64Encode(dds_input, dds_radix, false);
-		std::cout << "Your decryption share (keep confidential): " << dds_radix << std::endl;
+		std::cerr << "Your decryption share (keep confidential): " << dds_radix << std::endl;
 		mpz_init(r_i), mpz_init(c), mpz_init(r);
 		if (!verify_decryption_share(dkg, dds, idx, r_i, c, r))
 		{
@@ -1309,7 +1309,7 @@ int main
 		mpz_ptr tmp1 = new mpz_t();
 		mpz_init_set(tmp1, r_i);
 		interpol_parties.push_back(dkg->i), interpol_shares.push_back(tmp1);
-		std::cout << "Enter decryption shares (one per line; ^D for EOF) from other parties/devices:" << std::endl;
+		std::cerr << "Enter decryption shares (one per line; ^D for EOF) from other parties/devices:" << std::endl;
 		while (std::getline(std::cin, dds_radix))
 		{
 			tmcg_openpgp_octets_t dds_output;
@@ -1327,10 +1327,10 @@ int main
 					interpol_parties.push_back(idx), interpol_shares.push_back(tmp1);
 				}
 				else
-					std::cout << "WARNING: decryption share of P_" << idx << " already stored" << std::endl;
+					std::cerr << "WARNING: decryption share of P_" << idx << " already stored" << std::endl;
 			}
 			else
-				std::cout << "WARNING: verification of decryption share from P_" << idx << " failed" << std::endl;
+				std::cerr << "WARNING: verification of decryption share from P_" << idx << " failed" << std::endl;
 		}
 		bool res = combine_decryption_shares(dkg, interpol_parties, interpol_shares);
 		mpz_clear(r_i), mpz_clear(c), mpz_clear(r);
@@ -1466,16 +1466,16 @@ int main
 	std::cerr << "WARNING: GNUnet CADET is required for the message exchange of this program" << std::endl;
 #endif
 
-	std::cout << "INFO: running local test with " << peers.size() << " participants" << std::endl;
+	std::cerr << "INFO: running local test with " << peers.size() << " participants" << std::endl;
 	// open pipes
 	for (size_t i = 0; i < peers.size(); i++)
 	{
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if (pipe(pipefd[i][j]) < 0)
-				perror("dkg-decrypt (pipe)");
+				perror("ERROR: dkg-decrypt (pipe)");
 			if (pipe(broadcast_pipefd[i][j]) < 0)
-				perror("dkg-decrypt (pipe)");
+				perror("ERROR: dkg-decrypt (pipe)");
 		}
 	}
 	
@@ -1491,9 +1491,9 @@ int main
 	{
 		int wstatus = 0;
 		if (opt_verbose)
-			std::cout << "waitpid(" << pid[i] << ")" << std::endl;
+			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
 		if (waitpid(pid[i], &wstatus, 0) != pid[i])
-			perror("dkg-decrypt (waitpid)");
+			perror("ERROR: dkg-decrypt (waitpid)");
 		if (!WIFEXITED(wstatus))
 		{
 			std::cerr << "ERROR: protocol instance ";
@@ -1506,16 +1506,16 @@ int main
 		else if (WIFEXITED(wstatus))
 		{
 			if (opt_verbose)
-				std::cout << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+				std::cerr << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
 			if (WEXITSTATUS(wstatus))
 				ret = -2; // error
 		}
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("dkg-decrypt (close)");
+				perror("ERROR: dkg-decrypt (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) || (close(broadcast_pipefd[i][j][1]) < 0))
-				perror("dkg-decrypt (close)");
+				perror("ERROR: dkg-decrypt (close)");
 		}
 	}
 	

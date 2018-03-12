@@ -164,7 +164,7 @@ void handle_gnunet_data_callback(void *cls, const struct GNUNET_MessageHeader *m
 			}
 			else
 			{
-				perror("dkg-gnunet-common (write)");
+				perror("ERROR: dkg-gnunet-common (write)");
 				GNUNET_SCHEDULER_shutdown();
 				return;
 			}
@@ -197,7 +197,7 @@ void gnunet_pipe_ready(void *cls)
 				}
 				else
 				{
-					perror("dkg-gnunet-common (read)");
+					perror("ERROR: dkg-gnunet-common (read)");
 					GNUNET_SCHEDULER_shutdown();
 					return;
 				}
@@ -237,7 +237,7 @@ void gnunet_broadcast_pipe_ready(void *cls)
 				}
 				else
 				{
-					perror("dkg-gnunet-common (read)");
+					perror("ERROR: dkg-gnunet-common (read)");
 					GNUNET_SCHEDULER_shutdown();
 					return;
 				}
@@ -286,7 +286,7 @@ void* gnunet_channel_incoming(void *cls, struct GNUNET_CADET_Channel *channel,
 	const struct GNUNET_PeerIdentity *initiator)
 {
 	if (gnunet_opt_verbose)
-		std::cout << "INFO: incoming channel from " << GNUNET_i2s_full(initiator) << std::endl;
+		std::cerr << "INFO: incoming channel from " << GNUNET_i2s_full(initiator) << std::endl;
 	// check whether peer identity is included in peer list
 	std::string peer = GNUNET_i2s_full(initiator);
 	if (peer2pipe.count(peer) == 0)
@@ -374,12 +374,14 @@ void gnunet_shutdown_task(void *cls)
 	if (instance_forked)
 	{
 		int thispid = pid[peer2pipe[thispeer]];
-		std::cout << "kill(" << thispid << ", SIGTERM)" << std::endl;
+		if (gnunet_opt_verbose)
+			std::cerr << "INFO: kill(" << thispid << ", SIGTERM)" << std::endl;
 		if(kill(thispid, SIGTERM))
-			perror("dkg-gnunet-common (kill)");
-		std::cout << "waitpid(" << thispid << ", NULL, 0)" << std::endl;
+			perror("ERROR: dkg-gnunet-common (kill)");
+		if (gnunet_opt_verbose)
+			std::cerr << "INFO: waitpid(" << thispid << ", NULL, 0)" << std::endl;
 		if (waitpid(thispid, NULL, 0) != thispid)
-			perror("dkg-gnunet-common (waitpid)");
+			perror("ERROR: dkg-gnunet-common (waitpid)");
 		instance_forked = false;
 	}
 	for (size_t i = 0; ((i < peers.size()) && pipes_created); i++)
@@ -387,9 +389,9 @@ void gnunet_shutdown_task(void *cls)
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("dkg-gnunet-common (close)");
+				perror("ERROR: dkg-gnunet-common (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) || (close(broadcast_pipefd[i][j][1]) < 0))
-				perror("dkg-gnunet-common (close)");
+				perror("ERROR: dkg-gnunet-common (close)");
 		}
 	}
 	pipes_created = false;
@@ -433,7 +435,7 @@ void gnunet_io(void *cls)
 			struct GNUNET_MessageHeader *msg;
 			// send message on input channel
 			if ((gnunet_opt_verbose) && (opt_verbose > 1))
-				std::cout << "INFO: try to send " << buf.first << " bytes on input channel to " << pipe2peer[ble.first] << std::endl;
+				std::cerr << "INFO: try to send " << buf.first << " bytes on input channel to " << pipe2peer[ble.first] << std::endl;
 			env = GNUNET_MQ_msg_extra(msg, buf.first, GNUNET_MESSAGE_TYPE_TMCG_DKG_PIPE_UNICAST);
 			GNUNET_memcpy(&msg[1], buf.second, buf.first);
 			GNUNET_MQ_send(GNUNET_CADET_get_mq(pipe2channel_in[ble.first]), env);
@@ -454,7 +456,7 @@ void gnunet_io(void *cls)
 			struct GNUNET_MessageHeader *msg;
 			// send message on input channel
 			if ((gnunet_opt_verbose) && (opt_verbose > 1))
-				std::cout << "INFO: try to broadcast " << buf.first << " bytes on input channel to " << pipe2peer[ble.first] << std::endl;
+				std::cerr << "INFO: try to broadcast " << buf.first << " bytes on input channel to " << pipe2peer[ble.first] << std::endl;
 			env = GNUNET_MQ_msg_extra(msg, buf.first, GNUNET_MESSAGE_TYPE_TMCG_DKG_PIPE_BROADCAST);
 			GNUNET_memcpy(&msg[1], buf.second, buf.first);
 			GNUNET_MQ_send(GNUNET_CADET_get_mq(pipe2channel_in[ble.first]), env);
@@ -547,9 +549,9 @@ void gnunet_statistics(void *cls)
 	st = NULL;
 
 	if ((gnunet_opt_verbose) && (opt_verbose > 1))
-		std::cout << "INFO: pipe2channel_out.size() = " << pipe2channel_out.size() << ", pipe2channel_in.size() = " << pipe2channel_in.size() << std::endl;
+		std::cerr << "INFO: pipe2channel_out.size() = " << pipe2channel_out.size() << ", pipe2channel_in.size() = " << pipe2channel_in.size() << std::endl;
 	if ((gnunet_opt_verbose) && (opt_verbose > 1))
-		std::cout << "INFO: send_queue.size() = " << send_queue.size() << ", send_queue_broadcast.size() = " << send_queue_broadcast.size() << std::endl;
+		std::cerr << "INFO: send_queue.size() = " << send_queue.size() << ", send_queue_broadcast.size() = " << send_queue_broadcast.size() << std::endl;
 	if (instance_forked)
 	{
 		// shutdown, if forked instance has terminated 
@@ -557,7 +559,7 @@ void gnunet_statistics(void *cls)
 		int thispid = pid[peer2pipe[thispeer]];
 		int ret = waitpid(thispid, &wstatus, WNOHANG);
 		if (ret < 0)
-			perror("dkg-gnunet-common (waitpid)");
+			perror("ERROR: dkg-gnunet-common (waitpid)");
 		else if (ret == thispid)
 		{
 			if (!WIFEXITED(wstatus))
@@ -589,7 +591,7 @@ void gnunet_fork(void *cls)
 	{
 		// fork instance
 		if (gnunet_opt_verbose)
-			std::cout << "INFO: forking the protocol instance ..." << std::endl;
+			std::cerr << "INFO: forking the protocol instance ..." << std::endl;
 		fork_instance(peer2pipe[thispeer]);
 	}
 	else
@@ -617,7 +619,7 @@ void gnunet_init(void *cls)
 	// check whether own peer identity is included in peer list
 	thispeer = GNUNET_i2s_full(&opi);
 	if (gnunet_opt_verbose)
-		std::cout << "INFO: my peer id = " << thispeer << std::endl;
+		std::cerr << "INFO: my peer id = " << thispeer << std::endl;
 	std::map<std::string, size_t>::const_iterator jt = peer2pipe.find(thispeer);
 	if (jt == peer2pipe.end())
 	{
@@ -632,9 +634,9 @@ void gnunet_init(void *cls)
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if (pipe2(pipefd[i][j], O_NONBLOCK) < 0)
-				perror("dkg-gnunet-common (pipe)");
+				perror("ERROR: dkg-gnunet-common (pipe)");
 			if (pipe2(broadcast_pipefd[i][j], O_NONBLOCK) < 0)
-				perror("dkg-gnunet-common (pipe)");
+				perror("ERROR: dkg-gnunet-common (pipe)");
 		}
 	}
 	pipes_created = true;
@@ -699,7 +701,7 @@ void gnunet_run(void *cls, char *const *args, const char *cfgfile,
 	else
 		GNUNET_CRYPTO_hash(port.c_str(), port.length(), &porthash);
 	if (gnunet_opt_verbose)
-		std::cout << "INFO: my CADET listen port hash = " << GNUNET_h2s_full(&porthash) << std::endl;
+		std::cerr << "INFO: my CADET listen port hash = " << GNUNET_h2s_full(&porthash) << std::endl;
 	static const struct GNUNET_MQ_MessageHandler handlers[] = {
 		GNUNET_MQ_handler_end()
 	};

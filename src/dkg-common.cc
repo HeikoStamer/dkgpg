@@ -132,7 +132,7 @@ bool parse_message
 	tmcg_openpgp_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
+		std::cerr << "INFO: ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_MESSAGE)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
@@ -152,7 +152,7 @@ bool parse_message
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl, v_i, c_ik);
 		++pnum;
 		if (opt_verbose)
-			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << "INFO: PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
 		if (ptag == 0x00)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
@@ -171,29 +171,29 @@ bool parse_message
 		{
 			case 1: // Public-Key Encrypted Session Key
 				if (opt_verbose)
-					std::cout << " pkalgo = " << (int)ctx.pkalgo << std::endl;
+					std::cerr << "INFO: pkalgo = " << (int)ctx.pkalgo << std::endl;
 				if (ctx.pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL)
 				{
 					std::cerr << "WARNING: public-key algorithm not supported; packet #" << pnum << " ignored" << std::endl;
 					break;
 				}
 				if (opt_verbose)
-					std::cout << " keyid = " << std::hex;
+					std::cerr << "INFO: keyid = " << std::hex;
 				pkesk_keyid.clear();
 				for (size_t i = 0; i < sizeof(ctx.keyid); i++)
 				{
 					if (opt_verbose)
-						std::cout << (int)ctx.keyid[i] << " ";
+						std::cerr << (int)ctx.keyid[i] << " ";
 					pkesk_keyid.push_back(ctx.keyid[i]);
 				}
 				if (opt_verbose)
-					std::cout << std::dec << std::endl;
+					std::cerr << std::dec << std::endl;
 				if (CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompareZero(pkesk_keyid))
 					std::cerr << "WARNING: PKESK wildcard keyid found; try to decrypt" << std::endl;
 				else if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(pkesk_keyid, subkeyid))
 				{
 					if (opt_verbose)
-						std::cout << "WARNING: PKESK keyid does not match subkey ID" << std::endl;
+						std::cerr << "WARNING: PKESK keyid does not match subkey ID" << std::endl;
 					break;
 				}
 				if (have_pkesk)
@@ -293,12 +293,12 @@ bool decrypt_message
 	// decrypt the given message
 	tmcg_openpgp_skalgo_t symalgo = TMCG_OPENPGP_SKALGO_PLAINTEXT;
 	if (opt_verbose)
-		std::cout << "symmetric decryption of message ..." << std::endl;
+		std::cerr << "INFO: symmetric decryption of message ..." << std::endl;
 	if (key.size() > 0)
 	{
 		symalgo = (tmcg_openpgp_skalgo_t)key[0];
 		if (opt_verbose)
-			std::cout << "symalgo = " << (int)symalgo << std::endl;
+			std::cerr << "INFO: symalgo = " << (int)symalgo << std::endl;
 	}
 	else
 	{
@@ -336,7 +336,7 @@ bool decrypt_message
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl, v_i, c_ik);
 		++pnum;
 		if (opt_verbose)
-			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << "INFO: PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
 		if (ptag == 0x00)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
@@ -432,7 +432,7 @@ bool parse_public_key
 	tmcg_openpgp_octets_t pkts;
 	tmcg_openpgp_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
+		std::cerr << "INFO: ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
@@ -464,7 +464,7 @@ bool parse_public_key
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl, v_i, c_ik);
 		++pnum;
 		if (opt_verbose)
-			std::cout << "PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << "INFO: PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
 		if (ptag == 0x00)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
@@ -551,15 +551,15 @@ bool parse_public_key
 						dsa_pca[i] = ctx.pca[i];
 					dsa_hspd.clear();
 					if (opt_verbose)
-						std::cout << "INFO: dsa_hspd = " << std::hex;
+						std::cerr << "INFO: dsa_hspd = " << std::hex;
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 					{
 						dsa_hspd.push_back(ctx.hspd[i]);
 						if (opt_verbose)
-							std::cout << (int)ctx.hspd[i] << " ";
+							std::cerr << (int)ctx.hspd[i] << " ";
 					}
 					if (opt_verbose)
-						std::cout << std::dec << std::endl << "INFO: dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
+						std::cerr << std::dec << std::endl << "INFO: dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
 					if (dsa_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -573,7 +573,7 @@ bool parse_public_key
 					rbits = gcry_mpi_get_nbits(dsa_r);
 					sbits = gcry_mpi_get_nbits(dsa_s);
 					if (opt_verbose)
-						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+						std::cerr << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
 					if ((dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
 					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
 					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
@@ -617,7 +617,7 @@ bool parse_public_key
 					for (size_t i = 0; i < ctx.hspdlen; i++)
 						elg_hspd.push_back(ctx.hspd[i]);
 					if (opt_verbose)
-						std::cout << "INFO: elg_hspd.size() = " << elg_hspd.size() << std::endl;
+						std::cerr << "INFO: elg_hspd.size() = " << elg_hspd.size() << std::endl;
 					if (elg_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -631,7 +631,7 @@ bool parse_public_key
 					rbits = gcry_mpi_get_nbits(elg_r);
 					sbits = gcry_mpi_get_nbits(elg_s);
 					if (opt_verbose)
-						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+						std::cerr << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
 					if ((elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
 					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
 					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
@@ -671,7 +671,7 @@ bool parse_public_key
 							revdsa_hspd.push_back(ctx.hspd[i]);
 					}
 					if (opt_verbose)
-						std::cout << "INFO: revdsa_hspd.size() = " << revdsa_hspd.size() << std::endl;
+						std::cerr << "INFO: revdsa_hspd.size() = " << revdsa_hspd.size() << std::endl;
 					if (revdsa_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -685,7 +685,7 @@ bool parse_public_key
 					rbits = gcry_mpi_get_nbits(revdsa_r);
 					sbits = gcry_mpi_get_nbits(revdsa_s);
 					if (opt_verbose)
-						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+						std::cerr << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
 					if ((revdsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
 					    (revdsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
 					    (revdsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
@@ -712,7 +712,7 @@ bool parse_public_key
 							revelg_hspd.push_back(ctx.hspd[i]);
 					}
 					if (opt_verbose)
-						std::cout << "INFO: revelg_hspd.size() = " << revelg_hspd.size() << std::endl;
+						std::cerr << "INFO: revelg_hspd.size() = " << revelg_hspd.size() << std::endl;
 					if (revelg_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
@@ -726,7 +726,7 @@ bool parse_public_key
 					rbits = gcry_mpi_get_nbits(revelg_r);
 					sbits = gcry_mpi_get_nbits(revelg_s);
 					if (opt_verbose)
-						std::cout << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
+						std::cerr << "INFO: rbits = " << rbits << " sbits = " << sbits << std::endl;
 					if ((revelg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
 					    (revelg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
 					    (revelg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
@@ -755,10 +755,10 @@ bool parse_public_key
 					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
 					if (opt_verbose)
 					{
-						std::cout << "INFO: Key ID of DSA primary key: " << std::hex;
+						std::cerr << "INFO: Key ID of DSA primary key: " << std::hex;
 						for (size_t i = 0; i < keyid.size(); i++)
-							std::cout << (int)keyid[i] << " ";
-						std::cout << std::dec << std::endl;
+							std::cerr << (int)keyid[i] << " ";
+						std::cerr << std::dec << std::endl;
 					}
 				}
 				else if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_DSA) && pubdsa)
@@ -807,10 +807,10 @@ bool parse_public_key
 					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(sub_hashing, subkeyid);
 					if (opt_verbose)
 					{
-						std::cout << "INFO: Key ID of ElGamal subkey: " << std::hex;
+						std::cerr << "INFO: Key ID of ElGamal subkey: " << std::hex;
 						for (size_t i = 0; i < subkeyid.size(); i++)
-							std::cout << (int)subkeyid[i] << " ";
-						std::cout << std::dec << std::endl;
+							std::cerr << (int)subkeyid[i] << " ";
+						std::cerr << std::dec << std::endl;
 					}
 					if (CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(subkeyid, keyid))
 						std::cerr << "WARNING: probably same key material used for subkey" << std::endl;
@@ -873,31 +873,31 @@ bool parse_public_key
 	keyusage_out = flags & 0xFF; // return some flags
 	if (opt_verbose)
 	{
-		std::cout << "key flags on primary key: ";
+		std::cerr << "INFO: key flags on primary key: ";
 		if ((flags & 0x01) == 0x01)
-			std::cout << "C"; // The key may be used to certify other keys.
+			std::cerr << "C"; // The key may be used to certify other keys.
 		if ((flags & 0x02) == 0x02)
-			std::cout << "S"; // The key may be used to sign data.
+			std::cerr << "S"; // The key may be used to sign data.
 		if ((flags & 0x04) == 0x04)
-			std::cout << "E"; // The key may be used encrypt communications.
+			std::cerr << "E"; // The key may be used encrypt communications.
 		if ((flags & 0x08) == 0x08)
-			std::cout << "e"; // The key may be used encrypt storage.
+			std::cerr << "e"; // The key may be used encrypt storage.
 		if ((flags & 0x10) == 0x10)
-			std::cout << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
+			std::cerr << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
 		if ((flags & 0x20) == 0x20)
-			std::cout << "A"; // The key may be used for authentication.
+			std::cerr << "A"; // The key may be used for authentication.
 		if ((flags & 0x80) == 0x80)
-			std::cout << "M"; // The private component of this key may be in the possession of more than one person.
-		std::cout << std::endl;
-		std::cout << "INFO: userid = \"" << userid << "\"" << std::endl;
-		std::cout << "INFO: dsa_sigtype = 0x" << std::hex << (int)dsa_sigtype << std::dec << 
+			std::cerr << "M"; // The private component of this key may be in the possession of more than one person.
+		std::cerr << std::endl;
+		std::cerr << "INFO: userid = \"" << userid << "\"" << std::endl;
+		std::cerr << "INFO: dsa_sigtype = 0x" << std::hex << (int)dsa_sigtype << std::dec << 
 			" dsa_pkalgo = " << (int)dsa_pkalgo << " dsa_hashalgo = " << (int)dsa_hashalgo << " dsa_hspd.size() = " << dsa_hspd.size() << std::endl;
 	}
 	unsigned int pbits = 0, qbits = 0;
 	pbits = gcry_mpi_get_nbits(dsa_p);
 	qbits = gcry_mpi_get_nbits(dsa_q);
 	if (opt_verbose)
-		std::cout << "INFO: |p| = " << pbits << " bits, |q| = " << qbits << " bits" << std::endl;
+		std::cerr << "INFO: |p| = " << pbits << " bits, |q| = " << qbits << " bits" << std::endl;
 	if ((pbits < 2048) || (qbits < 256))
 		keystrength_out = 0; // bad DSA key strength
 	if ((dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
@@ -935,7 +935,7 @@ bool parse_public_key
 		CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, dsa_trailer, dsa_hashalgo, hash, dsa_left);
 	}
 	if (opt_verbose)
-		std::cout << "INFO: dsa_left = " << std::hex << (int)dsa_left[0] << " " << (int)dsa_left[1] << std::dec << std::endl;
+		std::cerr << "INFO: dsa_left = " << std::hex << (int)dsa_left[0] << " " << (int)dsa_left[1] << std::dec << std::endl;
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, dsa_r, dsa_s);
 	if (ret)
 	{
@@ -947,7 +947,7 @@ bool parse_public_key
 	if (revdsa)
 	{
 		if (opt_verbose)
-			std::cout << "INFO: revdsa_sigtype = 0x" << std::hex << (int)revdsa_sigtype << std::dec << 
+			std::cerr << "INFO: revdsa_sigtype = 0x" << std::hex << (int)revdsa_sigtype << std::dec << 
 				" revdsa_pkalgo = " << (int)revdsa_pkalgo << " revdsa_hashalgo = " << (int)revdsa_hashalgo <<
 				" revdsa_hspd.size() = " << revdsa_hspd.size() << std::endl;
 		tmcg_openpgp_octets_t revdsa_trailer, revdsa_left;
@@ -981,7 +981,7 @@ bool parse_public_key
 			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, revdsa_trailer, revdsa_hashalgo, hash, revdsa_left);
 		}
 		if (opt_verbose)
-			std::cout << "INFO: revdsa_left = " << std::hex << (int)revdsa_left[0] << " " << (int)revdsa_left[1] << std::dec << std::endl;
+			std::cerr << "INFO: revdsa_left = " << std::hex << (int)revdsa_left[0] << " " << (int)revdsa_left[1] << std::dec << std::endl;
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, revdsa_r, revdsa_s);
 		gcry_sexp_release(dsakey);
 		if (ret)
@@ -1008,23 +1008,23 @@ bool parse_public_key
 		}
 		if (opt_verbose)
 		{
-			std::cout << "key flags on subkey: ";
+			std::cerr << "INFO: key flags on subkey: ";
 			if ((flags & 0x01) == 0x01)
-				std::cout << "C"; // The key may be used to certify other keys.
+				std::cerr << "C"; // The key may be used to certify other keys.
 			if ((flags & 0x02) == 0x02)
-				std::cout << "S"; // The key may be used to sign data.
+				std::cerr << "S"; // The key may be used to sign data.
 			if ((flags & 0x04) == 0x04)
-				std::cout << "E"; // The key may be used encrypt communications.
+				std::cerr << "E"; // The key may be used encrypt communications.
 			if ((flags & 0x08) == 0x08)
-				std::cout << "e"; // The key may be used encrypt storage.
+				std::cerr << "e"; // The key may be used encrypt storage.
 			if ((flags & 0x10) == 0x10)
-				std::cout << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
+				std::cerr << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
 			if ((flags & 0x20) == 0x20)
-				std::cout << "A"; // The key may be used for authentication.
+				std::cerr << "A"; // The key may be used for authentication.
 			if ((flags & 0x80) == 0x80)
-				std::cout << "M"; // The private component of this key may be in the possession of more than one person.
-			std::cout << std::endl;
-			std::cout << "INFO: elg_sigtype = 0x" << std::hex << (int)elg_sigtype << std::dec << 
+				std::cerr << "M"; // The private component of this key may be in the possession of more than one person.
+			std::cerr << std::endl;
+			std::cerr << "INFO: elg_sigtype = 0x" << std::hex << (int)elg_sigtype << std::dec << 
 				" elg_pkalgo = " << (int)elg_pkalgo << " elg_hashalgo = " << (int)elg_hashalgo << " elg_hspd.size() = " << elg_hspd.size() << std::endl;
 		}
 		if (elg_required && ((flags & 0x04) != 0x04))
@@ -1035,7 +1035,7 @@ bool parse_public_key
 		}
 		pbits = gcry_mpi_get_nbits(elg_p);
 		if (opt_verbose)
-			std::cout << "INFO: |p| = " << pbits << " bits" << std::endl;
+			std::cerr << "INFO: |p| = " << pbits << " bits" << std::endl;
 		if (elg_required && (pbits < 2048))
 			keystrength_out = 0; // bad Elgamal key strength
 		if (elg_required && ((elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
@@ -1073,7 +1073,7 @@ bool parse_public_key
 			CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, elg_trailer, elg_hashalgo, hash, elg_left);
 		}
 		if (opt_verbose)
-			std::cout << "INFO: elg_left = " << std::hex << (int)elg_left[0] << " " << (int)elg_left[1] << std::dec << std::endl;
+			std::cerr << "INFO: elg_left = " << std::hex << (int)elg_left[0] << " " << (int)elg_left[1] << std::dec << std::endl;
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, elg_r, elg_s);
 		if (ret)
 		{
@@ -1085,7 +1085,7 @@ bool parse_public_key
 		if (revelg)
 		{
 			if (opt_verbose)
-				std::cout << "INFO: revelg_sigtype = 0x" << std::hex << (int)revelg_sigtype << std::dec << 
+				std::cerr << "INFO: revelg_sigtype = 0x" << std::hex << (int)revelg_sigtype << std::dec << 
 					" revelg_pkalgo = " << (int)revelg_pkalgo << " revelg_hashalgo = " << (int)revelg_hashalgo <<
 					" revelg_hspd.size() = " << revelg_hspd.size() << std::endl;
 			tmcg_openpgp_octets_t revelg_trailer, revelg_left;
@@ -1119,7 +1119,7 @@ bool parse_public_key
 				CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, revelg_trailer, revelg_hashalgo, hash, revelg_left);
 			}
 			if (opt_verbose)
-				std::cout << "INFO: revelg_left = " << std::hex << (int)revelg_left[0] << " " << (int)revelg_left[1] << std::dec << std::endl;
+				std::cerr << "INFO: revelg_left = " << std::hex << (int)revelg_left[0] << " " << (int)revelg_left[1] << std::dec << std::endl;
 			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, revelg_r, revelg_s);
 			gcry_sexp_release(dsakey);
 			if (ret)
@@ -1151,7 +1151,7 @@ bool parse_private_key
 	tmcg_openpgp_octets_t pkts;
 	tmcg_openpgp_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cout << "ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
+		std::cerr << "INFO: ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found" << std::endl;
@@ -1179,7 +1179,7 @@ bool parse_private_key
 		tmcg_openpgp_octets_t current_packet;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, x_rvss_qual, capl, v_i, c_ik);
 		if (opt_verbose)
-			std::cout << "PacketDecode(pkts.size = " << pkts.size() << ") = " << (int)ptag;
+			std::cerr << "INFO: PacketDecode(pkts.size = " << pkts.size() << ") = " << (int)ptag;
 		if (!ptag)
 		{
 			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
@@ -1188,35 +1188,35 @@ bool parse_private_key
 			return false; // error detected
 		}
 		if (opt_verbose)
-			std::cout << " tag = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << "INFO:  tag = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
 		switch (ptag)
 		{
 			case 2: // Signature Packet
 				issuer.clear();
 				if (opt_verbose)
-					std::cout << " issuer = " << std::hex;
+					std::cerr << "INFO:  issuer = " << std::hex;
 				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
 				{
 					if (opt_verbose)
-						std::cout << (int)ctx.issuer[i] << " ";
+						std::cerr << (int)ctx.issuer[i] << " ";
 					issuer.push_back(ctx.issuer[i]);
 				}
 				if (opt_verbose)
-					std::cout << std::dec << std::endl;
+					std::cerr << std::dec << std::endl;
 				if (secdsa && !ssbelg && (ctx.type >= 0x10) && (ctx.type <= 0x13) &&
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (opt_verbose)
 					{
-						std::cout << std::hex;
-						std::cout << " sigtype = 0x";
-						std::cout << (int)ctx.type;
-						std::cout << std::dec;
-						std::cout << " pkalgo = ";
-						std::cout << (int)ctx.pkalgo;
-						std::cout << " hashalgo = ";
-						std::cout << (int)ctx.hashalgo;
-						std::cout << std::endl;
+						std::cerr << std::hex;
+						std::cerr << "INFO: sigtype = 0x";
+						std::cerr << (int)ctx.type;
+						std::cerr << std::dec;
+						std::cerr << " pkalgo = ";
+						std::cerr << (int)ctx.pkalgo;
+						std::cerr << " hashalgo = ";
+						std::cerr << (int)ctx.hashalgo;
+						std::cerr << std::endl;
 					}
 					if (sigdsa)
 						std::cerr << "WARNING: more than one self-signatures; using last signature to check UID" << std::endl;
@@ -1260,15 +1260,15 @@ bool parse_private_key
 				{
 					if (opt_verbose)
 					{
-						std::cout << std::hex;
-						std::cout << " sigtype = 0x";
-						std::cout << (int)ctx.type;
-						std::cout << std::dec;
-						std::cout << " pkalgo = ";
-						std::cout << (int)ctx.pkalgo;
-						std::cout << " hashalgo = ";
-						std::cout << (int)ctx.hashalgo;
-						std::cout << std::endl;
+						std::cerr << std::hex;
+						std::cerr << "INFO: sigtype = 0x";
+						std::cerr << (int)ctx.type;
+						std::cerr << std::dec;
+						std::cerr << " pkalgo = ";
+						std::cerr << (int)ctx.pkalgo;
+						std::cerr << " hashalgo = ";
+						std::cerr << (int)ctx.hashalgo;
+						std::cerr << std::endl;
 					}
 					if (sigelg)
 						std::cerr << "WARNING: more than one subkey binding signature; using last signature" << std::endl;
@@ -1326,15 +1326,15 @@ bool parse_private_key
 					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
 					if (opt_verbose)
 					{
-						std::cout << " Key ID of tDSS key: " << std::hex;
+						std::cerr << "INFO: Key ID of tDSS key: " << std::hex;
 						for (size_t i = 0; i < keyid.size(); i++)
-							std::cout << (int)keyid[i] << " ";
-						std::cout << std::dec << std::endl;
-						std::cout << " encdatalen = " << ctx.encdatalen << std::endl;
-						std::cout << " symalgo = " << (int)ctx.symalgo << std::endl;
-						std::cout << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
-						std::cout << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
-						std::cout << std::endl;
+							std::cerr << (int)keyid[i] << " ";
+						std::cerr << std::dec << std::endl;
+						std::cerr << " encdatalen = " << ctx.encdatalen << std::endl;
+						std::cerr << " symalgo = " << (int)ctx.symalgo << std::endl;
+						std::cerr << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
+						std::cerr << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
+						std::cerr << std::endl;
 					}
 					if (!mpz_set_gcry_mpi(ctx.p, dss_p))
 					{
@@ -1635,7 +1635,7 @@ bool parse_private_key
 								found = true;
 								idx2dkg[i] = j, dkg2idx[j] = i;
 								if (opt_verbose)
-									std::cout << "INFO: mapping " << i << " -> P_" << j << std::endl; 
+									std::cerr << "INFO: mapping " << i << " -> P_" << j << std::endl; 
 								break;
 							}
 						}
@@ -1675,15 +1675,15 @@ bool parse_private_key
 					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
 					if (opt_verbose)
 					{
-						std::cout << " Key ID of DSA key: " << std::hex;
+						std::cerr << "INFO: Key ID of DSA key: " << std::hex;
 						for (size_t i = 0; i < keyid.size(); i++)
-							std::cout << (int)keyid[i] << " ";
-						std::cout << std::dec << std::endl;
-						std::cout << " encdatalen = " << ctx.encdatalen << std::endl;
-						std::cout << " symalgo = " << (int)ctx.symalgo << std::endl;
-						std::cout << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
-						std::cout << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
-						std::cout << std::endl;
+							std::cerr << (int)keyid[i] << " ";
+						std::cerr << std::dec << std::endl;
+						std::cerr << " encdatalen = " << ctx.encdatalen << std::endl;
+						std::cerr << " symalgo = " << (int)ctx.symalgo << std::endl;
+						std::cerr << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
+						std::cerr << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
+						std::cerr << std::endl;
 					}
 					if (!mpz_set_gcry_mpi(ctx.p, dss_p))
 					{
@@ -1893,7 +1893,7 @@ bool parse_private_key
 				break;
 			case 13: // User ID Packet
 				if (opt_verbose)
-					std::cout << " uid = " << ctx.uid << std::endl;
+					std::cerr << "INFO: uid = " << ctx.uid << std::endl;
 				userid = "";
 				for (size_t i = 0; i < sizeof(ctx.uid); i++)
 				{
@@ -1925,15 +1925,15 @@ bool parse_private_key
 					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(sub_hashing, subkeyid);
 					if (opt_verbose)
 					{
-						std::cout << "Key ID of ElGamal subkey: " << std::hex;
+						std::cerr << "INFO: Key ID of ElGamal subkey: " << std::hex;
 						for (size_t i = 0; i < subkeyid.size(); i++)
-							std::cout << (int)subkeyid[i] << " ";
-						std::cout << std::dec << std::endl;
-						std::cout << " symalgo = " << (int)ctx.symalgo << std::endl;
-						std::cout << " encdatalen = " << ctx.encdatalen << std::endl;
-						std::cout << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
-						std::cout << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
-						std::cout << std::endl;
+							std::cerr << (int)subkeyid[i] << " ";
+						std::cerr << std::dec << std::endl;
+						std::cerr << " symalgo = " << (int)ctx.symalgo << std::endl;
+						std::cerr << " encdatalen = " << ctx.encdatalen << std::endl;
+						std::cerr << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
+						std::cerr << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
+						std::cerr << std::endl;
 					}
 					if (!mpz_set_gcry_mpi(ctx.p, dkg_p))
 					{
@@ -2250,7 +2250,7 @@ bool parse_private_key
 	gcry_sexp_t dsakey;
 	tmcg_openpgp_octets_t dsa_trailer, elg_trailer, dsa_left, elg_left;
 	if (opt_verbose)
-		std::cout << "Primary User ID: " << userid << std::endl;
+		std::cerr << "INFO: Primary User ID: " << userid << std::endl;
 	ret = gcry_sexp_build(&dsakey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
 	if (ret)
 	{
@@ -2267,22 +2267,22 @@ bool parse_private_key
 	}
 	if (opt_verbose)
 	{
-		std::cout << "tDSS/DSA key flags: ";
+		std::cerr << "INFO: tDSS/DSA key flags: ";
 		if ((flags & 0x01) == 0x01)
-			std::cout << "C"; // The key may be used to certify other keys.
+			std::cerr << "C"; // The key may be used to certify other keys.
 		if ((flags & 0x02) == 0x02)
-			std::cout << "S"; // The key may be used to sign data.
+			std::cerr << "S"; // The key may be used to sign data.
 		if ((flags & 0x04) == 0x04)
-			std::cout << "E"; // The key may be used encrypt communications.
+			std::cerr << "E"; // The key may be used encrypt communications.
 		if ((flags & 0x08) == 0x08)
-			std::cout << "e"; // The key may be used encrypt storage.
+			std::cerr << "e"; // The key may be used encrypt storage.
 		if ((flags & 0x10) == 0x10)
-			std::cout << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
+			std::cerr << "D"; // The private component of this key may have been split by a secret-sharing mechanism.		
 		if ((flags & 0x20) == 0x20)
-			std::cout << "A"; // The key may be used for authentication.
+			std::cerr << "A"; // The key may be used for authentication.
 		if ((flags & 0x80) == 0x80)
-			std::cout << "M"; // The private component of this key may be in the possession of more than one person.
-		std::cout << std::endl;
+			std::cerr << "M"; // The private component of this key may be in the possession of more than one person.
+		std::cerr << std::endl;
 	}
 	if ((flags & 0x02) != 0x02)
 	{
@@ -2319,22 +2319,22 @@ bool parse_private_key
 		}
 		if (opt_verbose)
 		{
-			std::cout << "ElGamal key flags: ";
+			std::cerr << "INFO: ElGamal key flags: ";
 			if ((flags & 0x01) == 0x01)
-				std::cout << "C"; // The key may be used to certify other keys.
+				std::cerr << "C"; // The key may be used to certify other keys.
 			if ((flags & 0x02) == 0x02)
-				std::cout << "S"; // The key may be used to sign data.
+				std::cerr << "S"; // The key may be used to sign data.
 			if ((flags & 0x04) == 0x04)
-				std::cout << "E"; // The key may be used encrypt communications.
+				std::cerr << "E"; // The key may be used encrypt communications.
 			if ((flags & 0x08) == 0x08)
-				std::cout << "e"; // The key may be used encrypt storage.
+				std::cerr << "e"; // The key may be used encrypt storage.
 			if ((flags & 0x10) == 0x10)
-				std::cout << "D"; // The private component of this key may have been split by a secret-sharing mechanism.
+				std::cerr << "D"; // The private component of this key may have been split by a secret-sharing mechanism.
 			if ((flags & 0x20) == 0x20)
-				std::cout << "A"; // The key may be used for authentication.
+				std::cerr << "A"; // The key may be used for authentication.
 			if ((flags & 0x80) == 0x80)
-				std::cout << "M"; // The private component of this key may be in the possession of more than one person.
-			std::cout << std::endl;
+				std::cerr << "M"; // The private component of this key may be in the possession of more than one person.
+			std::cerr << std::endl;
 		}
 		if ((flags & 0x04) != 0x04)
 		{

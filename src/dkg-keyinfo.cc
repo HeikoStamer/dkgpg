@@ -169,7 +169,7 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cout << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
 	// read and parse the private key
 	std::string armored_seckey, thispeer = peers[0];
@@ -239,7 +239,7 @@ int main
 			dss_in << dss_c_ik[i][k] << std::endl;
 	}
 	if (opt_verbose)
-		std::cout << "CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" << std::endl;
+		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" << std::endl;
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = new CanettiGennaroJareckiKrawczykRabinDSS(dss_in);
 	if (!dss->CheckGroup())
 	{
@@ -282,7 +282,7 @@ int main
 				dkg_in << dkg_c_ik[i][k] << std::endl;
 		}
 		if (opt_verbose)
-			std::cout << "GennaroJareckiKrawczykRabinDKG(in, ...)" << std::endl;
+			std::cerr << "INFO: GennaroJareckiKrawczykRabinDKG(in, ...)" << std::endl;
 		dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
 		if (!dkg->CheckGroup())
 		{
@@ -677,7 +677,7 @@ int main
 			}
 			secofs.close();
 			if (opt_verbose)
-				std::cout << "INFO: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" finished" << std::endl;
+				std::cerr << "INFO: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" finished" << std::endl;
 		}
 		else
 			std::cerr << "WARNING: migration not possible due to missing or bad tDSS key" << std::endl;

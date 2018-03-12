@@ -138,7 +138,7 @@ int main
 		sigfrom = mktime(&sigfrom_tm);
 		if (sigfrom == ((time_t) -1))
 		{
-			perror("dkg-verify (mktime)");
+			perror("ERROR: dkg-verify (mktime)");
 			std::cerr << "ERROR: cannot convert TIMESPEC; required format: YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
 		}
@@ -149,7 +149,7 @@ int main
 		sigto = mktime(&sigto_tm);
 		if (sigto == ((time_t) -1))
 		{
-			perror("dkg-verify (mktime)");
+			perror("ERROR: dkg-verify (mktime)");
 			std::cerr << "ERROR: cannot convert TIMESPEC; required format: YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
 		}

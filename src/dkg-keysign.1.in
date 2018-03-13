@@ -9,9 +9,10 @@ dkg\-keysign \- threshold signature scheme for OpenPGP (only DSA/DSS)
 .IR PEERS
 
 .SH DESCRIPTION
-This program generates certification signatures for all or selected valid user
-IDs of a given OpenPGP public key. Note that the private DSA key for the
-signature scheme of the issuer has been shared between multiple parties by
+This program generates certification signatures either for all or some selected
+valid user IDs of a given OpenPGP public key. It supposes that the private key
+for the signature scheme of the issuer has been shared between multiple parties
+by
 .BR dkg\-generate (1).
 Thus, for successful signing at least 2s+1 different participants must join
 the protocol and provide their corresponding shares. The threshold parameter s

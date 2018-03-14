@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-03-14] dkg-encrypt: renamed option "-z" to "-t" for convenience
 * [2018-03-14] dkg-keysign: include only exportable signatures to output
 * [2018-03-14] check and set strict permissions (0600) for private key file
 * [2018-03-13] dkg-sign: added option "-U" (policy URI) and improved manpage

@@ -38,7 +38,7 @@ int main
 
 	std::string	kfilename, ifilename, ofilename;
 	int		opt_verbose = 0;
-	bool		opt_binary = false, opt_weak = false, opt_z = false;
+	bool		opt_binary = false, opt_weak = false, opt_t = false;
 	char		*opt_ifilename = NULL;
 	char		*opt_ofilename = NULL;
 
@@ -64,25 +64,27 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0)  || (arg.find("-v") == 0) || 
 			 (arg.find("-h") == 0) || (arg.find("-V") == 0) || (arg.find("-w") == 0) ||
-			 (arg.find("-z") == 0))
+			 (arg.find("-t") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary      write encrypted message in binary format (only if -i given)" << std::endl;
-				std::cout << "  -h, --help        print this help" << std::endl;
-				std::cout << "  -i FILENAME       read message rather from FILENAME than STDIN" << std::endl;
-				std::cout << "  -o FILENAME       write encrypted message rather to FILENAME than STDOUT" << std::endl;
-				std::cout << "  -v, --version     print the version number" << std::endl;
-				std::cout << "  -V, --verbose     turn on verbose output" << std::endl;
-				std::cout << "  -w, --weak        allow usage of weak keys" << std::endl;
-				std::cout << "  -z, --zero-keyid  set the included key ID to zero for improved privacy" << std::endl;
+				std::cout << "  -b, --binary        write encrypted message in binary format (only if -i given)" << std::endl;
+				std::cout << "  -h, --help          print this help" << std::endl;
+				std::cout << "  -i FILENAME         read message rather from FILENAME than STDIN" << std::endl;
+				std::cout << "  -o FILENAME         write encrypted message rather to FILENAME than STDOUT" << std::endl;
+				std::cout << "  -t, --throw-keyids  throw included key IDs for somewhat improved privacy" << std::endl;
+				std::cout << "  -v, --version       print the version number" << std::endl;
+				std::cout << "  -V, --verbose       turn on verbose output" << std::endl;
+				std::cout << "  -w, --weak          allow weak keys" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
 				opt_binary = true;
+			if ((arg.find("-t") == 0) || (arg.find("--throw-keyids") == 0))
+				opt_t = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 				std::cout << "dkg-encrypt v" << version << std::endl;
@@ -92,8 +94,6 @@ int main
 				opt_verbose++; // increase verbosity
 			if ((arg.find("-w") == 0) || (arg.find("--weak") == 0))
 				opt_weak = true;
-			if ((arg.find("-z") == 0) || (arg.find("--zero-keyid") == 0))
-				opt_z = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -290,7 +290,7 @@ int main
 	for (size_t j = 0; j < selected.size(); j++)
 	{
 		tmcg_openpgp_octets_t pkesk, subkeyid;
-		if (opt_z)
+		if (opt_t)
 		{
 			// An implementation MAY accept or use a Key ID of zero as a "wild card"
 			// or "speculative" Key ID. In this case, the receiving implementation
@@ -344,7 +344,7 @@ int main
 	if (!selected.size())
 	{
 		tmcg_openpgp_octets_t pkesk, keyid;
-		if (opt_z)
+		if (opt_t)
 		{
 			// An implementation MAY accept or use a Key ID of zero as a "wild card"
 			// or "speculative" Key ID. In this case, the receiving implementation

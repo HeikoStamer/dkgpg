@@ -290,8 +290,9 @@ void run_instance
 	}
 
 	// prepare the fingerprint, trailer, and accumulator of the certification (revocation) signatures
-	tmcg_openpgp_octets_t fpr, trailer, acc;
+	std::string fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
+	tmcg_openpgp_octets_t trailer, acc;
 	if (opt_r)
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else if (opt_1)
@@ -367,14 +368,10 @@ void run_instance
 		tmcg_openpgp_octets_t hash, left;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			CertificationHash(primary->pub_hashing, primary->userids[j]->userid, trailer, hashalgo, hash, left);
-		char *hex_digest = new char[(3 * fpr.size()) + 1];
-		for (size_t i = 0; i < (fpr.size() / 2); i++)
-        	        snprintf(hex_digest + (5 * i), 6, "%02X%02X ", fpr[2*i], fpr[(2*i)+1]);
 		if (opt_r)
-			std::cerr << "INFO: going to revoke signature on user ID \"" << primary->userids[j]->userid << "\" of key with fingerprint " << hex_digest << std::endl;
+			std::cerr << "INFO: going to revoke signature on user ID \"" << primary->userids[j]->userid << "\" of key with fingerprint " << fpr << std::endl;
 		else
-			std::cerr << "INFO: going to sign user ID \"" << primary->userids[j]->userid << "\" of key with fingerprint " << hex_digest << std::endl;
-		delete [] hex_digest;
+			std::cerr << "INFO: going to sign user ID \"" << primary->userids[j]->userid << "\" of key with fingerprint " << fpr << std::endl;
 		// sign the hash
 		tmcg_openpgp_byte_t buffer[1024];
 		gcry_mpi_t r, s, h;

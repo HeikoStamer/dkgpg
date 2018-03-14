@@ -36,18 +36,19 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	kfilename, ifilename, ofilename;
+	std::string	kfilename, ifilename, ofilename, s;
 	int		opt_verbose = 0;
 	bool		opt_binary = false, opt_weak = false, opt_t = false;
 	char		*opt_ifilename = NULL;
 	char		*opt_ofilename = NULL;
+	char		*opt_s = NULL;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
 		// ignore options
-		if ((arg.find("-i") == 0) || (arg.find("-o") == 0))
+		if ((arg.find("-i") == 0) || (arg.find("-o") == 0) || (arg.find("-s") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
@@ -59,6 +60,11 @@ int main
 			{
 				ofilename = argv[i+1];
 				opt_ofilename = (char*)ofilename.c_str();
+			}
+			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) && (opt_s == NULL))
+			{
+				s = argv[i+1];
+				opt_s = (char*)s.c_str();
 			}
 			continue;
 		}
@@ -75,6 +81,7 @@ int main
 				std::cout << "  -h, --help          print this help" << std::endl;
 				std::cout << "  -i FILENAME         read message rather from FILENAME than STDIN" << std::endl;
 				std::cout << "  -o FILENAME         write encrypted message rather to FILENAME than STDOUT" << std::endl;
+				std::cout << "  -s STRING           select only encryption-capable subkeys with key ID containing STRING" << std::endl;
 				std::cout << "  -t, --throw-keyids  throw included key IDs for somewhat improved privacy" << std::endl;
 				std::cout << "  -v, --version       print the version number" << std::endl;
 				std::cout << "  -V, --verbose       turn on verbose output" << std::endl;
@@ -166,6 +173,12 @@ int main
 	std::vector<TMCG_OpenPGP_Subkey*> selected;
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
+		// subkey not selected?
+		std::string kid;
+		CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
+		if (opt_s && (kid.find(s) == kid.npos))
+			continue;
+		// encryption-capable subkey?
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
 		    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08) ||
 		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 

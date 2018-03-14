@@ -49,7 +49,7 @@ print the version number of the program
 turn on verbose output
 .TP
 \fB\-w\fR, \fB\-\-weak\fR
-allow usage of weak or expired keys
+allow weak or expired keys
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT be used in

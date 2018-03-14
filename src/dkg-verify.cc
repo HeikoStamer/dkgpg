@@ -97,7 +97,7 @@ int main
 				std::cout << "  -t TIMESPEC    signature made after given TIMESPEC is not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -w, --weak     allow usage of weak or expired keys" << std::endl;
+				std::cout << "  -w, --weak     allow weak or expired keys" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))

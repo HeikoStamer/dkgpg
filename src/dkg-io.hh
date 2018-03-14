@@ -37,6 +37,8 @@
 	#include <fcntl.h>
 	#include <termios.h>
 	#include <sys/mman.h>
+	#include <sys/stat.h>
+	#include <sys/types.h>
 
 	#include <libTMCG.hh>
 
@@ -47,6 +49,12 @@
 	bool read_binary_key_file
 		(const std::string &filename, const tmcg_openpgp_armor_t type,
 		std::string &result);
+	bool check_strict_permissions
+		(const std::string &filename);
+	bool set_strict_permissions
+		(const std::string &filename);
+	bool create_strict_permissions
+		(const std::string &filename);
 	bool read_message
 		(const std::string &filename, std::string &result);
 	bool read_binary_message

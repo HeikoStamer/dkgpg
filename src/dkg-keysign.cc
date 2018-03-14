@@ -90,6 +90,12 @@ void run_instance
 {
 	// read and parse the private key
 	std::string armored_seckey, thispeer = peers[whoami];
+	if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
+	{
+		std::cerr << "WARNING: weak permissions of private key file detected" << std::endl;
+		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
+			exit(-1);
+	}
 	if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))
 		exit(-1);
 	init_mpis();
@@ -284,7 +290,7 @@ void run_instance
 	}
 
 	// prepare the fingerprint, trailer, and accumulator of the certification (revocation) signatures
-	tmcg_openpgp_octets_t fpr, trailer, all;
+	tmcg_openpgp_octets_t fpr, trailer, acc;
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
 	if (opt_r)
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
@@ -296,7 +302,7 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x13, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x10, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
-	all.insert(all.end(), primary->packet.begin(), primary->packet.end());
+	acc.insert(acc.end(), primary->packet.begin(), primary->packet.end());
 
 	// create an instance of tDSS by stored parameters from private key
 	std::stringstream dss_in;
@@ -444,11 +450,16 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(trailer, left, r, s, sig);
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		// attach certification (revocation) signature to given public key and output all together (pub, uidsig, sig)
-		all.insert(all.end(), primary->userids[j]->packet.begin(), primary->userids[j]->packet.end());
+		// attach the generated certification (revocation) signature to
+		// public key, selected user IDs, and exportable self-signatures
+		// of these user IDs
+		acc.insert(acc.end(), primary->userids[j]->packet.begin(), primary->userids[j]->packet.end());
 		for (size_t i = 0; i < primary->userids[j]->selfsigs.size(); i++)
-			all.insert(all.end(), primary->userids[j]->selfsigs[i]->packet.begin(), primary->userids[j]->selfsigs[i]->packet.end());
-		all.insert(all.end(), sig.begin(), sig.end());
+		{
+			if (primary->userids[j]->selfsigs[i]->exportable)
+				acc.insert(acc.end(), primary->userids[j]->selfsigs[i]->packet.begin(), primary->userids[j]->selfsigs[i]->packet.end());
+		}
+		acc.insert(acc.end(), sig.begin(), sig.end());
 	}
 
 	// at the end: deliver some more rounds for still waiting parties
@@ -486,7 +497,7 @@ void run_instance
 
 	// output the result
 	std::string signedkey;
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, signedkey);
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, acc, signedkey);
 	if (opt_ofilename != NULL)
 	{
 		if (!write_message(opt_ofilename, signedkey))

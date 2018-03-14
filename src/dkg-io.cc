@@ -106,6 +106,62 @@ bool read_binary_key_file
 	return true;
 }
 
+bool check_strict_permissions
+	(const std::string &filename)
+{
+	struct stat st;
+	if (stat(filename.c_str(), &st) < 0)
+	{
+		perror("ERROR: check_strict_permissions (stat)");
+		return false;
+	}
+	if ((st.st_mode & S_IXUSR) == S_IXUSR)
+		return false;
+	if ((st.st_mode & S_IRGRP) == S_IRGRP)
+		return false;
+	if ((st.st_mode & S_IWGRP) == S_IWGRP)
+		return false;
+	if ((st.st_mode & S_IXGRP) == S_IXGRP)
+		return false;
+	if ((st.st_mode & S_IROTH) == S_IROTH)
+		return false;
+	if ((st.st_mode & S_IWOTH) == S_IWOTH)
+		return false;
+	if ((st.st_mode & S_IXOTH) == S_IXOTH)
+		return false;
+	return true;
+}
+
+bool set_strict_permissions
+	(const std::string &filename)
+{
+	mode_t perm = S_IRUSR | S_IWUSR;
+	if (chmod(filename.c_str(), perm) < 0)
+	{
+		perror("ERROR: set_strict_permissions (chmod)");
+		return false;
+	}
+	return true;
+}
+
+bool create_strict_permissions
+	(const std::string &filename)
+{
+	mode_t perm = S_IRUSR | S_IWUSR;
+	int fd = open(filename.c_str(), O_CREAT | O_EXCL, perm); 
+	if (fd < 0)
+	{
+		perror("ERROR: create_strict_permissions (open)");
+		return false;
+	}
+	if (close(fd) < 0)
+	{
+		perror("ERROR: create_strict_permissions (close)");
+		return false;
+	}
+	return true;
+}
+
 bool read_message
 	(const std::string &filename, std::string &result)
 {

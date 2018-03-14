@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180225])
+AC_REVISION([20180314])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.6], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
@@ -99,8 +99,8 @@ AC_HEADER_STDC
 AC_HEADER_TIME
 AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
  ctime climits errno.h fcntl.h fstream functional inttypes.h iomanip iostream\
- limits.h list map sstream stdint.h stdio.h string string.h sys/select.h\
- time.h unistd.h vector], , 
+ limits.h list map sstream stdint.h stdio.h string string.h sys/stat.h\
+ sys/select.h sys/types.h time.h unistd.h vector], , 
 	AC_MSG_ERROR([some headers are missing]))
 
 # Checks for typedefs, structures, and compiler characteristics
@@ -112,12 +112,12 @@ AC_TYPE_SSIZE_T
 # Checks for basic library functions
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
-AC_CHECK_FUNCS([abs clock close ctime fcntl fileno fprintf memcmp memcpy\
- memmove memset mktime open perror read sscanf select sleep snprintf strptime\
- strrchr strtoul time write], ,
+AC_CHECK_FUNCS([abs chmod clock close ctime fcntl fileno fprintf memcmp\
+ memcpy memmove memset mktime open perror read sscanf select sleep snprintf\
+ stat strptime strrchr strtoul time write], ,
 	AC_MSG_ERROR([some basic functions are missing]))
 
-# Checks for further library functions
+# Checks for process and network library functions
 AC_HEADER_SYS_WAIT
 AC_TYPE_PID_T
 AC_TYPE_SIGNAL

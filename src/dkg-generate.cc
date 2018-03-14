@@ -1077,6 +1077,29 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
 	if (opt_verbose > 1)
 		std::cout << armor << std::endl;
+	if (!create_strict_permissions((secfilename.str()).c_str()))
+	{
+		if (errno == EEXIST)
+		{
+			if (!check_strict_permissions((secfilename.str()).c_str()))
+			{
+				std::cerr << "WARNING: weak permissions of existing private key file detected" << std::endl;
+				if (!set_strict_permissions((secfilename.str()).c_str()))
+				{
+					std::cerr << "ERROR: P_" << whoami << ": setting permissions for private key file failed" << std::endl;
+					delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+					exit(-1);
+				}
+			}
+			std::cerr << "WARNING: existing private key file have been overwritten" << std::endl;
+		}
+		else
+		{
+			std::cerr << "ERROR: P_" << whoami << ": creating private key file failed" << std::endl;
+			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			exit(-1);
+		}
+	}
 	std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out);
 	if (!secofs.good())
 	{

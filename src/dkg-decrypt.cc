@@ -541,6 +541,12 @@ void run_instance
 	(size_t whoami, const size_t num_xtests)
 {
 	std::string armored_seckey, thispeer = peers[whoami];
+	if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
+	{
+		std::cerr << "WARNING: weak permissions of private key file detected" << std::endl;
+		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
+			exit(-1);
+	}
 	if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))
 		exit(-1);
 	init_mpis();

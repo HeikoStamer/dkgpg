@@ -77,11 +77,11 @@ int main
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary        write encrypted message in binary format (only if -i given)" << std::endl;
+				std::cout << "  -b, --binary        write encrypted message in binary format (only if -i)" << std::endl;
 				std::cout << "  -h, --help          print this help" << std::endl;
 				std::cout << "  -i FILENAME         read message rather from FILENAME than STDIN" << std::endl;
 				std::cout << "  -o FILENAME         write encrypted message rather to FILENAME than STDOUT" << std::endl;
-				std::cout << "  -s STRING           select only encryption-capable subkeys with key ID containing STRING" << std::endl;
+				std::cout << "  -s STRING           select only encryption-capable subkeys containing STRING" << std::endl;
 				std::cout << "  -t, --throw-keyids  throw included key IDs for somewhat improved privacy" << std::endl;
 				std::cout << "  -v, --version       print the version number" << std::endl;
 				std::cout << "  -V, --verbose       turn on verbose output" << std::endl;

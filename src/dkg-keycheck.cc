@@ -699,16 +699,13 @@ int main
 	// show information w.r.t. primary key
 	std::ios oldcoutstate(NULL);
 	oldcoutstate.copyfmt(std::cout);
-	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << std::hex << std::uppercase << "\t";
-	for (size_t i = 0; i < primary->id.size(); i++)
-		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)primary->id[i] << " ";
-	std::cout << std::dec << std::endl;
-	tmcg_openpgp_octets_t fpr;
+	std::string kid, fpr;
+	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, kid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
-	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << std::hex << std::uppercase << "\t";
-	for (size_t i = 0; i < fpr.size(); i++)
-		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)fpr[i] << " ";
-	std::cout << std::dec << std::endl;
+	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << "\t";
+	std::cout << kid << std::endl;
+	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << "\t";
+	std::cout << fpr << std::endl;
 	std::cout << "OpenPGP Key Creation Time: " << std::endl << "\t" << ctime(&primary->creationtime);
 	std::cout << "OpenPGP Key Expiration Time: " << std::endl << "\t";
 	if (primary->expirationtime == 0)
@@ -717,6 +714,8 @@ int main
 	{
 		// compute validity period of the primary key after key creation time
 		time_t ekeytime = primary->creationtime + primary->expirationtime;
+		if (ekeytime < time(NULL))
+			std::cout << "[EXPIRED] ";
 		std::cout << ctime(&ekeytime);
 	}
 	size_t allflags = 0;
@@ -880,16 +879,12 @@ int main
 	{
 		if (primary->subkeys[j]->weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak subkey detected" << std::endl;
-		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << std::hex << std::uppercase << "\t";
-		for (size_t i = 0; i < primary->subkeys[j]->id.size(); i++)
-			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)primary->subkeys[j]->id[i] << " ";
-		std::cout << std::dec << std::endl;
-		tmcg_openpgp_octets_t fpr;
+		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->subkeys[j]->sub_hashing, kid);
 		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->subkeys[j]->sub_hashing, fpr);
-		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << std::hex << std::uppercase << "\t";
-		for (size_t i = 0; i < fpr.size(); i++)
-			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)fpr[i] << " ";
-		std::cout << std::dec << std::endl;
+		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << "\t";
+		std::cout << kid << std::endl;
+		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << "\t";
+		std::cout << fpr << std::endl;
 		std::cout << "OpenPGP Subkey Creation Time: " << std::endl << "\t" << ctime(&primary->subkeys[j]->creationtime);
 		std::cout << "OpenPGP Subkey Expiration Time: " << std::endl << "\t";
 		if (primary->subkeys[j]->expirationtime == 0)
@@ -898,6 +893,8 @@ int main
 		{
 			// compute validity period of the primary key after key creation time
 			time_t ekeytime = primary->subkeys[j]->creationtime + primary->subkeys[j]->expirationtime;
+			if (ekeytime < time(NULL))
+				std::cout << "[EXPIRED] ";
 			std::cout << ctime(&ekeytime);
 		}
 		size_t allflags = 0;

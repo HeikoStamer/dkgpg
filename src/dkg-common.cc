@@ -437,7 +437,7 @@ bool parse_private_key
 	// parse the private key according to OpenPGP
 	bool secdsa = false, sigdsa = false, ssbelg = false, sigelg = false;
 	tmcg_openpgp_byte_t ptag = 0xFF;
-	tmcg_openpgp_pkalgo_t dsa_pkalgo, elg_pkalgo;
+	tmcg_openpgp_pkalgo_t dsa_pkalgo = TMCG_OPENPGP_PKALGO_DSA, elg_pkalgo = TMCG_OPENPGP_PKALGO_ELGAMAL;
 	tmcg_openpgp_hashalgo_t dsa_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN, elg_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
 	tmcg_openpgp_byte_t dsa_sigtype, dsa_keyflags[32], elg_sigtype, elg_keyflags[32];
 	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32], elg_psa[32], elg_pha[32], elg_pca[32];

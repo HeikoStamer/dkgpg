@@ -700,7 +700,7 @@ int main
 	std::ios oldcoutstate(NULL);
 	oldcoutstate.copyfmt(std::cout);
 	std::string kid, fpr;
-	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, kid);
+	CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(primary->pub_hashing, kid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
 	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << "\t";
 	std::cout << kid << std::endl;
@@ -879,7 +879,7 @@ int main
 	{
 		if (primary->subkeys[j]->weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak subkey detected" << std::endl;
-		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->subkeys[j]->sub_hashing, kid);
+		CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
 		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->subkeys[j]->sub_hashing, fpr);
 		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << "\t";
 		std::cout << kid << std::endl;

@@ -1258,6 +1258,12 @@ int main
 		std::vector<size_t> interpol_parties;
 		std::vector<mpz_ptr> interpol_shares;
 
+		if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
+		{
+			std::cerr << "WARNING: weak permissions of private key file detected" << std::endl;
+			if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
+				return -1;
+		}
 		if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))
 			return -1;
 		init_mpis();

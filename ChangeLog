@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-03-16] dkg-keycheck: added output of allowed external revocation keys
 * [2018-03-14] dkg-encrypt: added option "-s" to select appropriate subkey
 * [2018-03-14] dkg-encrypt: renamed option "-z" to "-t" for convenience
 * [2018-03-14] dkg-keysign: include only exportable signatures to output

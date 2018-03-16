@@ -718,14 +718,19 @@ int main
 			std::cout << "[EXPIRED] ";
 		std::cout << ctime(&ekeytime);
 	}
-	size_t allflags = 0;
-	for (size_t i = 0; i < primary->flags.size(); i++)
+	std::cout << "OpenPGP Revocation Keys: " << std::endl;
+	for (size_t i = 0; i < primary->revkeys.size(); i++)
 	{
-		if (primary->flags[i])
-			allflags = (allflags << 8) + primary->flags[i];
-		else
-			break;
+		tmcg_openpgp_revkey_t rk = primary->revkeys[i];
+		tmcg_openpgp_octets_t f(rk.key_fingerprint,
+			 rk.key_fingerprint+sizeof(rk.key_fingerprint));
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintConvert(f, fpr);
+		std::cout << "\t" << fpr << std::endl;
 	}
+	if (primary->revkeys.size() == 0)
+		std::cout << "\t" << "none" << std::endl;
+	size_t allflags = primary->AccumulateFlags();
 	std::cout << "OpenPGP Key Flags: " << std::endl << "\t";
 	// The key may be used to certify other keys.
 	if ((allflags & 0x01) == 0x01)
@@ -897,14 +902,19 @@ int main
 				std::cout << "[EXPIRED] ";
 			std::cout << ctime(&ekeytime);
 		}
-		size_t allflags = 0;
-		for (size_t i = 0; i < primary->subkeys[j]->flags.size(); i++)
+		std::cout << "OpenPGP Revocation Keys: " << std::endl;
+		for (size_t i = 0; i < primary->subkeys[j]->revkeys.size(); i++)
 		{
-			if (primary->subkeys[j]->flags[i])
-				allflags = (allflags << 8) + primary->subkeys[j]->flags[i];
-			else
-				break;
+			tmcg_openpgp_revkey_t rk = primary->subkeys[j]->revkeys[i];
+			tmcg_openpgp_octets_t f(rk.key_fingerprint,
+				 rk.key_fingerprint+sizeof(rk.key_fingerprint));
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				FingerprintConvert(f, fpr);
+			std::cout << "\t" << fpr << std::endl;
 		}
+		if (primary->subkeys[j]->revkeys.size() == 0)
+			std::cout << "\t" << "none" << std::endl;
+		size_t allflags = primary->subkeys[j]->AccumulateFlags();
 		std::cout << "OpenPGP Key Flags: " << std::endl << "\t";
 		// The key may be used to certify other keys.
 		if ((allflags & 0x01) == 0x01)

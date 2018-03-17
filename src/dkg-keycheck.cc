@@ -677,12 +677,13 @@ int main
 
 	// parse the public key and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
+	TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
 	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{
-		primary->CheckSelfSignatures(opt_verbose);
-		primary->CheckSubkeys(opt_verbose);
+		primary->CheckSelfSignatures(ring, opt_verbose);
+		primary->CheckSubkeys(ring, opt_verbose);
 		if (opt_reduce)
 			primary->Reduce();
 		if (primary->weak(opt_verbose) && opt_verbose)
@@ -693,6 +694,7 @@ int main
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		if (primary)
 			delete primary;
+		delete ring;
 		return -1;
 	}
 
@@ -768,6 +770,7 @@ int main
 			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		rsa_check(rsa_n, rsa_e);
@@ -783,6 +786,7 @@ int main
 			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
 			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
@@ -871,6 +875,7 @@ int main
 	{
 		std::cerr << "ERROR: public-key algorithm not supported" << std::endl;
 		delete primary;
+		delete ring;
 		return -1;
 	}
 	// show information w.r.t. (valid) user IDs
@@ -953,6 +958,7 @@ int main
 				std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
 				mpz_clear(rsa_n), mpz_clear(rsa_e);
 				delete primary;
+				delete ring;
 				return -1;
 			}
 			rsa_check(rsa_n, rsa_e);
@@ -968,6 +974,7 @@ int main
 				std::cerr << "ERROR: cannot convert ElGamal key material" << std::endl;
 				mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
 				delete primary;
+				delete ring;
 				return -1;
 			}
 			if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
@@ -977,6 +984,7 @@ int main
 					std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
 					mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
 					delete primary;
+					delete ring;
 					return -1;
 				}
 			}
@@ -995,6 +1003,7 @@ int main
 				std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
 				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y);
 				delete primary;
+				delete ring;
 				return -1;
 			}
 			dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
@@ -1004,6 +1013,7 @@ int main
 		{
 			std::cerr << "ERROR: public-key algorithm not supported" << std::endl;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		// additional part for checking DSA signatures
@@ -1017,6 +1027,7 @@ int main
 				std::cerr << "ERROR: cannot convert DSA primary key material" << std::endl;
 				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
 				delete primary;
+				delete ring;
 				return -1;
 			}
 			for (size_t i = 0; i < primary->subkeys[j]->selfsigs.size(); i++)
@@ -1099,8 +1110,9 @@ int main
 	// restore default formatting
 	std::cout.copyfmt(oldcoutstate);
 
-	// release primary key structure
+	// release primary key and keyring structures
 	delete primary;
+	delete ring;
 	
 	return 0;
 }

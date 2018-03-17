@@ -141,23 +141,26 @@ int main
 
 	// parse the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
+	TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
 	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{
-		primary->CheckSelfSignatures(opt_verbose);
+		primary->CheckSelfSignatures(ring, opt_verbose);
 		if (!primary->valid)
 		{
 			std::cerr << "ERROR: primary key is not valid" << std::endl;
 			delete primary;
+			delete ring;
 			return -1;
 		}
-		primary->CheckSubkeys(opt_verbose);
+		primary->CheckSubkeys(ring, opt_verbose);
 		primary->Reduce(); // keep only valid subkeys
 		if (primary->weak(opt_verbose) && !opt_weak)
 		{
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 	}
@@ -166,6 +169,7 @@ int main
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		if (primary)
 			delete primary;
+		delete ring;
 		return -1;
 	}
 
@@ -225,6 +229,7 @@ int main
 		{
 			std::cerr << "ERROR: no encryption-capable public key found" << std::endl;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		if (std::find(primary->psa.begin(), primary->psa.end(), TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
@@ -252,6 +257,7 @@ int main
 		if (!read_message(opt_ifilename, input_msg))
 		{
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		for (size_t i = 0; i < input_msg.length(); i++)
@@ -275,6 +281,7 @@ int main
 	{
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
 		delete primary;
+		delete ring;
 		return ret;
 	}
 	enc.clear();
@@ -292,6 +299,7 @@ int main
 	{
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
 		delete primary;
+		delete ring;
 		return ret;
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSeipdEncode(enc, seipd);
@@ -324,6 +332,7 @@ int main
 			{
 				std::cerr << "ERROR: AsymmetricEncryptRSA() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
+				delete ring;
 				return ret;
 			}
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(subkeyid, me, pkesk);
@@ -344,6 +353,7 @@ int main
 			{
 				std::cerr << "ERROR: AsymmetricEncryptElgamal() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
+				delete ring;
 				return ret;
 			}
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(subkeyid, gk, myk, pkesk);
@@ -378,6 +388,7 @@ int main
 			{
 				std::cerr << "ERROR: AsymmetricEncryptRSA() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
+				delete ring;
 				return ret;
 			}
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(keyid, me, pkesk);
@@ -398,6 +409,7 @@ int main
 			{
 				std::cerr << "ERROR: AsymmetricEncryptElgamal() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
+				delete ring;
 				return ret;
 			}
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(keyid, gk, myk, pkesk);
@@ -408,6 +420,7 @@ int main
 		{
 			std::cerr << "ERROR: public-key algorithm " << (int)primary->pkalgo << " not supported" << std::endl;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		all.insert(all.end(), pkesk.begin(), pkesk.end());
@@ -426,6 +439,7 @@ int main
 			if (!write_message(opt_ofilename, all))
 			{
 				delete primary;
+				delete ring;
 				return -1;
 			}
 		}
@@ -434,6 +448,7 @@ int main
 			if (!write_message(opt_ofilename, armored_message))
 			{
 				delete primary;
+				delete ring;
 				return -1;
 			}
 		}
@@ -441,8 +456,9 @@ int main
 	else
 		std::cout << armored_message << std::endl;
 
-	// release primary key structure
+	// release primary key and keyring structures
 	delete primary;
+	delete ring;
 	
 	return 0;
 }

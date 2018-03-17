@@ -256,15 +256,17 @@ void run_instance
 
 	// parse the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
+	TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
 	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{
-		primary->CheckSelfSignatures(opt_verbose);
+		primary->CheckSelfSignatures(ring, opt_verbose);
 		if (!primary->valid)
 		{
 			std::cerr << "ERROR: primary key to sign is not valid" << std::endl;
 			delete primary;
+			delete ring;
 			delete rbc, delete aiou, delete aiou2;
 			release_mpis();
 			exit(-1);
@@ -273,6 +275,7 @@ void run_instance
 		{
 			std::cerr << "ERROR: weak primary key to sign is not allowed" << std::endl;
 			delete primary;
+			delete ring;
 			delete rbc, delete aiou, delete aiou2;
 			release_mpis();
 			exit(-1);
@@ -284,6 +287,7 @@ void run_instance
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		if (primary)
 			delete primary;
+		delete ring;
 		delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -353,6 +357,7 @@ void run_instance
 	{
 		std::cerr << "ERROR: S_" << whoami << ": " << "tDSS domain parameters are not correctly generated!" << std::endl;
 		delete primary;
+		delete ring;
 		delete dss, delete rbc, delete aiou, delete aiou2;
 		release_mpis();
 		exit(-1);
@@ -391,6 +396,7 @@ void run_instance
 			gcry_mpi_release(r), gcry_mpi_release(s);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete primary;
+			delete ring;
 			delete dss, delete rbc, delete aiou, delete aiou2;
 			release_mpis();
 			exit(-1);
@@ -401,6 +407,7 @@ void run_instance
 			gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete primary;
+			delete ring;
 			delete dss, delete rbc, delete aiou, delete aiou2;
 			release_mpis();
 			exit(-1);
@@ -417,6 +424,7 @@ void run_instance
 			gcry_mpi_release(r), gcry_mpi_release(s);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete primary;
+			delete ring;
 			delete dss, delete rbc, delete aiou, delete aiou2;
 			release_mpis();
 			exit(-1);
@@ -429,6 +437,7 @@ void run_instance
 			gcry_mpi_release(r), gcry_mpi_release(s);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete primary;
+			delete ring;
 			delete dss, delete rbc, delete aiou, delete aiou2;
 			release_mpis();
 			exit(-1);
@@ -439,6 +448,7 @@ void run_instance
 			gcry_mpi_release(r), gcry_mpi_release(s);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete primary;
+			delete ring;
 			delete dss, delete rbc, delete aiou, delete aiou2;
 			release_mpis();
 			exit(-1);
@@ -468,8 +478,9 @@ void run_instance
 	// release tDSS
 	delete dss;
 
-	// release primary key structures
+	// release primary key and keyring structures
 	delete primary;
+	delete ring;
 
 	// release RBC
 	delete rbc;

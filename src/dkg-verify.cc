@@ -173,24 +173,27 @@ int main
 
 	// parse the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
+	TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
 	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{
-		primary->CheckSelfSignatures(opt_verbose);
+		primary->CheckSelfSignatures(ring, opt_verbose);
 		if (!primary->valid && !opt_weak)
 		{
 			std::cerr << "ERROR: primary key is not valid" << std::endl;
 			delete primary;
+			delete ring;
 			return -1;
 		}
-		primary->CheckSubkeys(opt_verbose);
+		primary->CheckSubkeys(ring, opt_verbose);
 		if (!opt_weak)
 			primary->Reduce(); // keep only valid subkeys
 		if (primary->weak(opt_verbose) && !opt_weak)
 		{
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 	}
@@ -199,6 +202,7 @@ int main
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		if (primary)
 			delete primary;
+		delete ring;
 		return -1;
 	}
 
@@ -209,6 +213,7 @@ int main
 	if (!read_message(sigfilename, armored_signature))
 	{
 		delete primary;
+		delete ring;
 		return -1;
 	}
 #else
@@ -229,6 +234,7 @@ int main
 			std::cerr << "ERROR: wrong signature type " << (int)signature->type << " found" << std::endl;
 			delete signature;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 	}
@@ -236,6 +242,7 @@ int main
 	{
 		std::cerr << "ERROR: cannot parse resp. use the provided signature" << std::endl;
 		delete primary;
+		delete ring;
 		return -1;
 	}
 	if (opt_verbose)
@@ -274,6 +281,7 @@ int main
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
 			delete signature;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(signature->issuer, primary->id))
@@ -281,6 +289,7 @@ int main
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
 			delete signature;
 			delete primary;
+			delete ring;
 			return -1;
 		}
 		keyusage = primary->AccumulateFlags();
@@ -296,6 +305,7 @@ int main
 		std::cerr << "ERROR: signature was made before key creation" << std::endl;
 		delete signature;
 		delete primary;
+		delete ring;
 		return -2;
 	}
 	if (ekeytime && (signature->creationtime > (ckeytime + ekeytime)))
@@ -303,6 +313,7 @@ int main
 		std::cerr << "ERROR: signature was made after key expiry" << std::endl;
 		delete signature;
 		delete primary;
+		delete ring;
 		return -2;
 	}
 	// 2. signature validity time (expired signatures are not valid)
@@ -311,6 +322,7 @@ int main
 		std::cerr << "ERROR: signature is expired" << std::endl;
 		delete signature;
 		delete primary;
+		delete ring;
 		return -2;
 	}
 	// 3. key usage flags (signatures made by keys not with the "signing" capability are not valid)
@@ -319,6 +331,7 @@ int main
 		std::cerr << "ERROR: corresponding key was not intented for signing" << std::endl;
 		delete signature;
 		delete primary;
+		delete ring;
 		return -2;
 	}
 	// 4. key validity time (expired keys are not valid)
@@ -327,6 +340,7 @@ int main
 		std::cerr << "ERROR: corresponding key is expired" << std::endl;
 		delete signature;
 		delete primary;
+		delete ring;
 		return -2;
 	}
 	// 5. signature time (signatures made before the sigfrom or after the sigto timespec are not valid)
@@ -335,6 +349,7 @@ int main
 		std::cerr << "ERROR: signature was made before given TIMESPEC" << std::endl;
 		delete signature;
 		delete primary;
+		delete ring;
 		return -2;
 	}
 	if (signature->creationtime > sigto)
@@ -342,6 +357,7 @@ int main
 		std::cerr << "ERROR: signature was made after given TIMESPEC" << std::endl;
 		delete signature;
 		delete primary;
+		delete ring;
 		return -2;
 	}
 
@@ -355,8 +371,9 @@ int main
 	// release signature
 	delete signature;
 
-	// release primary key structure
+	// release primary key and keyring structures
 	delete primary;
+	delete ring;
 
 	if (!verify_ok)
 	{

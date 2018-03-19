@@ -49,6 +49,9 @@ print this list of options
 \fB\-i\fR \fI\,FILENAME\/\fR
 read message rather from FILENAME than STDIN
 .TP
+\fB\-k\fR \fI\,FILENAME\/\fR
+use keyring FILENAME containing external revocation keys
+.TP
 \fB\-o\fR \fI\,FILENAME\/\fR
 write encrypted message rather to FILENAME than STDOUT
 .TP

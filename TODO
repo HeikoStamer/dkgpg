@@ -7,7 +7,10 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* dkg-tools: decrease the final RBC synchronization time to resonable values
 * dkg-generate: create additional direct-key signature (0x1f) with key flags
-+ dkg-tools: use own getopt parser with long options
-
+                (use LibTMCG interface PacketSigPrepareDesignatedRevoker())
++ dkg-tools: add issuer fingerprint subpacket by using LibTMCG extensions
++ dkg-tools: add program dkg-keyedit for adding user IDs and other stuff
++ dkg-tools: use getopt parser with long options (even if no GNUnet support)
 

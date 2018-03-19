@@ -51,39 +51,48 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include "dkg-common.hh"
 #include "dkg-io.hh"
 
-int 					pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
-pid_t 					pid[DKGPG_MAX_N];
+int								pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+int								broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+pid_t							pid[DKGPG_MAX_N];
 std::vector<std::string>		peers;
-bool					instance_forked = false;
+bool							instance_forked = false;
 
-std::string				passphrase, userid, ifilename, ofilename, passwords, hostname, port, URI, u;
-tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+std::string						passphrase, userid, ifilename, ofilename;
+std::string						passwords, hostname, port, URI, u, kfilename;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig;
+tmcg_openpgp_octets_t			sec, ssb, uid;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
-mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
-size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual, dss_x_rvss_qual;
+mpz_t							dss_p, dss_q, dss_g, dss_h, dss_y;
+mpz_t							dss_x_i, dss_xprime_i;
+size_t							dss_n, dss_t, dss_i;
+std::vector<size_t>				dss_qual, dss_x_rvss_qual;
 std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
-size_t					dkg_n, dkg_t, dkg_i;
-std::vector<size_t>			dkg_qual;
+mpz_t							dkg_p, dkg_q, dkg_g, dkg_h, dkg_y;
+mpz_t							dkg_x_i, dkg_xprime_i;
+size_t							dkg_n, dkg_t, dkg_i;
+std::vector<size_t>				dkg_qual;
 std::vector<mpz_ptr>			dkg_v_i;
 std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
-gcry_mpi_t 				gk, myk, sig_r, sig_s;
-gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
+gcry_mpi_t						dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
+gcry_mpi_t						elg_p, elg_q, elg_g, elg_y, elg_x;
+gcry_mpi_t						dsa_r, dsa_s, elg_r, elg_s;
+gcry_mpi_t						rsa_n, rsa_e, rsa_md;
+gcry_mpi_t						gk, myk, sig_r, sig_s;
+gcry_mpi_t						revdsa_r, revdsa_s, revelg_r, revelg_s;
+gcry_mpi_t						revrsa_md;
 
-int 					opt_verbose = 0;
-bool					libgcrypt_secmem = false;
-char					*opt_ifilename = NULL;
-char					*opt_ofilename = NULL;
-char					*opt_passwords = NULL;
-char					*opt_hostname = NULL;
-char					*opt_URI = NULL;
-char					*opt_u = NULL;
-unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
-bool					opt_r = false;
-bool					opt_1 = false, opt_2 = false, opt_3 = false;
+int 							opt_verbose = 0;
+bool							libgcrypt_secmem = false;
+char							*opt_ifilename = NULL;
+char							*opt_ofilename = NULL;
+char							*opt_passwords = NULL;
+char							*opt_hostname = NULL;
+char							*opt_URI = NULL;
+char							*opt_u = NULL;
+char							*opt_k = NULL;
+unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
+bool							opt_r = false;
+bool							opt_1 = false, opt_2 = false, opt_3 = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime, const size_t num_xtests)
@@ -254,10 +263,33 @@ void run_instance
 		exit(-1);
 	}
 
-	// parse the public key block and corresponding signatures
+	// read the keyring
+	std::string armored_pubring;
+	if (opt_k && !read_key_file(kfilename, armored_pubring))
+	{
+		std::cerr << "ERROR: S_" << whoami << ": read_key_file() failed; cannot process keyring file \"" << kfilename << "\"" << std::endl;
+		delete rbc, delete aiou, delete aiou2;
+		release_mpis();
+		exit(-1);
+	}
+
+	// parse the keyring, the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
-	TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
-	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+	TMCG_OpenPGP_Keyring *ring = NULL;
+	bool parse_ok;
+	if (opt_k)
+	{
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyringParse(armored_pubring, opt_verbose, ring);
+		if (!parse_ok)
+		{
+			std::cerr << "WARNING: cannot use the given keyring" << std::endl;
+			ring = new TMCG_OpenPGP_Keyring();
+		}
+	}
+	else
+		ring = new TMCG_OpenPGP_Keyring();
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{
@@ -523,6 +555,7 @@ char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
 char *gnunet_opt_u = NULL;
 char *gnunet_opt_URI = NULL;
+char *gnunet_opt_k = NULL;
 unsigned int gnunet_opt_sigexptime = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
@@ -605,6 +638,12 @@ int main
 			"FILENAME",
 			"create certification signature on key resp. user ID from FILENAME",
 			&gnunet_opt_ifilename
+		),
+		GNUNET_GETOPT_option_string('k',
+			"keyring",
+			"FILENAME",
+			"use keyring FILENAME containing external revocation keys",
+			&gnunet_opt_k
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
 		GNUNET_GETOPT_option_loglevel(&loglev),
@@ -691,6 +730,8 @@ int main
 		opt_URI = gnunet_opt_URI;
 	if (gnunet_opt_u != NULL)
 		opt_u = gnunet_opt_u;
+	if (gnunet_opt_k != NULL)
+		opt_k = gnunet_opt_k;
 	if (gnunet_opt_passwords != NULL)
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
@@ -701,6 +742,8 @@ int main
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 	if (gnunet_opt_u != NULL)
 		u = gnunet_opt_u; // get policy URI from GNUnet options
+	if (gnunet_opt_k != NULL)
+		kfilename = gnunet_opt_k; // get keyring from GNUnet options
 #endif
 
 	// parse options and create peer list from remaining arguments
@@ -711,7 +754,7 @@ int main
 		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
 		    (arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-i") == 0) || (arg.find("-o") == 0) || 
 		    (arg.find("-e") == 0) || (arg.find("-x") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0) ||
-		    (arg.find("-u") == 0) || (arg.find("-U") == 0))
+		    (arg.find("-u") == 0) || (arg.find("-U") == 0) || (arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
@@ -744,6 +787,11 @@ int main
 				URI = argv[i+1];
 				opt_URI = (char*)URI.c_str();
 			}
+			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			{
+				kfilename = argv[i+1];
+				opt_k = (char*)kfilename.c_str();
+			}
 			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
 				opt_e = strtoul(argv[i+1], NULL, 10);
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
@@ -768,6 +816,7 @@ int main
 				std::cout << "  -e TIME          expiration time of generated signatures in seconds" << std::endl;
 				std::cout << "  -H STRING        hostname (e.g. onion address) of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME      create certification signatures on key from FILENAME" << std::endl;
+				std::cout << "  -k FILENAME      use keyring FILENAME containing external revocation keys" << std::endl;
 				std::cout << "  -o FILENAME      write key with certification signatures attached to FILENAME" << std::endl;
 				std::cout << "  -p INTEGER       start port for built-in TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING        exchanged passwords to protect private and broadcast channels" << std::endl;
@@ -946,6 +995,12 @@ int main
 			"FILENAME",
 			"create certification signature on key resp. user ID from FILENAME",
 			&gnunet_opt_ifilename
+		),
+		GNUNET_GETOPT_option_string('k',
+			"keyring",
+			"FILENAME",
+			"use keyring FILENAME containing external revocation keys",
+			&gnunet_opt_k
 		),
 		GNUNET_GETOPT_option_string('o',
 			"output",

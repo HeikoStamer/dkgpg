@@ -39,11 +39,12 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	ifilename, kfilename;
+	std::string	ifilename, kfilename, rfilename;
 	int 		opt_verbose = 0;
 	bool		opt_binary = false, opt_weak = false;
 	char		*opt_ifilename = NULL;
 	char		*opt_sigfrom = NULL, *opt_sigto = NULL;
+	char		*opt_k = NULL;
 	std::string	sigfrom_str, sigto_str;
 	struct tm	sigfrom_tm = { 0 }, sigto_tm = { 0 };
 	time_t		sigfrom = 1243810800, sigto = time(NULL);
@@ -82,6 +83,16 @@ int main
 			}
 			continue;
 		}
+		else if (arg.find("-k") == 0)
+		{
+			size_t idx = ++i;
+			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			{
+				rfilename = argv[i+1];
+				opt_k = (char*)rfilename.c_str();
+			}
+			continue;
+		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || 
 		         (arg.find("-h") == 0) || (arg.find("-V") == 0) || (arg.find("-w") == 0))
 		{
@@ -90,10 +101,11 @@ int main
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary   consider KEYFILE as binary input" << std::endl;
+				std::cout << "  -b, --binary   consider KEYFILE and FILENAME as binary input" << std::endl;
 				std::cout << "  -f TIMESPEC    signature made before given TIMESPEC is not valid" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -i FILENAME    verify detached signature on FILENAME" << std::endl;
+				std::cout << "  -k FILENAME    use keyring FILENAME containing external revocation keys" << std::endl;
 				std::cout << "  -t TIMESPEC    signature made after given TIMESPEC is not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
@@ -171,10 +183,30 @@ int main
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
 
-	// parse the public key block and corresponding signatures
+	// read the keyring
+	std::string armored_pubring;
+	if (opt_k && opt_binary && !read_binary_key_file(rfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
+		return -1;
+	if (opt_k && !opt_binary && !read_key_file(rfilename, armored_pubring))
+		return -1;
+
+	// parse the keyring, the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
-	TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
-	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+	TMCG_OpenPGP_Keyring *ring = NULL;
+	bool parse_ok;
+	if (opt_k)
+	{
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyringParse(armored_pubring, opt_verbose, ring);
+		if (!parse_ok)
+		{
+			std::cerr << "WARNING: cannot use the given keyring" << std::endl;
+			ring = new TMCG_OpenPGP_Keyring();
+		}
+	}
+	else
+		ring = new TMCG_OpenPGP_Keyring();
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{

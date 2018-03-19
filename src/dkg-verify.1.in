@@ -9,26 +9,29 @@ dkg\-verify \- verifies a detached signature of a file according to OpenPGP
 .IR KEYFILE
 
 .SH DESCRIPTION
-This program verifies a detached signature read from STDIN according to the OpenPGP standard.
-KEYFILE must contain the ASCII\-armored public key, for which the verification is performed.
-That means, KEYFILE must contain the corresponding public key of the signature issuer.
-Currently, only DSA/DSS and RSA are permitted as public-key algorithms. The input file for
-which the signature is checked must be specified by the mandatory option "\-i".
+This program verifies a detached signature read from STDIN according to the
+OpenPGP standard. KEYFILE must contain the ASCII\-armored public key, for which
+the verification is performed. That means, KEYFILE must contain the
+corresponding public key of the signature issuer and optionally by "\-k" some
+external revocation keys can be provided. Currently, only DSA/DSS and RSA are
+permitted as public-key algorithms. The input file for which the signature is
+checked must be specified by the mandatory option "\-i".
 .PP
-By "\-f" and "\-t" the user can provide a validity period, i.e., signatures made before the
-TIMESPEC of option "\-f" or after the TIMESPEC of option "\-t" are not valid. The corresponding
-TIMESPEC must be of the format "YYYY-MM-DD[_HH:MM:SS]". The default values are
-"2009-06-01 00:00:00 (publication date of FIPS 186-3)" and the current system date, respectively.
+By "\-f" and "\-t" the user can provide a validity period, i.e., signatures
+made before the TIMESPEC of option "\-f" or after the TIMESPEC of option "\-t"
+are not valid. The corresponding TIMESPEC must be of the format
+"YYYY-MM-DD[_HH:MM:SS]". The default values are "2009-06-01 00:00:00
+(publication date of FIPS 186-3)" and the current system date, respectively.
 
 .PP
-The program returns a non\-zero value on error, e.g., if the detached signature is invalid or
-no admissible public key is found in KEYFILE.
+The program returns a non\-zero value on error, e.g., if the detached signature
+is invalid or no admissible public key is found in KEYFILE.
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
 .TP
 \fB\-b\fR, \fB\-\-binary\fR
-consider KEYFILE as binary input
+consider KEYFILE and FILENAME as binary input
 .TP
 \fB\-f\fR \fI\,TIMESPEC\/\fR
 signature made before given TIMESPEC is not valid
@@ -38,6 +41,9 @@ print this list of options
 .TP
 \fB\-i\fR \fI\,FILENAME\/\fR
 verify detached signature from FILENAME
+.TP
+\fB\-k\fR \fI\,FILENAME\/\fR
+use keyring FILENAME containing external revocation keys
 .TP
 \fB\-t\fR \fI\,TIMESPEC\/\fR
 signature made after given TIMESPEC is not valid
@@ -61,9 +67,11 @@ via an email directly to
 <HeikoStamer@gmx.net>.
 Reported problems will be published after they've been fixed.
 .PP
-Please report all other bugs via public bug tracker <https://savannah.nongnu.org/bugs/?func=additem&group=dkgpg>
+Please report all other bugs via public bug tracker
+<https://savannah.nongnu.org/bugs/?func=additem&group=dkgpg>
 .PP
-Home page of Distributed Privacy Guard (DKGPG): <https://savannah.nongnu.org/projects/dkgpg/>
+Home page of Distributed Privacy Guard (DKGPG):
+<https://savannah.nongnu.org/projects/dkgpg/>
 
 .SH "COPYRIGHT"
 .TP
@@ -72,9 +80,9 @@ Copyright (C)  2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later
 version published by the Free Software Foundation; with no Invariant Sections,
-no Front\-Cover Texts, and no Back\-Cover Texts. A copy of the license is included
-in the sources of this package and additionally can be obtained from Internet
-<https://www.gnu.org/licenses>.
+no Front\-Cover Texts, and no Back\-Cover Texts. A copy of the license is
+included in the sources of this package and additionally can be obtained from
+Internet <https://www.gnu.org/licenses>.
 
 .SH "SEE ALSO"
 .BR dkg\-generate (1),

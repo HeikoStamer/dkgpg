@@ -36,19 +36,21 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	kfilename, ifilename, ofilename, s;
+	std::string	kfilename, ifilename, ofilename, s, rfilename;
 	int		opt_verbose = 0;
 	bool		opt_binary = false, opt_weak = false, opt_t = false;
 	char		*opt_ifilename = NULL;
 	char		*opt_ofilename = NULL;
 	char		*opt_s = NULL;
+	char		*opt_k = NULL;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
 		// ignore options
-		if ((arg.find("-i") == 0) || (arg.find("-o") == 0) || (arg.find("-s") == 0))
+		if ((arg.find("-i") == 0) || (arg.find("-o") == 0) ||
+			(arg.find("-s") == 0) || (arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
@@ -66,6 +68,11 @@ int main
 				s = argv[i+1];
 				opt_s = (char*)s.c_str();
 			}
+			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			{
+				rfilename = argv[i+1];
+				opt_k = (char*)rfilename.c_str();
+			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0)  || (arg.find("-v") == 0) || 
@@ -80,6 +87,7 @@ int main
 				std::cout << "  -b, --binary        write encrypted message in binary format (only if -i)" << std::endl;
 				std::cout << "  -h, --help          print this help" << std::endl;
 				std::cout << "  -i FILENAME         read message rather from FILENAME than STDIN" << std::endl;
+				std::cout << "  -k FILENAME         use keyring FILENAME containing external revocation keys" << std::endl;
 				std::cout << "  -o FILENAME         write encrypted message rather to FILENAME than STDOUT" << std::endl;
 				std::cout << "  -s STRING           select only encryption-capable subkeys containing STRING" << std::endl;
 				std::cout << "  -t, --throw-keyids  throw included key IDs for somewhat improved privacy" << std::endl;
@@ -139,10 +147,28 @@ int main
 	if (!read_key_file(kfilename, armored_pubkey))
 		return -1;
 
-	// parse the public key block and corresponding signatures
+	// read the keyring
+	std::string armored_pubring;
+	if (opt_k && !read_key_file(rfilename, armored_pubring))
+		return -1;
+
+	// parse the keyring, the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
-	TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
-	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+	TMCG_OpenPGP_Keyring *ring = NULL;
+	bool parse_ok;
+	if (opt_k)
+	{
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyringParse(armored_pubring, opt_verbose, ring);
+		if (!parse_ok)
+		{
+			std::cerr << "WARNING: cannot use the given keyring" << std::endl;
+			ring = new TMCG_OpenPGP_Keyring();
+		}
+	}
+	else
+		ring = new TMCG_OpenPGP_Keyring();
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{

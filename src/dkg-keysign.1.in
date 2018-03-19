@@ -99,6 +99,9 @@ hostname (e.g. onion address) of this peer within PEERS
 \fB\-i\fR, \fB\-\-input\fR=\fI\,FILENAME\/\fR
 create certification signatures on key from FILENAME
 .TP
+\fB\-k\fR, \fB\-\-keyring\fR=\fI\,FILENAME\/\fR
+use keyring FILENAME containing external revocation keys
+.TP
 \fB\-L\fR, \fB\-\-log\fR=\fI\,LOGLEVEL\/\fR
 configure logging to use LOGLEVEL
 .TP

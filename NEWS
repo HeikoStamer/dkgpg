@@ -7,6 +7,11 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.0.6   Again some important improvements have been introduced, e.g., the
+        support for external revocation keys when validating a public key
+        or new options for different signature types of dkg-keysign. The most
+        notable change is the usage of a new key block and signature parser
+        from LibTMCG. Thus code complexity has been reduced a little bit. 
 1.0.5   Major improvements have been achieved in this release: For signing
         of an OpenPGP public key (certification) the program dkg-keysign is
         contained. With dkg-keycheck and the option "-r" some basic checks on

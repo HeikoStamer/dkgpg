@@ -73,6 +73,10 @@ Please report all other bugs via public bug tracker
 Home page of Distributed Privacy Guard (DKGPG):
 <https://savannah.nongnu.org/projects/dkgpg/>
 
+.SH "THANKS"
+The author thanks Daniel Kahn Gillmor for his valuable suggestions regarding
+this program.
+
 .SH "COPYRIGHT"
 .TP
 Copyright (C)  2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>

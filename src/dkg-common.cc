@@ -455,7 +455,7 @@ bool parse_private_key
 	{
 		tmcg_openpgp_octets_t current_packet;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, x_rvss_qual, capl, v_i, c_ik);
-		if (opt_verbose)
+		if (opt_verbose && ptag)
 			std::cerr << "INFO: PacketDecode(pkts.size = " << pkts.size() << ") = " << (int)ptag;
 		if (!ptag)
 		{
@@ -465,13 +465,13 @@ bool parse_private_key
 			return false; // error detected
 		}
 		if (opt_verbose)
-			std::cerr << "INFO:  tag = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << " tag = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
 		switch (ptag)
 		{
 			case 2: // Signature Packet
 				issuer.clear();
 				if (opt_verbose)
-					std::cerr << "INFO:  issuer = " << std::hex;
+					std::cerr << "INFO: issuer = " << std::hex;
 				for (size_t i = 0; i < sizeof(ctx.issuer); i++)
 				{
 					if (opt_verbose)

@@ -120,7 +120,8 @@ int main
 	}
 #ifdef DKGPG_TESTSUITE
 	kfilename = "Test1_dkg-pub.asc";
-	opt_binary = true;
+	if (!opt_binary)
+		opt_binary = true;
 	ofilename = "Test1_output.bin";
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 1;

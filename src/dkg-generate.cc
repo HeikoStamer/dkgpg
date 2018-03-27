@@ -1303,6 +1303,8 @@ bool fips_verify
 		}
 		// 4. $N = \mathbf{len}(q)$.
 		fips_N = mpz_sizeinbase(fips_q, 2L);
+		if (opt_verbose)
+			std::cerr << "INFO: fips_N = " << fips_N << std::endl;
 		// 5. $e = (p - 1)/q$.
 		mpz_t e;
 		mpz_init_set(e, fips_p);

@@ -261,6 +261,8 @@ int main
 		mpz_init_set_ui(index, 108L); // fixed index value for DKG-tools
 		// 2. $N = \mathbf{len}(q)$.
 		N = mpz_sizeinbase(q, 2L);
+		if (opt_verbose)
+			std::cerr << "INFO: N = " << N << std::endl;
 		// 3. $e = (p - 1)/q$.
 		mpz_t e;
 		mpz_init_set(e, p);
@@ -302,7 +304,7 @@ int main
 			break;
 		}
 		if (opt_verbose)
-			std::cerr << "INFO: g = " << p << std::endl;		
+			std::cerr << "INFO: g = " << p << std::endl;
 
 		// export group parameters to stdout
 		mpz_t hash_algo_mpz, counter_mpz;

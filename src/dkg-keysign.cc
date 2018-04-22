@@ -330,15 +330,25 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
 	tmcg_openpgp_octets_t trailer, acc;
 	if (opt_r)
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x30, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION,
+				hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else if (opt_1)
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x11, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION,
+				hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else if (opt_2)
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x12, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION,
+				hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else if (opt_3)
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x13, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
+				hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	else
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareCertificationSignature(0x10, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION,
+				hashalgo, csigtime, sigexptime, URI, keyid, trailer);
 	acc.insert(acc.end(), primary->packet.begin(), primary->packet.end());
 
 	// create an instance of tDSS by stored parameters from private key

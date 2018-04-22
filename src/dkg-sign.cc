@@ -245,8 +245,11 @@ void run_instance
 	if (opt_verbose)
 		std::cerr << "INFO: hashing the input file \"" << opt_ifilename << "\"" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left;
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareDetachedSignature(0x00, hashalgo, csigtime, sigexptime, URI, keyid, trailer);
-	if (!CallasDonnerhackeFinneyShawThayerRFC4880::BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigPrepareDetachedSignature(TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
+			hashalgo, csigtime, sigexptime, URI, keyid, trailer);
+	if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+		BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
 	{
 		std::cerr << "ERROR: S_" << whoami << ": BinaryDocumentHash() failed; cannot process input file \"" << opt_ifilename << "\"" << std::endl;
 		delete rbc, delete aiou, delete aiou2;

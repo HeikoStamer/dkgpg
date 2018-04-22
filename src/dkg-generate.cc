@@ -612,9 +612,13 @@ void run_instance
 	}
 	// TODO: create a direct-key signature (0x1f) with the above key flags
 	// positive certification (0x13) of uid and pub
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareSelfSignature(0x13, hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
+			hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
 	hash.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, uidsig_hashing, hashalgo, hash, uidsig_left);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		CertificationHash(pub_hashing, userid, uidsig_hashing, hashalgo, hash,
+			uidsig_left);
 	if (S > 0)
 	{
 		tmcg_openpgp_byte_t buffer[1024];
@@ -724,7 +728,8 @@ void run_instance
 			exit(-1);
 		}
 	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(uidsig_hashing, uidsig_left, r, s, uidsig);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigEncode(uidsig_hashing, uidsig_left, r, s, uidsig);
 	gcry_mpi_release(r);
 	gcry_mpi_release(s);
 	gcry_mpi_release(x);
@@ -744,7 +749,9 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSubEncode(ckeytime, TMCG_OPENPGP_PKALGO_ELGAMAL, p, q, g, y, sub); // use common key creation time
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSubEncode(ckeytime, TMCG_OPENPGP_PKALGO_ELGAMAL, p, q, g, y,
+				sub); // use common key creation time
 		// create an OpenPGP private subkey as experimental algorithm ID 109 to store everything from DKG
 		gcry_mpi_t h, n, t, i, qualsize, x_i, xprime_i;
 		std::vector<gcry_mpi_t> qual, v_i;
@@ -896,8 +903,9 @@ void run_instance
 			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSsbEncodeExperimental109(ckeytime, p, q, g, h, y,
-			n, t, i, qualsize, qual, v_i, c_ik, x_i, xprime_i, passphrase, ssb);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSsbEncodeExperimental109(ckeytime, p, q, g, h, y,	n, t, i,
+				qualsize, qual, v_i, c_ik, x_i, xprime_i, passphrase, ssb);
 		gcry_mpi_release(h);
 		gcry_mpi_release(n);
 		gcry_mpi_release(t);
@@ -919,11 +927,15 @@ void run_instance
 		else
 			sigtime = time(NULL); // otherwise use current time
 		// Subkey Binding Signature (0x18) of sub
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareSelfSignature(0x18, hashalgo, sigtime, keyexptime, elgflags, keyid, subsig_hashing);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
+				hashalgo, sigtime, keyexptime, elgflags, keyid, subsig_hashing);
 		for (size_t i = 6; i < sub.size(); i++)
 			sub_hashing.push_back(sub[i]);
 		hash.clear();
-		CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash, subsig_left);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash,
+				subsig_left);
 		if (S > 0)
 		{
 			tmcg_openpgp_byte_t buffer[1024];
@@ -1006,7 +1018,8 @@ void run_instance
 		{
 			r = gcry_mpi_new(2048);
 			s = gcry_mpi_new(2048);
-			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricSignDSA(hash, key, r, s);
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				AsymmetricSignDSA(hash, key, r, s);
 			if (ret)
 			{
 				std::cerr << "ERROR: P_" << whoami << ": CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricSignDSA() failed" << std::endl;
@@ -1021,7 +1034,8 @@ void run_instance
 				exit(-1);
 			}
 		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigEncode(subsig_hashing, subsig_left, r, s, subsig);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigEncode(subsig_hashing, subsig_left, r, s, subsig);
 		gcry_mpi_release(r);
 		gcry_mpi_release(s);
 	}
@@ -1046,7 +1060,8 @@ void run_instance
 	all.insert(all.end(), uidsig.begin(), uidsig.end());
 	all.insert(all.end(), sub.begin(), sub.end());
 	all.insert(all.end(), subsig.begin(), subsig.end());
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, armor);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, armor);
 	if (opt_verbose > 1)
 		std::cout << armor << std::endl;
 	std::ofstream pubofs((pubfilename.str()).c_str(), std::ofstream::out);
@@ -1074,7 +1089,8 @@ void run_instance
 	all.insert(all.end(), uidsig.begin(), uidsig.end());
 	all.insert(all.end(), ssb.begin(), ssb.end());
 	all.insert(all.end(), subsig.begin(), subsig.end());
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
 	if (opt_verbose > 1)
 		std::cout << armor << std::endl;
 	if (!create_strict_permissions((secfilename.str()).c_str()))

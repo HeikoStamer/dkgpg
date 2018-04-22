@@ -297,8 +297,12 @@ void run_instance
 
 	// compute a hash of pub and sub, respectively
 	tmcg_openpgp_octets_t trailer_pub, pub_hashing, hash_pub, left_pub, trailer_sub, sub_hashing, hash_sub, left_sub;
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareRevocationSignature(0x20, hashalgo, csigtime, revcode, "", keyid, trailer_pub);
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSigPrepareRevocationSignature(0x28, hashalgo, csigtime, revcode, "", keyid, trailer_sub);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION,
+			hashalgo, csigtime, revcode, "", keyid, trailer_pub);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION,
+			hashalgo, csigtime, revcode, "", keyid, trailer_sub);
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
 	for (size_t i = 6; i < sub.size(); i++)
@@ -307,8 +311,10 @@ void run_instance
 	// Primary key revocation signatures (type 0x20) hash only the key being revoked.
 	// Subkey revocation signature (type 0x28) hash first the primary key and then the
 	// subkey being revoked.
-	CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, trailer_pub, hashalgo, hash_pub, left_pub);
-	CallasDonnerhackeFinneyShawThayerRFC4880::KeyHash(pub_hashing, sub_hashing, trailer_sub, hashalgo, hash_sub, left_sub);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		KeyHash(pub_hashing, trailer_pub, hashalgo, hash_pub, left_pub);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		KeyHash(pub_hashing, sub_hashing, trailer_sub, hashalgo, hash_sub, left_sub);
 
 	// sign the hashes
 	tmcg_openpgp_octets_t revsig_pub, revsig_sub;

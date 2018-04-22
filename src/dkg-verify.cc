@@ -56,60 +56,94 @@ int main
 		if (arg.find("-i") == 0)
 		{
 			size_t idx = ++i;
-			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
+			if ((idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
 			{
 				ifilename = argv[i+1];
 				opt_ifilename = (char*)ifilename.c_str();
+			}
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
 			}
 			continue;
 		}
 		else if (arg.find("-f") == 0)
 		{
 			size_t idx = ++i;
-			if ((arg.find("-f") == 0) && (idx < (size_t)(argc - 1)) && (opt_sigfrom == NULL))
+			if ((idx < (size_t)(argc - 1)) && (opt_sigfrom == NULL))
 			{
 				sigfrom_str = argv[i+1];
 				opt_sigfrom = (char*)sigfrom_str.c_str();
+			}
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
 			}
 			continue;
 		}
 		else if (arg.find("-t") == 0)
 		{
 			size_t idx = ++i;
-			if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) && (opt_sigto == NULL))
+			if ((idx < (size_t)(argc - 1)) && (opt_sigto == NULL))
 			{
 				sigto_str = argv[i+1];
 				opt_sigto = (char*)sigto_str.c_str();
+			}
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
 			}
 			continue;
 		}
 		else if (arg.find("-k") == 0)
 		{
 			size_t idx = ++i;
-			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
 			{
 				rfilename = argv[i+1];
 				opt_k = (char*)rfilename.c_str();
 			}
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
+			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || (arg.find("-v") == 0) || 
-		         (arg.find("-h") == 0) || (arg.find("-V") == 0) || (arg.find("-w") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
+				 (arg.find("-v") == 0) || (arg.find("-h") == 0) ||
+				 (arg.find("-V") == 0) || (arg.find("-w") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary   consider KEYFILE and FILENAME as binary input" << std::endl;
-				std::cout << "  -f TIMESPEC    signature made before given TIMESPEC is not valid" << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
+				std::cout << "  -b, --binary   consider KEYFILE and FILENAME" <<
+					" as binary input" << std::endl;
+				std::cout << "  -f TIMESPEC    signature made before given" <<
+					" TIMESPEC is not valid" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -i FILENAME    verify detached signature on FILENAME" << std::endl;
-				std::cout << "  -k FILENAME    use keyring FILENAME containing external revocation keys" << std::endl;
-				std::cout << "  -t TIMESPEC    signature made after given TIMESPEC is not valid" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -w, --weak     allow weak or expired keys" << std::endl;
+				std::cout << "  -i FILENAME    verify detached signature on" <<
+					" FILENAME" << std::endl;
+				std::cout << "  -k FILENAME    use keyring FILENAME" <<
+					" containing external revocation keys" << std::endl;
+				std::cout << "  -t TIMESPEC    signature made after given" <<
+					" TIMESPEC is not valid" << std::endl;
+				std::cout << "  -v, --version  print the version number" <<
+					std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" <<
+					std::endl;
+				std::cout << "  -w, --weak     allow weak or expired keys" <<
+					std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
@@ -141,7 +175,8 @@ int main
 	// check command line arguments
 	if ((kfilename.length() == 0) || (ifilename.length() == 0))
 	{
-		std::cerr << "ERROR: some filename missing; usage: " << usage << std::endl;
+		std::cerr << "ERROR: some filename missing; usage: " << usage <<
+			std::endl;
 		return -1;
 	}
 	if (opt_sigfrom)
@@ -151,7 +186,8 @@ int main
 		if (sigfrom == ((time_t) -1))
 		{
 			perror("ERROR: dkg-verify (mktime)");
-			std::cerr << "ERROR: cannot convert TIMESPEC; required format: YYYY-MM-DD_HH:MM:SS" << std::endl;
+			std::cerr << "ERROR: cannot convert TIMESPEC; required format:" <<
+				" YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
 		}
 	}
@@ -162,7 +198,8 @@ int main
 		if (sigto == ((time_t) -1))
 		{
 			perror("ERROR: dkg-verify (mktime)");
-			std::cerr << "ERROR: cannot convert TIMESPEC; required format: YYYY-MM-DD_HH:MM:SS" << std::endl;
+			std::cerr << "ERROR: cannot convert TIMESPEC; required format:" <<
+				" YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
 		}
 	}
@@ -174,18 +211,21 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
 
 	// read the public key
 	std::string armored_pubkey;
-	if (opt_binary && !read_binary_key_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
+	if (opt_binary && !read_binary_key_file(kfilename,
+			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
 		return -1;
 	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
 		return -1;
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k && opt_binary && !read_binary_key_file(rfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
+	if (opt_k && opt_binary && !read_binary_key_file(rfilename,
+			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
 		return -1;
 	if (opt_k && !opt_binary && !read_key_file(rfilename, armored_pubring))
 		return -1;
@@ -261,9 +301,10 @@ int main
 		SignatureParse(armored_signature, opt_verbose, signature);
 	if (parse_ok)
 	{
-		if (signature->type != 0x00)
+		if (signature->type != TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT)
 		{
-			std::cerr << "ERROR: wrong signature type " << (int)signature->type << " found" << std::endl;
+			std::cerr << "ERROR: wrong signature type " <<
+				(int)signature->type << " found" << std::endl;
 			delete signature;
 			delete primary;
 			delete ring;
@@ -272,7 +313,8 @@ int main
 	}
 	else
 	{
-		std::cerr << "ERROR: cannot parse resp. use the provided signature" << std::endl;
+		std::cerr << "ERROR: cannot parse resp. use the provided signature" <<
+			std::endl;
 		delete primary;
 		delete ring;
 		return -1;
@@ -287,10 +329,13 @@ int main
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x02) == 0x02) ||
-		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
-				(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) || (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA))))
+		    (!primary->subkeys[j]->AccumulateFlags() &&
+			((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+			(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) ||
+			(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA))))
 		{
-			if (CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(signature->issuer, primary->subkeys[j]->id))
+			if (CallasDonnerhackeFinneyShawThayerRFC4880::
+				OctetsCompare(signature->issuer, primary->subkeys[j]->id))
 			{
 				subkey_selected = true;
 				subkey_idx = j;
@@ -307,8 +352,10 @@ int main
 	{
 
 		if (((primary->AccumulateFlags() & 0x02) != 0x02) &&
-		    (!primary->AccumulateFlags() && (primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
-			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) && (primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA)))
+		    (!primary->AccumulateFlags() &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA)))
 		{
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
 			delete signature;
@@ -316,7 +363,8 @@ int main
 			delete ring;
 			return -1;
 		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(signature->issuer, primary->id))
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			OctetsCompare(signature->issuer, primary->id))
 		{
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
 			delete signature;
@@ -331,10 +379,12 @@ int main
 
 	// additional validity checks on key and signature
 	time_t current_time = time(NULL);
-	// 1. key validity time (signatures made before key creation or after key expiry are not valid)
+	// 1. key validity time (signatures made before key creation or
+	//    after key expiry are not valid)
 	if (signature->creationtime < ckeytime)
 	{
-		std::cerr << "ERROR: signature was made before key creation" << std::endl;
+		std::cerr << "ERROR: signature was made before key creation" <<
+			std::endl;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -349,7 +399,8 @@ int main
 		return -2;
 	}
 	// 2. signature validity time (expired signatures are not valid)
-	if (signature->expirationtime && (current_time > (signature->creationtime + signature->expirationtime)))
+	if (signature->expirationtime &&
+		(current_time > (signature->creationtime + signature->expirationtime)))
 	{
 		std::cerr << "ERROR: signature is expired" << std::endl;
 		delete signature;
@@ -357,10 +408,12 @@ int main
 		delete ring;
 		return -2;
 	}
-	// 3. key usage flags (signatures made by keys not with the "signing" capability are not valid)
+	// 3. key usage flags (signatures made by keys not with the "signing"
+	//    capability are not valid)
 	if (!opt_weak && ((keyusage & 0x02) != 0x02))
 	{
-		std::cerr << "ERROR: corresponding key was not intented for signing" << std::endl;
+		std::cerr << "ERROR: corresponding key was not intented for signing" <<
+			std::endl;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -375,10 +428,12 @@ int main
 		delete ring;
 		return -2;
 	}
-	// 5. signature time (signatures made before the sigfrom or after the sigto timespec are not valid)
+	// 5. signature time (signatures made before the sigfrom or after the sigto
+	//    timespec are not valid)
 	if (signature->creationtime < sigfrom)
 	{
-		std::cerr << "ERROR: signature was made before given TIMESPEC" << std::endl;
+		std::cerr << "ERROR: signature was made before given TIMESPEC" <<
+			std::endl;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -386,7 +441,8 @@ int main
 	}
 	if (signature->creationtime > sigto)
 	{
-		std::cerr << "ERROR: signature was made after given TIMESPEC" << std::endl;
+		std::cerr << "ERROR: signature was made after given TIMESPEC" <<
+			std::endl;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -396,7 +452,8 @@ int main
 	// verify signature cryptographically
 	bool verify_ok = false;
 	if (subkey_selected)
-		verify_ok = signature->Verify(primary->subkeys[subkey_idx]->key, opt_ifilename, opt_verbose);
+		verify_ok = signature->Verify(primary->subkeys[subkey_idx]->key,
+			opt_ifilename, opt_verbose);
 	else
 		verify_ok = signature->Verify(primary->key, opt_ifilename, opt_verbose);
 
@@ -410,13 +467,15 @@ int main
 	if (!verify_ok)
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: Bad signature for input file \"" << opt_ifilename << "\"" << std::endl;
+			std::cerr << "INFO: Bad signature for input file \"" <<
+				opt_ifilename << "\"" << std::endl;
 		return -3;
 	}
 	else
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: Good signature for input file \"" << opt_ifilename << "\"" << std::endl;
+			std::cerr << "INFO: Good signature for input file \"" <<
+				opt_ifilename << "\"" << std::endl;
 	}
 	return 0;
 }

@@ -26,25 +26,32 @@
 
 extern std::vector<std::string>			peers;
 
-extern std::string				passphrase, userid;
-extern tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+extern std::string						passphrase, userid;
+extern tmcg_openpgp_octets_t			keyid, subkeyid;
+extern tmcg_openpgp_octets_t			pub, sub, sec, ssb, uid;
+extern tmcg_openpgp_octets_t			uidsig, subsig;
 extern std::map<size_t, size_t>			idx2dkg, dkg2idx;
-extern mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
-extern size_t					dss_n, dss_t, dss_i;
-extern std::vector<size_t>			dss_qual, dss_x_rvss_qual;
-extern std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-extern mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
-extern size_t					dkg_n, dkg_t, dkg_i;
-extern std::vector<size_t>			dkg_qual;
-extern std::vector<mpz_ptr>			dkg_v_i;
-extern std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-extern gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-extern gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
-extern gcry_mpi_t 				gk, myk, sig_r, sig_s;
-extern gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
+extern mpz_t							dss_p, dss_q, dss_g, dss_h, dss_y;
+extern mpz_t							dss_x_i, dss_xprime_i; // secret key
+extern size_t							dss_n, dss_t, dss_i;
+extern std::vector<size_t>				dss_qual, dss_x_rvss_qual;
+extern tmcg_mpz_matrix_t				dss_c_ik;
+extern mpz_t							dkg_p, dkg_q, dkg_g, dkg_h, dkg_y;
+extern mpz_t							dkg_x_i, dkg_xprime_i; // secret key
+extern size_t							dkg_n, dkg_t, dkg_i;
+extern std::vector<size_t>				dkg_qual;
+extern tmcg_mpz_vector_t				dkg_v_i;
+extern tmcg_mpz_matrix_t				dkg_c_ik;
+extern gcry_mpi_t 						dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
+extern gcry_mpi_t						elg_p, elg_q, elg_g, elg_y, elg_x;
+extern gcry_mpi_t						dsa_r, dsa_s, elg_r, elg_s;
+extern gcry_mpi_t						rsa_n, rsa_e, rsa_md;
+extern gcry_mpi_t						gk, myk, sig_r, sig_s;
+extern gcry_mpi_t						revdsa_r, revdsa_s, revelg_r, revelg_s;
+extern gcry_mpi_t						revrsa_md;
 
-extern int					opt_verbose;
-extern bool					libgcrypt_secmem;
+extern int								opt_verbose;
+extern bool								libgcrypt_secmem;
 
 void init_mpis
 	()
@@ -98,7 +105,7 @@ void init_mpis
 }
 
 void cleanup_containers
-	(std::vector<gcry_mpi_t> &qual, std::vector<gcry_mpi_t> &v_i, std::vector< std::vector<gcry_mpi_t> > &c_ik)
+	(tmcg_mpi_vector_t &qual, tmcg_mpi_vector_t &v_i, tmcg_mpi_matrix_t &c_ik)
 {
 	for (size_t i = 0; i < qual.size(); i++)
 		gcry_mpi_release(qual[i]);
@@ -116,7 +123,8 @@ void cleanup_containers
 }
 
 void cleanup_containers
-	(std::vector<gcry_mpi_t> &qual, std::vector<gcry_mpi_t> &v_i, std::vector<gcry_mpi_t> &x_rvss_qual, std::vector< std::vector<gcry_mpi_t> > &c_ik)
+	(tmcg_mpi_vector_t &qual, tmcg_mpi_vector_t &v_i,
+	 tmcg_mpi_vector_t &x_rvss_qual, tmcg_mpi_matrix_t &c_ik)
 {
 	cleanup_containers(qual, v_i, c_ik);
 	for (size_t i = 0; i < x_rvss_qual.size(); i++)
@@ -125,17 +133,20 @@ void cleanup_containers
 }
 
 bool parse_message
-	(const std::string &in, tmcg_openpgp_octets_t &enc_out, bool &have_seipd_out)
+	(const std::string &in,
+	 tmcg_openpgp_octets_t &enc_out, bool &have_seipd_out)
 {
 	// decode ASCII armor and parse encrypted message
 	tmcg_openpgp_armor_t atype = TMCG_OPENPGP_ARMOR_UNKNOWN;
 	tmcg_openpgp_octets_t pkts;
 	atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cerr << "INFO: ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
+		std::cerr << "INFO: ArmorDecode() = " << (int)atype << " with " <<
+			pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_MESSAGE)
 	{
-		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " << (int)atype << ")" << std::endl;
+		std::cerr << "ERROR: wrong type of ASCII Armor found (type = " <<
+			(int)atype << ")" << std::endl;
 		return false;
 	}
 	bool have_pkesk = false, have_sed = false;
@@ -149,20 +160,25 @@ bool parse_message
 		std::vector<gcry_mpi_t> qual, v_i;
 		std::vector<std::string> capl;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
-		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl, v_i, c_ik);
+		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl,
+				v_i, c_ik);
 		++pnum;
 		if (opt_verbose)
-			std::cerr << "INFO: PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << "INFO: PacketDecode() = " << (int)ptag <<
+				" version = " << (int)ctx.version << std::endl;
 		if (ptag == 0x00)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at #" <<
+				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
 		}
 		else if (ptag == 0xFE)
 		{
-			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" <<
+				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			continue; // ignore packet
@@ -171,10 +187,12 @@ bool parse_message
 		{
 			case 1: // Public-Key Encrypted Session Key
 				if (opt_verbose)
-					std::cerr << "INFO: pkalgo = " << (int)ctx.pkalgo << std::endl;
+					std::cerr << "INFO: pkalgo = " << (int)ctx.pkalgo <<
+						std::endl;
 				if (ctx.pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL)
 				{
-					std::cerr << "WARNING: public-key algorithm not supported; packet #" << pnum << " ignored" << std::endl;
+					std::cerr << "WARNING: public-key algorithm not sup" <<
+						"ported; packet #" << pnum << " ignored" << std::endl;
 					break;
 				}
 				if (opt_verbose)
@@ -188,23 +206,31 @@ bool parse_message
 				}
 				if (opt_verbose)
 					std::cerr << std::dec << std::endl;
-				if (CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompareZero(pkesk_keyid))
-					std::cerr << "WARNING: PKESK wildcard keyid found; try to decrypt" << std::endl;
-				else if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(pkesk_keyid, subkeyid))
+				if (CallasDonnerhackeFinneyShawThayerRFC4880::
+					OctetsCompareZero(pkesk_keyid))
+				{
+					std::cerr << "WARNING: PKESK wildcard keyid found; " <<
+						"try to decrypt anyway" << std::endl;
+				}
+				else if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+					OctetsCompare(pkesk_keyid, subkeyid))
 				{
 					if (opt_verbose)
-						std::cerr << "WARNING: PKESK keyid does not match subkey ID" << std::endl;
+						std::cerr << "WARNING: PKESK keyid does not match " <<
+							"subkey ID" << std::endl;
 					break;
 				}
 				if (have_pkesk)
-					std::cerr << "WARNING: matching PKESK packet already found; g^k and my^k overwritten" << std::endl;
+					std::cerr << "WARNING: matching PKESK packet already " <<
+						"found; g^k and my^k overwritten" << std::endl;
 				gcry_mpi_set(gk, ctx.gk);
 				gcry_mpi_set(myk, ctx.myk);
 				have_pkesk = true;
 				break;
 			case 9: // Symmetrically Encrypted Data
 				if (!have_pkesk)
-					std::cerr << "WARNING: no preceding PKESK packet found; decryption may fail" << std::endl;
+					std::cerr << "WARNING: no preceding PKESK packet found; " <<
+						"decryption may fail" << std::endl;
 				if ((!have_sed) && (!have_seipd_out))
 				{
 					have_sed = true;
@@ -214,8 +240,10 @@ bool parse_message
 				}
 				else
 				{
-					std::cerr << "ERROR: duplicate SED/SEIPD packet found" << std::endl;
-					CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+					std::cerr << "ERROR: duplicate SED/SEIPD packet found" <<
+						std::endl;
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketContextRelease(ctx);
 					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
@@ -230,15 +258,19 @@ bool parse_message
 				}
 				else
 				{
-					std::cerr << "ERROR: duplicate SED/SEIPD packet found" << std::endl;
-					CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+					std::cerr << "ERROR: duplicate SED/SEIPD packet found" <<
+						std::endl;
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketContextRelease(ctx);
 					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
 			default:
-				std::cerr << "ERROR: unexpected OpenPGP packet " << (int)ptag<< " found at #" << pnum << std::endl;
-				CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+				std::cerr << "ERROR: unexpected OpenPGP packet " << (int)ptag <<
+					" found at #" << pnum << std::endl;
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketContextRelease(ctx);
 				cleanup_containers(qual, v_i, c_ik);
 				return false;
 		}
@@ -248,17 +280,20 @@ bool parse_message
 	}
 	if (!have_pkesk)
 	{
-		std::cerr << "ERROR: no public-key encrypted session key found" << std::endl;
+		std::cerr << "ERROR: no public-key encrypted session key found" <<
+			std::endl;
 		return false;
 	}
 	if (!have_sed && !have_seipd_out)
 	{
-		std::cerr << "ERROR: no symmetrically encrypted (and integrity protected) data found" << std::endl;
+		std::cerr << "ERROR: no symmetrically encrypted (and integrity" <<
+			" protected) data found" << std::endl;
 		return false;
 	}
 	if (have_sed && have_seipd_out)
 	{
-		std::cerr << "ERROR: multiple types of symmetrically encrypted data found" << std::endl;
+		std::cerr << "ERROR: multiple types of symmetrically encrypted data" <<
+			" found" << std::endl;
 		return false;
 	}
 	// check whether $0 < g^k < p$.
@@ -288,7 +323,8 @@ bool parse_message
 }
 
 bool decrypt_message
-	(const bool have_seipd, const tmcg_openpgp_octets_t &in, tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out)
+	(const bool have_seipd, const tmcg_openpgp_octets_t &in,
+	 tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out)
 {
 	// decrypt the given message
 	tmcg_openpgp_skalgo_t symalgo = TMCG_OPENPGP_SKALGO_PLAINTEXT;
@@ -308,10 +344,12 @@ bool decrypt_message
 	gcry_error_t ret;
 	tmcg_openpgp_octets_t prefix, pkts;
 	if (have_seipd)
-		ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricDecrypt(in, key, prefix, false, symalgo, pkts);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			SymmetricDecrypt(in, key, prefix, false, symalgo, pkts);
 	else
 	{
-		std::cerr << "ERROR: encrypted message was not integrity protected" << std::endl;
+		std::cerr << "ERROR: encrypted message was not integrity" <<
+			" protected" << std::endl;
 		return false;
 	}
 	if (ret)
@@ -321,32 +359,38 @@ bool decrypt_message
 	}
 	// parse the content of decrypted message
 	tmcg_openpgp_packet_ctx_t ctx;
-	std::vector<gcry_mpi_t> qual, v_i;
+	tmcg_mpi_vector_t qual, v_i;
 	std::vector<std::string> capl;
-	std::vector< std::vector<gcry_mpi_t> > c_ik;
+	tmcg_mpi_matrix_t c_ik;
 	bool have_lit = false, have_mdc = false;
 	tmcg_openpgp_octets_t lit, mdc_hash;
 	tmcg_openpgp_byte_t ptag = 0xFF;
 	size_t pnum = 0, mdc_len = sizeof(ctx.mdc_hash) + 2;
 	if (pkts.size() > mdc_len)
-		lit.insert(lit.end(), pkts.begin(), pkts.end() - mdc_len); // store literal data
+		lit.insert(lit.end(), pkts.begin(), pkts.end() - mdc_len); // literal
 	while (pkts.size() && ptag)
 	{
 		tmcg_openpgp_octets_t current_packet;
-		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl, v_i, c_ik);
+		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl,
+				v_i, c_ik);
 		++pnum;
 		if (opt_verbose)
-			std::cerr << "INFO: PacketDecode() = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << "INFO: PacketDecode() = " << (int)ptag <<
+				" version = " << (int)ctx.version << std::endl;
 		if (ptag == 0x00)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed at #" << pnum << " and position " << pkts.size() << std::endl;
+			std::cerr << "ERROR: parsing OpenPGP packets failed at #" <<
+				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
 		}
-		else if ((ptag == 0xFE) || (ptag == 0xFA) || (ptag == 0xFB) || (ptag == 0xFC))
+		else if ((ptag == 0xFE) || (ptag == 0xFA) || (ptag == 0xFB) ||
+			(ptag == 0xFC))
 		{
-			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" << pnum << " and position " << pkts.size() << std::endl;
+			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" <<
+				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 			cleanup_containers(qual, v_i, c_ik);
 			continue; // ignore packet
@@ -354,13 +398,16 @@ bool decrypt_message
 		switch (ptag)
 		{
 			case 2: // Signature
-				std::cerr << "WARNING: signature OpenPGP packet found; not supported and ignored" << std::endl;
+				std::cerr << "WARNING: signature OpenPGP packet found;" <<
+					" not supported and ignored" << std::endl;
 				break;
 			case 4: // One-Pass Signature
-				std::cerr << "WARNING: one-pass signature OpenPGP packet found; not supported and ignored" << std::endl;
+				std::cerr << "WARNING: one-pass signature OpenPGP packet" <<
+					" found; not supported and ignored" << std::endl;
 				break;
 			case 8: // Compressed Data
-				std::cerr << "WARNING: compressed OpenPGP packet found; not supported and ignored" << std::endl;
+				std::cerr << "WARNING: compressed OpenPGP packet found;" <<
+					" not supported and ignored" << std::endl;
 				break;
 			case 11: // Literal Data
 				if (!have_lit)
@@ -372,8 +419,10 @@ bool decrypt_message
 				}
 				else
 				{
-					std::cerr << "ERROR: OpenPGP message contains more than one literal data packet" << std::endl;
-					CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+					std::cerr << "ERROR: OpenPGP message contains more than" <<
+						" one literal data packet" << std::endl;
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketContextRelease(ctx);
 					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
@@ -385,8 +434,10 @@ bool decrypt_message
 					mdc_hash.push_back(ctx.mdc_hash[i]);
 				break;
 			default:
-				std::cerr << "ERROR: unexpected OpenPGP packet " << (int)ptag<< " found at #" << pnum << std::endl;
-				CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+				std::cerr << "ERROR: unexpected OpenPGP packet " << (int)ptag <<
+					" found at #" << pnum << std::endl;
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketContextRelease(ctx);
 				cleanup_containers(qual, v_i, c_ik);
 				return false;
 		}
@@ -407,14 +458,21 @@ bool decrypt_message
 	if (have_mdc)
 	{
 		tmcg_openpgp_octets_t mdc_hashing, hash;
-		mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end()); // "it includes the prefix data described above" [RFC4880]
-		mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end()); // "it includes all of the plaintext" [RFC4880]
-		mdc_hashing.push_back(0xD3); // "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
+		// "it includes the prefix data described above" [RFC4880]
+		mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end());
+		// "it includes all of the plaintext" [RFC4880]
+		mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end());
+		// "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
+		mdc_hashing.push_back(0xD3);
 		mdc_hashing.push_back(0x14);
-		CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash); // "passed through the SHA-1 hash function" [RFC4880]
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(mdc_hash, hash))
+		// "passed through the SHA-1 hash function" [RFC4880]
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash);
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			OctetsCompare(mdc_hash, hash))
 		{
-			std::cerr << "ERROR: MDC hash does not match (security issue)" << std::endl;
+			std::cerr << "ERROR: MDC hash does not match (security issue)" <<
+				std::endl;
 			return false;
 		}
 	}
@@ -422,13 +480,16 @@ bool decrypt_message
 }
 
 bool parse_private_key
-	(const std::string &in, time_t &keycreationtime_out, time_t &keyexpirationtime_out, std::vector<std::string> &capl_out)
+	(const std::string &in, time_t &keycreationtime_out,
+	 time_t &keyexpirationtime_out, std::vector<std::string> &capl_out)
 {
 	// decode ASCII Armor
 	tmcg_openpgp_octets_t pkts;
-	tmcg_openpgp_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(in, pkts);
+	tmcg_openpgp_armor_t atype = CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorDecode(in, pkts);
 	if (opt_verbose)
-		std::cerr << "INFO: ArmorDecode() = " << (int)atype << " with " << pkts.size() << " bytes" << std::endl;
+		std::cerr << "INFO: ArmorDecode() = " << (int)atype << " with " <<
+			pkts.size() << " bytes" << std::endl;
 	if (atype != TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK)
 	{
 		std::cerr << "ERROR: wrong type of ASCII Armor found" << std::endl;
@@ -437,12 +498,17 @@ bool parse_private_key
 	// parse the private key according to OpenPGP
 	bool secdsa = false, sigdsa = false, ssbelg = false, sigelg = false;
 	tmcg_openpgp_byte_t ptag = 0xFF;
-	tmcg_openpgp_pkalgo_t dsa_pkalgo = TMCG_OPENPGP_PKALGO_DSA, elg_pkalgo = TMCG_OPENPGP_PKALGO_ELGAMAL;
-	tmcg_openpgp_hashalgo_t dsa_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN, elg_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
-	tmcg_openpgp_byte_t dsa_sigtype, dsa_keyflags[32], elg_sigtype, elg_keyflags[32];
-	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32], elg_psa[32], elg_pha[32], elg_pca[32];
+	tmcg_openpgp_pkalgo_t dsa_pkalgo = TMCG_OPENPGP_PKALGO_DSA;
+	tmcg_openpgp_pkalgo_t elg_pkalgo = TMCG_OPENPGP_PKALGO_ELGAMAL;
+	tmcg_openpgp_hashalgo_t dsa_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+	tmcg_openpgp_hashalgo_t elg_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+	tmcg_openpgp_signature_t dsa_sigtype, elg_sigtype;
+	tmcg_openpgp_byte_t dsa_keyflags[32], elg_keyflags[32];
+	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32];
+	tmcg_openpgp_byte_t elg_psa[32], elg_pha[32], elg_pca[32];
 	tmcg_openpgp_byte_t *key, *iv;
-	tmcg_openpgp_octets_t seskey, salt, mpis, hash_input, hash, pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
+	tmcg_openpgp_octets_t seskey, salt, mpis, hash_input, hash;
+	tmcg_openpgp_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
 	gcry_cipher_hd_t hd;
 	gcry_error_t ret;
 	size_t erroff, keylen, ivlen, chksum, mlen, chksum2;
@@ -454,18 +520,23 @@ bool parse_private_key
 	while (pkts.size() && ptag)
 	{
 		tmcg_openpgp_octets_t current_packet;
-		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, x_rvss_qual, capl, v_i, c_ik);
+		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketDecode(pkts, opt_verbose, ctx, current_packet, qual,
+				x_rvss_qual, capl, v_i, c_ik);
 		if (opt_verbose && ptag)
-			std::cerr << "INFO: PacketDecode(pkts.size = " << pkts.size() << ") = " << (int)ptag;
+			std::cerr << "INFO: PacketDecode(pkts.size = " << pkts.size() <<
+				") = " << (int)ptag;
 		if (!ptag)
 		{
-			std::cerr << "ERROR: parsing OpenPGP packets failed at position " << pkts.size() << std::endl;
+			std::cerr << std::endl << "ERROR: parsing OpenPGP packets failed" <<
+				" at position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 			cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 			return false; // error detected
 		}
 		if (opt_verbose)
-			std::cerr << " tag = " << (int)ptag << " version = " << (int)ctx.version << std::endl;
+			std::cerr << " tag = " << (int)ptag << " version = " <<
+				(int)ctx.version << std::endl;
 		switch (ptag)
 		{
 			case 2: // Signature Packet
@@ -486,7 +557,7 @@ bool parse_private_key
 					if (opt_verbose)
 					{
 						std::cerr << std::hex;
-						std::cerr << "INFO: sigtype = 0x";
+						std::cerr << "INFO: sig type = 0x";
 						std::cerr << (int)ctx.type;
 						std::cerr << std::dec;
 						std::cerr << " pkalgo = ";
@@ -496,7 +567,8 @@ bool parse_private_key
 						std::cerr << std::endl;
 					}
 					if (sigdsa)
-						std::cerr << "WARNING: more than one self-signatures; using last signature to check UID" << std::endl;
+						std::cerr << "WARNING: more than one self-signatures" <<
+						"; using last signature to check UID" << std::endl;
 					dsa_sigtype = ctx.type;
 					dsa_pkalgo = ctx.pkalgo;
 					dsa_hashalgo = ctx.hashalgo;
@@ -538,7 +610,7 @@ bool parse_private_key
 					if (opt_verbose)
 					{
 						std::cerr << std::hex;
-						std::cerr << "INFO: sigtype = 0x";
+						std::cerr << "INFO: sig type = 0x";
 						std::cerr << (int)ctx.type;
 						std::cerr << std::dec;
 						std::cerr << " pkalgo = ";

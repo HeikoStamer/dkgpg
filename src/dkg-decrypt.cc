@@ -51,38 +51,46 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include "dkg-common.hh"
 #include "dkg-io.hh"
 
-int 					pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
-pid_t 					pid[DKGPG_MAX_N];
+int 							pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+int								broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+pid_t 							pid[DKGPG_MAX_N];
 std::vector<std::string>		peers;
-bool					instance_forked = false;
+bool							instance_forked = false;
 
-std::string				passphrase, userid, ifilename, ofilename, passwords, hostname, port;
-tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+std::string						passphrase, userid, ifilename, ofilename;
+std::string						passwords, hostname, port;
+tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, sec, ssb, uid;
+tmcg_openpgp_octets_t			uidsig, subsig;
 std::map<size_t, size_t>		idx2dkg, dkg2idx;
-mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
-size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual, dss_x_rvss_qual;
-std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
-size_t					dkg_n, dkg_t, dkg_i;
-std::vector<size_t>			dkg_qual;
-std::vector<mpz_ptr>			dkg_v_i;
-std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-gcry_mpi_t				dsa_r, dsa_s, elg_r, elg_s, rsa_n, rsa_e, rsa_md;
-gcry_mpi_t 				gk, myk, sig_r, sig_s;
-gcry_mpi_t				revdsa_r, revdsa_s, revelg_r, revelg_s, revrsa_md;
+mpz_t							dss_p, dss_q, dss_g, dss_h, dss_y;
+mpz_t							dss_x_i, dss_xprime_i;
+size_t							dss_n, dss_t, dss_i;
+std::vector<size_t>				dss_qual, dss_x_rvss_qual;
+tmcg_mpz_matrix_t				dss_c_ik;
+mpz_t							dkg_p, dkg_q, dkg_g, dkg_h, dkg_y;
+mpz_t							dkg_x_i, dkg_xprime_i;
+size_t							dkg_n, dkg_t, dkg_i;
+std::vector<size_t>				dkg_qual;
+tmcg_mpz_vector_t				dkg_v_i;
+tmcg_mpz_matrix_t				dkg_c_ik;
+gcry_mpi_t 						dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
+gcry_mpi_t						elg_p, elg_q, elg_g, elg_y, elg_x;
+gcry_mpi_t						dsa_r, dsa_s, elg_r, elg_s;
+gcry_mpi_t						rsa_n, rsa_e, rsa_md;
+gcry_mpi_t 						gk, myk, sig_r, sig_s;
+gcry_mpi_t						revdsa_r, revdsa_s, revelg_r, revelg_s;
+gcry_mpi_t						revrsa_md;
 
-int 					opt_verbose = 0;
-bool					libgcrypt_secmem = false;
-bool					opt_binary = false;
-char					*opt_ifilename = NULL;
-char					*opt_ofilename = NULL;
-char					*opt_passwords = NULL;
-char					*opt_hostname = NULL;
-unsigned long int			opt_p = 55000, opt_W = 5;
+int 							opt_verbose = 0;
+bool							libgcrypt_secmem = false;
+bool							opt_binary = false;
+char							*opt_ifilename = NULL;
+char							*opt_ofilename = NULL;
+char							*opt_passwords = NULL;
+char							*opt_hostname = NULL;
+unsigned long int				opt_p = 55000, opt_W = 5;
 
-std::string				armored_message;
+std::string						armored_message;
 
 
 void print_message

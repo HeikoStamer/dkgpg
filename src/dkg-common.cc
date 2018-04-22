@@ -157,9 +157,9 @@ bool parse_message
 		tmcg_openpgp_octets_t pkesk_keyid;
 		tmcg_openpgp_packet_ctx_t ctx;
 		tmcg_openpgp_octets_t current_packet;
-		std::vector<gcry_mpi_t> qual, v_i;
+		tmcg_mpi_vector_t qual, v_i;
 		std::vector<std::string> capl;
-		std::vector< std::vector<gcry_mpi_t> > c_ik;
+		tmcg_mpi_matrix_t c_ik;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl,
 				v_i, c_ik);
@@ -514,9 +514,9 @@ bool parse_private_key
 	size_t erroff, keylen, ivlen, chksum, mlen, chksum2;
 	int algo;
 	tmcg_openpgp_packet_ctx_t ctx;
-	std::vector<gcry_mpi_t> qual, v_i, x_rvss_qual;
+	tmcg_mpi_vector_t qual, v_i, x_rvss_qual;
 	std::vector<std::string> capl;
-	std::vector< std::vector<gcry_mpi_t> > c_ik;
+	tmcg_mpi_matrix_t c_ik;
 	while (pkts.size() && ptag)
 	{
 		tmcg_openpgp_octets_t current_packet;
@@ -551,7 +551,11 @@ bool parse_private_key
 				}
 				if (opt_verbose)
 					std::cerr << std::dec << std::endl;
-				if (secdsa && !ssbelg && (ctx.type >= 0x10) && (ctx.type <= 0x13) &&
+				if (secdsa && !ssbelg &&
+					((ctx.type == TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION) ||
+					 (ctx.type == TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION) ||
+					 (ctx.type == TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION) ||
+					 (ctx.type == TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION)) &&
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (opt_verbose)
@@ -596,15 +600,17 @@ bool parse_private_key
 					if ((dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
 					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
 					    (dsa_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
-						std::cerr << "WARNING: insecure hash algorithm " << (int)dsa_hashalgo << 
-							" used for signatures" << std::endl;
+						std::cerr << "WARNING: insecure hash algorithm " <<
+							(int)dsa_hashalgo << " used for signatures" <<
+							std::endl;
 					sigdsa = true;
 					// store the whole packet
 					uidsig.clear();
 					for (size_t i = 0; i < current_packet.size(); i++)
 						uidsig.push_back(current_packet[i]);
 				}
-				else if (secdsa && ssbelg && (ctx.type == 0x18) && 
+				else if (secdsa && ssbelg &&
+					(ctx.type == TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING) && 
 					CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(keyid, issuer))
 				{
 					if (opt_verbose)
@@ -620,7 +626,8 @@ bool parse_private_key
 						std::cerr << std::endl;
 					}
 					if (sigelg)
-						std::cerr << "WARNING: more than one subkey binding signature; using last signature" << std::endl;
+						std::cerr << "WARNING: more than one subkey binding" <<
+							" signature; using last signature" << std::endl;
 					elg_sigtype = ctx.type;
 					elg_pkalgo = ctx.pkalgo;
 					elg_hashalgo = ctx.hashalgo;
@@ -637,8 +644,10 @@ bool parse_private_key
 						elg_hspd.push_back(ctx.hspd[i]);
 					if (elg_pkalgo != TMCG_OPENPGP_PKALGO_DSA)
 					{
-						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
-						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+						std::cerr << "ERROR: public-key signature algorithms" <<
+							" other than DSA not supported" << std::endl;
+						CallasDonnerhackeFinneyShawThayerRFC4880::
+							PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
 						return false;
 					}
@@ -647,8 +656,9 @@ bool parse_private_key
 					if ((elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA256) &&
 					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA384) &&
 					    (elg_hashalgo != TMCG_OPENPGP_HASHALGO_SHA512))
-						std::cerr << "WARNING: insecure hash algorithm " << (int)elg_hashalgo << 
-							" used for signatures" << std::endl;
+						std::cerr << "WARNING: insecure hash algorithm " <<
+							(int)elg_hashalgo << " used for signatures" <<
+							std::endl;
 					sigelg = true;
 					// store the whole packet
 					subsig.clear();
@@ -666,13 +676,16 @@ bool parse_private_key
 					gcry_mpi_set(dsa_g, ctx.g);
 					gcry_mpi_set(dsa_y, ctx.y);
 					pub.clear();
-					CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ctx.keycreationtime, TMCG_OPENPGP_PKALGO_DSA,
-						dsa_p, dsa_q, dsa_g, dsa_y, pub);
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketPubEncode(ctx.keycreationtime,
+							TMCG_OPENPGP_PKALGO_DSA, dsa_p, dsa_q, dsa_g, dsa_y,
+							pub);
 					pub_hashing.clear();
 					for (size_t i = 6; i < pub.size(); i++)
 						pub_hashing.push_back(pub[i]);
 					keyid.clear();
-					CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						KeyidCompute(pub_hashing, keyid);
 					if (opt_verbose)
 					{
 						std::cerr << "INFO: Key ID of tDSS key: " << std::hex;

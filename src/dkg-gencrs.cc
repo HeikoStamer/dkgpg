@@ -31,7 +31,8 @@
 int main
 	(int argc, char **argv)
 {
-	static const char *usage = "dkg-gencrs [OPTIONS] [ARGS]; number of dummy ARGS defines security level (bits)";
+	static const char *usage = "dkg-gencrs [OPTIONS] [ARGS]; "
+		"security level is defined by number of dummy ARGS";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 	size_t factor = 0;
@@ -45,29 +46,47 @@ int main
 		if ((arg.find("-f") == 0))
 		{
 			size_t idx = ++i;
-			if ((arg.find("-f") == 0) && (idx < (size_t)(argc - 1)) && (!fips.length()))
+			if ((idx < (size_t)(argc - 1)) && (!fips.length()))
 				fips = argv[i+1];
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
+			}
 			continue;
 		}
 		else if ((arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
-			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (!prefix.length()))
+			if ((idx < (size_t)(argc - 1)) && (!prefix.length()))
 				prefix = argv[i+1];
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
+			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -f SEED        generate domain parameters according to FIPS 186-4 with SEED" << std::endl;
-				std::cout << "  -k PREFIX      generate value k with given PREFIX (not in FIPS mode)" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				std::cout << "  -f SEED        generate domain parameters" <<
+					" according to FIPS 186-4 with SEED" << std::endl;
+				std::cout << "  -k PREFIX      generate value k with given" <<
+					" PREFIX (not in FIPS mode)" << std::endl;
+				std::cout << "  -v, --version  print the version number" <<
+					std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" <<
+					std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
@@ -90,7 +109,7 @@ int main
 #ifdef DKGPG_TESTSUITE
 	factor = 1;
 	if (mpz_wrandom_ui() % 2)
-		fips = "DKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITE";
+		fips = "DKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPG";
 	opt_verbose = 1;
 #endif
 
@@ -101,23 +120,28 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
 
-	if (fips.length()) // generate primes and generator according to FIPS 186-4?
+	// generate primes and generator according to FIPS 186-4
+	if (fips.length())
 	{
-		// 1. Check that the $(L, N)$ pair is in the list of acceptable $(L, N)$ pairs.
-		//    If the pair is not in the list, the return INVALID.
+		// 1. Check that the $(L, N)$ pair is in the list of acceptable $(L, N)$
+		//    pairs. If the pair is not in the list, the return INVALID.
 		size_t L = 0, N = 0;
 		if (factor > 0)
 		{
 			if (opt_verbose)
-				std::cerr << "INFO: Generating primes p and q according to FIPS 186-4 with factor = " << factor << std::endl;
-			L = TMCG_DDH_SIZE + (factor * 1024), N = TMCG_DLSE_SIZE + ((factor - 1) * 128);
+				std::cerr << "INFO: Generating primes p and q according to" <<
+					" FIPS 186-4 with factor = " << factor << std::endl;
+			L = TMCG_DDH_SIZE + (factor * 1024);
+			N = TMCG_DLSE_SIZE + ((factor - 1) * 128);
 		}
 		else
 		{
 			if (opt_verbose)
-				std::cerr << "INFO: Generating primes p and q according to FIPS 186-4 with default sizes" << std::endl;
+				std::cerr << "INFO: Generating primes p and q according to" <<
+					" FIPS 186-4 with default sizes" << std::endl;
 			L = TMCG_DDH_SIZE, N = TMCG_DLSE_SIZE;
 		}
 		int hash_algo = 0, mr_iterations = 0;
@@ -129,15 +153,19 @@ int main
 			hash_algo = GCRY_MD_SHA512, mr_iterations = 72;
 		else
 		{
-			std::cerr << "ERROR: no FIPS approved hash function defined for N = " << N << std::endl;
+			std::cerr << "ERROR: no FIPS approved hash function defined for" <<
+				" N = " << N << std::endl;
 			return -1;
 		}
-		// 5. Get an arbitrary sequence of $seedlen$ bits as the $domain\_parameter\_seed$.
+		// 5. Get an arbitrary sequence of $seedlen$ bits as the
+		//    $domain\_parameter\_seed$.
 		mpz_t domain_parameter_seed;
 		mpz_init(domain_parameter_seed);
-		if (mpz_set_str(domain_parameter_seed, fips.c_str(), TMCG_MPZ_IO_BASE) < 0)
+		if (mpz_set_str(domain_parameter_seed, fips.c_str(),
+			TMCG_MPZ_IO_BASE) < 0)
 		{
-			std::cerr << "ERROR: FIPS domain parameter SEED is not a valid integer of base " << TMCG_MPZ_IO_BASE << std::endl;
+			std::cerr << "ERROR: FIPS domain parameter SEED is not a valid" <<
+				" integer of base " << TMCG_MPZ_IO_BASE << std::endl;
 			mpz_clear(domain_parameter_seed);
 			return -1;
 		}
@@ -145,7 +173,8 @@ int main
 		size_t seedlen = mpz_sizeinbase(domain_parameter_seed, 2L);
 		if (seedlen < N)
 		{
-			std::cerr << "ERROR: FIPS domain parameter SEED (seedlen = " << seedlen << ") too short for N = " << N << std::endl;
+			std::cerr << "ERROR: FIPS domain parameter SEED (seedlen = " <<
+				seedlen << ") too short for N = " << N << std::endl;
 			mpz_clear(domain_parameter_seed);
 			return -1;
 		}
@@ -156,7 +185,8 @@ int main
 		// 5.
 		size_t counter = 0;
 		mpz_t U, q, q2, W, X, c, p;
-		mpz_init(U), mpz_init(q), mpz_init(q2), mpz_init(W), mpz_init(X), mpz_init(c), mpz_init(p);
+		mpz_init(U), mpz_init(q), mpz_init(q2), mpz_init(W), mpz_init(X);
+		mpz_init(c), mpz_init(p);
 		std::vector<mpz_ptr> V_j;
 		for (size_t j = 0; j <= n; j++)
 		{
@@ -168,7 +198,7 @@ int main
 		{
 			while (1)
 			{
-				// 6. $U = \mathbf{Hash}(domain\_parameter\_seed) \bmod 2^{N-1}$.
+				// 6. $U = \mathbf{Hash}(domain\_parameter\_seed)\bmod 2^{N-1}$.
 				mpz_fhash(U, hash_algo, domain_parameter_seed);
 				mpz_tdiv_r_2exp(U, U, N - 1);
 				if (opt_verbose)
@@ -182,10 +212,12 @@ int main
 					mpz_sub_ui(q, q, 1L);
 				if (opt_verbose)
 					std::cerr << "INFO: q = " << q << std::endl;
-				// 8. Test whether or not $q$ is prime as specified in Appendix C.3.
+				// 8. Test whether or not $q$ is prime as specified in
+				//    Appendix C.3.
 				// 9. If $q$ is not a prime, then go to step 5.
 				if (!mpz_probab_prime_p(q, mr_iterations))
-					mpz_add_ui(domain_parameter_seed, domain_parameter_seed, 1L);
+					mpz_add_ui(domain_parameter_seed, domain_parameter_seed,
+						1L);
 				else
 					break;
 			}
@@ -198,7 +230,8 @@ int main
 				// 11.1 For $j = 0$ to $n$ do
 				for (size_t j = 0; j <= n; j++)
 				{
-					// $V_j = \mathbf{Hash}((domain_parameter_seed + offset + j) \bmod 2^{seedlen})$.
+					// $V_j = \mathbf{Hash}((domain_parameter_seed + offset + j)
+					//        \bmod 2^{seedlen})$.
 					mpz_t tmp;
 					mpz_init_set(tmp, domain_parameter_seed);
 					mpz_add_ui(tmp, tmp, offset);
@@ -206,10 +239,13 @@ int main
 					mpz_tdiv_r_2exp(tmp, tmp, seedlen);
 					mpz_fhash(V_j[j], hash_algo, tmp);
 					if (opt_verbose > 1)
-						std::cerr << "INFO: V_j[" << j << "] = " << V_j[j] << std::endl;
+						std::cerr << "INFO: V_j[" << j << "] = " << V_j[j] <<
+							std::endl;
 					mpz_clear(tmp);
 				}
-				// 11.2 $W = V_0 + (V_1 * 2^{outlen}) + \cdots + (V_{n-1} * 2^{(n-1)*outlen}) + ((V_n \bmod 2^b) * 2^{n*outlen})$.
+				// 11.2 $W = V_0 + (V_1 * 2^{outlen}) + \cdots +
+				//           (V_{n-1} * 2^{(n-1)*outlen}) + ((V_n \bmod 2^b) *
+				//           2^{n*outlen})$.
 				mpz_set_ui(W, 0L);
 				for (size_t j = 0; j <= n; j++)
 				{
@@ -238,10 +274,11 @@ int main
 					offset += (n + 1);
 					continue;
 				}
-				// 11.7 Test whether or not $p$ is prime as specified in Appendix C.3.
-				// 11.8 If $p$ is determined to be prime, then return VALID and the values of
-				//      $p$, $q$ and (optionally) the values of $domain\_parameter\_seed$ and
-				//      $counter$. 
+				// 11.7 Test whether or not $p$ is prime as specified in
+				//      Appendix C.3.
+				// 11.8 If $p$ is determined to be prime, then return VALID and
+				//      the values of $p$, $q$ and (optionally) the values of
+				//      $domain\_parameter\_seed$ and $counter$. 
 				if (mpz_probab_prime_p(p, mr_iterations))
 					break;
 				// 11.9 $offset = offset + n + 1$.
@@ -255,7 +292,8 @@ int main
 		if (opt_verbose)
 			std::cerr << "INFO: counter = " << counter << std::endl;
 		if (opt_verbose)
-			std::cerr << "INFO: Computing generator g according to FIPS 186-4" << std::endl;
+			std::cerr << "INFO: Computing generator g according to" <<
+				" FIPS 186-4" << std::endl;
 		// 1. If ($index$ is incorrect), then return INVALID.
 		mpz_t index;
 		mpz_init_set_ui(index, 108L); // fixed index value for DKG-tools
@@ -281,7 +319,8 @@ int main
 			{
 				std::cerr << "ERROR: invalid value count = 0" << std::endl;
 				mpz_clear(domain_parameter_seed);
-				mpz_clear(U), mpz_clear(q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(p);
+				mpz_clear(U), mpz_clear(q), mpz_clear(q2), mpz_clear(W);
+				mpz_clear(X), mpz_clear(c), mpz_clear(p);
 				for (size_t j = 0; j <= n; j++)
 				{
 					mpz_clear(V_j[j]);
@@ -294,7 +333,8 @@ int main
 			}
 			// 7. $U = domain_parameter_seed || "ggen" || index || count$.
 			// 8. $W = \mathbf{Hash}(U)$.
-			mpz_fhash_ggen(W, hash_algo, domain_parameter_seed, "ggen", index, count);
+			mpz_fhash_ggen(W, hash_algo, domain_parameter_seed, "ggen", index,
+				count);
 			// 9. $g = W^e \bmod p$.
 			mpz_powm(g, W, e, p);
 			// 10. If $(g < 2)$, the go to step 5.
@@ -308,24 +348,31 @@ int main
 
 		// export group parameters to stdout
 		mpz_t hash_algo_mpz, counter_mpz;
-		mpz_init_set_ui(hash_algo_mpz, hash_algo), mpz_init_set_ui(counter_mpz, counter);
-		std::cout << "// setup CRS (common reference string) aka set of domain parameters" << std::endl;
+		mpz_init_set_ui(hash_algo_mpz, hash_algo), mpz_init_set_ui(counter_mpz,
+			counter);
+		std::cout << "// setup CRS (common reference string) aka set of" <<
+			" domain parameters" << std::endl;
 		std::cout << "//           ";
 		std::cout << "|p| = " << mpz_sizeinbase(p, 2L) << " bit, ";
 		std::cout << "|q| = " << mpz_sizeinbase(q, 2L) << " bit, ";
 		std::cout << "|g| = " << mpz_sizeinbase(g, 2L) << " bit";
 		std::cout << std::endl;
-		std::cout << "// FIPS 186-4 A.1.1.2 generation of parameters using an approved hash function" << std::endl;
-		std::cout << "//      hash_algo = " << gcry_md_algo_name(hash_algo) << std::endl; 
-		std::cout << "//      domain_parameter_seed = " << domain_parameter_seed << std::endl;
+		std::cout << "// FIPS 186-4 A.1.1.2 generation of parameters using" <<
+			" an approved hash function" << std::endl;
+		std::cout << "//      hash_algo = " << gcry_md_algo_name(hash_algo) <<
+			std::endl; 
+		std::cout << "//      domain_parameter_seed = " <<
+			domain_parameter_seed << std::endl;
 		std::cout << "//      counter = " << counter << std::endl;
 		std::cout << "//      index = " << index << std::endl;
-		std::cout << "crs = \"fips-crs|" << p << "|" << q << "|" << g << "|" << e << "|" << hash_algo_mpz << "|" <<
-			domain_parameter_seed << "|" << counter_mpz << "|" << index << "|\"" << std::endl;
+		std::cout << "crs = \"fips-crs|" << p << "|" << q << "|" << g << "|" <<
+			e << "|" << hash_algo_mpz << "|" << domain_parameter_seed << "|" <<
+			counter_mpz << "|" << index << "|\"" << std::endl;
 
 		// release
 		mpz_clear(domain_parameter_seed);
-		mpz_clear(U), mpz_clear(q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(p);
+		mpz_clear(U), mpz_clear(q), mpz_clear(q2), mpz_clear(W), mpz_clear(X);
+		mpz_clear(c), mpz_clear(p);
 		for (size_t j = 0; j <= n; j++)
 		{
 			mpz_clear(V_j[j]);
@@ -343,17 +390,20 @@ int main
 		if (prefix.length())
 		{
 			if (opt_verbose)
-				std::cerr << "INFO: Generating primes p and q with k-prefix = " << prefix << ", factor = " << factor <<
+				std::cerr << "INFO: Generating primes p and q with" <<
+					" k-prefix = " << prefix << ", factor = " << factor <<
 					" and canonical generator g (by VTMF)" << std::endl;
 			mpz_t p, q, g, k;
 			mpz_init(p), mpz_init(q), mpz_init(g), mpz_init(k);
 			if (mpz_set_str(k, prefix.c_str(), TMCG_MPZ_IO_BASE) < 0)
 			{
 				mpz_clear(p), mpz_clear(q), mpz_clear(g), mpz_clear(k);
-				std::cerr << "ERROR: cannot convert given PREFIX to MPI value (wrong base)" << std::endl;
+				std::cerr << "ERROR: cannot convert given PREFIX to MPI" <<
+					" value (wrong base)" << std::endl;
 				return -1;
 			}
-			mpz_lprime_prefix(p, q, k, TMCG_DDH_SIZE + (factor * 1024), TMCG_DLSE_SIZE + (factor * 128), TMCG_MR_ITERATIONS);
+			mpz_lprime_prefix(p, q, k, TMCG_DDH_SIZE + (factor * 1024),
+				TMCG_DLSE_SIZE + (factor * 128), TMCG_MR_ITERATIONS);
 			mpz_t foo, bar;
 			mpz_init(foo), mpz_init(bar);
 			mpz_sub_ui(foo, p, 1L); // compute $p-1$
@@ -373,45 +423,56 @@ int main
 				!mpz_cmp(g, foo) || mpz_cmp_ui(bar, 1L));
 			mpz_clear(foo), mpz_clear(bar);
 			std::stringstream input;
-			input << p << std::endl << q << std::endl << g << std::endl << k << std::endl;
+			input << p << std::endl << q << std::endl << g << std::endl <<
+				k << std::endl;
 			mpz_clear(p), mpz_clear(q), mpz_clear(g), mpz_clear(k);
-			vtmf = new BarnettSmartVTMF_dlog(input, TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true);
+			vtmf = new BarnettSmartVTMF_dlog(input, TMCG_DDH_SIZE,
+				TMCG_DLSE_SIZE, true);
 		}
 		else
 		{
 			if (factor > 0)
 			{
 				if (opt_verbose)
-					std::cerr << "INFO: Generating primes p and q with factor = " << factor <<
+					std::cerr << "INFO: Generating primes p and q with" <<
+						" factor = " << factor <<
 						" and canonical generator g (by VTMF)" << std::endl;
-				// for each argument, sizes of underlying finite field and subgroup are increased by 1024 bit resp. 128 bit
-				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE + (factor * 1024), TMCG_DLSE_SIZE + (factor * 128), true);
+				// for each argument, sizes of underlying finite field and
+				// subgroup are increased by 1024 bit resp. 128 bit
+				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE +
+					(factor * 1024), TMCG_DLSE_SIZE + (factor * 128), true);
 			}
 			else
 			{
 				if (opt_verbose)
-					std::cerr << "INFO: Generating primes p and q with default sizes" <<
-						" and canonical generator g (by VTMF)" << std::endl;
-				// use default security parameter from LibTMCG and verifiable generation of $g$
-				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true);
+					std::cerr << "INFO: Generating primes p and q with" <<
+						" default sizes and canonical generator g (by VTMF)" <<
+						std::endl;
+				// use default security parameter from LibTMCG and
+				// verifiable generation of $g$
+				vtmf = new BarnettSmartVTMF_dlog(TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
+					true);
 			}
 		}
 
 		// check the instance for sanity
 		if (!vtmf->CheckGroup())
 		{
-			std::cerr << "ERROR: Group G from CRS is incorrectly generated!" << std::endl;
+			std::cerr << "ERROR: Group G from CRS is incorrectly generated!" <<
+				std::endl;
 			return -1;
 		}
 
 		// export group parameters to stdout
-		std::cout << "// setup CRS (common reference string) aka set of domain parameters" << std::endl;
+		std::cout << "// setup CRS (common reference string) aka set of" <<
+			" domain parameters" << std::endl;
 		std::cout << "//           ";
 		std::cout << "|p| = " << mpz_sizeinbase(vtmf->p, 2L) << " bit, ";
 		std::cout << "|q| = " << mpz_sizeinbase(vtmf->q, 2L) << " bit, ";
 		std::cout << "|g| = " << mpz_sizeinbase(vtmf->g, 2L) << " bit";
 		std::cout << std::endl;
-		std::cout << "crs = \"crs|" << vtmf->p << "|" << vtmf->q << "|" << vtmf->g << "|" << vtmf->k << "|\"" << std::endl;
+		std::cout << "crs = \"crs|" << vtmf->p << "|" << vtmf->q << "|" <<
+			vtmf->g << "|" << vtmf->k << "|\"" << std::endl;
 
 		// release
 		delete vtmf;

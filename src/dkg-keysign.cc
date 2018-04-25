@@ -412,9 +412,10 @@ void run_instance
 		if (opt_u && (primary->userids[j]->userid.find(u) == primary->userids[j]->userid.npos))
 			continue;
 		// compute the hash of the certified key resp. user ID
-		tmcg_openpgp_octets_t hash, left;
+		tmcg_openpgp_octets_t hash, left, empty;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			CertificationHash(primary->pub_hashing, primary->userids[j]->userid, trailer, hashalgo, hash, left);
+			CertificationHash(primary->pub_hashing, primary->userids[j]->userid,
+				empty, trailer, hashalgo, hash, left);
 		if (opt_r)
 			std::cerr << "INFO: going to revoke signature on user ID \"" << primary->userids[j]->userid << "\" of key with fingerprint " << fpr << std::endl;
 		else

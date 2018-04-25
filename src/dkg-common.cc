@@ -1610,7 +1610,7 @@ bool parse_private_key
 
 	// build keys, check key usage and self-signatures
 	gcry_sexp_t dsakey;
-	tmcg_openpgp_octets_t dsa_trailer, elg_trailer, dsa_left, elg_left;
+	tmcg_openpgp_octets_t dsa_trailer, elg_trailer, dsa_left, elg_left, empty;
 	if (opt_verbose)
 		std::cerr << "INFO: Primary User ID: " << userid << std::endl;
 	ret = gcry_sexp_build(&dsakey, &erroff, "(public-key (dsa (p %M) (q %M) (g %M) (y %M)))", dsa_p, dsa_q, dsa_g, dsa_y);
@@ -1660,7 +1660,8 @@ bool parse_private_key
 	dsa_trailer.push_back(dsa_hspd.size());
 	dsa_trailer.insert(dsa_trailer.end(), dsa_hspd.begin(), dsa_hspd.end());
 	hash.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing, userid, dsa_trailer, dsa_hashalgo, hash, dsa_left);
+	CallasDonnerhackeFinneyShawThayerRFC4880::CertificationHash(pub_hashing,
+		userid, empty, dsa_trailer, dsa_hashalgo, hash, dsa_left);
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricVerifyDSA(hash, dsakey, dsa_r, dsa_s);
 	if (ret)
 	{

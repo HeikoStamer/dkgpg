@@ -341,7 +341,7 @@ void run_instance
 	tmcg_openpgp_octets_t all, pub, sec, uid, uidsig, sub, ssb, subsig, keyid, dsaflags, elgflags;
 	tmcg_openpgp_octets_t pub_hashing, sub_hashing;
 	tmcg_openpgp_octets_t uidsig_hashing, subsig_hashing, uidsig_left, subsig_left;
-	tmcg_openpgp_octets_t hash;
+	tmcg_openpgp_octets_t hash, empty;
 	time_t sigtime;
 	gcry_sexp_t key;
 	gcry_mpi_t p, q, g, y, x, r, s;
@@ -617,8 +617,8 @@ void run_instance
 			hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
 	hash.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		CertificationHash(pub_hashing, userid, uidsig_hashing, hashalgo, hash,
-			uidsig_left);
+		CertificationHash(pub_hashing, userid, empty, uidsig_hashing, hashalgo,
+			hash, uidsig_left);
 	if (S > 0)
 	{
 		tmcg_openpgp_byte_t buffer[1024];

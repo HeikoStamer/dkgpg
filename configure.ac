@@ -18,10 +18,11 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180425])
+AC_REVISION([20180501])
 AC_PREREQ(2.61)
 
-AC_INIT([Distributed Privacy Guard], [1.0.7], [HeikoStamer@gmx.net], [dkgpg], [https://savannah.nongnu.org/projects/dkgpg/])
+AC_INIT([Distributed Privacy Guard], [1.0.7], [HeikoStamer@gmx.net], [dkgpg],
+	[https://savannah.nongnu.org/projects/dkgpg/])
 
 AC_LANG(C++)
 AC_CONFIG_SRCDIR([src/dkg-common.hh])
@@ -42,7 +43,7 @@ LT_PREREQ([2.4.2])
 LT_INIT
 LT_LANG([C++])
 
-# Checks for programs
+# Checks for required programs
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_MAKE_SET
@@ -50,15 +51,22 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
 
-# Checks for libraries
+# Checks for required libraries
 backup_LDFLAGS="$LDFLAGS"
 backup_CPPLAGS="$CPPFLAGS"
-AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>], [prefix of libgmp installation e.g. /usr/local])],\
- [GMP_PREFIX="$with_gmp" LDFLAGS="-L${with_gmp}/lib $backup_LDFLAGS" CPPFLAGS="-I${with_gmp}/include $backup_CPPFLAGS"],\
- [AC_CHECK_LIB(gmp, __gmpz_init, [LIBS=""], AC_MSG_ERROR([libgmp is needed; maybe you want call configure with the --with-gmp=<path> option]))])
-AC_CHECK_LIB(gmp, __gmpz_import, [LIBS=""], AC_MSG_ERROR([libgmp >= 4.2 is needed]))
-AC_CHECK_LIB(gmp, __gmpz_export, [LIBS=""], AC_MSG_ERROR([libgmp >= 4.2 is needed]))
-AC_CHECK_LIB(gmp, __gmpz_powm_sec, AC_DEFINE(HAVE_POWMSEC, , [Defined if your libgmp have the mpz_powm_sec() function]), AC_MSG_WARN([libgmp >= 5.0.3 is recommended]))
+AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>],
+ [prefix of libgmp installation e.g. /usr/local])],
+ [GMP_PREFIX="$with_gmp" LDFLAGS="-L${with_gmp}/lib $backup_LDFLAGS"\
+  CPPFLAGS="-I${with_gmp}/include $backup_CPPFLAGS"],
+ [AC_CHECK_LIB(gmp, __gmpz_init, [LIBS=""],
+  AC_MSG_ERROR([libgmp is needed; use the --with-gmp=<path> option]))])
+AC_CHECK_LIB(gmp, __gmpz_import, [LIBS=""],
+ AC_MSG_ERROR([libgmp >= 4.2 is needed]))
+AC_CHECK_LIB(gmp, __gmpz_export, [LIBS=""],
+ AC_MSG_ERROR([libgmp >= 4.2 is needed]))
+AC_CHECK_LIB(gmp, __gmpz_powm_sec,
+ AC_DEFINE(HAVE_POWMSEC, , [Defined if libgmp have mpz_powm_sec() function]),
+ AC_MSG_WARN([libgmp >= 5.0.3 is recommended]))
 AC_CHECK_HEADERS([gmp.h], , AC_MSG_ERROR([libgmp headers are missing]))
 if test "x$GMP_PREFIX" != x ; then
 	LIBGMP_LIBS=" -L${GMP_PREFIX}/lib"
@@ -94,7 +102,7 @@ fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)
 
-# Checks for header files
+# Checks for required header files
 AC_HEADER_STDC
 AC_HEADER_TIME
 AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
@@ -103,13 +111,13 @@ AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
  sys/select.h sys/types.h time.h unistd.h vector], , 
 	AC_MSG_ERROR([some headers are missing]))
 
-# Checks for typedefs, structures, and compiler characteristics
+# Checks for required typedefs, structures, and compiler characteristics
 AC_C_CONST
 AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
-# Checks for basic library functions
+# Checks for required basic library functions
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_CHECK_FUNCS([abs chmod clock close ctime fcntl fileno fprintf memcmp\
@@ -117,7 +125,7 @@ AC_CHECK_FUNCS([abs chmod clock close ctime fcntl fileno fprintf memcmp\
  stat strptime strrchr strtoul time write], ,
 	AC_MSG_ERROR([some basic functions are missing]))
 
-# Checks for process and network library functions
+# Checks for required process and network library functions
 AC_HEADER_SYS_WAIT
 AC_TYPE_PID_T
 AC_TYPE_SIGNAL
@@ -136,7 +144,7 @@ AC_CHECK_HEADERS([sys/mman.h], ,
 AC_CHECK_FUNCS([mlockall munlockall], ,
 	AC_MSG_ERROR([some functions for locking memory are missing]))
 
-# Checks for GNUnet
+# Checks for optional GNUnet support
 gnunet=0
 lookin=${prefix}
 backup_LDFLAGS="$LDFLAGS"       
@@ -165,21 +173,27 @@ then
 	GNUNET_CFLAGS="-I${lookin}/include"
 	LDFLAGS="$GNUNET_LIBS $backup_LDFLAGS"
 	CPPFLAGS="$GNUNET_CFLAGS $backup_CPPFLAGS"
-	AC_CHECK_HEADERS([gnunet/gnunet_util_lib.h], [gnunet=1], [gnunet=0], [#include <gnunet/platform.h>])
+	AC_CHECK_HEADERS([gnunet/gnunet_util_lib.h], [gnunet=1], [gnunet=0],
+	 [#include <gnunet/platform.h>])
 	AC_CHECK_LIB([gnunetutil], [GNUNET_xfree_], [LIBS=""], [gnunet=0])
-##	AC_CHECK_HEADERS([gnunet/gnunet_peerinfo_service.h], , [gnunet=0], [#include <gnunet/platform.h>])
-##	AC_CHECK_LIB([gnunetpeerinfo], [GNUNET_PEERINFO_connect], [LIBS=""], [gnunet=0])
-	AC_CHECK_HEADERS([gnunet/gnunet_hello_lib.h], , [gnunet=0], [#include <gnunet/platform.h>])
+	AC_CHECK_HEADERS([gnunet/gnunet_hello_lib.h], , [gnunet=0],
+	 [#include <gnunet/platform.h>])
 	AC_CHECK_LIB([gnunethello], [GNUNET_HELLO_get_id], [LIBS=""], [gnunet=0])
-	AC_CHECK_HEADERS([gnunet/gnunet_transport_hello_service.h], , [gnunet=0], [#include <gnunet/platform.h>])
-	AC_CHECK_LIB([gnunettransport], [GNUNET_TRANSPORT_hello_get], [LIBS=""], [gnunet=0])
-	AC_CHECK_HEADERS([gnunet/gnunet_cadet_service.h], , [gnunet=0], [#include <gnunet/platform.h>])
+	AC_CHECK_HEADERS([gnunet/gnunet_transport_hello_service.h], , [gnunet=0],
+	 [#include <gnunet/platform.h>])
+	AC_CHECK_LIB([gnunettransport], [GNUNET_TRANSPORT_hello_get], [LIBS=""],
+	 [gnunet=0])
+	AC_CHECK_HEADERS([gnunet/gnunet_cadet_service.h], , [gnunet=0],
+	 [#include <gnunet/platform.h>])
 	AC_CHECK_LIB([gnunetcadet], [GNUNET_CADET_connect], [LIBS=""], [gnunet=0])
 fi
 if test "x$gnunet" == "x1"
 then
-	AC_DEFINE(GNUNET, , [Define to enable the GNUnet-based tools])
-	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetutil -lgnunethello -lgnunettransport -lgnunetcadet"
+	AC_DEFINE(GNUNET, , [Define to enable GNUnet support])
+	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetutil"
+	GNUNET_LIBS="${GNUNET_LIBS} -lgnunethello"
+	GNUNET_LIBS="${GNUNET_LIBS} -lgnunettransport"
+	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetcadet"
 fi
 if test "x$gnunet" == "x0"
 then
@@ -191,7 +205,7 @@ AC_SUBST(GNUNET_CFLAGS)
 LDFLAGS="$backup_LDFLAGS"
 CPPFLAGS="$backup_CPPFLAGS"
 
-# Enable all compiler warnings
+# Enable all compiler warnings by default
 CFLAGS="$CFLAGS -Wall"
 CXXFLAGS="$CXXFLAGS -Wall"
 
@@ -221,4 +235,4 @@ AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile\
  src/dkg-revoke.1 src/dkg-verify.1 src/dkg-keysign.1])
 AC_OUTPUT
 
-echo "Now type 'make && make install' to build and install Distributed Privacy Guard."
+echo "Now type 'make && make install' to build and install $PACKAGE_NAME."

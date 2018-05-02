@@ -157,12 +157,8 @@ bool parse_message
 		tmcg_openpgp_octets_t pkesk_keyid;
 		tmcg_openpgp_packet_ctx_t ctx;
 		tmcg_openpgp_octets_t current_packet;
-		tmcg_mpi_vector_t qual, v_i;
-		std::vector<std::string> capl;
-		tmcg_mpi_matrix_t c_ik;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl,
-				v_i, c_ik);
+			PacketDecode(pkts, opt_verbose, ctx, current_packet);
 		++pnum;
 		if (opt_verbose)
 			std::cerr << "INFO: PacketDecode() = " << (int)ptag <<
@@ -172,7 +168,6 @@ bool parse_message
 			std::cerr << "ERROR: parsing OpenPGP packets failed at #" <<
 				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
-			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
 		}
 		else if (ptag == 0xFE)
@@ -180,7 +175,6 @@ bool parse_message
 			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" <<
 				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
-			cleanup_containers(qual, v_i, c_ik);
 			continue; // ignore packet
 		}
 		switch (ptag)
@@ -244,7 +238,6 @@ bool parse_message
 						std::endl;
 					CallasDonnerhackeFinneyShawThayerRFC4880::
 						PacketContextRelease(ctx);
-					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
@@ -262,7 +255,6 @@ bool parse_message
 						std::endl;
 					CallasDonnerhackeFinneyShawThayerRFC4880::
 						PacketContextRelease(ctx);
-					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
@@ -271,12 +263,10 @@ bool parse_message
 					" found at #" << pnum << std::endl;
 				CallasDonnerhackeFinneyShawThayerRFC4880::
 					PacketContextRelease(ctx);
-				cleanup_containers(qual, v_i, c_ik);
 				return false;
 		}
 		// cleanup allocated buffers and mpi's
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
-		cleanup_containers(qual, v_i, c_ik);
 	}
 	if (!have_pkesk)
 	{
@@ -359,9 +349,6 @@ bool decrypt_message
 	}
 	// parse the content of decrypted message
 	tmcg_openpgp_packet_ctx_t ctx;
-	tmcg_mpi_vector_t qual, v_i;
-	std::vector<std::string> capl;
-	tmcg_mpi_matrix_t c_ik;
 	bool have_lit = false, have_mdc = false;
 	tmcg_openpgp_octets_t lit, mdc_hash;
 	tmcg_openpgp_byte_t ptag = 0xFF;
@@ -372,8 +359,7 @@ bool decrypt_message
 	{
 		tmcg_openpgp_octets_t current_packet;
 		ptag = CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketDecode(pkts, opt_verbose, ctx, current_packet, qual, capl,
-				v_i, c_ik);
+			PacketDecode(pkts, opt_verbose, ctx, current_packet);
 		++pnum;
 		if (opt_verbose)
 			std::cerr << "INFO: PacketDecode() = " << (int)ptag <<
@@ -383,7 +369,6 @@ bool decrypt_message
 			std::cerr << "ERROR: parsing OpenPGP packets failed at #" <<
 				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
-			cleanup_containers(qual, v_i, c_ik);
 			return false; // parsing error detected
 		}
 		else if ((ptag == 0xFE) || (ptag == 0xFA) || (ptag == 0xFB) ||
@@ -392,7 +377,6 @@ bool decrypt_message
 			std::cerr << "WARNING: unrecognized OpenPGP packet found at #" <<
 				pnum << " and position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
-			cleanup_containers(qual, v_i, c_ik);
 			continue; // ignore packet
 		}
 		switch (ptag)
@@ -423,7 +407,6 @@ bool decrypt_message
 						" one literal data packet" << std::endl;
 					CallasDonnerhackeFinneyShawThayerRFC4880::
 						PacketContextRelease(ctx);
-					cleanup_containers(qual, v_i, c_ik);
 					return false;
 				}
 				break;
@@ -438,12 +421,10 @@ bool decrypt_message
 					" found at #" << pnum << std::endl;
 				CallasDonnerhackeFinneyShawThayerRFC4880::
 					PacketContextRelease(ctx);
-				cleanup_containers(qual, v_i, c_ik);
 				return false;
 		}
 		// cleanup allocated buffers and mpi's
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
-		cleanup_containers(qual, v_i, c_ik);
 	}
 	if (!have_lit)
 	{

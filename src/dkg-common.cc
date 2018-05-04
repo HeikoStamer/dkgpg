@@ -320,14 +320,14 @@ bool decrypt_message
 	 tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out)
 {
 	// decrypt the given message
-	tmcg_openpgp_skalgo_t symalgo = TMCG_OPENPGP_SKALGO_PLAINTEXT;
+	tmcg_openpgp_skalgo_t skalgo = TMCG_OPENPGP_SKALGO_PLAINTEXT;
 	if (opt_verbose)
 		std::cerr << "INFO: symmetric decryption of message ..." << std::endl;
 	if (key.size() > 0)
 	{
-		symalgo = (tmcg_openpgp_skalgo_t)key[0];
+		skalgo = (tmcg_openpgp_skalgo_t)key[0];
 		if (opt_verbose)
-			std::cerr << "INFO: symalgo = " << (int)symalgo << std::endl;
+			std::cerr << "INFO: skalgo = " << (int)skalgo << std::endl;
 	}
 	else
 	{
@@ -338,7 +338,7 @@ bool decrypt_message
 	tmcg_openpgp_octets_t prefix, pkts;
 	if (have_seipd)
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-			SymmetricDecrypt(in, key, prefix, false, symalgo, pkts);
+			SymmetricDecrypt(in, key, prefix, false, skalgo, pkts);
 	else
 	{
 		std::cerr << "ERROR: encrypted message was not integrity" <<
@@ -677,7 +677,7 @@ bool parse_private_key
 							std::cerr << (int)keyid[i] << " ";
 						std::cerr << std::dec << std::endl;
 						std::cerr << " encdatalen = " << ctx.encdatalen << std::endl;
-						std::cerr << " symalgo = " << (int)ctx.symalgo << std::endl;
+						std::cerr << " skalgo = " << (int)ctx.skalgo << std::endl;
 						std::cerr << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
 						std::cerr << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
 						std::cerr << std::endl;
@@ -767,9 +767,9 @@ bool parse_private_key
 					}
 					else if ((ctx.s2kconv == 254) || (ctx.s2kconv == 255))
 					{
-						keylen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmKeyLength(ctx.symalgo);
-						ivlen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmIVLength(ctx.symalgo);
-						algo = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmSymGCRY(ctx.symalgo);
+						keylen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmKeyLength(ctx.skalgo);
+						ivlen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmIVLength(ctx.skalgo);
+						algo = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmSymGCRY(ctx.skalgo);
 						if (!keylen || !ivlen)
 						{
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
@@ -1026,7 +1026,7 @@ bool parse_private_key
 							std::cerr << (int)keyid[i] << " ";
 						std::cerr << std::dec << std::endl;
 						std::cerr << " encdatalen = " << ctx.encdatalen << std::endl;
-						std::cerr << " symalgo = " << (int)ctx.symalgo << std::endl;
+						std::cerr << " skalgo = " << (int)ctx.skalgo << std::endl;
 						std::cerr << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
 						std::cerr << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
 						std::cerr << std::endl;
@@ -1058,9 +1058,9 @@ bool parse_private_key
 					}
 					else if ((ctx.s2kconv == 254) || (ctx.s2kconv == 255))
 					{
-						keylen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmKeyLength(ctx.symalgo);
-						ivlen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmIVLength(ctx.symalgo);
-						algo = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmSymGCRY(ctx.symalgo);
+						keylen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmKeyLength(ctx.skalgo);
+						ivlen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmIVLength(ctx.skalgo);
+						algo = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmSymGCRY(ctx.skalgo);
 						if (!keylen || !ivlen)
 						{
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
@@ -1275,7 +1275,7 @@ bool parse_private_key
 						for (size_t i = 0; i < subkeyid.size(); i++)
 							std::cerr << (int)subkeyid[i] << " ";
 						std::cerr << std::dec << std::endl;
-						std::cerr << " symalgo = " << (int)ctx.symalgo << std::endl;
+						std::cerr << " skalgo = " << (int)ctx.skalgo << std::endl;
 						std::cerr << " encdatalen = " << ctx.encdatalen << std::endl;
 						std::cerr << " S2K: convention = " << (int)ctx.s2kconv << " type = " << (int)ctx.s2k_type;
 						std::cerr << " hashalgo = " << (int)ctx.s2k_hashalgo << " count = " << (int)ctx.s2k_count;
@@ -1375,8 +1375,8 @@ bool parse_private_key
 					}
 					else if ((ctx.s2kconv == 254) || (ctx.s2kconv == 255))
 					{
-						keylen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmKeyLength(ctx.symalgo);
-						ivlen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmIVLength(ctx.symalgo);
+						keylen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmKeyLength(ctx.skalgo);
+						ivlen = CallasDonnerhackeFinneyShawThayerRFC4880::AlgorithmIVLength(ctx.skalgo);
 						if (!keylen || !ivlen)
 						{
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
@@ -1431,7 +1431,7 @@ bool parse_private_key
 						iv = new tmcg_openpgp_byte_t[ivlen];
 						for (size_t i = 0; i < ivlen; i++)
 							iv[i] = ctx.iv[i];
-						ret = gcry_cipher_open(&hd, (int)ctx.symalgo, GCRY_CIPHER_MODE_CFB, 0);
+						ret = gcry_cipher_open(&hd, (int)ctx.skalgo, GCRY_CIPHER_MODE_CFB, 0);
 						if (ret)
 						{
 							std::cerr << "ERROR: gcry_cipher_open() failed" << std::endl;

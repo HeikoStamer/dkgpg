@@ -46,7 +46,7 @@ extern gcry_mpi_t 						dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
 extern gcry_mpi_t						elg_p, elg_q, elg_g, elg_y, elg_x;
 extern gcry_mpi_t						dsa_r, dsa_s, elg_r, elg_s;
 extern gcry_mpi_t						rsa_n, rsa_e, rsa_md;
-extern gcry_mpi_t						gk, myk, sig_r, sig_s;
+extern gcry_mpi_t						gk, myk;
 extern gcry_mpi_t						revdsa_r, revdsa_s, revelg_r, revelg_s;
 extern gcry_mpi_t						revrsa_md;
 
@@ -95,8 +95,6 @@ void init_mpis
 	rsa_md = gcry_mpi_new(2048);
 	gk = gcry_mpi_new(2048);
 	myk = gcry_mpi_new(2048);
-	sig_r = gcry_mpi_new(2048);
-	sig_s = gcry_mpi_new(2048);
 	revdsa_r = gcry_mpi_new(2048);
 	revdsa_s = gcry_mpi_new(2048);
 	revelg_r = gcry_mpi_new(2048);
@@ -1768,8 +1766,6 @@ void release_mpis
 	gcry_mpi_release(rsa_md);
 	gcry_mpi_release(gk);
 	gcry_mpi_release(myk);
-	gcry_mpi_release(sig_r);
-	gcry_mpi_release(sig_s);
 	gcry_mpi_release(revdsa_r);
 	gcry_mpi_release(revdsa_s);
 	gcry_mpi_release(revelg_r);

@@ -242,6 +242,9 @@ bool parse_message
 				}
 				break;
 			case 18: // Symmetrically Encrypted Integrity Protected Data
+				if (!have_pkesk)
+					std::cerr << "WARNING: no preceding PKESK packet found; " <<
+						"decryption may fail" << std::endl;
 				if ((!have_sed) && (!have_seipd_out))
 				{
 					have_seipd_out = true;

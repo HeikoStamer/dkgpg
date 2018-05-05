@@ -44,11 +44,7 @@ extern tmcg_mpz_vector_t				dkg_v_i;
 extern tmcg_mpz_matrix_t				dkg_c_ik;
 extern gcry_mpi_t 						dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
 extern gcry_mpi_t						elg_p, elg_q, elg_g, elg_y, elg_x;
-extern gcry_mpi_t						dsa_r, dsa_s, elg_r, elg_s;
-extern gcry_mpi_t						rsa_n, rsa_e, rsa_md;
 extern gcry_mpi_t						gk, myk;
-extern gcry_mpi_t						revdsa_r, revdsa_s, revelg_r, revelg_s;
-extern gcry_mpi_t						revrsa_md;
 
 extern int								opt_verbose;
 extern bool								libgcrypt_secmem;
@@ -86,20 +82,8 @@ void init_mpis
 		elg_x = gcry_mpi_snew(2048);
 	else
 		elg_x = gcry_mpi_new(2048);
-	dsa_r = gcry_mpi_new(2048);
-	dsa_s = gcry_mpi_new(2048);
-	elg_r = gcry_mpi_new(2048);
-	elg_s = gcry_mpi_new(2048);
-	rsa_n = gcry_mpi_new(2048);
-	rsa_e = gcry_mpi_new(2048);
-	rsa_md = gcry_mpi_new(2048);
 	gk = gcry_mpi_new(2048);
 	myk = gcry_mpi_new(2048);
-	revdsa_r = gcry_mpi_new(2048);
-	revdsa_s = gcry_mpi_new(2048);
-	revelg_r = gcry_mpi_new(2048);
-	revelg_s = gcry_mpi_new(2048);
-	revrsa_md = gcry_mpi_new(2048);
 }
 
 void cleanup_containers
@@ -491,6 +475,7 @@ bool parse_private_key
 	tmcg_openpgp_byte_t *key, *iv;
 	tmcg_openpgp_octets_t seskey, salt, mpis, hash_input, hash;
 	tmcg_openpgp_octets_t pub_hashing, sub_hashing, issuer, dsa_hspd, elg_hspd;
+	gcry_mpi_t dsa_r, dsa_s, elg_r, elg_s;
 	gcry_cipher_hd_t hd;
 	gcry_error_t ret;
 	size_t erroff, keylen, ivlen, chksum, mlen, chksum2;
@@ -499,6 +484,10 @@ bool parse_private_key
 	tmcg_mpi_vector_t qual, v_i, x_rvss_qual;
 	std::vector<std::string> capl;
 	tmcg_mpi_matrix_t c_ik;
+	dsa_r = gcry_mpi_new(2048);
+	dsa_s = gcry_mpi_new(2048);
+	elg_r = gcry_mpi_new(2048);
+	elg_s = gcry_mpi_new(2048);
 	while (pkts.size() && ptag)
 	{
 		tmcg_openpgp_octets_t current_packet;
@@ -514,6 +503,10 @@ bool parse_private_key
 				" at position " << pkts.size() << std::endl;
 			CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 			cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+			gcry_mpi_release(dsa_r);
+			gcry_mpi_release(dsa_s);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
 			return false; // error detected
 		}
 		if (opt_verbose)
@@ -575,6 +568,10 @@ bool parse_private_key
 						std::cerr << "ERROR: public-key signature algorithms other than DSA not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					gcry_mpi_set(dsa_r, ctx.r);
@@ -631,6 +628,10 @@ bool parse_private_key
 						CallasDonnerhackeFinneyShawThayerRFC4880::
 							PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					gcry_mpi_set(elg_r, ctx.r);
@@ -685,6 +686,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_p" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dss_q))
@@ -692,6 +697,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_q" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dss_g))
@@ -699,6 +708,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_g" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.h, dss_h))
@@ -706,6 +719,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_h" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.y, dss_y))
@@ -713,6 +730,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_y" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					dss_n = get_gcry_mpi_ui(ctx.n);
@@ -741,6 +762,10 @@ bool parse_private_key
 								delete [] tmp;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							dss_c_ik[i].push_back(tmp);
@@ -753,6 +778,10 @@ bool parse_private_key
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_x_i" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (!mpz_set_gcry_mpi(ctx.xprime_i, dss_xprime_i))
@@ -760,6 +789,10 @@ bool parse_private_key
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_xprime_i" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 					}
@@ -773,6 +806,10 @@ bool parse_private_key
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						salt.clear();
@@ -800,6 +837,10 @@ bool parse_private_key
 							std::cerr << "ERROR: unknown S2K specifier" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (seskey.size() != keylen)
@@ -807,6 +848,10 @@ bool parse_private_key
 							std::cerr << "ERROR: S2K failed" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
@@ -814,6 +859,10 @@ bool parse_private_key
 							std::cerr << "ERROR: nothing to decrypt" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						key = new tmcg_openpgp_byte_t[keylen];
@@ -830,6 +879,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
@@ -841,6 +894,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
@@ -852,6 +909,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
@@ -863,6 +924,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						gcry_cipher_close(hd);
@@ -879,6 +944,10 @@ bool parse_private_key
 							std::cerr << "ERROR: reading MPI x_i failed (bad passphrase)" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -887,6 +956,10 @@ bool parse_private_key
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_x_i" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, dsa_x, chksum);
@@ -895,6 +968,10 @@ bool parse_private_key
 							std::cerr << "ERROR: reading MPI xprime_i failed (bad passphrase)" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -903,6 +980,10 @@ bool parse_private_key
 							std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_xprime_i" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (ctx.s2kconv == 255)
@@ -912,6 +993,10 @@ bool parse_private_key
 								std::cerr << "ERROR: no checksum found" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
@@ -920,6 +1005,10 @@ bool parse_private_key
 								std::cerr << "ERROR: checksum mismatch" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 						}
@@ -930,6 +1019,10 @@ bool parse_private_key
 								std::cerr << "ERROR: no SHA-1 hash found" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							hash_input.clear(), hash.clear();
@@ -941,6 +1034,10 @@ bool parse_private_key
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 						}
@@ -950,6 +1047,10 @@ bool parse_private_key
 						std::cerr << "ERROR: S2K format not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					// create one-to-one mapping based on the stored canonicalized peer list
@@ -959,6 +1060,10 @@ bool parse_private_key
 						std::cerr << "ERROR: tDSS parameter n and CAPL size does not match" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					else if ((ctx.pkalgo == 108) && (capl.size() != dss_qual.size()))
@@ -966,6 +1071,10 @@ bool parse_private_key
 						std::cerr << "ERROR: QUAL size of tDSS key and CAPL does not match" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					for (size_t i = 0; i < peers.size(); i++)
@@ -989,6 +1098,10 @@ bool parse_private_key
 								"\" not found inside CAPL from tDSS key" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 					}
@@ -1034,6 +1147,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_p" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dss_q))
@@ -1041,6 +1158,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_q" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dss_g))
@@ -1048,6 +1169,10 @@ bool parse_private_key
 						std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_g" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (ctx.s2kconv == 0)
@@ -1064,6 +1189,10 @@ bool parse_private_key
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						salt.clear();
@@ -1091,6 +1220,10 @@ bool parse_private_key
 							std::cerr << "ERROR: unknown S2K specifier" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (seskey.size() != keylen)
@@ -1098,6 +1231,10 @@ bool parse_private_key
 							std::cerr << "ERROR: S2K failed" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
@@ -1105,6 +1242,10 @@ bool parse_private_key
 							std::cerr << "ERROR: nothing to decrypt" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						key = new tmcg_openpgp_byte_t[keylen];
@@ -1121,6 +1262,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
@@ -1132,6 +1277,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
@@ -1143,6 +1292,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
@@ -1154,6 +1307,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						gcry_cipher_close(hd);
@@ -1170,6 +1327,10 @@ bool parse_private_key
 							std::cerr << "ERROR: reading MPI x failed (bad passphrase)" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -1180,6 +1341,10 @@ bool parse_private_key
 								std::cerr << "ERROR: no checksum found" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
@@ -1188,6 +1353,10 @@ bool parse_private_key
 								std::cerr << "ERROR: checksum mismatch" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 						}
@@ -1198,6 +1367,10 @@ bool parse_private_key
 								std::cerr << "ERROR: no SHA-1 hash found" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							hash_input.clear(), hash.clear();
@@ -1209,6 +1382,10 @@ bool parse_private_key
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 						}
@@ -1218,6 +1395,10 @@ bool parse_private_key
 						std::cerr << "ERROR: S2K format not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					// store the whole packet
@@ -1230,6 +1411,10 @@ bool parse_private_key
 					std::cerr << "ERROR: more than one primary key not supported" << std::endl;
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 					cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+					gcry_mpi_release(dsa_r);
+					gcry_mpi_release(dsa_s);
+					gcry_mpi_release(elg_r);
+					gcry_mpi_release(elg_s);
 					return false;
 				}
 				else
@@ -1284,6 +1469,10 @@ bool parse_private_key
 						std::cerr << "ERROR: converting key component dkg_p failed" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.q, dkg_q))
@@ -1291,6 +1480,10 @@ bool parse_private_key
 						std::cerr << "ERROR: converting key component dkg_q failed" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.g, dkg_g))
@@ -1298,6 +1491,10 @@ bool parse_private_key
 						std::cerr << "ERROR: converting key component dkg_g failed" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.h, dkg_h))
@@ -1305,6 +1502,10 @@ bool parse_private_key
 						std::cerr << "ERROR: converting key component dkg_h failed" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					if (!mpz_set_gcry_mpi(ctx.y, dkg_y))
@@ -1312,6 +1513,10 @@ bool parse_private_key
 						std::cerr << "ERROR: converting key component dkg_y failed" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					dkg_n = get_gcry_mpi_ui(ctx.n);
@@ -1330,6 +1535,10 @@ bool parse_private_key
 							delete [] tmp;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						dkg_v_i.push_back(tmp);
@@ -1348,6 +1557,10 @@ bool parse_private_key
 								delete [] tmp;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							dkg_c_ik[i].push_back(tmp);
@@ -1361,6 +1574,10 @@ bool parse_private_key
 							std::cerr << "ERROR: converting key component dkg_x_i failed" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (!mpz_set_gcry_mpi(ctx.xprime_i, dkg_xprime_i))
@@ -1368,6 +1585,10 @@ bool parse_private_key
 							std::cerr << "ERROR: converting key component dkg_xprime_i failed" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 					}
@@ -1380,6 +1601,10 @@ bool parse_private_key
 							std::cerr << "ERROR: unknown symmetric algorithm" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						salt.clear();
@@ -1407,6 +1632,10 @@ bool parse_private_key
 							std::cerr << "ERROR: unknown S2K specifier" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (seskey.size() != keylen)
@@ -1414,6 +1643,10 @@ bool parse_private_key
 							std::cerr << "ERROR: S2K failed" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (!ctx.encdatalen || !ctx.encdata)
@@ -1421,6 +1654,10 @@ bool parse_private_key
 							std::cerr << "ERROR: nothing to decrypt" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						key = new tmcg_openpgp_byte_t[keylen];
@@ -1437,6 +1674,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_setkey(hd, key, keylen);
@@ -1448,6 +1689,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_setiv(hd, iv, ivlen);
@@ -1459,6 +1704,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						ret = gcry_cipher_decrypt(hd, ctx.encdata, ctx.encdatalen, NULL, 0);
@@ -1470,6 +1719,10 @@ bool parse_private_key
 							delete [] iv;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						gcry_cipher_close(hd);
@@ -1486,6 +1739,10 @@ bool parse_private_key
 							std::cerr << "ERROR: reading MPI x_i failed (bad passphrase)" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -1494,6 +1751,10 @@ bool parse_private_key
 							std::cerr << "ERROR: converting key component dkg_x_i failed" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						mlen = CallasDonnerhackeFinneyShawThayerRFC4880::PacketMPIDecode(mpis, elg_x, chksum);
@@ -1502,6 +1763,10 @@ bool parse_private_key
 							std::cerr << "ERROR: reading MPI xprime_i failed (bad passphrase)" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						mpis.erase(mpis.begin(), mpis.begin()+mlen);
@@ -1510,6 +1775,10 @@ bool parse_private_key
 							std::cerr << "ERROR: converting key component dkg_xprime_i failed" << std::endl;
 							CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 							cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+							gcry_mpi_release(dsa_r);
+							gcry_mpi_release(dsa_s);
+							gcry_mpi_release(elg_r);
+							gcry_mpi_release(elg_s);
 							return false;
 						}
 						if (ctx.s2kconv == 255)
@@ -1519,6 +1788,10 @@ bool parse_private_key
 								std::cerr << "ERROR: no checksum found" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							chksum2 = (mpis[0] << 8) + mpis[1];
@@ -1527,6 +1800,10 @@ bool parse_private_key
 								std::cerr << "ERROR: checksum mismatch" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 						}
@@ -1537,6 +1814,10 @@ bool parse_private_key
 								std::cerr << "ERROR: no SHA-1 hash found" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 							hash_input.clear(), hash.clear();
@@ -1548,6 +1829,10 @@ bool parse_private_key
 								std::cerr << "ERROR: SHA-1 hash mismatch" << std::endl;
 								CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 								cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+								gcry_mpi_release(dsa_r);
+								gcry_mpi_release(dsa_s);
+								gcry_mpi_release(elg_r);
+								gcry_mpi_release(elg_s);
 								return false;
 							}
 						}
@@ -1557,6 +1842,10 @@ bool parse_private_key
 						std::cerr << "ERROR: S2K format not supported" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 						cleanup_containers(qual, v_i, x_rvss_qual, c_ik);
+						gcry_mpi_release(dsa_r);
+						gcry_mpi_release(dsa_s);
+						gcry_mpi_release(elg_r);
+						gcry_mpi_release(elg_s);
 						return false;
 					}
 					// store the whole packet
@@ -1577,16 +1866,28 @@ bool parse_private_key
 	if (!secdsa)
 	{
 		std::cerr << "ERROR: no tDSS/DSA private key found" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		return false;
 	}
 	if (!sigdsa)
 	{
 		std::cerr << "ERROR: no self-signature for tDSS/DSA key found" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		return false;
 	}
 	if (ssbelg && !sigelg)
 	{
 		std::cerr << "ERROR: no self-signature for ElGamal subkey found" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		return false;
 	}
 
@@ -1599,6 +1900,10 @@ bool parse_private_key
 	if (ret)
 	{
 		std::cerr << "ERROR: parsing tDSS/DSA key material failed" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		return false;
 	}
 	size_t flags = 0;
@@ -1631,6 +1936,10 @@ bool parse_private_key
 	if ((flags & 0x02) != 0x02)
 	{
 		std::cerr << "ERROR: tDSS/DSA primary key cannot used to sign data" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		gcry_sexp_release(dsakey);
 		return false;
 	}
@@ -1649,6 +1958,10 @@ bool parse_private_key
 	{
 		std::cerr << "ERROR: verification of tDSS/DSA key self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
 			gcry_strerror(ret) << ")" << std::endl;
+		gcry_mpi_release(dsa_r);
+		gcry_mpi_release(dsa_s);
+		gcry_mpi_release(elg_r);
+		gcry_mpi_release(elg_s);
 		gcry_sexp_release(dsakey);
 		return false;
 	}
@@ -1684,6 +1997,10 @@ bool parse_private_key
 		if ((flags & 0x04) != 0x04)
 		{
 			std::cerr << "ERROR: ElGamal subkey cannot used to encrypt communications" << std::endl;
+			gcry_mpi_release(dsa_r);
+			gcry_mpi_release(dsa_s);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
 			gcry_sexp_release(dsakey);
 			return false;
 		}
@@ -1701,10 +2018,18 @@ bool parse_private_key
 		{
 			std::cerr << "ERROR: verification of ElGamal subkey self-signature failed (rc = " << gcry_err_code(ret) << ", str = " <<
 				gcry_strerror(ret) << ")" << std::endl;
+			gcry_mpi_release(dsa_r);
+			gcry_mpi_release(dsa_s);
+			gcry_mpi_release(elg_r);
+			gcry_mpi_release(elg_s);
 			gcry_sexp_release(dsakey);
 			return false;
 		}
 	}
+	gcry_mpi_release(dsa_r);
+	gcry_mpi_release(dsa_s);
+	gcry_mpi_release(elg_r);
+	gcry_mpi_release(elg_s);
 	gcry_sexp_release(dsakey);
 	return true;
 }
@@ -1757,19 +2082,7 @@ void release_mpis
 	gcry_mpi_release(elg_g);
 	gcry_mpi_release(elg_y);
 	gcry_mpi_release(elg_x);
-	gcry_mpi_release(dsa_r);
-	gcry_mpi_release(dsa_s);
-	gcry_mpi_release(elg_r);
-	gcry_mpi_release(elg_s);
-	gcry_mpi_release(rsa_n);
-	gcry_mpi_release(rsa_e);
-	gcry_mpi_release(rsa_md);
 	gcry_mpi_release(gk);
 	gcry_mpi_release(myk);
-	gcry_mpi_release(revdsa_r);
-	gcry_mpi_release(revdsa_s);
-	gcry_mpi_release(revelg_r);
-	gcry_mpi_release(revelg_s);
-	gcry_mpi_release(revrsa_md);
 }
 

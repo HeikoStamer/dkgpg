@@ -75,7 +75,6 @@ std::vector<mpz_ptr>			dkg_v_i;
 std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
 gcry_mpi_t						dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
 gcry_mpi_t						elg_p, elg_q, elg_g, elg_y, elg_x;
-gcry_mpi_t						gk, myk;
 
 int 							opt_verbose = 0;
 bool							libgcrypt_secmem = false;

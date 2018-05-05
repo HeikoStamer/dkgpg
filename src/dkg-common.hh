@@ -38,12 +38,6 @@
 
 	void init_mpis
 		();
-	bool parse_message
-		(const std::string &in, tmcg_openpgp_octets_t &enc_out,
-		bool &have_seipd_out);
-	bool decrypt_message
-		(const bool have_seipd, const tmcg_openpgp_octets_t &in,
-		tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out);
 	bool parse_private_key
 		(const std::string &in,
 		time_t &keycreationtime_out, time_t &keyexpirationtime_out,

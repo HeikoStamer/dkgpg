@@ -693,8 +693,6 @@ bool parse_message
 	return true;
 }
 
-
-
 bool decrypt_message
 	(const bool have_seipd, const tmcg_openpgp_octets_t &in,
 	 tmcg_openpgp_octets_t &key, tmcg_openpgp_octets_t &out)

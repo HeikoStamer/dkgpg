@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180501])
+AC_REVISION([20180506])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.7], [HeikoStamer@gmx.net], [dkgpg],
@@ -75,7 +75,7 @@ else
 	LIBGMP_LIBS=""
 	LIBGMP_CFLAGS=""
 fi
-LIBGMP_LIBS="${GMP_LIBS} -lgmp"
+LIBGMP_LIBS="${LIBGMP_LIBS} -lgmp"
 AC_SUBST(LIBGMP_LIBS)
 AC_SUBST(LIBGMP_CFLAGS)
 LDFLAGS="$backup_LDFLAGS"

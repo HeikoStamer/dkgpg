@@ -706,7 +706,7 @@ int main
 		if (!parse_ok)
 		{
 			std::cerr << "WARNING: cannot use the given keyring" << std::endl;
-			ring = new TMCG_OpenPGP_Keyring();
+			ring = new TMCG_OpenPGP_Keyring(); // construct an empty ring
 		}
 	}
 	else

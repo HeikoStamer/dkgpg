@@ -279,11 +279,11 @@ void run_instance
 		if (!parse_ok)
 		{
 			std::cerr << "WARNING: cannot use the given keyring" << std::endl;
-			ring = new TMCG_OpenPGP_Keyring();
+			ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
 		}
 	}
 	else
-		ring = new TMCG_OpenPGP_Keyring();
+		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
@@ -307,13 +307,11 @@ void run_instance
 			release_mpis();
 			exit(-1);
 		}
-		primary->Reduce(); // keep only valid user IDs
+		primary->Reduce(); // keep only valid user IDs and user attributes
 	}
 	else
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
-		if (primary)
-			delete primary;
 		delete ring;
 		delete rbc, delete aiou, delete aiou2;
 		release_mpis();

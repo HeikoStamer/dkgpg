@@ -766,8 +766,6 @@ int main
 	else
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
-		if (primary)
-			delete primary;
 		return -1;
 	}
 

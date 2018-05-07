@@ -241,11 +241,11 @@ int main
 		if (!parse_ok)
 		{
 			std::cerr << "WARNING: cannot use the given keyring" << std::endl;
-			ring = new TMCG_OpenPGP_Keyring();
+			ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
 		}
 	}
 	else
-		ring = new TMCG_OpenPGP_Keyring();
+		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
@@ -272,8 +272,6 @@ int main
 	else
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
-		if (primary)
-			delete primary;
 		delete ring;
 		return -1;
 	}

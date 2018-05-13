@@ -656,7 +656,7 @@ int main
 
 	std::string	ifilename, kfilename, rfilename;
 	int			opt_verbose = 0;
-	bool		opt_binary = false, opt_reduce = false;
+	bool		opt_binary = false, opt_reduce = false, opt_private = false;
 	char		*opt_k = NULL;
 
 	// parse command line arguments
@@ -676,7 +676,8 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || 
 		    (arg.find("-r") == 0) || (arg.find("-v") == 0) ||
-		    (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		    (arg.find("-h") == 0) || (arg.find("-V") == 0) ||
+			(arg.find("-p") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -689,6 +690,8 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
+				std::cout << "  -p, --private  read from private key block" <<
+					std::endl;
 				std::cout << "  -r, --reduce   check only valid subkeys" <<
 					std::endl;
 				std::cout << "  -v, --version  print the version number" <<
@@ -699,6 +702,8 @@ int main
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
 				opt_binary = true;
+			if ((arg.find("-p") == 0) || (arg.find("--private") == 0))
+				opt_private = true;
 			if ((arg.find("-r") == 0) || (arg.find("--reduce") == 0))
 				opt_reduce = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
@@ -736,12 +741,16 @@ int main
 		std::cerr << "INFO: using LibTMCG version " <<
 			version_libTMCG() << std::endl;
 
+	// choose input format of key file
+	tmcg_openpgp_armor_t kformat = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 
+	if (opt_private)
+		kformat = TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK;
+
 	// read the key file
 	std::string armored_pubkey;
 	if (opt_binary)
 	{
-		if (!read_binary_key_file(kfilename,
-			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
+		if (!read_binary_key_file(kfilename, kformat, armored_pubkey))
 			return -1;
 	}
 	else
@@ -751,13 +760,13 @@ int main
 	}
 
 	// read the keyring
+	tmcg_openpgp_armor_t rformat = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK;
 	std::string armored_pubring;
 	if (opt_k)
 	{
 		if (opt_binary)
 		{
-			if (!read_binary_key_file(rfilename,
-				TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
+			if (!read_binary_key_file(rfilename, rformat, armored_pubring))
 				return -1;
 		}
 		else
@@ -768,6 +777,7 @@ int main
 	}
 
 	// parse the keyring, the public key and corresponding signatures
+	TMCG_OpenPGP_Prvkey *prv = NULL;
 	TMCG_OpenPGP_Pubkey *primary = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
@@ -783,10 +793,32 @@ int main
 	}
 	else
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
-	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+	if (opt_private)
+	{
+		std::string passphrase = ""; // first try an empty passphrase
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PrivateKeyBlockParse(armored_pubkey, opt_verbose, passphrase, prv);
+		if (!parse_ok)
+		{
+			if (!get_passphrase("Enter passphrase to unlock private key",
+				passphrase))
+			{
+				std::cerr << "ERROR: cannot read passphrase" << std::endl;
+				delete ring;
+				return -1;
+			}
+			parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+				PrivateKeyBlockParse(armored_pubkey, opt_verbose, passphrase,
+				prv);
+		}
+	}
+	else
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{
+		if (opt_private)
+			primary = prv->pub; // get the public key from private key
 		primary->CheckSelfSignatures(ring, opt_verbose);
 		primary->CheckSubkeys(ring, opt_verbose);
 		if (opt_reduce)

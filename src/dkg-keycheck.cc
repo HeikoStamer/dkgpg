@@ -909,7 +909,10 @@ int main
 		{
 			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
-			delete primary;
+			if (opt_private)
+				delete prv;
+			else
+				delete primary;
 			delete ring;
 			return -1;
 		}
@@ -929,7 +932,10 @@ int main
 			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
 			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 			mpz_clear(dsa_y), mpz_clear(dsa_r);
-			delete primary;
+			if (opt_private)
+				delete prv;
+			else
+				delete primary;
 			delete ring;
 			return -1;
 		}
@@ -1087,7 +1093,10 @@ int main
 	else
 	{
 		std::cerr << "ERROR: public-key algorithm not supported" << std::endl;
-		delete primary;
+		if (opt_private)
+			delete prv;
+		else
+			delete primary;
 		delete ring;
 		return -1;
 	}
@@ -1176,7 +1185,10 @@ int main
 				std::cerr << "ERROR: cannot convert RSA key material" <<
 					std::endl;
 				mpz_clear(rsa_n), mpz_clear(rsa_e);
-				delete primary;
+				if (opt_private)
+					delete prv;
+				else
+					delete primary;
 				delete ring;
 				return -1;
 			}
@@ -1196,7 +1208,10 @@ int main
 					std::endl;
 				mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
 				mpz_clear(dsa_q);
-				delete primary;
+				if (opt_private)
+					delete prv;
+				else
+					delete primary;
 				delete ring;
 				return -1;
 			}
@@ -1208,7 +1223,10 @@ int main
 						std::endl;
 					mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
 					mpz_clear(dsa_q);
-					delete primary;
+					if (opt_private)
+						delete prv;
+					else
+						delete primary;
 					delete ring;
 					return -1;
 				}
@@ -1233,7 +1251,10 @@ int main
 					std::endl;
 				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 				mpz_clear(dsa_y);
-				delete primary;
+				if (opt_private)
+					delete prv;
+				else
+					delete primary;
 				delete ring;
 				return -1;
 			}
@@ -1245,7 +1266,10 @@ int main
 		{
 			std::cerr << "ERROR: public-key algorithm not supported" <<
 				std::endl;
-			delete primary;
+			if (opt_private)
+				delete prv;
+			else
+				delete primary;
 			delete ring;
 			return -1;
 		}
@@ -1264,7 +1288,10 @@ int main
 					std::endl;
 				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 				mpz_clear(dsa_y), mpz_clear(dsa_r);
-				delete primary;
+				if (opt_private)
+					delete prv;
+				else
+					delete primary;
 				delete ring;
 				return -1;
 			}
@@ -1370,7 +1397,10 @@ int main
 	std::cout.copyfmt(oldcoutstate);
 
 	// release primary key and keyring structures
-	delete primary;
+	if (opt_private)
+		delete prv;
+	else
+		delete primary;
 	delete ring;
 	
 	return 0;

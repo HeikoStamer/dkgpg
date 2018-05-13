@@ -148,14 +148,16 @@ bool decomp
 }
 
 bool order
-	(mpz_srcptr a, mpz_srcptr phi_m, const std::map<size_t, size_t> &phi_m_decomp, mpz_srcptr m, mpz_ptr result)
+	(mpz_srcptr a, mpz_srcptr phi_m,
+	 const std::map<size_t, size_t> &phi_m_decomp, mpz_srcptr m,
+	 mpz_ptr result)
 {
 	mpz_t foo;
 	
 	if (!mpz_cmp_ui(a, 1L))
 	{
 		mpz_set_ui(result, 1L);
-		return true;
+		return true; // a is the identity element
 	}
 	mpz_init(foo);
 	mpz_powm(foo, a, phi_m, m);
@@ -169,7 +171,8 @@ bool order
 		mpz_t bar, baz;
 		mpz_init(bar), mpz_init(baz);
 		mpz_set(foo, phi_m);
-		for (std::map<size_t, size_t>::const_iterator it = phi_m_decomp.begin(); it != phi_m_decomp.end(); ++it)
+		for (std::map<size_t, size_t>::const_iterator it = phi_m_decomp.begin();
+			 it != phi_m_decomp.end(); ++it)
 		{
 			for (size_t i = 0; i < it->second; i++)
 			{
@@ -189,7 +192,7 @@ bool order
 }
 
 bool crt
-	(const std::vector<mpz_ptr> &n, const std::vector<mpz_ptr> &a, mpz_ptr result)
+	(const tmcg_mpz_vector_t &n, const std::vector<mpz_ptr> &a, mpz_ptr result)
 {
 	mpz_t sum, prod, foo, bar;
 
@@ -219,7 +222,9 @@ bool crt
 }
 
 bool dlog
-	(mpz_srcptr a, mpz_srcptr g, mpz_srcptr order_g, const std::map<size_t, size_t> &order_g_decomp, mpz_srcptr m, mpz_ptr result)
+	(mpz_srcptr a, mpz_srcptr g, mpz_srcptr order_g,
+	 const std::map<size_t, size_t> &order_g_decomp, mpz_srcptr m,
+	 mpz_ptr result)
 {
 	mpz_t foo, bar, baz;
 	bool found = false;
@@ -232,7 +237,8 @@ bool dlog
 		mpz_clear(foo), mpz_clear(bar), mpz_clear(baz);
 		return false;
 	}
-	for (std::map<size_t, size_t>::const_iterator it = order_g_decomp.begin(); it != order_g_decomp.end(); ++it)
+	for (std::map<size_t, size_t>::const_iterator it = order_g_decomp.begin();
+		 it != order_g_decomp.end(); ++it)
 	{
 		mpz_t idx, prime_to_power;
 		mpz_init_set_ui(idx, 0L);
@@ -249,7 +255,7 @@ bool dlog
 			if (!mpz_cmp(foo, baz))
 			{
 				mpz_ptr tmp1 = new mpz_t(), tmp2 = new mpz_t();
-                        	mpz_init_set(tmp1, idx), mpz_init_set(tmp2, prime_to_power);
+				mpz_init_set(tmp1, idx), mpz_init_set(tmp2, prime_to_power);
 				remainders.push_back(tmp1);
 				moduli.push_back(tmp2);
 				found = true;
@@ -287,12 +293,18 @@ bool roca_check
 {
 	bool roca_fingerprint = false;
 	std::vector<size_t> roca_max_prime_idx;
-	roca_max_prime_idx.push_back(39), roca_max_prime_idx.push_back(71), roca_max_prime_idx.push_back(126), roca_max_prime_idx.push_back(225);
-	for (std::vector<size_t>::const_iterator it = roca_max_prime_idx.begin(); it != roca_max_prime_idx.end(); ++it)
+	roca_max_prime_idx.push_back(39); // these values are from the ROCA paper
+	roca_max_prime_idx.push_back(71);
+	roca_max_prime_idx.push_back(126);
+	roca_max_prime_idx.push_back(225);
+	for (std::vector<size_t>::const_iterator it = roca_max_prime_idx.begin();
+		 it != roca_max_prime_idx.end(); ++it)
 	{
 		mpz_t roca_generator, roca_generator_order, roca_m, roca_phi_m, tmp;
-		mpz_init_set_ui(roca_generator, 65537L), mpz_init(roca_generator_order), mpz_init_set_ui(roca_m, 1L), mpz_init_set_ui(roca_phi_m, 1L);
-		mpz_init(tmp);
+		mpz_init_set_ui(roca_generator, 65537L);
+		mpz_init(roca_generator_order);
+		mpz_init_set_ui(roca_m, 1L);
+		mpz_init_set_ui(roca_phi_m, 1L);
 		for (size_t i = 0; i < *it; i++)
 		{
 			mpz_mul_ui(roca_m, roca_m, primes[i]);
@@ -302,25 +314,44 @@ bool roca_check
 		if (!decomp(roca_phi_m, roca_phi_m_decomp))
 		{
 			std::cerr << "BUG: decomp() for roca_phi_m failed" << std::endl;
-			mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
+			mpz_clear(roca_generator);
+			mpz_clear(roca_generator_order);
+			mpz_clear(roca_m);
+			mpz_clear(roca_phi_m);
 			break;
 		}
-		if (!order(roca_generator, roca_phi_m, roca_phi_m_decomp, roca_m, roca_generator_order))
+		if (!order(roca_generator, roca_phi_m, roca_phi_m_decomp, roca_m,
+			roca_generator_order))
 		{
 			std::cerr << "BUG: order() for roca_generator failed" << std::endl;
-			mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
+			mpz_clear(roca_generator);
+			mpz_clear(roca_generator_order);
+			mpz_clear(roca_m);
+			mpz_clear(roca_phi_m);
 			break;
 		}
 		std::map<size_t, size_t> roca_generator_order_decomp;
 		if (!decomp(roca_generator_order, roca_generator_order_decomp))
 		{
-			std::cerr << "BUG: decomp() for roca_generator_order failed" << std::endl;
-			mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m);
+			std::cerr << "BUG: decomp() for roca_generator_order failed" <<
+				std::endl;
+			mpz_clear(roca_generator);
+			mpz_clear(roca_generator_order);
+			mpz_clear(roca_m);
+			mpz_clear(roca_phi_m);
 			break;
 		}
-		if (dlog(rsa_modulus, roca_generator, roca_generator_order, roca_generator_order_decomp, roca_m, tmp))
+		mpz_init(tmp);
+		if (dlog(rsa_modulus, roca_generator, roca_generator_order,
+			roca_generator_order_decomp, roca_m, tmp))
+		{
 			roca_fingerprint = true;
-		mpz_clear(roca_generator), mpz_clear(roca_generator_order), mpz_clear(roca_m), mpz_clear(roca_phi_m), mpz_clear(tmp);
+		}
+		mpz_clear(roca_generator);
+		mpz_clear(roca_generator_order);
+		mpz_clear(roca_m);
+		mpz_clear(roca_phi_m);
+		mpz_clear(tmp);
 	}
 	if (roca_fingerprint)
 		return true;
@@ -346,7 +377,8 @@ void rsa_check
 	for (size_t i = 1; i < 4; i++)
 	{
 		if (mpz_congruent_ui_p(rsa_n, i, 4L))
-			std::cout << "n is congruent " << i << " mod 4" << std::endl << "\t";
+			std::cout << "n is congruent " << i << " mod 4" <<
+				std::endl << "\t";
 	}
 	std::cout << "n = ";
 	for (size_t i = 0; i < PRIMES_SIZE; i++)
@@ -372,7 +404,8 @@ void rsa_check
 	}
 	std::cout << "#(+1) = " << pos << " #(-1) = " << neg << std::endl << "\t";
 	if (roca_check(rsa_n))
-		std::cout << "n is SUSPICIOUS for the ROCA vulnerability" << std::endl << "\t";
+		std::cout << "n is SUSPICIOUS for the ROCA vulnerability" <<
+			std::endl << "\t";
 	std::cout << "e is ";
 	if (!mpz_probab_prime_p(rsa_e, TMCG_MR_ITERATIONS))
 		std::cout << "NOT ";
@@ -388,7 +421,8 @@ void dsa_check
 	(mpz_srcptr dsa_p, mpz_srcptr dsa_q, mpz_srcptr dsa_g, mpz_srcptr dsa_y)
 {
 	std::cout << "Public-key algorithm: " << std::endl << "\tDSA" << std::endl;
-	std::cout << "Security level of DSA domain parameter set: " << std::endl << "\t";
+	std::cout << "Security level of DSA domain parameter set: " <<
+		std::endl << "\t";
 	std::cout << "|p| = " << mpz_sizeinbase(dsa_p, 2L) << " bit, ";
 	std::cout << "|q| = " << mpz_sizeinbase(dsa_q, 2L) << " bit, ";
 	std::cout << "|g| = " << mpz_sizeinbase(dsa_g, 2L) << " bit";
@@ -403,7 +437,8 @@ void dsa_check
 	std::map<size_t, size_t> pm1_decomp;
 	std::cout << "(p-1) = ";
 	decomp(pm1, pm1_decomp);
-	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
+	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin();
+		 it != pm1_decomp.end(); ++it)
 	{
 		std::cout << it->first;
 		if (it->second > 1)
@@ -422,7 +457,8 @@ void dsa_check
 	mpz_sub_ui(pm1, pm1, 1L);
 	std::cout << "(q-1) = ";
 	decomp(pm1, pm1_decomp);
-	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
+	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin();
+		 it != pm1_decomp.end(); ++it)
 	{
 		std::cout << it->first;
 		if (it->second > 1)
@@ -473,8 +509,10 @@ void dsa_check
 	if (!trivial)
 		std::cout << "y is not trivial" << std::endl << "\t";
 	else
-		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
-	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(dsa_y, dsa_p) << std::endl;
+		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " <<
+			TRIVIAL_SIZE << ")" << std::endl << "\t";
+	std::cout << "Legendre-Jacobi symbol (y/p) is " <<
+		mpz_jacobi(dsa_y, dsa_p) << std::endl;
 	mpz_clear(pm1);
 	mpz_clear(tmp);
 }
@@ -483,10 +521,13 @@ void elg_check
 	(mpz_srcptr elg_p, mpz_srcptr elg_g, mpz_srcptr elg_y, mpz_srcptr dsa_q)
 {
 	mpz_t pm1, tmp, bar;
-	std::cout << "Public-key algorithm: " << std::endl << "\tElGamal" << std::endl;
-	std::cout << "Security level of domain parameter set: " << std::endl << "\t";
+	std::cout << "Public-key algorithm: " << std::endl <<
+		"\tElGamal" << std::endl;
+	std::cout << "Security level of domain parameter set: " <<
+		std::endl << "\t";
 	std::cout << "|p| = " << mpz_sizeinbase(elg_p, 2L) << " bit, ";
-	std::cout << "|g| = " << mpz_sizeinbase(elg_g, 2L) << " bit" << std::endl << "\t";
+	std::cout << "|g| = " << mpz_sizeinbase(elg_g, 2L) << " bit" <<
+		std::endl << "\t";
 	std::cout << "p is ";
 	if (!mpz_probab_prime_p(elg_p, TMCG_MR_ITERATIONS))
 		std::cout << "NOT ";
@@ -496,7 +537,8 @@ void elg_check
 	std::map<size_t, size_t> pm1_decomp;
 	std::cout << "(p-1) = ";
 	decomp(pm1, pm1_decomp);
-	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
+	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin();
+		 it != pm1_decomp.end(); ++it)
 	{
 		std::cout << it->first;
 		if (it->second > 1)
@@ -522,12 +564,14 @@ void elg_check
 	mpz_init(tmp), mpz_init(bar);
 	std::cout << "subgroup generated by g ";
 	mpz_sub_ui(pm1, elg_p, 1L);
-	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin(); it != pm1_decomp.end(); ++it)
+	for (std::map<size_t, size_t>::const_iterator it = pm1_decomp.begin();
+		 it != pm1_decomp.end(); ++it)
 	{
 		mpz_ui_pow_ui(bar, it->first, it->second);
 		mpz_powm(tmp, elg_g, bar, elg_p);
 		if (!mpz_cmp_ui(tmp, 1L))
-			std::cout << "is VERY SMALL (" << it->first << "^" << it->second << " elements) ";
+			std::cout << "is VERY SMALL (" << it->first << "^" <<
+				it->second << " elements) ";
 		else
 			std::cout << "is okay ";
 	}
@@ -563,13 +607,16 @@ void elg_check
 	if (!trivial)
 		std::cout << "y is not trivial" << std::endl << "\t";
 	else
-		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " << TRIVIAL_SIZE << ")" << std::endl << "\t";
-	std::cout << "Legendre-Jacobi symbol (y/p) is " << mpz_jacobi(elg_y, elg_p) << std::endl;
+		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " <<
+			TRIVIAL_SIZE << ")" << std::endl << "\t";
+	std::cout << "Legendre-Jacobi symbol (y/p) is " <<
+		mpz_jacobi(elg_y, elg_p) << std::endl;
 	mpz_clear(pm1);
 }
 
 void sig_check_dsa
-	(mpz_srcptr dsa_p, mpz_srcptr dsa_q, mpz_srcptr dsa_g, mpz_srcptr dsa_y, mpz_srcptr dsa_r)
+	(mpz_srcptr dsa_p, mpz_srcptr dsa_q, mpz_srcptr dsa_g, mpz_srcptr dsa_y,
+	 mpz_srcptr dsa_r)
 {
 	if (!mpz_cmp_ui(dsa_r, 1L))
 		std::cout << "r is WEAK (i.e. k = 0)" << std::endl << "\t";
@@ -616,11 +663,11 @@ int main
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
-		// ignore options
+		// handle some options
 		if ((arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
-			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
 			{
 				rfilename = argv[i+1];
 				opt_k = (char*)rfilename.c_str();
@@ -635,13 +682,19 @@ int main
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary   consider KEYFILE and FILENAME as binary input" << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
+				std::cout << "  -b, --binary   consider KEYFILE and FILENAME" <<
+					" as binary input" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -k FILENAME    use keyring FILENAME containing external revocation keys" << std::endl;
-				std::cout << "  -r, --reduce   check only valid subkeys" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
+				std::cout << "  -k FILENAME    use keyring FILENAME" <<
+					" containing external revocation keys" << std::endl;
+				std::cout << "  -r, --reduce   check only valid subkeys" <<
+					std::endl;
+				std::cout << "  -v, --version  print the version number" <<
+					std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" <<
+					std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
@@ -668,7 +721,8 @@ int main
 	// check command line arguments
 	if (kfilename.length() == 0)
 	{
-		std::cerr << "ERROR: argument KEYFILE is missing; usage: " << usage << std::endl;
+		std::cerr << "ERROR: argument KEYFILE is missing; usage: " <<
+			usage << std::endl;
 		return -1;
 	}
 
@@ -679,21 +733,39 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " <<
+			version_libTMCG() << std::endl;
 
 	// read the key file
 	std::string armored_pubkey;
-	if (opt_binary && !read_binary_key_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
-		return -1;
-	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
-		return -1;
+	if (opt_binary)
+	{
+		if (!read_binary_key_file(kfilename,
+			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
+			return -1;
+	}
+	else
+	{
+		if (!read_key_file(kfilename, armored_pubkey))
+			return -1;
+	}
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k && opt_binary && !read_binary_key_file(rfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
-		return -1;
-	if (opt_k && !opt_binary && !read_key_file(rfilename, armored_pubring))
-		return -1;
+	if (opt_k)
+	{
+		if (opt_binary)
+		{
+			if (!read_binary_key_file(rfilename,
+				TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
+				return -1;
+		}
+		else
+		{
+			if (!read_key_file(rfilename, armored_pubring))
+				return -1;
+		}
+	}
 
 	// parse the keyring, the public key and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
@@ -733,13 +805,16 @@ int main
 	std::ios oldcoutstate(NULL);
 	oldcoutstate.copyfmt(std::cout);
 	std::string kid, fpr;
-	CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(primary->pub_hashing, kid);
-	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->pub_hashing, fpr);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		KeyidCompute(primary->pub_hashing, kid);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintCompute(primary->pub_hashing, fpr);
 	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << "\t";
 	std::cout << kid << std::endl;
 	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << "\t";
 	std::cout << fpr << std::endl;
-	std::cout << "OpenPGP Key Creation Time: " << std::endl << "\t" << ctime(&primary->creationtime);
+	std::cout << "OpenPGP Key Creation Time: " <<
+		std::endl << "\t" << ctime(&primary->creationtime);
 	std::cout << "OpenPGP Key Expiration Time: " << std::endl << "\t";
 	if (primary->expirationtime == 0)
 		std::cout << "undefined" << std::endl;
@@ -792,11 +867,13 @@ int main
 		std::cout << "undefined";
 	std::cout << std::endl;
 	std::vector<TMCG_OpenPGP_Signature*> sigs;
-	if ((primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || (primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY))
+	if ((primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+		(primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY))
 	{
 		mpz_t rsa_n, rsa_e;
 		mpz_init(rsa_n), mpz_init(rsa_e);
-		if (!mpz_set_gcry_mpi(primary->rsa_n, rsa_n) || !mpz_set_gcry_mpi(primary->rsa_e, rsa_e))
+		if (!mpz_set_gcry_mpi(primary->rsa_n, rsa_n) ||
+			!mpz_set_gcry_mpi(primary->rsa_e, rsa_e))
 		{
 			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
@@ -810,12 +887,16 @@ int main
 	else if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 	{
 		mpz_t dsa_p, dsa_q, dsa_g, dsa_y, dsa_r;
-		mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y), mpz_init(dsa_r);
-		if (!mpz_set_gcry_mpi(primary->dsa_p, dsa_p) || !mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
-		    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) || !mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
+		mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y);
+		mpz_init(dsa_r);
+		if (!mpz_set_gcry_mpi(primary->dsa_p, dsa_p) ||
+			!mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
+		    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) ||
+			!mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
 		{
 			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
-			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
+			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
+			mpz_clear(dsa_y), mpz_clear(dsa_r);
 			delete primary;
 			delete ring;
 			return -1;
@@ -827,7 +908,10 @@ int main
 			if (primary->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
 				if (!mpz_set_gcry_mpi(primary->selfsigs[i]->dsa_r, dsa_r))
-					std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+				{
+					std::cerr << "WARNING: bad signature (cannot convert" <<
+						" dsa_r)" << std::endl << "\t";
+				}
 				else
 				{
 					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
@@ -835,14 +919,18 @@ int main
 				}
 			}
 			else
-				std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+				std::cerr << "WARNING: inconsistent public-key algorithm" <<
+					std::endl << "\t";
 		}
 		for (size_t i = 0; i < primary->keyrevsigs.size(); i++)
 		{
 			if (primary->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
 				if (!mpz_set_gcry_mpi(primary->keyrevsigs[i]->dsa_r, dsa_r))
-					std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+				{
+					std::cerr << "WARNING: bad signature (cannot convert" <<
+						" dsa_r)" << std::endl << "\t";
+				}
 				else
 				{
 					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
@@ -850,14 +938,18 @@ int main
 				}
 			}
 			else
-				std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+				std::cerr << "WARNING: inconsistent public-key algorithm" <<
+					std::endl << "\t";
 		}
 		for (size_t i = 0; i < primary->certrevsigs.size(); i++)
 		{
 			if (primary->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
 				if (!mpz_set_gcry_mpi(primary->certrevsigs[i]->dsa_r, dsa_r))
-					std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+				{
+					std::cerr << "WARNING: bad signature (cannot convert" <<
+						" dsa_r)" << std::endl << "\t";
+				}
 				else
 				{
 					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
@@ -865,75 +957,100 @@ int main
 				}
 			}
 			else
-				std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+				std::cerr << "WARNING: inconsistent public-key algorithm" <<
+					std::endl << "\t";
 		}
 		for (size_t j = 0; j < primary->userids.size(); j++)
 		{
 			for (size_t i = 0; i < primary->userids[j]->selfsigs.size(); i++)
 			{
-				if (primary->userids[j]->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				TMCG_OpenPGP_Signature *sig = primary->userids[j]->selfsigs[i]; 
+				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->userids[j]->selfsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->userids[j]->selfsigs[i]);
+						sigs.push_back(sig);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
 			for (size_t i = 0; i < primary->userids[j]->revsigs.size(); i++)
 			{
-				if (primary->userids[j]->revsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				TMCG_OpenPGP_Signature *sig = primary->userids[j]->revsigs[i];
+				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->userids[j]->revsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->userids[j]->revsigs[i]);
+						sigs.push_back(sig);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
 		}
 		for (size_t j = 0; j < primary->userattributes.size(); j++)
 		{
-			for (size_t i = 0; i < primary->userattributes[j]->selfsigs.size(); i++)
+			for (size_t i = 0; i < primary->userattributes[j]->selfsigs.size();
+				i++)
 			{
-				if (primary->userattributes[j]->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				TMCG_OpenPGP_Signature *sig =
+					primary->userattributes[j]->selfsigs[i];
+				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->userattributes[j]->selfsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->userattributes[j]->selfsigs[i]);
+						sigs.push_back(sig);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
 			for (size_t i = 0; i < primary->userattributes[j]->revsigs.size(); i++)
 			{
-				if (primary->userattributes[j]->revsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				TMCG_OpenPGP_Signature *sig =
+					primary->userattributes[j]->revsigs[i];
+				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->userattributes[j]->revsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->userattributes[j]->revsigs[i]);
+						sigs.push_back(sig);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
 		}
-		mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
+		mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
+		mpz_clear(dsa_y), mpz_clear(dsa_r);
 	}
 	else
 	{
@@ -951,39 +1068,43 @@ int main
 	// show information w.r.t. (valid) subkeys
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
-		if (primary->subkeys[j]->weak(opt_verbose) && opt_verbose)
+		TMCG_OpenPGP_Subkey *sub = primary->subkeys[j];
+		if (sub->weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak subkey detected" << std::endl;
-		CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
-		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(primary->subkeys[j]->sub_hashing, fpr);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyidCompute(sub->sub_hashing, kid);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintCompute(sub->sub_hashing, fpr);
 		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << "\t";
 		std::cout << kid << std::endl;
 		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << "\t";
 		std::cout << fpr << std::endl;
-		std::cout << "OpenPGP Subkey Creation Time: " << std::endl << "\t" << ctime(&primary->subkeys[j]->creationtime);
+		std::cout << "OpenPGP Subkey Creation Time: " << std::endl << "\t" <<
+			ctime(&sub->creationtime);
 		std::cout << "OpenPGP Subkey Expiration Time: " << std::endl << "\t";
-		if (primary->subkeys[j]->expirationtime == 0)
+		if (sub->expirationtime == 0)
 			std::cout << "undefined" << std::endl;
 		else
 		{
-			// compute validity period of the primary key after key creation time
-			time_t ekeytime = primary->subkeys[j]->creationtime + primary->subkeys[j]->expirationtime;
+			// compute validity period of the primary key after key creation
+			time_t ekeytime = sub->creationtime + sub->expirationtime;
 			if (ekeytime < time(NULL))
 				std::cout << "[EXPIRED] ";
 			std::cout << ctime(&ekeytime);
 		}
 		std::cout << "OpenPGP Revocation Keys: " << std::endl;
-		for (size_t i = 0; i < primary->subkeys[j]->revkeys.size(); i++)
+		for (size_t i = 0; i < sub->revkeys.size(); i++)
 		{
-			tmcg_openpgp_revkey_t rk = primary->subkeys[j]->revkeys[i];
+			tmcg_openpgp_revkey_t rk = sub->revkeys[i];
 			tmcg_openpgp_octets_t f(rk.key_fingerprint,
 				 rk.key_fingerprint+sizeof(rk.key_fingerprint));
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				FingerprintConvert(f, fpr);
 			std::cout << "\t" << fpr << std::endl;
 		}
-		if (primary->subkeys[j]->revkeys.size() == 0)
+		if (sub->revkeys.size() == 0)
 			std::cout << "\t" << "none" << std::endl;
-		size_t allflags = primary->subkeys[j]->AccumulateFlags();
+		size_t allflags = sub->AccumulateFlags();
 		std::cout << "OpenPGP Key Flags: " << std::endl << "\t";
 		// The key may be used to certify other keys.
 		if ((allflags & 0x01) == 0x01)
@@ -1011,15 +1132,17 @@ int main
 		if (allflags == 0x00)
 			std::cout << "undefined";
 		std::cout << std::endl;
-		if ((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
-		    (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
-		    (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY))
+		if ((sub->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+		    (sub->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
+		    (sub->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY))
 		{
 			mpz_t rsa_n, rsa_e;
 			mpz_init(rsa_n), mpz_init(rsa_e);
-			if (!mpz_set_gcry_mpi(primary->subkeys[j]->rsa_n, rsa_n) || !mpz_set_gcry_mpi(primary->subkeys[j]->rsa_e, rsa_e))
+			if (!mpz_set_gcry_mpi(sub->rsa_n, rsa_n) ||
+				!mpz_set_gcry_mpi(sub->rsa_e, rsa_e))
 			{
-				std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
+				std::cerr << "ERROR: cannot convert RSA key material" <<
+					std::endl;
 				mpz_clear(rsa_n), mpz_clear(rsa_e);
 				delete primary;
 				delete ring;
@@ -1028,15 +1151,19 @@ int main
 			rsa_check(rsa_n, rsa_e);
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
 		}
-		else if (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
+		else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
 		{
 			mpz_t elg_p, elg_g, elg_y, dsa_q;
-			mpz_init(elg_p), mpz_init(elg_g), mpz_init(elg_y), mpz_init(dsa_q);
-			if (!mpz_set_gcry_mpi(primary->subkeys[j]->elg_p, elg_p) || !mpz_set_gcry_mpi(primary->subkeys[j]->elg_g, elg_g) ||
-			    !mpz_set_gcry_mpi(primary->subkeys[j]->elg_y, elg_y))
+			mpz_init(elg_p), mpz_init(elg_g), mpz_init(elg_y);
+			mpz_init(dsa_q);
+			if (!mpz_set_gcry_mpi(sub->elg_p, elg_p) ||
+				!mpz_set_gcry_mpi(sub->elg_g, elg_g) ||
+			    !mpz_set_gcry_mpi(sub->elg_y, elg_y))
 			{
-				std::cerr << "ERROR: cannot convert ElGamal key material" << std::endl;
-				mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
+				std::cerr << "ERROR: cannot convert ElGamal key material" <<
+					std::endl;
+				mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
+				mpz_clear(dsa_q);
 				delete primary;
 				delete ring;
 				return -1;
@@ -1045,8 +1172,10 @@ int main
 			{
 				if (!mpz_set_gcry_mpi(primary->dsa_q, dsa_q))
 				{
-					std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
-					mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
+					std::cerr << "ERROR: cannot convert DSA key material" <<
+						std::endl;
+					mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
+					mpz_clear(dsa_q);
 					delete primary;
 					delete ring;
 					return -1;
@@ -1055,27 +1184,35 @@ int main
 			else
 				mpz_set_ui(dsa_q, 0L);
 			elg_check(elg_p, elg_g, elg_y, dsa_q);
-			mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y), mpz_clear(dsa_q);
+			mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
+			mpz_clear(dsa_q);
 		}
-		else if (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+		else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 		{
 			mpz_t dsa_p, dsa_q, dsa_g, dsa_y;
-			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y);
-			if (!mpz_set_gcry_mpi(primary->subkeys[j]->dsa_p, dsa_p) || !mpz_set_gcry_mpi(primary->subkeys[j]->dsa_q, dsa_q) ||
-			    !mpz_set_gcry_mpi(primary->subkeys[j]->dsa_g, dsa_g) || !mpz_set_gcry_mpi(primary->subkeys[j]->dsa_y, dsa_y))
+			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g);
+			mpz_init(dsa_y);
+			if (!mpz_set_gcry_mpi(sub->dsa_p, dsa_p) ||
+				!mpz_set_gcry_mpi(sub->dsa_q, dsa_q) ||
+			    !mpz_set_gcry_mpi(sub->dsa_g, dsa_g) ||
+				!mpz_set_gcry_mpi(sub->dsa_y, dsa_y))
 			{
-				std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
-				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y);
+				std::cerr << "ERROR: cannot convert DSA key material" <<
+					std::endl;
+				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
+				mpz_clear(dsa_y);
 				delete primary;
 				delete ring;
 				return -1;
 			}
 			dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
-			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y);
+			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
+			mpz_clear(dsa_y);
 		}
 		else
 		{
-			std::cerr << "ERROR: public-key algorithm not supported" << std::endl;
+			std::cerr << "ERROR: public-key algorithm not supported" <<
+				std::endl;
 			delete primary;
 			delete ring;
 			return -1;
@@ -1084,77 +1221,99 @@ int main
 		if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 		{
 			mpz_t dsa_p, dsa_q, dsa_g, dsa_y, dsa_r;
-			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y), mpz_init(dsa_r);
-			if (!mpz_set_gcry_mpi(primary->dsa_p, dsa_p) || !mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
-			    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) || !mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
+			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g);
+			mpz_init(dsa_y), mpz_init(dsa_r);
+			if (!mpz_set_gcry_mpi(primary->dsa_p, dsa_p) ||
+				!mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
+			    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) ||
+				!mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
 			{
-				std::cerr << "ERROR: cannot convert DSA primary key material" << std::endl;
-				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
+				std::cerr << "ERROR: cannot convert DSA primary key material" <<
+					std::endl;
+				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
+				mpz_clear(dsa_y), mpz_clear(dsa_r);
 				delete primary;
 				delete ring;
 				return -1;
 			}
-			for (size_t i = 0; i < primary->subkeys[j]->selfsigs.size(); i++)
+			for (size_t i = 0; i < sub->selfsigs.size(); i++)
 			{
-				if (primary->subkeys[j]->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				if (sub->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->subkeys[j]->selfsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sub->selfsigs[i]->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->subkeys[j]->selfsigs[i]);
+						sigs.push_back(sub->selfsigs[i]);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
-			for (size_t i = 0; i < primary->subkeys[j]->bindsigs.size(); i++)
+			for (size_t i = 0; i < sub->bindsigs.size(); i++)
 			{
-				if (primary->subkeys[j]->bindsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				if (sub->bindsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->subkeys[j]->bindsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sub->bindsigs[i]->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->subkeys[j]->bindsigs[i]);
+						sigs.push_back(sub->bindsigs[i]);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
-			for (size_t i = 0; i < primary->subkeys[j]->keyrevsigs.size(); i++)
+			for (size_t i = 0; i < sub->keyrevsigs.size(); i++)
 			{
-				if (primary->subkeys[j]->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				if (sub->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->subkeys[j]->keyrevsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sub->keyrevsigs[i]->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->subkeys[j]->keyrevsigs[i]);
+						sigs.push_back(sub->keyrevsigs[i]);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
-			for (size_t i = 0; i < primary->subkeys[j]->certrevsigs.size(); i++)
+			for (size_t i = 0; i < sub->certrevsigs.size(); i++)
 			{
-				if (primary->subkeys[j]->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
+				if (sub->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(primary->subkeys[j]->certrevsigs[i]->dsa_r, dsa_r))
-						std::cerr << "WARNING: bad signature (cannot convert dsa_r)" << std::endl << "\t";
+					if (!mpz_set_gcry_mpi(sub->certrevsigs[i]->dsa_r, dsa_r))
+					{
+						std::cerr << "WARNING: bad signature (cannot convert" <<
+							" dsa_r)" << std::endl << "\t";
+					}
 					else
 					{
 						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
-						sigs.push_back(primary->subkeys[j]->certrevsigs[i]);
+						sigs.push_back(sub->certrevsigs[i]);
 					}
 				}
 				else
-					std::cerr << "WARNING: inconsistent public-key algorithm" << std::endl << "\t";
+					std::cerr << "WARNING: inconsistent public-key algorithm" <<
+						std::endl << "\t";
 			}
-			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g), mpz_clear(dsa_y), mpz_clear(dsa_r);
+			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
+			mpz_clear(dsa_y), mpz_clear(dsa_r);
 		}
 	}
 
@@ -1166,8 +1325,12 @@ int main
 		{
 			if (i >= ii)
 				continue;
-			if (!gcry_mpi_cmp(sigs[i]->dsa_r, sigs[ii]->dsa_r) && gcry_mpi_cmp(sigs[i]->dsa_s, sigs[ii]->dsa_s))
-				std::cout << "WEAKNESS: DSA value r is EQUAL for both signatures (e.g. same k used)" << std::endl;
+			if (!gcry_mpi_cmp(sigs[i]->dsa_r, sigs[ii]->dsa_r) &&
+				gcry_mpi_cmp(sigs[i]->dsa_s, sigs[ii]->dsa_s))
+			{
+				std::cout << "WEAKNESS: DSA value r is EQUAL for both" <<
+					" signatures (e.g. same k used)" << std::endl;
+			}
 		}
 	}
 

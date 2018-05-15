@@ -496,7 +496,7 @@ void dsa_check
 		if (!mpz_cmp(dsa_y, pm1))
 			trivial = true;
 		mpz_mod(pm1, pm1, dsa_q);
-		if (i > 0)
+		if ((i > 0) && mpz_invert(tmp, dsa_g, dsa_p))
 		{
 			mpz_set_ui(tmp, i);
 			mpz_neg(tmp, tmp);

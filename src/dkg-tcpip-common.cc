@@ -969,7 +969,8 @@ void tcpip_done
 		if(kill(thispid, SIGTERM))
 			perror("ERROR: dkg-tcpip-common (kill)");
 		if (opt_verbose)
-			std::cerr << "INFO: waitpid(" << thispid << ", NULL, 0)" << std::endl;
+			std::cerr << "INFO: waitpid(" << thispid << ", NULL, 0)" <<
+				std::endl;
 		if (waitpid(thispid, NULL, 0) != thispid)
 			perror("ERROR: dkg-tcpip-common (waitpid)");
 	}

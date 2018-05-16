@@ -489,7 +489,7 @@ void tcpip_fork
 int tcpip_io
 	()
 {
-	int thisidx = tcpip_peer2pipe[tcpip_thispeer]; // index of this peer
+	size_t thisidx = tcpip_peer2pipe[tcpip_thispeer]; // index of this peer
 	while (1)
 	{
 		if (instance_forked)

@@ -270,19 +270,18 @@ bool verify_decryption_share
 	 mpz_ptr r_out)
 {
 	// initialize
-	mpz_t c2, a, b;
-	mpz_init(c2), mpz_init(a), mpz_init(b);
-	mpz_t nizk_gk;
-	mpz_init(nizk_gk);
-	if (!mpz_set_gcry_mpi(gk, nizk_gk))
-	{
-		std::cerr << "ERROR: converting message component failed" << std::endl;
-		mpz_clear(nizk_gk);
-		exit(-1);
-	}
+	mpz_t c2, a, b, nizk_gk;
+	mpz_init(c2), mpz_init(a), mpz_init(b), mpz_init(nizk_gk);
 
 	try
 	{
+		// convert message component
+		if (!mpz_set_gcry_mpi(gk, nizk_gk))
+		{
+			std::cerr << "ERROR: converting message component failed" <<
+				std::endl;
+			throw false;
+		}
 		// check magic
 		if (!TMCG_ParseHelper::cm(in, "dds", '|'))
 			throw false;
@@ -290,22 +289,26 @@ bool verify_decryption_share
 		std::string idxstr, mpzstr;
 		if (!TMCG_ParseHelper::gs(in, '|', idxstr))
 			throw false;
-		if ((sscanf(idxstr.c_str(), "%zu", &idx_dkg) < 1) || !TMCG_ParseHelper::nx(in, '|'))
+		if ((sscanf(idxstr.c_str(), "%zu", &idx_dkg) < 1) ||
+			!TMCG_ParseHelper::nx(in, '|'))
 			throw false;
 		// r_i
 		if (!TMCG_ParseHelper::gs(in, '|', mpzstr))
 			throw false;
-		if ((mpz_set_str(r_i_out, mpzstr.c_str(), TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(in, '|'))
+		if ((mpz_set_str(r_i_out, mpzstr.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			!TMCG_ParseHelper::nx(in, '|'))
 			throw false;
 		// c
 		if (!TMCG_ParseHelper::gs(in, '|', mpzstr))
 			throw false;
-		if ((mpz_set_str(c_out, mpzstr.c_str(), TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(in, '|'))
+		if ((mpz_set_str(c_out, mpzstr.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			!TMCG_ParseHelper::nx(in, '|'))
 			throw false;
 		// r
 		if (!TMCG_ParseHelper::gs(in, '|', mpzstr))
 			throw false;
-		if ((mpz_set_str(r_out, mpzstr.c_str(), TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(in, '|'))
+		if ((mpz_set_str(r_out, mpzstr.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			!TMCG_ParseHelper::nx(in, '|'))
 			throw false;
 		// check index for sanity
 		if (idx_dkg >= (dkg->v_i).size())
@@ -314,10 +317,12 @@ bool verify_decryption_share
 		if (!dkg->CheckElement(r_i_out))
 			throw false;
 		// check the NIZK argument for sanity
-		size_t c_len = mpz_shash_len() * 8; // (NOTE: output size of mpz_shash is fixed)
-		if ((mpz_cmpabs(r_out, dkg->q) >= 0) || (mpz_sizeinbase(c_out, 2L) > c_len)) // check the size of r and c
+		if (mpz_cmpabs(r_out, dkg->q) >= 0)  // check the size of r
 			throw false;
-		// verify proof of knowledge (equality of discrete logarithms), e.g. see [CGS97]
+		size_t c_len = mpz_shash_len() * 8;
+		if (mpz_sizeinbase(c_out, 2L) > c_len) // check the size of c
+			throw false;
+		// verify proof of knowledge (equality of discrete logarithms), [CGS97]
 		mpz_powm(a, nizk_gk, r_out, dkg->p);
 		mpz_powm(b, r_i_out, c_out, dkg->p);
 		mpz_mul(a, a, b);
@@ -336,8 +341,7 @@ bool verify_decryption_share
 	catch (bool return_value)
 	{
 		// release
-		mpz_clear(c2), mpz_clear(a), mpz_clear(b);
-		mpz_clear(nizk_gk);
+		mpz_clear(c2), mpz_clear(a), mpz_clear(b), mpz_clear(nizk_gk);
 		// return
 		return return_value;
 	}
@@ -350,17 +354,10 @@ bool verify_decryption_share_interactive_publiccoin
 	 JareckiLysyanskayaEDCF *edcf, std::ostream &err)
 {
 	// initialize
-	mpz_t a, b, c, r, foo, bar;
+	mpz_t a, b, c, r, foo, bar, nizk_gk;
 	mpz_init(a), mpz_init(b), mpz_init(c), mpz_init(r);
-	mpz_init(foo), mpz_init(bar);
-	mpz_t nizk_gk;
-	mpz_init(nizk_gk);
-	if (!mpz_set_gcry_mpi(gk, nizk_gk))
-	{
-		std::cerr << "ERROR: converting message component failed" << std::endl;
-		mpz_clear(nizk_gk);
-		exit(-1);
-	}
+	mpz_init(foo), mpz_init(bar), mpz_init(nizk_gk);
+
 	// set ID for RBC
 	std::stringstream myID;
 	myID << "dkg-decrypt::*_decryption_share_interactive_publiccoin" <<
@@ -370,6 +367,13 @@ bool verify_decryption_share_interactive_publiccoin
 
 	try
 	{
+		// convert message component
+		if (!mpz_set_gcry_mpi(gk, nizk_gk))
+		{
+			std::cerr << "ERROR: converting message component failed" <<
+				std::endl;
+			throw false;
+		}
 		// check index for sanity
 		if (idx_dkg >= (dkg->v_i).size())
 		{
@@ -450,8 +454,7 @@ bool verify_decryption_share_interactive_publiccoin
 		rbc->unsetID();
 		// release
 		mpz_clear(a), mpz_clear(b), mpz_clear(c), mpz_clear(r);
-		mpz_clear(foo), mpz_clear(bar);
-		mpz_clear(nizk_gk);
+		mpz_clear(foo), mpz_clear(bar), mpz_clear(nizk_gk);
 		// return
 		return return_value;
 	}
@@ -503,13 +506,15 @@ bool combine_decryption_shares
 			jt != parties.end(); ++jt, ++j)
 		{
 			mpz_set_ui(a, 1L); // compute optimized Lagrange coefficients
-			for (std::vector<size_t>::iterator lt = parties.begin(); lt != parties.end(); ++lt)
+			for (std::vector<size_t>::iterator lt = parties.begin();
+				lt != parties.end(); ++lt)
 			{
 				if (*lt != *jt)
 					mpz_mul_ui(a, a, (*lt + 1)); // adjust index in computation
 			}
 			mpz_set_ui(b, 1L);
-			for (std::vector<size_t>::iterator lt = parties.begin(); lt != parties.end(); ++lt)
+			for (std::vector<size_t>::iterator lt = parties.begin();
+				lt != parties.end(); ++lt)
 			{
 				if (*lt != *jt)
 				{
@@ -520,12 +525,14 @@ bool combine_decryption_shares
 			}
 			if (!mpz_invert(b, b, dkg->q))
 			{
-				std::cerr << "ERROR: cannot invert during interpolation" << std::endl;
+				std::cerr << "ERROR: cannot invert during interpolation" <<
+					std::endl;
 				throw false;
 			}
 			mpz_mul(lambda, a, b);
-			mpz_mod(lambda, lambda, dkg->q); // computation of Lagrange coefficients finished
-			// interpolate and accumulate correct decryption shares
+			mpz_mod(lambda, lambda, dkg->q);
+			// computation of Lagrange coefficients finished
+			// now interpolate and accumulate correct decryption shares
 			mpz_powm(a, shares[j], lambda, dkg->p);
 			mpz_mul(R, R, a);
 			mpz_mod(R, R, dkg->p);
@@ -534,8 +541,9 @@ bool combine_decryption_shares
 		// copy the result from R to gk
 		if (!mpz_get_gcry_mpi(gk, R))
 		{
-			std::cerr << "ERROR: converting interpolated result failed" << std::endl;
-			exit(-1);
+			std::cerr << "ERROR: converting interpolated result failed" <<
+				std::endl;
+			throw false;
 		}
 
 		// finish
@@ -554,22 +562,26 @@ bool combine_decryption_shares
 bool decrypt_session_key
 	(const gcry_mpi_t gk, const gcry_mpi_t myk, tmcg_openpgp_octets_t &out)
 {
-	// decrypt the session key
 	gcry_sexp_t elgkey;
-	gcry_error_t ret;
 	size_t erroff;
-	gcry_mpi_set_ui(elg_x, 1); // cheat libgcrypt (decryption key shares have been already applied to gk)
-	ret = gcry_sexp_build(&elgkey, &erroff, "(private-key (elg (p %M) (g %M) (y %M) (x %M)))", elg_p, elg_g, elg_y, elg_x);
+	// cheat libgcrypt (decryption key shares have been already applied to gk)
+	gcry_mpi_set_ui(elg_x, 1);
+	gcry_error_t ret = gcry_sexp_build(&elgkey, &erroff,
+		"(private-key (elg (p %M) (g %M) (y %M) (x %M)))",
+		elg_p, elg_g, elg_y, elg_x);
 	if (ret)
 	{
-		std::cerr << "ERROR: processing ElGamal key material failed" << std::endl;
+		std::cerr << "ERROR: processing ElGamal key material failed" <<
+			std::endl;
 		return false;
 	}
-	ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricDecryptElgamal(gk, myk, elgkey, out);
+	ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+		AsymmetricDecryptElgamal(gk, myk, elgkey, out);
 	gcry_sexp_release(elgkey);
 	if (ret)
 	{
-		std::cerr << "ERROR: AsymmetricDecryptElgamal() failed with rc = " << gcry_err_code(ret) << std::endl;
+		std::cerr << "ERROR: AsymmetricDecryptElgamal() failed" <<
+			" with rc = " << gcry_err_code(ret) << std::endl;
 		return false;
 	}
 	return true;
@@ -588,7 +600,8 @@ void run_instance
 	std::string armored_seckey, thispeer = peers[whoami];
 	if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
 	{
-		std::cerr << "WARNING: weak permissions of private key file detected" << std::endl;
+		std::cerr << "WARNING: weak permissions of private key file detected" <<
+			std::endl;
 		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
 			exit(-1);
 	}
@@ -600,14 +613,17 @@ void run_instance
 	if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 	{
 		release_mpis();
-		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
-		dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
+		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear();
+		uidsig.clear(), subsig.clear();
+		dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear();
+		dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
 		init_mpis();
 		// protected with password
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
-		if (!get_passphrase("Please enter passphrase to unlock your private key", passphrase))
+		if (!get_passphrase("Enter passphrase to unlock your private key",
+			passphrase))
 		{
 			release_mpis();
 			exit(-1);
@@ -615,7 +631,8 @@ void run_instance
 #endif
 		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
 		{
-			std::cerr << "ERROR: wrong passphrase to unlock private key" << std::endl;
+			std::cerr << "ERROR: wrong passphrase to unlock private key" <<
+				std::endl;
 			release_mpis();
 			exit(-1);
 		}
@@ -717,16 +734,21 @@ void run_instance
 			std::string pwd;
 			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 			{
-				std::cerr << "ERROR: D_" << whoami << ": " << "cannot read password for protecting channel to D_" << i << std::endl;
+				std::cerr << "ERROR: D_" << whoami << ": " <<
+					"cannot read password for protecting channel to D_" << i <<
+					std::endl;
 				release_mpis();
 				delete msg;
 				done_dkg(dkg);
 				exit(-1);
 			}
 			key << pwd;
-			if (((i + 1) < peers.size()) && !TMCG_ParseHelper::nx(passwords, '/'))
+			if (((i + 1) < peers.size()) &&
+				!TMCG_ParseHelper::nx(passwords, '/'))
 			{
-				std::cerr << "ERROR: D_" << whoami << ": " << "cannot skip to next password for protecting channel to D_" << (i + 1) << std::endl;
+				std::cerr << "ERROR: D_" << whoami << ": " <<
+					"cannot skip to next password for protecting channel" <<
+					" to D_" << (i + 1) << std::endl;
 				release_mpis();
 				delete msg;
 				done_dkg(dkg);
@@ -734,7 +756,10 @@ void run_instance
 			}
 		}
 		else
-			key << "dkg-decrypt::D_" << (i + whoami); // use simple key -- we assume that GNUnet provides secure channels
+		{
+			// use simple key -- we assume that GNUnet provides secure channels
+			key << "dkg-decrypt::D_" << (i + whoami);
+		}
 		uP_in.push_back(pipefd[i][whoami][0]);
 		uP_out.push_back(pipefd[whoami][i][1]);
 		uP_key.push_back(key.str());
@@ -744,10 +769,14 @@ void run_instance
 	}
 
 	// create asynchronous authenticated unicast channels
-	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami,
+		uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin,
+		(opt_W * 60));
 
 	// create asynchronous authenticated unicast channels for broadcast protocol
-	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami,
+		bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin,
+		(opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
 	std::string myID = "dkg-decrypt|";
@@ -755,7 +784,9 @@ void run_instance
 		myID += peers[i] + "|";
 	myID += dkg->t; // include parameterized t-resiliance of DKG in the ID of broadcast protocol
 	size_t T_RBC = (peers.size() - 1) / 3; // assume maximum asynchronous t-resilience for RBC
-	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	CachinKursawePetzoldShoupRBC *rbc =
+		new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2,
+			aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
@@ -982,7 +1013,9 @@ void run_instance
 	// at the end: deliver some more rounds for waiting parties
 	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
-		std::cerr << "INFO: D_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
+		std::cerr << "INFO: D_" << whoami << ": waiting approximately " <<
+			(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
+			std::endl;
 	rbc->Sync(synctime);
 
 	// release EDCF
@@ -997,14 +1030,20 @@ void run_instance
 	// release handles (unicast channel)
 	uP_in.clear(), uP_out.clear(), uP_key.clear();
 	if (opt_verbose)
-		std::cerr << "INFO: D_" << whoami << ": aiou.numRead = " << aiou->numRead <<
-			" aiou.numWrite = " << aiou->numWrite << std::endl;
+	{
+		std::cerr << "INFO: D_" << whoami << ": unicast channels";
+		aiou->PrintStatistics(std::cerr);
+		std::cerr << std::endl;
+	}
 
 	// release handles (broadcast channel)
 	bP_in.clear(), bP_out.clear(), bP_key.clear();
 	if (opt_verbose)
-		std::cerr << "INFO: D_" << whoami << ": aiou2.numRead = " << aiou2->numRead <<
-			" aiou2.numWrite = " << aiou2->numWrite << std::endl;
+	{
+		std::cerr << "INFO: D_" << whoami << ": broadcast channel";
+		aiou2->PrintStatistics(std::cerr);
+		std::cerr << std::endl;
+	}
 
 	// release asynchronous unicast and broadcast
 	delete aiou, delete aiou2;

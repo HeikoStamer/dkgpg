@@ -7,7 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* dkg-decrypt: add a fake image header for bluring decryption shares
+* dkg-decrypt: add a fake image header (png) for bluring decryption shares
 * dkg-tools: decrease the final RBC synchronization time to resonable values
 * dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())

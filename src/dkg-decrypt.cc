@@ -1053,8 +1053,8 @@ void run_instance
 				exit(-1);
 			}
 			else
-				content.insert(content.end(), (msg->literal_message).begin(),
-					(msg->literal_message).end());
+				content.insert(content.end(), (msg->literal_data).begin(),
+					(msg->literal_data).end());
 		}
 		// output result
 		if (opt_ofilename != NULL)
@@ -1627,8 +1627,8 @@ int main
 				}
 				else
 					content.insert(content.end(),
-						(msg->literal_message).begin(),
-						(msg->literal_message).end());
+						(msg->literal_data).begin(),
+						(msg->literal_data).end());
 			}
 		}
 		// release

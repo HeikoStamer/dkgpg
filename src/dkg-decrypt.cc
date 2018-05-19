@@ -1626,7 +1626,8 @@ int main
 					return -1;
 				}
 				else
-					content.insert(content.end(), (msg->literal_message).begin(),
+					content.insert(content.end(),
+						(msg->literal_message).begin(),
 						(msg->literal_message).end());
 			}
 		}
@@ -1655,7 +1656,12 @@ int main
 	if (opt_hostname != NULL)
 	{
 		if (port.length())
-			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from options
+			opt_p = strtoul(port.c_str(), NULL, 10); // set own TCP start port
+		if ((opt_p < 1) || (opt_p > 65535))
+		{
+			std::cerr << "ERROR: no valid TCP start port given" << std::endl;
+			return -1;
+		}
 		tcpip_init(hostname);
 		tcpip_bindports((uint16_t)opt_p, false);
 		tcpip_bindports((uint16_t)opt_p, true);

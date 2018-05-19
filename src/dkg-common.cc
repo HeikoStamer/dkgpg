@@ -134,7 +134,8 @@ bool parse_private_key
 	tmcg_openpgp_pkalgo_t elg_pkalgo = TMCG_OPENPGP_PKALGO_ELGAMAL;
 	tmcg_openpgp_hashalgo_t dsa_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
 	tmcg_openpgp_hashalgo_t elg_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
-	tmcg_openpgp_signature_t dsa_sigtype, elg_sigtype;
+	tmcg_openpgp_signature_t dsa_sigtype = TMCG_OPENPGP_SIGNATURE_TIMESTAMP;
+	tmcg_openpgp_signature_t elg_sigtype = TMCG_OPENPGP_SIGNATURE_TIMESTAMP;
 	tmcg_openpgp_byte_t dsa_keyflags[32], elg_keyflags[32];
 	tmcg_openpgp_byte_t dsa_psa[32], dsa_pha[32], dsa_pca[32];
 	tmcg_openpgp_byte_t elg_psa[32], elg_pha[32], elg_pca[32];

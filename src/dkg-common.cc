@@ -317,7 +317,9 @@ bool parse_private_key
 				}
 				break;
 			case 5: // Secret-Key Packet
-				if (((ctx.pkalgo == 107) || (ctx.pkalgo == 108)) && !secdsa)
+				if (((ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) ||
+					(ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL8)) &&
+					!secdsa)
 				{
 					secdsa = true;
 					keycreationtime_out = ctx.keycreationtime;
@@ -409,7 +411,7 @@ bool parse_private_key
 					size_t qualsize = qual.size();
 					for (size_t i = 0; i < qualsize; i++)
 						dss_qual.push_back(get_gcry_mpi_ui(qual[i]));
-					if (ctx.pkalgo == 107)
+					if (ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
 					{
 						size_t x_rvss_qualsize = x_rvss_qual.size();
 						for (size_t i = 0; i < x_rvss_qualsize; i++)
@@ -722,7 +724,8 @@ bool parse_private_key
 					}
 					// create one-to-one mapping based on the stored canonicalized peer list
 					idx2dkg.clear(), dkg2idx.clear();
-					if ((ctx.pkalgo == 107) && (capl.size() != dss_n))
+					if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) &&
+						(capl.size() != dss_n))
 					{
 						std::cerr << "ERROR: tDSS parameter n and CAPL size does not match" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -733,7 +736,8 @@ bool parse_private_key
 						gcry_mpi_release(elg_s);
 						return false;
 					}
-					else if ((ctx.pkalgo == 108) && (capl.size() != dss_qual.size()))
+					else if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL8) &&
+						(capl.size() != dss_qual.size()))
 					{
 						std::cerr << "ERROR: QUAL size of tDSS key and CAPL does not match" << std::endl;
 						CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -1073,7 +1077,8 @@ bool parse_private_key
 					for (size_t i = 0; i < current_packet.size(); i++)
 						sec.push_back(current_packet[i]);
 				}
-				else if (((ctx.pkalgo == 108) || (ctx.pkalgo == TMCG_OPENPGP_PKALGO_DSA)) && secdsa)
+				else if (((ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL8) ||
+					(ctx.pkalgo == TMCG_OPENPGP_PKALGO_DSA)) && secdsa)
 				{
 					std::cerr << "ERROR: more than one primary key not supported" << std::endl;
 					CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
@@ -1104,7 +1109,7 @@ bool parse_private_key
 					uid.push_back(current_packet[i]);
 				break;
 			case 7: // Secret-Subkey Packet
-				if ((ctx.pkalgo == 109) && !ssbelg)
+				if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9) && !ssbelg)
 				{
 					ssbelg = true;
 					gcry_mpi_set(elg_p, ctx.p);
@@ -1520,7 +1525,7 @@ bool parse_private_key
 					for (size_t i = 0; i < current_packet.size(); i++)
 						ssb.push_back(current_packet[i]);
 				}
-				else if ((ctx.pkalgo == 109) && ssbelg)
+				else if ((ctx.pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9) && ssbelg)
 					std::cerr << "WARNING: ElGamal subkey already found; packet ignored" << std::endl; 
 				else
 					std::cerr << "WARNING: public-key algorithm not supported; packet ignored" << std::endl;

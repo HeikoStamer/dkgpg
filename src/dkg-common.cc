@@ -32,12 +32,12 @@ extern tmcg_openpgp_octets_t			pub, sub, sec, ssb, uid;
 extern tmcg_openpgp_octets_t			uidsig, subsig;
 extern std::map<size_t, size_t>			idx2dkg, dkg2idx;
 extern mpz_t							dss_p, dss_q, dss_g, dss_h, dss_y;
-extern mpz_t							dss_x_i, dss_xprime_i; // secret key
+extern mpz_t							dss_x_i, dss_xprime_i; // secret values
 extern size_t							dss_n, dss_t, dss_i;
 extern std::vector<size_t>				dss_qual, dss_x_rvss_qual;
 extern tmcg_mpz_matrix_t				dss_c_ik;
 extern mpz_t							dkg_p, dkg_q, dkg_g, dkg_h, dkg_y;
-extern mpz_t							dkg_x_i, dkg_xprime_i; // secret key
+extern mpz_t							dkg_x_i, dkg_xprime_i; // secret values
 extern size_t							dkg_n, dkg_t, dkg_i;
 extern std::vector<size_t>				dkg_qual;
 extern tmcg_mpz_vector_t				dkg_v_i;

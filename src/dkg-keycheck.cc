@@ -818,7 +818,10 @@ int main
 	if (parse_ok)
 	{
 		if (opt_private)
+		{
 			primary = prv->pub; // get the public key from private key
+			prv->RelinkPublicSubkeys(); // relink the contained subkeys
+		}
 		primary->CheckSelfSignatures(ring, opt_verbose);
 		primary->CheckSubkeys(ring, opt_verbose);
 		if (opt_reduce)

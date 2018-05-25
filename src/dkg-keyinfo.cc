@@ -33,28 +33,7 @@
 #include <ctime>
 
 #include <libTMCG.hh>
-
-#include "dkg-common.hh"
 #include "dkg-io.hh"
-
-std::vector<std::string>		peers;
-
-std::string				passphrase, userid;
-tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
-std::map<size_t, size_t>		idx2dkg, dkg2idx;
-mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
-size_t					dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual, dss_x_rvss_qual;
-std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
-size_t					dkg_n, dkg_t, dkg_i;
-std::vector<size_t>			dkg_qual;
-std::vector<mpz_ptr>			dkg_v_i;
-std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
-
-int 					opt_verbose = 0;
-bool					libgcrypt_secmem = false;
 
 int main
 	(int argc, char *const *argv)
@@ -62,7 +41,13 @@ int main
 	static const char *usage = "dkg-keyinfo [OPTIONS] PEER";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
-	std::string migrate_peer_from, migrate_peer_to;
+
+	std::vector<std::string>	peers;
+	std::string					passphrase, userid;
+	std::string					migrate_peer_from, migrate_peer_to;
+	std::string					kfilename;
+	int 						opt_verbose = 0;
+	char						*opt_k = NULL;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -73,8 +58,11 @@ int main
 			size_t idx = ++i + 1; // Note: this option has two required arguments
 			if (idx < (size_t)(argc - 1))
 			{
-				if ((migrate_peer_from.length() == 0) && (migrate_peer_to.length() == 0))
+				if ((migrate_peer_from.length() == 0) &&
+					(migrate_peer_to.length() == 0))
+				{
 					migrate_peer_from = argv[i+1], migrate_peer_to = argv[i+2];
+				}
 				else
 					std::cerr << "WARNING: duplicate option \"" << arg << "\" ignored" << std::endl;
 			}
@@ -86,6 +74,16 @@ int main
 			++i; // Note: this option has two required arguments
 			continue;
 		}
+		else if ((arg.find("-k") == 0))
+		{
+			size_t idx = ++i;
+			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			{
+				kfilename = argv[i+1];
+				opt_k = (char*)kfilename.c_str();
+			}
+			continue;
+		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
@@ -94,6 +92,8 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
 				std::cout << "  -h, --help           print this help" << std::endl;
+				std::cout << "  -k FILENAME          use keyring FILENAME" <<
+					" containing external revocation keys" << std::endl;
 				std::cout << "  -m OLDPEER NEWPEER   migrate OLDPEER identity to NEWPEER" << std::endl;
 				std::cout << "  -v, --version        print the version number" << std::endl;
 				std::cout << "  -V, --verbose        turn on verbose output" << std::endl;
@@ -156,7 +156,6 @@ int main
 		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
 		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
 		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
-		libgcrypt_secmem = true;
 	}
 
 	// initialize LibTMCG
@@ -168,529 +167,637 @@ int main
 	if (opt_verbose)
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
 
-	// read and parse the private key
+	// read the key file
 	std::string armored_seckey, thispeer = peers[0];
 	if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
 	{
 		std::cerr << "WARNING: weak permissions of private key file detected" << std::endl;
 		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
-			exit(-1);
+			return -1;
 	}
 	if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))
 		return -1;
-	init_mpis();
-	std::vector<std::string> CAPL;
-	time_t ckeytime = 0, ekeytime = 0;
-	if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
+
+	// read the keyring
+	std::string armored_pubring;
+	if (opt_k)
 	{
-		release_mpis();
-		keyid.clear(), subkeyid.clear(), pub.clear(), sub.clear(), uidsig.clear(), subsig.clear();
-		dss_qual.clear(), dss_x_rvss_qual.clear(), dss_c_ik.clear(), dkg_qual.clear(), dkg_v_i.clear(), dkg_c_ik.clear();
-		init_mpis();
-		// protected with password
+		if (!read_key_file(kfilename, armored_pubring))
+			return -1;
+	}
+
+	// parse the keyring, the private key and corresponding signatures
+	TMCG_OpenPGP_Prvkey *prv = NULL;
+	TMCG_OpenPGP_Keyring *ring = NULL;
+	bool parse_ok;
+	if (opt_k)
+	{
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyringParse(armored_pubring, opt_verbose, ring);
+		if (!parse_ok)
+		{
+			std::cerr << "WARNING: cannot use the given keyring" << std::endl;
+			ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
+		}
+	}
+	else
+		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		PrivateKeyBlockParse(armored_seckey, opt_verbose, passphrase, prv);
+	if (!parse_ok)
+	{
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
-		if (!get_passphrase("Please enter passphrase to unlock your private key", passphrase))
+		if (!get_passphrase("Enter passphrase to unlock private key",
+			passphrase))
 		{
-			release_mpis();
+			std::cerr << "ERROR: cannot read passphrase" << std::endl;
+			delete ring;
 			return -1;
 		}
 #endif
-		if (!parse_private_key(armored_seckey, ckeytime, ekeytime, CAPL))
-		{
-			std::cerr << "ERROR: wrong passphrase to unlock private key" << std::endl;
-			release_mpis();
-			return -1;
-		}
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PrivateKeyBlockParse(armored_seckey, opt_verbose, passphrase, prv);
+	}
+	if (parse_ok)
+	{
+		prv->RelinkPublicSubkeys(); // relink the contained subkeys
+		prv->pub->CheckSelfSignatures(ring, opt_verbose);
+		prv->pub->CheckSubkeys(ring, opt_verbose);
+		prv->RelinkPrivateSubkeys(); // undo the relinking
+	}
+	else
+	{
+		std::cerr << "ERROR: cannot use the provided private key" << std::endl;
+		delete ring;
+		return -1;
+	}
+	if (!prv->pub->valid || prv->weak(opt_verbose))
+	{
+		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
+		delete ring;
+		delete prv;
+		return -1;
+	}
+	if (prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
+	{
+		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
+		delete ring;
+		delete prv;
+		return -1;
 	}
 
 	// create an instance of tDSS by stored parameters from private key
 	std::stringstream dss_in;
-	if (dss_n == 0L)
-	{
-		// cheat CheckGroup() with $h$ for non-tDSS individual DSA key
-		mpz_set_ui(dss_h, 42L);
-		mpz_powm(dss_h, dss_g, dss_h, dss_p);
-	}
-	dss_in << dss_p << std::endl << dss_q << std::endl << dss_g << std::endl << dss_h << std::endl;
-	dss_in << dss_n << std::endl << dss_t << std::endl << dss_i << std::endl;
-	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl << dss_y << std::endl;
-	dss_in << dss_qual.size() << std::endl;
-	for (size_t i = 0; i < dss_qual.size(); i++)
-		dss_in << dss_qual[i] << std::endl;
-	dss_in << dss_p << std::endl << dss_q << std::endl << dss_g << std::endl << dss_h << std::endl;
-	dss_in << dss_n << std::endl << dss_t << std::endl << dss_i << std::endl;
-	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl << dss_y << std::endl;
-	dss_in << dss_qual.size() << std::endl;
-	for (size_t i = 0; i < dss_qual.size(); i++)
-		dss_in << dss_qual[i] << std::endl;
-	dss_in << dss_p << std::endl << dss_q << std::endl << dss_g << std::endl << dss_h << std::endl;
-	dss_in << dss_n << std::endl << dss_t << std::endl << dss_i << std::endl << dss_t << std::endl;
-	dss_in << dss_x_i << std::endl << dss_xprime_i << std::endl;
+	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
+		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
+	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
+		prv->tdss_i << std::endl;
+	dss_in << prv->tdss_x_i << std::endl << prv->tdss_xprime_i << std::endl <<
+		prv->pub->dsa_y << std::endl;
+	dss_in << prv->tdss_qual.size() << std::endl;
+	for (size_t i = 0; i < prv->tdss_qual.size(); i++)
+		dss_in << prv->tdss_qual[i] << std::endl;
+	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
+		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
+	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
+		prv->tdss_i << std::endl;
+	dss_in << prv->tdss_x_i << std::endl << prv->tdss_xprime_i << std::endl <<
+		prv->pub->dsa_y << std::endl;
+	dss_in << prv->tdss_qual.size() << std::endl;
+	for (size_t i = 0; i < prv->tdss_qual.size(); i++)
+		dss_in << prv->tdss_qual[i] << std::endl;
+	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
+		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
+	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
+		prv->tdss_i << std::endl << prv->tdss_t << std::endl;
+	dss_in << prv->tdss_x_i << std::endl << prv->tdss_xprime_i << std::endl;
 	dss_in << "0" << std::endl << "0" << std::endl;
-	dss_in << dss_x_rvss_qual.size() << std::endl;
-	for (size_t i = 0; i < dss_x_rvss_qual.size(); i++)
-		dss_in << dss_x_rvss_qual[i] << std::endl;
-	assert((dss_c_ik.size() == dss_n));
-	for (size_t i = 0; i < dss_c_ik.size(); i++)
+	dss_in << prv->tdss_x_rvss_qual.size() << std::endl;
+	for (size_t i = 0; i < prv->tdss_x_rvss_qual.size(); i++)
+		dss_in << prv->tdss_x_rvss_qual[i] << std::endl;
+	assert((prv->tdss_c_ik.size() == prv->tdss_n));
+	for (size_t i = 0; i < prv->tdss_c_ik.size(); i++)
 	{
-		for (size_t j = 0; j < dss_c_ik.size(); j++)
+		for (size_t j = 0; j < prv->tdss_c_ik.size(); j++)
 			dss_in << "0" << std::endl << "0" << std::endl;
-		assert((dss_c_ik[i].size() == (dss_t + 1)));
-		for (size_t k = 0; k < dss_c_ik[i].size(); k++)
-			dss_in << dss_c_ik[i][k] << std::endl;
+		assert((prv->tdss_c_ik[i].size() == (prv->tdss_t + 1)));
+		for (size_t k = 0; k < prv->tdss_c_ik[i].size(); k++)
+			dss_in << prv->tdss_c_ik[i][k] << std::endl;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" << std::endl;
-	CanettiGennaroJareckiKrawczykRabinDSS *dss = new CanettiGennaroJareckiKrawczykRabinDSS(dss_in);
+		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" <<
+			std::endl;
+	CanettiGennaroJareckiKrawczykRabinDSS *dss =
+		new CanettiGennaroJareckiKrawczykRabinDSS(dss_in);
 	if (!dss->CheckGroup())
 	{
-		std::cerr << "ERROR: tDSS domain parameters are not correctly generated!" << std::endl;
+		std::cerr << "ERROR: bad tDSS domain parameters" << std::endl;
 		delete dss;
-		release_mpis();
+		delete ring;
+		delete prv;
 		return -1;
-	}
-	if (dss_n == 0)
-	{
-		mpz_set_ui(dss_h, 0L); // restore $h$ for non-tDSS individual DSA key
-		mpz_set_ui(dss->h, 0L);
 	}
 
 	GennaroJareckiKrawczykRabinDKG *dkg = NULL;
-	if (sub.size())
+	if (prv->private_subkeys.size() &&
+		(prv->private_subkeys[0]->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9))
 	{
-		// create an instance of DKG by stored parameters from private key
-		std::stringstream dkg_in;
-		dkg_in << dkg_p << std::endl << dkg_q << std::endl << dkg_g << std::endl << dkg_h << std::endl;
-		dkg_in << dkg_n << std::endl << dkg_t << std::endl << dkg_i << std::endl;
-		dkg_in << dkg_x_i << std::endl << dkg_xprime_i << std::endl << dkg_y << std::endl;
-		dkg_in << dkg_qual.size() << std::endl;
-		for (size_t i = 0; i < dkg_qual.size(); i++)
-			dkg_in << dkg_qual[i] << std::endl;
-		for (size_t i = 0; i < dkg_n; i++)
-			dkg_in << "1" << std::endl; // y_i not yet stored
-		for (size_t i = 0; i < dkg_n; i++)
-			dkg_in << "0" << std::endl; // z_i not yet stored
-		assert((dkg_v_i.size() == dkg_n));
-		for (size_t i = 0; i < dkg_v_i.size(); i++)
-			dkg_in << dkg_v_i[i] << std::endl;
-		assert((dkg_c_ik.size() == dkg_n));
-		for (size_t i = 0; i < dkg_n; i++)
+		TMCG_OpenPGP_PrivateSubkey *sub = prv->private_subkeys[0];
+		if (!sub->pub->valid || sub->weak(opt_verbose))
 		{
-			for (size_t j = 0; j < dkg_n; j++)
-				dkg_in << "0" << std::endl << "0" << std::endl; // s_ij and sprime_ij not yet stored
-			assert((dkg_c_ik[i].size() == (dkg_t + 1)));
-			for (size_t k = 0; k < dkg_c_ik[i].size(); k++)
-				dkg_in << dkg_c_ik[i][k] << std::endl;
+			std::cerr << "ERROR: subkey is invalid or weak" << std::endl;
+			delete dss;
+			delete ring;
+			delete prv;
+			return -1;
+		}
+		
+		// create an instance of tElG by stored parameters from private key
+		std::stringstream dkg_in;
+		dkg_in << sub->pub->elg_p << std::endl << sub->telg_q << std::endl <<
+			sub->pub->elg_g << std::endl << sub->telg_h << std::endl;
+		dkg_in << sub->telg_n << std::endl << sub->telg_t << std::endl <<
+			sub->telg_i << std::endl;
+		dkg_in << sub->telg_x_i << std::endl << sub->telg_xprime_i <<
+			std::endl << sub->pub->elg_y << std::endl;
+		dkg_in << sub->telg_qual.size() << std::endl;
+		for (size_t i = 0; i < sub->telg_qual.size(); i++)
+			dkg_in << sub->telg_qual[i] << std::endl;
+		for (size_t i = 0; i < sub->telg_n; i++)
+			dkg_in << "1" << std::endl; // y_i not yet stored
+		for (size_t i = 0; i < sub->telg_n; i++)
+			dkg_in << "0" << std::endl; // z_i not yet stored
+		assert((sub->telg_v_i.size() == sub->telg_n));
+		for (size_t i = 0; i < sub->telg_v_i.size(); i++)
+			dkg_in << sub->telg_v_i[i] << std::endl;
+		assert((sub->telg_c_ik.size() == sub->telg_n));
+		for (size_t i = 0; i < sub->telg_n; i++)
+		{
+			// s_ij and sprime_ij not yet stored
+			for (size_t j = 0; j < sub->telg_n; j++)
+				dkg_in << "0" << std::endl << "0" << std::endl;
+			assert((sub->telg_c_ik[i].size() == (sub->telg_t + 1)));
+			for (size_t k = 0; k < sub->telg_c_ik[i].size(); k++)
+				dkg_in << sub->telg_c_ik[i][k] << std::endl;
 		}
 		if (opt_verbose)
-			std::cerr << "INFO: GennaroJareckiKrawczykRabinDKG(in, ...)" << std::endl;
+			std::cerr << "INFO: GennaroJareckiKrawczykRabinDKG(in, ...)" <<
+				std::endl;
 		dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
 		if (!dkg->CheckGroup())
 		{
-			std::cerr << "ERROR: DKG domain parameters are not correctly generated!" << std::endl;
+			std::cerr << "ERROR: bad tElG domain parameters" << std::endl;
 			delete dss, delete dkg;
-			release_mpis();
+			delete ring;
+			delete prv;
 			return -1;
 		}
 		if (!dkg->CheckKey())
 		{
-			std::cerr << "ERROR: DKG CheckKey() failed!" << std::endl;
+			std::cerr << "ERROR: CheckKey() for tElG key failed" << std::endl;
 			delete dss, delete dkg;
-			release_mpis();
+			delete ring;
+			delete prv;
 			return -1;
 		}
 	}
 
-	// show information
+	// show information w.r.t. primary key
 	std::ios oldcoutstate(NULL);
 	oldcoutstate.copyfmt(std::cout);
-	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << std::hex << std::uppercase << "\t";
-	for (size_t i = 0; i < keyid.size(); i++)
-		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)keyid[i] << " ";
-	std::cout << std::dec << std::endl;
-	tmcg_openpgp_octets_t pub_hashing, fpr;
-	for (size_t i = 6; i < pub.size(); i++)
-		pub_hashing.push_back(pub[i]);
-	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, fpr);
-	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << std::hex << std::uppercase << "\t";
-	for (size_t i = 0; i < fpr.size(); i++)
-		std::cout << std::setfill('0') << std::setw(2) << std::right << (int)fpr[i] << " ";
-	std::cout << std::dec << std::endl;
-	std::cout << "OpenPGP Key Creation Time: " << std::endl << "\t" << ctime(&ckeytime);
+	std::string kid, fpr;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		KeyidCompute(prv->pub->pub_hashing, kid);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintCompute(prv->pub->pub_hashing, fpr);
+	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << "\t";
+	std::cout << kid << std::endl;
+	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << "\t";
+	std::cout << fpr << std::endl;
+	std::cout << "OpenPGP Key Creation Time: " <<
+		std::endl << "\t" << ctime(&prv->pub->creationtime);
 	std::cout << "OpenPGP Key Expiration Time: " << std::endl << "\t";
-	if (ekeytime == 0)
+	if (prv->pub->expirationtime == 0)
 		std::cout << "undefined" << std::endl;
 	else
 	{
-		ekeytime += ckeytime; // validity period of the key after key creation time
+		// compute validity period of the primary key after key creation time
+		time_t ekeytime = prv->pub->creationtime + prv->pub->expirationtime;
+		if (ekeytime < time(NULL))
+			std::cout << "[EXPIRED] ";
 		std::cout << ctime(&ekeytime);
 	}
-	std::cout << "OpenPGP User ID: " << std::endl << "\t";
-	std::cout << userid << std::endl;
-	std::cout << "Security level of domain parameter set: " << std::endl << "\t";
-	std::cout << "|p| = " << mpz_sizeinbase(dss->p, 2L) << " bit, ";
-	std::cout << "|q| = " << mpz_sizeinbase(dss->q, 2L) << " bit, ";
-	std::cout << "|g| = " << mpz_sizeinbase(dss->g, 2L) << " bit";
-	if (dss_n != 0)
-		std::cout << ", |h| = " << mpz_sizeinbase(dss->h, 2L) << " bit";
-	std::cout << std::endl;
-	if (dss_n != 0)
+	std::cout << "OpenPGP Revocation Keys: " << std::endl;
+	for (size_t i = 0; i < prv->pub->revkeys.size(); i++)
 	{
-		std::cout << "Threshold parameter set of primary key (tDSS): " << std::endl << "\t";
-		std::cout << "n = " << dss->n << ", s = " << dss->t << std::endl;
-		std::cout << "Set of non-disqualified parties of primary key (tDSS): " << std::endl << "\t" << "QUAL = { ";
-		for (size_t i = 0; i < dss->QUAL.size(); i++)
-			std::cout << "P_" << dss->QUAL[i] << " ";
-		std::cout << "}" << std::endl;
-		if (dss->dkg->x_rvss->QUAL.size())
-		{
-			std::cout << "Set of non-disqualified parties of x_rvss subprotocol: " << std::endl << "\t" << "QUAL = { ";
-			for (size_t i = 0; i < dss->dkg->x_rvss->QUAL.size(); i++)
-				std::cout << "P_" << dss->dkg->x_rvss->QUAL[i] << " ";
-			std::cout << "}" << std::endl;
-		}
-		std::cout << "Unique identifier of this party (tDSS): " << std::endl << "\t";
-		std::cout << "P_" << dss->i << std::endl;
-		std::cout << "Canonicalized peer list (CAPL): " << std::endl;
-		for (size_t i = 0; i < CAPL.size(); i++)
-			std::cout << "\t" << "P_" << ((dss->dkg->x_rvss->QUAL.size())?(i):(dss->QUAL[i])) << "\t" << CAPL[i] << std::endl;
-		std::cout << "Public commitments C_ik of x_rvss subprotocol: " << std::endl;
-		for (size_t i = 0; i < dss->dkg->x_rvss->C_ik.size(); i++)
-		{
-			for (size_t k = 0; k < dss->dkg->x_rvss->C_ik[i].size(); k++)
-				std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " << dss->dkg->x_rvss->C_ik[i][k] << std::endl;
-		}
+		tmcg_openpgp_revkey_t rk = prv->pub->revkeys[i];
+		tmcg_openpgp_octets_t f(rk.key_fingerprint,
+			 rk.key_fingerprint+sizeof(rk.key_fingerprint));
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintConvert(f, fpr);
+		std::cout << "\t" << fpr << std::endl;
 	}
-	if (sub.size() && (dkg != NULL))
+	if (prv->pub->revkeys.size() == 0)
+		std::cout << "\t" << "none" << std::endl;
+	size_t allflags = prv->pub->AccumulateFlags();
+	std::cout << "OpenPGP Key Flags: " << std::endl << "\t";
+	// The key may be used to certify other keys.
+	if ((allflags & 0x01) == 0x01)
+		std::cout << "C";
+	// The key may be used to sign data.
+	if ((allflags & 0x02) == 0x02)
+		std::cout << "S";
+	// The key may be used encrypt communications.
+	if ((allflags & 0x04) == 0x04)
+		std::cout << "E";
+	// The key may be used encrypt storage.
+	if ((allflags & 0x08) == 0x08)
+		std::cout << "e";
+	// The private component of this key may have
+	// been split by a secret-sharing mechanism.
+	if ((allflags & 0x10) == 0x10)
+		std::cout << "D";
+	// The key may be used for authentication.
+	if ((allflags & 0x20) == 0x20)
+		std::cout << "A";
+	// The private component of this key may be
+	// in the possession of more than one person.
+	if ((allflags & 0x80) == 0x80)
+		std::cout << "G";
+	if (allflags == 0x00)
+		std::cout << "undefined";
+	std::cout << std::endl;
+	// show information w.r.t. user IDs
+	for (size_t j = 0; j < prv->pub->userids.size(); j++)
 	{
-		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << std::hex << std::uppercase << "\t";
-		for (size_t i = 0; i < subkeyid.size(); i++)
-			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)subkeyid[i] << " ";
-		std::cout << std::dec << std::endl;
-		tmcg_openpgp_octets_t sub_hashing, sub_fpr;
-		for (size_t i = 6; i < sub.size(); i++)
-			sub_hashing.push_back(sub[i]);
-		CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(sub_hashing, sub_fpr);
-		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << std::hex << std::uppercase << "\t";
-		for (size_t i = 0; i < sub_fpr.size(); i++)
-			std::cout << std::setfill('0') << std::setw(2) << std::right << (int)sub_fpr[i] << " ";
-		std::cout << std::dec << std::endl;
-		std::cout << "Security level of domain parameter set: " << std::endl << "\t"; 
-		std::cout << "|p| = " << mpz_sizeinbase(dkg->p, 2L) << " bit, ";
-		std::cout << "|q| = " << mpz_sizeinbase(dkg->q, 2L) << " bit, ";
-		std::cout << "|g| = " << mpz_sizeinbase(dkg->g, 2L) << " bit, ";
-		std::cout << "|h| = " << mpz_sizeinbase(dkg->h, 2L) << " bit" << std::endl;
-		std::cout << "Threshold parameter set of subkey (DKG): " << std::endl << "\t";
+		std::cout << "OpenPGP User ID: " << std::endl << "\t";
+		std::cout << prv->pub->userids[j]->userid << std::endl;
+	}
+	// show information w.r.t. tDSS
+	std::cout << "Security level of domain parameter set: " <<
+		std::endl << "\t";
+	std::cout << "|p| = " << mpz_sizeinbase(dss->p, 2L) << " bits, ";
+	std::cout << "|q| = " << mpz_sizeinbase(dss->q, 2L) << " bits, ";
+	std::cout << "|g| = " << mpz_sizeinbase(dss->g, 2L) << " bits, ";
+	std::cout << "|h| = " << mpz_sizeinbase(dss->h, 2L) << " bits" << std::endl;
+	std::cout << "Threshold parameter set of primary key (tDSS): " <<
+		std::endl << "\t";
+	std::cout << "n = " << dss->n << ", s = " << dss->t << std::endl;
+	std::cout << "Set of non-disqualified parties of primary key (tDSS): " <<
+		std::endl << "\t" << "QUAL = { ";
+	for (size_t i = 0; i < dss->QUAL.size(); i++)
+		std::cout << "P_" << dss->QUAL[i] << " ";
+	std::cout << "}" << std::endl;
+	std::cout << "Set of non-disqualified parties of RVSS subprotocol: " <<
+		std::endl << "\t" << "QUAL = { ";
+	for (size_t i = 0; i < dss->dkg->x_rvss->QUAL.size(); i++)
+		std::cout << "P_" << dss->dkg->x_rvss->QUAL[i] << " ";
+	std::cout << "}" << std::endl;
+	std::cout << "Unique identifier of this party (tDSS): " <<
+		std::endl << "\t";
+	std::cout << "P_" << dss->i << std::endl;
+	std::cout << "Canonicalized peer list (CAPL): " << std::endl;
+	for (size_t i = 0; i < prv->tdss_capl.size(); i++)
+		std::cout << "\t" << "P_" << i << "\t" <<
+			prv->tdss_capl[i] << std::endl;
+	std::cout << "Public commitments C_ik of RVSS subprotocol: " << std::endl;
+	for (size_t i = 0; i < dss->dkg->x_rvss->C_ik.size(); i++)
+	{
+		for (size_t k = 0; k < dss->dkg->x_rvss->C_ik[i].size(); k++)
+			std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " <<
+				dss->dkg->x_rvss->C_ik[i][k] << std::endl;
+	}
+	// show information w.r.t. tElG
+	if (dkg != NULL)
+	{
+		TMCG_OpenPGP_PrivateSubkey *sub = prv->private_subkeys[0];
+		std::string kid2, fpr2;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyidCompute(sub->pub->sub_hashing, kid2);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintCompute(sub->pub->sub_hashing, fpr2);
+		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << "\t";
+		std::cout << kid2 << std::endl;
+		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << "\t";
+		std::cout << fpr2 << std::endl;
+		std::cout << "OpenPGP Key Creation Time: " <<
+			std::endl << "\t" << ctime(&sub->pub->creationtime);
+		std::cout << "OpenPGP Key Expiration Time: " << std::endl << "\t";
+		if (sub->pub->expirationtime == 0)
+			std::cout << "undefined" << std::endl;
+		else
+		{
+			// compute validity period of the subkey after key creation time
+			time_t ekeytime = sub->pub->creationtime + sub->pub->expirationtime;
+			if (ekeytime < time(NULL))
+				std::cout << "[EXPIRED] ";
+			std::cout << ctime(&ekeytime);
+		}
+		std::cout << "OpenPGP Revocation Keys: " << std::endl;
+		for (size_t i = 0; i < sub->pub->revkeys.size(); i++)
+		{
+			tmcg_openpgp_revkey_t rk = sub->pub->revkeys[i];
+			tmcg_openpgp_octets_t f(rk.key_fingerprint,
+				 rk.key_fingerprint+sizeof(rk.key_fingerprint));
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				FingerprintConvert(f, fpr2);
+			std::cout << "\t" << fpr2 << std::endl;
+		}
+		if (sub->pub->revkeys.size() == 0)
+			std::cout << "\t" << "none" << std::endl;
+		size_t allflags = sub->pub->AccumulateFlags();
+		std::cout << "OpenPGP Key Flags: " << std::endl << "\t";
+		// The key may be used to certify other keys.
+		if ((allflags & 0x01) == 0x01)
+			std::cout << "C";
+		// The key may be used to sign data.
+		if ((allflags & 0x02) == 0x02)
+			std::cout << "S";
+		// The key may be used encrypt communications.
+		if ((allflags & 0x04) == 0x04)
+			std::cout << "E";
+		// The key may be used encrypt storage.
+		if ((allflags & 0x08) == 0x08)
+			std::cout << "e";
+		// The private component of this key may have
+		// been split by a secret-sharing mechanism.
+		if ((allflags & 0x10) == 0x10)
+			std::cout << "D";
+		// The key may be used for authentication.
+		if ((allflags & 0x20) == 0x20)
+			std::cout << "A";
+		// The private component of this key may be
+		// in the possession of more than one person.
+		if ((allflags & 0x80) == 0x80)
+			std::cout << "G";
+		if (allflags == 0x00)
+			std::cout << "undefined";
+		std::cout << std::endl;
+		// show information w.r.t. tElG
+		std::cout << "Security level of domain parameter set (tElG): " <<
+			std::endl << "\t"; 
+		std::cout << "|p| = " << mpz_sizeinbase(dkg->p, 2L) << " bits, ";
+		std::cout << "|q| = " << mpz_sizeinbase(dkg->q, 2L) << " bits, ";
+		std::cout << "|g| = " << mpz_sizeinbase(dkg->g, 2L) << " bits, ";
+		std::cout << "|h| = " << mpz_sizeinbase(dkg->h, 2L) << " bits" <<
+			std::endl;
+		std::cout << "Threshold parameter set of subkey (tElG): " <<
+			std::endl << "\t";
 		std::cout << "n = " << dkg->n << ", t = " << dkg->t << std::endl;
-		std::cout << "Set of non-disqualified parties of subkey (DKG): " << std::endl << "\t" << "QUAL = { ";
+		std::cout << "Set of non-disqualified parties of subkey (tElG): " <<
+			std::endl << "\t" << "QUAL = { ";
 		for (size_t i = 0; i < dkg->QUAL.size(); i++)
 			std::cout << "P_" << dkg->QUAL[i] << " ";
 		std::cout << "}" << std::endl;
-		std::cout << "Unique identifier of this party (DKG): " << std::endl << "\t";
+		std::cout << "Unique identifier of this party (tElG): " <<
+			std::endl << "\t";
 		std::cout << "P_" << dkg->i << std::endl;
-		std::cout << "Public verification keys (DKG): " << std::endl;
+		std::cout << "Public verification keys (tElG): " << std::endl;
 		for (size_t i = 0; i < dkg->v_i.size(); i++)
 			std::cout << "\t" << "v_" << i << " = " << dkg->v_i[i] << std::endl;
-		std::cout << "Public commitments C_ik (DKG): " << std::endl;
+		std::cout << "Public commitments C_ik (tElG): " << std::endl;
 		for (size_t i = 0; i < dkg->C_ik.size(); i++)
 		{
 			for (size_t k = 0; k < dkg->C_ik[i].size(); k++)
-				std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " << dkg->C_ik[i][k] << std::endl;
+				std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " <<
+					dkg->C_ik[i][k] << std::endl;
 		}
 	}
-
 	// restore default formatting
 	std::cout.copyfmt(oldcoutstate);
 
 	// migrate peer identity, if requested by option "-m OLDPEER NEWPEER"
 	if (migrate_peer_from.length() && migrate_peer_to.length())
 	{
-		if ((dss_n != 0) && (CAPL.size() > 0))
+		std::vector<std::string> CAPL, CAPL_new;
+		for (size_t i = 0; i < prv->tdss_capl.size(); i++)
+			CAPL.push_back(prv->tdss_capl[i]);
+		size_t capl_idx = CAPL.size();
+		for (size_t i = 0; i < CAPL.size(); i++)
 		{
-			std::vector<std::string> CAPL_new;
-			size_t capl_idx = CAPL.size();
-			for (size_t i = 0; i < CAPL.size(); i++)
+			if (migrate_peer_from == CAPL[i])
+				capl_idx = i;
+			CAPL_new.push_back(CAPL[i]);
+		}
+		if (capl_idx == CAPL.size())
+		{
+			std::cerr << "ERROR: migration peer \"" << migrate_peer_from <<
+				"\" not contained in CAPL" << std::endl;
+			if (dkg != NULL)
+				delete dkg;
+			delete dss;
+			delete prv;
+			delete ring;	
+			return -1;
+		}
+		else
+			CAPL_new[capl_idx] = migrate_peer_to; // migration to NEWPEER
+		// canonicalize new peer list and check for lexicographical order
+		std::sort(CAPL_new.begin(), CAPL_new.end());
+		std::vector<std::string>::iterator it = std::unique(CAPL_new.begin(),
+			CAPL_new.end());
+		CAPL_new.resize(std::distance(CAPL_new.begin(), it));
+		if (CAPL_new.size() == CAPL.size())
+		{
+			for (size_t i = 0; i < CAPL_new.size(); i++)
 			{
-				if (migrate_peer_from == CAPL[i])
-					capl_idx = i;
-				CAPL_new.push_back(CAPL[i]);
-			}
-			if (capl_idx == CAPL.size())
-			{
-				std::cerr << "ERROR: migration peer \"" << migrate_peer_from << "\" not contained in CAPL" << std::endl;
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			else
-				CAPL_new[capl_idx] = migrate_peer_to; // migration to NEWPEER
-			// canonicalize new peer list and check for persitent lexicographical order
-			std::sort(CAPL_new.begin(), CAPL_new.end());
-			std::vector<std::string>::iterator it = std::unique(CAPL_new.begin(), CAPL_new.end());
-			CAPL_new.resize(std::distance(CAPL_new.begin(), it));
-			if (CAPL_new.size() == CAPL.size())
-			{
-				for (size_t i = 0; i < CAPL_new.size(); i++)
+				if ((i != capl_idx) && (CAPL_new[i] != CAPL[i]))
 				{
-					if ((i != capl_idx) && (CAPL_new[i] != CAPL[i]))
-					{
-						std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" <<
-							migrate_peer_to << "\" failed (wrong order of CAPL)" << std::endl;
-						if (sub.size() && (dkg != NULL))
-							delete dkg;
-						delete dss;
-						release_mpis();
-						return -1;
-					}
+					std::cerr << "ERROR: migration from peer \"" <<
+						migrate_peer_from << "\" to \"" << migrate_peer_to <<
+						"\" failed (wrong order of CAPL)" << std::endl;
+					if (dkg != NULL)
+						delete dkg;
+					delete dss;
+					delete prv;
+					delete ring;
+					return -1;
 				}
 			}
-			else
+		}
+		else
+		{
+			std::cerr << "ERROR: migration from peer \"" << migrate_peer_from <<
+				"\" to \"" <<  migrate_peer_to << "\" failed" <<
+				" (identity occupied)" << std::endl;
+			if (dkg != NULL)
+				delete dkg;
+			delete dss;
+			delete prv;
+			delete ring;
+			return -1;
+		}
+		// create an OpenPGP private key structure with refreshed values
+		tmcg_openpgp_octets_t sec, ssb;
+		gcry_mpi_t n, t, i, qualsize, x_rvss_qualsize;
+		std::vector<gcry_mpi_t> qual, x_rvss_qual;
+		n = gcry_mpi_set_ui(NULL, dss->n);
+		t = gcry_mpi_set_ui(NULL, dss->t);
+		i = gcry_mpi_set_ui(NULL, dss->i);
+		qualsize = gcry_mpi_set_ui(NULL, dss->QUAL.size());
+		for (size_t j = 0; j < dss->QUAL.size(); j++)
+		{
+			gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->QUAL[j]);
+			qual.push_back(tmp);
+		}
+		x_rvss_qualsize = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL.size());
+		for (size_t j = 0; j < dss->dkg->x_rvss->QUAL.size(); j++)
+		{
+			gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL[j]);
+			x_rvss_qual.push_back(tmp);
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSecEncodeExperimental107(prv->pub->creationtime,
+				prv->pub->dsa_p, prv->pub->dsa_q, prv->pub->dsa_g, prv->tdss_h,
+				prv->pub->dsa_y, n, t, i, qualsize, qual, x_rvss_qualsize,
+				x_rvss_qual, CAPL_new, prv->tdss_c_ik, prv->tdss_x_i,
+				prv->tdss_xprime_i, passphrase, sec);
+		gcry_mpi_release(n);
+		gcry_mpi_release(t);
+		gcry_mpi_release(i);
+		gcry_mpi_release(qualsize);
+		for (size_t j = 0; j < qual.size(); j++)
+			gcry_mpi_release(qual[j]);
+		qual.clear();
+		gcry_mpi_release(x_rvss_qualsize);
+		for (size_t j = 0; j < x_rvss_qual.size(); j++)
+			gcry_mpi_release(x_rvss_qual[j]);
+		x_rvss_qual.clear();
+		if (dkg != NULL)
+		{
+			n = gcry_mpi_set_ui(NULL, dkg->n);
+			t = gcry_mpi_set_ui(NULL, dkg->t);
+			i = gcry_mpi_set_ui(NULL, dkg->i);
+			qualsize = gcry_mpi_set_ui(NULL, dkg->QUAL.size());
+			for (size_t j = 0; j < dkg->QUAL.size(); j++)
 			{
-				std::cerr << "ERROR: migration from peer \"" << migrate_peer_from << "\" to \"" << 
-					migrate_peer_to << "\" failed (identity occupied)" << std::endl;
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			// create an OpenPGP DSA-based primary key using refreshed values from tDSS
-			gcry_mpi_t p, q, g, h, y, n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
-			std::vector<gcry_mpi_t> qual, x_rvss_qual;
-			std::vector< std::vector<gcry_mpi_t> > c_ik;
-			p = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(p, dss->p))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for p" << std::endl;
-				gcry_mpi_release(p);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			q = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(q, dss->q))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for q" << std::endl;
-				gcry_mpi_release(p);
-				gcry_mpi_release(q);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;	
-			}
-			g = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(g, dss->g))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for g" << std::endl;
-				gcry_mpi_release(p);
-				gcry_mpi_release(q);
-				gcry_mpi_release(g);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			h = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(h, dss->h))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for h" << std::endl;
-				gcry_mpi_release(p);
-				gcry_mpi_release(q);
-				gcry_mpi_release(g);
-				gcry_mpi_release(h);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			y = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(y, dss->y))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for y" << std::endl;
-				gcry_mpi_release(p);
-				gcry_mpi_release(q);
-				gcry_mpi_release(g);
-				gcry_mpi_release(h);
-				gcry_mpi_release(y);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			if (libgcrypt_secmem)
-				x_i = gcry_mpi_snew(2048);
-			else
-				x_i = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(x_i, dss->x_i))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for x_i" << std::endl;
-				gcry_mpi_release(p);
-				gcry_mpi_release(q);
-				gcry_mpi_release(g);
-				gcry_mpi_release(h);
-				gcry_mpi_release(y);
-				gcry_mpi_release(x_i);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			if (libgcrypt_secmem)
-				xprime_i = gcry_mpi_snew(2048);
-			else
-				xprime_i = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
-			{
-				std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for xprime_i" << std::endl;
-				gcry_mpi_release(p);
-				gcry_mpi_release(q);
-				gcry_mpi_release(g);
-				gcry_mpi_release(h);
-				gcry_mpi_release(y);
-				gcry_mpi_release(x_i);
-				gcry_mpi_release(xprime_i);
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			n = gcry_mpi_set_ui(NULL, dss->n);
-			t = gcry_mpi_set_ui(NULL, dss->t);
-			i = gcry_mpi_set_ui(NULL, dss->i);
-			qualsize = gcry_mpi_set_ui(NULL, dss->QUAL.size());
-			for (size_t j = 0; j < dss->QUAL.size(); j++)
-			{
-				gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->QUAL[j]);
+				gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dkg->QUAL[j]);
 				qual.push_back(tmp);
 			}
-			x_rvss_qualsize = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL.size());
-			for (size_t j = 0; j < dss->dkg->x_rvss->QUAL.size(); j++)
-			{
-				gcry_mpi_t tmp = gcry_mpi_set_ui(NULL, dss->dkg->x_rvss->QUAL[j]);
-				x_rvss_qual.push_back(tmp);
-			}
-			c_ik.resize(dss->n);
-			for (size_t j = 0; j < c_ik.size(); j++)
-			{
-				for (size_t k = 0; k <= dss->t; k++)
-				{
-					gcry_mpi_t tmp;
-					tmp = gcry_mpi_new(2048);
-					if (!mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
-					{
-						std::cerr << "ERROR: migrate -- mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
-						gcry_mpi_release(p);
-						gcry_mpi_release(q);
-						gcry_mpi_release(g);
-						gcry_mpi_release(h);
-						gcry_mpi_release(y);
-						gcry_mpi_release(x_i);
-						gcry_mpi_release(xprime_i);
-						gcry_mpi_release(n);
-						gcry_mpi_release(t);
-						gcry_mpi_release(i);
-						gcry_mpi_release(qualsize);
-						for (size_t jj = 0; jj < qual.size(); jj++)
-							gcry_mpi_release(qual[jj]);
-						gcry_mpi_release(x_rvss_qualsize);
-						for (size_t jj = 0; jj < x_rvss_qual.size(); jj++)
-							gcry_mpi_release(x_rvss_qual[jj]);
-						for (size_t jj = 0; jj < c_ik.size(); jj++)
-							for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
-								gcry_mpi_release(c_ik[jj][kk]);
-						gcry_mpi_release(tmp);
-						if (sub.size() && (dkg != NULL))
-							delete dkg;
-						delete dss;
-						release_mpis();
-						return -1;
-					}
-					c_ik[j].push_back(tmp);
-				}
-			}
-			sec.clear(); // clear old private key (tDSS)
-			CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental107(ckeytime, p, q, g, h, y, 
-				n, t, i, qualsize, qual, x_rvss_qualsize, x_rvss_qual, CAPL_new, c_ik, x_i, xprime_i, passphrase, sec);
-			gcry_mpi_release(p);
-			gcry_mpi_release(q);
-			gcry_mpi_release(g);
-			gcry_mpi_release(h);
-			gcry_mpi_release(y);
-			gcry_mpi_release(x_i);
-			gcry_mpi_release(xprime_i);
+			TMCG_OpenPGP_PrivateSubkey *sub = prv->private_subkeys[0];
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSsbEncodeExperimental109(sub->pub->creationtime,
+				sub->pub->elg_p, sub->telg_q, sub->pub->elg_g, sub->telg_h,
+				sub->pub->elg_y, n, t, i, qualsize, qual, sub->telg_v_i,
+				sub->telg_c_ik, sub->telg_x_i, sub->telg_xprime_i,
+				passphrase, ssb);
 			gcry_mpi_release(n);
 			gcry_mpi_release(t);
 			gcry_mpi_release(i);
 			gcry_mpi_release(qualsize);
 			for (size_t j = 0; j < qual.size(); j++)
 				gcry_mpi_release(qual[j]);
-			gcry_mpi_release(x_rvss_qualsize);
-			for (size_t j = 0; j < x_rvss_qual.size(); j++)
-				gcry_mpi_release(x_rvss_qual[j]);
-			for (size_t j = 0; j < c_ik.size(); j++)
-				for (size_t k = 0; k < c_ik[j].size(); k++)
-					gcry_mpi_release(c_ik[j][k]);
-			// export updated private key in OpenPGP armor format
-			tmcg_openpgp_octets_t all;
-			std::string armor;
-			std::stringstream secfilename;
-			secfilename << thispeer << "_dkg-sec.asc";
-			all.insert(all.end(), sec.begin(), sec.end());
-			all.insert(all.end(), uid.begin(), uid.end());
-			all.insert(all.end(), uidsig.begin(), uidsig.end());
-			if (sub.size())
-			{
-				all.insert(all.end(), ssb.begin(), ssb.end());
-				all.insert(all.end(), subsig.begin(), subsig.end());
-			}
-			CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
-			if (opt_verbose > 1)
-				std::cout << armor << std::endl;
-			std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out | std::ofstream::trunc);
-			if (!secofs.good())
-			{
-				std::cerr << "ERROR: opening private key file failed" << std::endl;
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			secofs << armor;
-			if (!secofs.good())
-			{
-				std::cerr << "ERROR: writing private key file failed" << std::endl;
-				if (sub.size() && (dkg != NULL))
-					delete dkg;
-				delete dss;
-				release_mpis();
-				return -1;
-			}
-			secofs.close();
-			if (opt_verbose)
-				std::cerr << "INFO: migration from peer \"" << migrate_peer_from << "\" to \"" << migrate_peer_to << "\" finished" << std::endl;
+			qual.clear();
 		}
-		else
-			std::cerr << "WARNING: migration not possible due to missing or bad tDSS key" << std::endl;
+		// export updated private key in OpenPGP armor format
+		tmcg_openpgp_octets_t all;
+		std::string armor;
+		std::stringstream secfilename;
+		secfilename << thispeer << "_dkg-sec.asc";
+		all.insert(all.end(), sec.begin(), sec.end());
+		for (size_t k = 0; k < prv->pub->selfsigs.size(); k++)
+			all.insert(all.end(),
+				(prv->pub->selfsigs[k]->packet).begin(),
+				(prv->pub->selfsigs[k]->packet).end());
+		for (size_t k = 0; k < prv->pub->keyrevsigs.size(); k++)
+			all.insert(all.end(),
+				(prv->pub->keyrevsigs[k]->packet).begin(),
+				(prv->pub->keyrevsigs[k]->packet).end());
+		for (size_t j = 0; j < prv->pub->userids.size(); j++)
+		{
+			TMCG_OpenPGP_UserID *uid = prv->pub->userids[j];
+			if (uid->valid)
+			{
+				all.insert(all.end(),
+					(uid->packet).begin(), (uid->packet).end());
+				for (size_t k = 0; k < uid->selfsigs.size(); k++)
+					all.insert(all.end(),
+						(uid->selfsigs[k]->packet).begin(),
+						(uid->selfsigs[k]->packet).end());
+				for (size_t k = 0; k < uid->revsigs.size(); k++)
+					all.insert(all.end(),
+						(uid->selfsigs[k]->packet).begin(),
+						(uid->selfsigs[k]->packet).end());
+			}
+		}
+		for (size_t j = 0; j < prv->pub->userattributes.size(); j++)
+		{
+			TMCG_OpenPGP_UserAttribute *uat = prv->pub->userattributes[j];
+			if (uat->valid)
+			{
+				all.insert(all.end(),
+					(uat->packet).begin(), (uat->packet).end());
+				for (size_t k = 0; k < uat->selfsigs.size(); k++)
+					all.insert(all.end(),
+						(uat->selfsigs[k]->packet).begin(),
+						(uat->selfsigs[k]->packet).end());
+				for (size_t k = 0; k < uat->revsigs.size(); k++)
+					all.insert(all.end(),
+						(uat->selfsigs[k]->packet).begin(),
+						(uat->selfsigs[k]->packet).end());
+			}
+		}
+		if (dkg != NULL)
+		{
+			all.insert(all.end(), ssb.begin(), ssb.end());
+			TMCG_OpenPGP_Subkey *sub = prv->private_subkeys[0]->pub;
+			for (size_t k = 0; k < sub->selfsigs.size(); k++)
+				all.insert(all.end(),
+					(sub->selfsigs[k]->packet).begin(),
+					(sub->selfsigs[k]->packet).end());
+			for (size_t k = 0; k < sub->bindsigs.size(); k++)
+				all.insert(all.end(),
+					(sub->bindsigs[k]->packet).begin(),
+					(sub->bindsigs[k]->packet).end());
+			for (size_t k = 0; k < sub->pbindsigs.size(); k++)
+				all.insert(all.end(),
+					(sub->pbindsigs[k]->packet).begin(),
+					(sub->pbindsigs[k]->packet).end());
+			for (size_t k = 0; k < sub->keyrevsigs.size(); k++)
+				all.insert(all.end(),
+					(sub->keyrevsigs[k]->packet).begin(),
+					(sub->keyrevsigs[k]->packet).end());
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
+		if (opt_verbose > 1)
+			std::cout << armor << std::endl;
+		std::ofstream secofs((secfilename.str()).c_str(),
+			std::ofstream::out | std::ofstream::trunc);
+		if (!secofs.good())
+		{
+			std::cerr << "ERROR: opening private key file failed" << std::endl;
+			if (dkg != NULL)
+				delete dkg;
+			delete dss;
+			delete prv;
+			delete ring;
+			return -1;
+		}
+		secofs << armor;
+		if (!secofs.good())
+		{
+			std::cerr << "ERROR: writing private key file failed" << std::endl;
+			if (dkg != NULL)
+				delete dkg;
+			delete dss;
+			delete prv;
+			delete ring;
+			return -1;
+		}
+		secofs.close();
+		if (opt_verbose)
+			std::cerr << "INFO: migration from peer \"" << migrate_peer_from <<
+			"\" to \"" << migrate_peer_to << "\" finished" << std::endl;
 	}
 
-	// release
-	if (sub.size() && (dkg != NULL))
+	if (dkg != NULL)
 		delete dkg;
 	delete dss;
-	release_mpis();
+	delete prv;
+	delete ring;
 	
 	return 0;
 }

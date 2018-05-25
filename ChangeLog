@@ -7,6 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-05-25] dkg-keyinfo: added option "-k" (keyring with external keys)
+* [2018-05-25] dkg-keyinfo: replace OpenPGP parsing by functions from LibTMCG
 * [2018-05-19] dkg-decrypt: replace OpenPGP parsing by functions from LibTMCG
 * [2018-05-13] dkg-keycheck: added option "-p" (read from private key block)
 * [2018-04-25] dkg-keycheck: include signatures from user attributes

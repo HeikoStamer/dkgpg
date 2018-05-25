@@ -1046,11 +1046,11 @@ int main
 		}
 		for (size_t j = 0; j < primary->userattributes.size(); j++)
 		{
-			for (size_t i = 0; i < primary->userattributes[j]->selfsigs.size();
+			TMCG_OpenPGP_UserAttribute *uat = primary->userattributes[j];
+			for (size_t i = 0; i < uat->selfsigs.size();
 				i++)
 			{
-				TMCG_OpenPGP_Signature *sig =
-					primary->userattributes[j]->selfsigs[i];
+				TMCG_OpenPGP_Signature *sig = uat->selfsigs[i];
 				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
 					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
@@ -1068,10 +1068,9 @@ int main
 					std::cerr << "WARNING: inconsistent public-key algorithm" <<
 						std::endl << "\t";
 			}
-			for (size_t i = 0; i < primary->userattributes[j]->revsigs.size(); i++)
+			for (size_t i = 0; i < uat->revsigs.size(); i++)
 			{
-				TMCG_OpenPGP_Signature *sig =
-					primary->userattributes[j]->revsigs[i];
+				TMCG_OpenPGP_Signature *sig = uat->revsigs[i];
 				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
 					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))

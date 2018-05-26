@@ -23,7 +23,7 @@
 	#include "dkgpg_config.h"
 #endif
 
-#include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <vector>
 #include <map>
@@ -34,6 +34,7 @@
 
 #include <libTMCG.hh>
 #include "dkg-io.hh"
+#include "dkg-common.hh"
 
 int main
 	(int argc, char *const *argv)
@@ -55,7 +56,7 @@ int main
 		std::string arg = argv[i+1];
 		if (arg.find("-m") == 0)
 		{
-			size_t idx = ++i + 1; // Note: this option has two required arguments
+			size_t idx = ++i + 1; // Note: this option has 2 required arguments
 			if (idx < (size_t)(argc - 1))
 			{
 				if ((migrate_peer_from.length() == 0) &&
@@ -64,11 +65,13 @@ int main
 					migrate_peer_from = argv[i+1], migrate_peer_to = argv[i+2];
 				}
 				else
-					std::cerr << "WARNING: duplicate option \"" << arg << "\" ignored" << std::endl;
+					std::cerr << "WARNING: duplicate option \"" << arg <<
+						"\" ignored" << std::endl;
 			}
 			else
 			{
-				std::cerr << "ERROR: missing some required arguments for option \"" << arg << "\"" << std::endl;
+				std::cerr << "ERROR: missing some required arguments for" <<
+					" option \"" << arg << "\"" << std::endl;
 				return -1;
 			}
 			++i; // Note: this option has two required arguments
@@ -84,19 +87,25 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -h, --help           print this help" << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
+				std::cout << "  -h, --help           print this help" <<
+					std::endl;
 				std::cout << "  -k FILENAME          use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -m OLDPEER NEWPEER   migrate OLDPEER identity to NEWPEER" << std::endl;
-				std::cout << "  -v, --version        print the version number" << std::endl;
-				std::cout << "  -V, --verbose        turn on verbose output" << std::endl;
+				std::cout << "  -m OLDPEER NEWPEER   migrate OLDPEER" <<
+					" identity to NEWPEER" << std::endl;
+				std::cout << "  -v, --version        print the version" <<
+					" number" << std::endl;
+				std::cout << "  -V, --verbose        turn on verbose" <<
+					" output" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
@@ -120,7 +129,8 @@ int main
 		}
 		else
 		{
-			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" <<
+				std::endl;
 			return -1;
 		}
 	}
@@ -132,7 +142,8 @@ int main
 	// check command line arguments
 	if (peers.size() < 1)
 	{
-		std::cerr << "ERROR: no peer given as argument; usage: " << usage << std::endl;
+		std::cerr << "ERROR: no peer given as argument; usage: " << usage <<
+			std::endl;
 		return -1;
 	}
 	if (peers.size() != 1)
@@ -144,11 +155,13 @@ int main
 	// lock memory
 	if (!lock_memory())
 	{
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required for memory protection" << std::endl;
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
+			" for memory protection" << std::endl;
 		// at least try to use libgcrypt's secure memory
 		if (!gcry_check_version(TMCG_LIBGCRYPT_VERSION))
 		{
-			std::cerr << "ERROR: libgcrypt version >= " << TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
+			std::cerr << "ERROR: libgcrypt version >= " <<
+				TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
 			return -1;
 		}
 		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
@@ -165,13 +178,15 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
 
 	// read the key file
 	std::string armored_seckey, thispeer = peers[0];
 	if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
 	{
-		std::cerr << "WARNING: weak permissions of private key file detected" << std::endl;
+		std::cerr << "WARNING: weak permissions of private key file detected" <<
+			std::endl;
 		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
 			return -1;
 	}
@@ -249,51 +264,9 @@ int main
 	}
 
 	// create an instance of tDSS by stored parameters from private key
-	std::stringstream dss_in;
-	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
-		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
-	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
-		prv->tdss_i << std::endl;
-	dss_in << prv->tdss_x_i << std::endl << prv->tdss_xprime_i << std::endl <<
-		prv->pub->dsa_y << std::endl;
-	dss_in << prv->tdss_qual.size() << std::endl;
-	for (size_t i = 0; i < prv->tdss_qual.size(); i++)
-		dss_in << prv->tdss_qual[i] << std::endl;
-	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
-		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
-	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
-		prv->tdss_i << std::endl;
-	dss_in << prv->tdss_x_i << std::endl << prv->tdss_xprime_i << std::endl <<
-		prv->pub->dsa_y << std::endl;
-	dss_in << prv->tdss_qual.size() << std::endl;
-	for (size_t i = 0; i < prv->tdss_qual.size(); i++)
-		dss_in << prv->tdss_qual[i] << std::endl;
-	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
-		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
-	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
-		prv->tdss_i << std::endl << prv->tdss_t << std::endl;
-	dss_in << prv->tdss_x_i << std::endl << prv->tdss_xprime_i << std::endl;
-	dss_in << "0" << std::endl << "0" << std::endl;
-	dss_in << prv->tdss_x_rvss_qual.size() << std::endl;
-	for (size_t i = 0; i < prv->tdss_x_rvss_qual.size(); i++)
-		dss_in << prv->tdss_x_rvss_qual[i] << std::endl;
-	assert((prv->tdss_c_ik.size() == prv->tdss_n));
-	for (size_t i = 0; i < prv->tdss_c_ik.size(); i++)
+	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
+	if (!init_tDSS(prv, opt_verbose, dss))
 	{
-		for (size_t j = 0; j < prv->tdss_c_ik.size(); j++)
-			dss_in << "0" << std::endl << "0" << std::endl;
-		assert((prv->tdss_c_ik[i].size() == (prv->tdss_t + 1)));
-		for (size_t k = 0; k < prv->tdss_c_ik[i].size(); k++)
-			dss_in << prv->tdss_c_ik[i][k] << std::endl;
-	}
-	if (opt_verbose)
-		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" <<
-			std::endl;
-	CanettiGennaroJareckiKrawczykRabinDSS *dss =
-		new CanettiGennaroJareckiKrawczykRabinDSS(dss_in);
-	if (!dss->CheckGroup())
-	{
-		std::cerr << "ERROR: bad tDSS domain parameters" << std::endl;
 		delete dss;
 		delete ring;
 		delete prv;
@@ -315,48 +288,8 @@ int main
 		}
 		
 		// create an instance of tElG by stored parameters from private key
-		std::stringstream dkg_in;
-		dkg_in << sub->pub->elg_p << std::endl << sub->telg_q << std::endl <<
-			sub->pub->elg_g << std::endl << sub->telg_h << std::endl;
-		dkg_in << sub->telg_n << std::endl << sub->telg_t << std::endl <<
-			sub->telg_i << std::endl;
-		dkg_in << sub->telg_x_i << std::endl << sub->telg_xprime_i <<
-			std::endl << sub->pub->elg_y << std::endl;
-		dkg_in << sub->telg_qual.size() << std::endl;
-		for (size_t i = 0; i < sub->telg_qual.size(); i++)
-			dkg_in << sub->telg_qual[i] << std::endl;
-		for (size_t i = 0; i < sub->telg_n; i++)
-			dkg_in << "1" << std::endl; // y_i not yet stored
-		for (size_t i = 0; i < sub->telg_n; i++)
-			dkg_in << "0" << std::endl; // z_i not yet stored
-		assert((sub->telg_v_i.size() == sub->telg_n));
-		for (size_t i = 0; i < sub->telg_v_i.size(); i++)
-			dkg_in << sub->telg_v_i[i] << std::endl;
-		assert((sub->telg_c_ik.size() == sub->telg_n));
-		for (size_t i = 0; i < sub->telg_n; i++)
+		if (!init_tElG(sub, opt_verbose, dkg))
 		{
-			// s_ij and sprime_ij not yet stored
-			for (size_t j = 0; j < sub->telg_n; j++)
-				dkg_in << "0" << std::endl << "0" << std::endl;
-			assert((sub->telg_c_ik[i].size() == (sub->telg_t + 1)));
-			for (size_t k = 0; k < sub->telg_c_ik[i].size(); k++)
-				dkg_in << sub->telg_c_ik[i][k] << std::endl;
-		}
-		if (opt_verbose)
-			std::cerr << "INFO: GennaroJareckiKrawczykRabinDKG(in, ...)" <<
-				std::endl;
-		dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
-		if (!dkg->CheckGroup())
-		{
-			std::cerr << "ERROR: bad tElG domain parameters" << std::endl;
-			delete dss, delete dkg;
-			delete ring;
-			delete prv;
-			return -1;
-		}
-		if (!dkg->CheckKey())
-		{
-			std::cerr << "ERROR: CheckKey() for tElG key failed" << std::endl;
 			delete dss, delete dkg;
 			delete ring;
 			delete prv;
@@ -365,8 +298,6 @@ int main
 	}
 
 	// show information w.r.t. primary key
-	std::ios oldcoutstate(NULL);
-	oldcoutstate.copyfmt(std::cout);
 	std::string kid, fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyidCompute(prv->pub->pub_hashing, kid);
@@ -565,8 +496,6 @@ int main
 					dkg->C_ik[i][k] << std::endl;
 		}
 	}
-	// restore default formatting
-	std::cout.copyfmt(oldcoutstate);
 
 	// migrate peer identity, if requested by option "-m OLDPEER NEWPEER"
 	if (migrate_peer_from.length() && migrate_peer_to.length())

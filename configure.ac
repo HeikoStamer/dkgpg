@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180506])
+AC_REVISION([20180526])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.7], [HeikoStamer@gmx.net], [dkgpg],
@@ -106,7 +106,7 @@ AC_SUBST(LIBTMCG_CFLAGS)
 AC_HEADER_STDC
 AC_HEADER_TIME
 AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
- ctime climits errno.h fcntl.h fstream functional inttypes.h iomanip iostream\
+ ctime climits errno.h fcntl.h fstream functional inttypes.h iostream\
  limits.h list map sstream stdint.h stdio.h string string.h sys/stat.h\
  sys/select.h sys/types.h time.h unistd.h vector], , 
 	AC_MSG_ERROR([some headers are missing]))

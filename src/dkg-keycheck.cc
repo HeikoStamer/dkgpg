@@ -25,8 +25,6 @@
 
 #include <iostream>
 #include <sstream>
-#include <fstream>
-#include <iomanip>
 #include <vector>
 #include <map>
 #include <string>
@@ -837,8 +835,6 @@ int main
 	}
 
 	// show information w.r.t. primary key
-	std::ios oldcoutstate(NULL);
-	oldcoutstate.copyfmt(std::cout);
 	std::string kid, fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyidCompute(primary->pub_hashing, kid);
@@ -1394,9 +1390,6 @@ int main
 			}
 		}
 	}
-
-	// restore default formatting
-	std::cout.copyfmt(oldcoutstate);
 
 	// release primary key and keyring structures
 	if (opt_private)

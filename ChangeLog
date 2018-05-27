@@ -7,6 +7,15 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-05-27] dkg-refresh: replace OpenPGP parsing by functions from LibTMCG
+* [2018-05-27] dkg-refresh: added option "-k" (keyring with external keys)
+* [2018-05-27] dkg-revoke: replace OpenPGP parsing by functions from LibTMCG
+* [2018-05-27] dkg-revoke: added option "-k" (keyring with external keys)
+* [2018-05-26] dkg-keysign: replace OpenPGP parsing by functions from LibTMCG
+* [2018-05-26] dkg-sign: added option "-k" (keyring with external keys)
+* [2018-05-26] dkg-sign: replace OpenPGP parsing by functions from LibTMCG
+* [2018-05-26] dkg-decrypt: added option "-k" (keyring with external keys)
+* [2018-05-26] dkg-decrypt: replace OpenPGP parsing by functions from LibTMCG
 * [2018-05-25] dkg-keyinfo: added option "-k" (keyring with external keys)
 * [2018-05-25] dkg-keyinfo: replace OpenPGP parsing by functions from LibTMCG
 * [2018-05-19] dkg-decrypt: replace OpenPGP parsing by functions from LibTMCG

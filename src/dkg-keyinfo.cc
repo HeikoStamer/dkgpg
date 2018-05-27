@@ -44,9 +44,8 @@ int main
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
 	std::vector<std::string>	peers;
-	std::string					passphrase, userid;
+	std::string					passphrase, kfilename;
 	std::string					migrate_peer_from, migrate_peer_to;
-	std::string					kfilename;
 	int 						opt_verbose = 0;
 	char						*opt_k = NULL;
 
@@ -185,8 +184,8 @@ int main
 	std::string armored_seckey, thispeer = peers[0];
 	if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
 	{
-		std::cerr << "WARNING: weak permissions of private key file detected" <<
-			std::endl;
+		std::cerr << "WARNING: weak permissions of private key file" <<
+			" detected" << std::endl;
 		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
 			return -1;
 	}
@@ -255,7 +254,8 @@ int main
 		delete prv;
 		return -1;
 	}
-	if (prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
+	if ((prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) &&
+		(prv->pkalgo != TMCG_OPENPGP_PKALGO_DSA))
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
 		delete ring;
@@ -265,12 +265,15 @@ int main
 
 	// create an instance of tDSS by stored parameters from private key
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
-	if (!init_tDSS(prv, opt_verbose, dss))
+	if (prv->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
 	{
-		delete dss;
-		delete ring;
-		delete prv;
-		return -1;
+		if (!init_tDSS(prv, opt_verbose, dss))
+		{
+			delete dss;
+			delete ring;
+			delete prv;
+			return -1;
+		}
 	}
 
 	GennaroJareckiKrawczykRabinDKG *dkg = NULL;
@@ -286,11 +289,12 @@ int main
 			delete prv;
 			return -1;
 		}
-		
 		// create an instance of tElG by stored parameters from private key
 		if (!init_tElG(sub, opt_verbose, dkg))
 		{
-			delete dss, delete dkg;
+			delete dkg;
+			if (dss != NULL)
+				delete dss;
 			delete ring;
 			delete prv;
 			return -1;
@@ -366,43 +370,48 @@ int main
 		std::cout << "OpenPGP User ID: " << std::endl << "\t";
 		std::cout << prv->pub->userids[j]->userid << std::endl;
 	}
-	// show information w.r.t. tDSS
-	std::cout << "Security level of domain parameter set: " <<
-		std::endl << "\t";
-	std::cout << "|p| = " << mpz_sizeinbase(dss->p, 2L) << " bits, ";
-	std::cout << "|q| = " << mpz_sizeinbase(dss->q, 2L) << " bits, ";
-	std::cout << "|g| = " << mpz_sizeinbase(dss->g, 2L) << " bits, ";
-	std::cout << "|h| = " << mpz_sizeinbase(dss->h, 2L) << " bits" << std::endl;
-	std::cout << "Threshold parameter set of primary key (tDSS): " <<
-		std::endl << "\t";
-	std::cout << "n = " << dss->n << ", s = " << dss->t << std::endl;
-	std::cout << "Set of non-disqualified parties of primary key (tDSS): " <<
-		std::endl << "\t" << "QUAL = { ";
-	for (size_t i = 0; i < dss->QUAL.size(); i++)
-		std::cout << "P_" << dss->QUAL[i] << " ";
-	std::cout << "}" << std::endl;
-	std::cout << "Set of non-disqualified parties of RVSS subprotocol: " <<
-		std::endl << "\t" << "QUAL = { ";
-	for (size_t i = 0; i < dss->dkg->x_rvss->QUAL.size(); i++)
-		std::cout << "P_" << dss->dkg->x_rvss->QUAL[i] << " ";
-	std::cout << "}" << std::endl;
-	std::cout << "Unique identifier of this party (tDSS): " <<
-		std::endl << "\t";
-	std::cout << "P_" << dss->i << std::endl;
-	std::cout << "Canonicalized peer list (CAPL): " << std::endl;
-	for (size_t i = 0; i < prv->tdss_capl.size(); i++)
-		std::cout << "\t" << "P_" << i << "\t" <<
-			prv->tdss_capl[i] << std::endl;
-	std::cout << "Public commitments C_ik of RVSS subprotocol: " << std::endl;
-	for (size_t i = 0; i < dss->dkg->x_rvss->C_ik.size(); i++)
+	if (dss != NULL)
 	{
-		for (size_t k = 0; k < dss->dkg->x_rvss->C_ik[i].size(); k++)
-			std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " <<
-				dss->dkg->x_rvss->C_ik[i][k] << std::endl;
+		// show information w.r.t. tDSS
+		std::cout << "Security level of domain parameter set: " <<
+			std::endl << "\t";
+		std::cout << "|p| = " << mpz_sizeinbase(dss->p, 2L) << " bits, ";
+		std::cout << "|q| = " << mpz_sizeinbase(dss->q, 2L) << " bits, ";
+		std::cout << "|g| = " << mpz_sizeinbase(dss->g, 2L) << " bits, ";
+		std::cout << "|h| = " << mpz_sizeinbase(dss->h, 2L) << " bits" <<
+			std::endl;
+		std::cout << "Threshold parameter set of primary key (tDSS): " <<
+			std::endl << "\t";
+		std::cout << "n = " << dss->n << ", s = " << dss->t << std::endl;
+		std::cout << "Set of non-disqualified parties of primary key" <<
+			" (tDSS): " << std::endl << "\t" << "QUAL = { ";
+		for (size_t i = 0; i < dss->QUAL.size(); i++)
+			std::cout << "P_" << dss->QUAL[i] << " ";
+		std::cout << "}" << std::endl;
+		std::cout << "Set of non-disqualified parties of RVSS subprotocol: " <<
+			std::endl << "\t" << "QUAL = { ";
+		for (size_t i = 0; i < dss->dkg->x_rvss->QUAL.size(); i++)
+			std::cout << "P_" << dss->dkg->x_rvss->QUAL[i] << " ";
+		std::cout << "}" << std::endl;
+		std::cout << "Unique identifier of this party (tDSS): " <<
+			std::endl << "\t";
+		std::cout << "P_" << dss->i << std::endl;
+		std::cout << "Canonicalized peer list (CAPL): " << std::endl;
+		for (size_t i = 0; i < prv->tdss_capl.size(); i++)
+			std::cout << "\t" << "P_" << i << "\t" <<
+				prv->tdss_capl[i] << std::endl;
+		std::cout << "Public commitments C_ik of RVSS subprotocol: " <<
+			std::endl;
+		for (size_t i = 0; i < dss->dkg->x_rvss->C_ik.size(); i++)
+		{
+			for (size_t k = 0; k < dss->dkg->x_rvss->C_ik[i].size(); k++)
+				std::cout << "\t" << "C_ik[" << i << "][" << k << "] = " <<
+					dss->dkg->x_rvss->C_ik[i][k] << std::endl;
+		}
 	}
-	// show information w.r.t. tElG
 	if (dkg != NULL)
 	{
+		// show information w.r.t. tElG
 		TMCG_OpenPGP_PrivateSubkey *sub = prv->private_subkeys[0];
 		std::string kid2, fpr2;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -498,7 +507,8 @@ int main
 	}
 
 	// migrate peer identity, if requested by option "-m OLDPEER NEWPEER"
-	if (migrate_peer_from.length() && migrate_peer_to.length())
+	if (migrate_peer_from.length() && migrate_peer_to.length() &&
+		(dss != NULL))
 	{
 		std::vector<std::string> CAPL, CAPL_new;
 		for (size_t i = 0; i < prv->tdss_capl.size(); i++)
@@ -724,7 +734,8 @@ int main
 
 	if (dkg != NULL)
 		delete dkg;
-	delete dss;
+	if (dss != NULL)
+		delete dss;
 	delete prv;
 	delete ring;
 	

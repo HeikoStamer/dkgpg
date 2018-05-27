@@ -31,8 +31,7 @@ dist_man_MANS = dkg-generate.1 dkg-encrypt.1 dkg-decrypt.1 dkg-sign.1\
 dkg_gencrs_SOURCES = dkg-gencrs.cc
 dkg_gencrs_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 dkg_generate_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
- dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
- dkg-io.hh dkg-io.cc dkg-generate.cc
+ dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-io.hh dkg-io.cc dkg-generate.cc
 dkg_encrypt_SOURCES = dkg-io.hh dkg-io.cc dkg-encrypt.cc
 dkg_encrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 dkg_decrypt_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\

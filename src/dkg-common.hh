@@ -35,16 +35,7 @@
 	#include <errno.h>
 
 	#include <libTMCG.hh>
-/*
-	void init_mpis
-		();
-	bool parse_private_key
-		(const std::string &in,
-		 time_t &keycreationtime_out, time_t &keyexpirationtime_out,
-		 std::vector<std::string> &capl_out);
-	void release_mpis
-		();
-*/
+
 	bool init_tDSS
 		(const TMCG_OpenPGP_Prvkey *prv, const int opt_verbose,
 		 CanettiGennaroJareckiKrawczykRabinDSS* &dss);

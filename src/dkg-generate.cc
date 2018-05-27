@@ -44,19 +44,19 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include <libTMCG.hh>
 #include <aiounicast_select.hh>
 
-#include "dkg-common.hh"
-#include "dkg-io.hh"
 #include "dkg-tcpip-common.hh"
 #include "dkg-gnunet-common.hh"
+#include "dkg-io.hh"
 
-int					pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2], broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
-pid_t					pid[DKGPG_MAX_N];
-std::vector<std::string>		peers;
-bool					instance_forked = false;
+int							pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+int							broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+pid_t						pid[DKGPG_MAX_N];
+std::vector<std::string>	peers;
+bool						instance_forked = false;
 
-std::string				passphrase, userid, passwords, hostname, port;
-tmcg_openpgp_octets_t			keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
-std::map<size_t, size_t>		idx2dkg, dkg2idx;
+std::string					passphrase, userid, passwords, hostname, port;
+tmcg_openpgp_octets_t		keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+std::map<size_t, size_t>	idx2dkg, dkg2idx;
 mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
 size_t					dss_n, dss_t, dss_i;
 std::vector<size_t>			dss_qual, dss_x_rvss_qual;
@@ -73,10 +73,10 @@ bool					libgcrypt_secmem = false;
 char					*opt_crs = NULL;
 char					*opt_passwords = NULL;
 char					*opt_hostname = NULL;
-unsigned long int			opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
+unsigned long int		opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
 
 bool					fips = false;
-std::stringstream			crss;
+std::stringstream		crss;
 mpz_t 					cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
 size_t					cache_avail = 0;
 

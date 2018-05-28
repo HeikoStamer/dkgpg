@@ -1099,6 +1099,7 @@ void run_instance
 		}
 		if (!msg->Decrypt(seskey, opt_verbose, decmsg))
 		{
+			std::cerr << "ERROR: message decryption failed" << std::endl;
 			delete msg;
 			delete dkg;
 			delete ring;
@@ -1108,6 +1109,7 @@ void run_instance
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
 			opt_verbose, msg))
 		{
+			std::cerr << "ERROR: message parsing failed" << std::endl;
 			delete msg;
 			delete dkg;
 			delete ring;
@@ -1116,6 +1118,8 @@ void run_instance
 		}
 		if (!msg->CheckMDC(opt_verbose))
 		{
+			std::cerr << "ERROR: message was modified (security issue)" <<
+				std::endl;
 			delete msg;
 			delete dkg;
 			delete ring;
@@ -1828,10 +1832,18 @@ int main
 		tmcg_openpgp_octets_t content, decmsg, seskey;
 		if (res)
 		{
-			decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
-				ssb->pub->elg_y, esk->gk, esk->myk, seskey);
+			if (!decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
+				ssb->pub->elg_y, esk->gk, esk->myk, seskey))
+			{
+				delete msg;
+				delete dkg;
+				delete ring;
+				delete prv;
+				return -1;
+			}
 			if (!msg->Decrypt(seskey, opt_verbose, decmsg))
 			{
+				std::cerr << "ERROR: message decryption failed" << std::endl;
 				delete msg;
 				delete dkg;
 				delete ring;
@@ -1841,6 +1853,7 @@ int main
 			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
 				opt_verbose, msg))
 			{
+				std::cerr << "ERROR: message parsing failed" << std::endl;
 				delete msg;
 				delete dkg;
 				delete ring;
@@ -1849,6 +1862,8 @@ int main
 			}
 			if (!msg->CheckMDC(opt_verbose))
 			{
+				std::cerr << "ERROR: message was modified (security issue)" <<
+					std::endl;
 				delete msg;
 				delete dkg;
 				delete ring;

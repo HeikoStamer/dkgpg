@@ -1137,6 +1137,16 @@ void run_instance
 				delete prv;
 				exit(-1);
 			}
+			else if ((msg->literal_data).size() == 0)
+			{
+				std::cerr << "ERROR: empty literal data in decrypted message" <<
+					std::endl;
+				delete msg;
+				delete dkg;
+				delete ring;
+				delete prv;
+				exit(-1);
+			}
 			else
 				content.insert(content.end(), (msg->literal_data).begin(),
 					(msg->literal_data).end());
@@ -1876,6 +1886,16 @@ int main
 				{
 					std::cerr << "ERROR: compression is not supported" <<
 						std::endl;
+					delete msg;
+					delete dkg;
+					delete ring;
+					delete prv;
+					return -1;
+				}
+				else if ((msg->literal_data).size() == 0)
+				{
+					std::cerr << "ERROR: empty literal data in decrypted" <<
+						" message" << std::endl;
 					delete msg;
 					delete dkg;
 					delete ring;

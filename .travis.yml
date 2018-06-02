@@ -1,0 +1,18 @@
+dist: trusty
+sudo: required
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libgcrypt20-dev
+  - sudo apt-get install -y libgmp-dev
+  - sudo apt-get install -y autoconf
+  - sudo apt-get install -y automake
+  - sudo apt-get install -y libtool
+  - sudo apt-get install -y texinfo
+  - git clone https://github.com/HeikoStamer/libtmcg.git
+  - cd libtmcg && autoreconf -v -i -f && ./configure --prefix=~ && make && make install && cd ..
+language: cpp
+compiler:
+  - clang
+  - gcc
+script: autoreconf -v -i -f -I ~/share/aclocal && ./configure && make && make check
+

@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180526])
+AC_REVISION([20180602])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.7], [HeikoStamer@gmx.net], [dkgpg],
@@ -81,9 +81,9 @@ AC_SUBST(LIBGMP_CFLAGS)
 LDFLAGS="$backup_LDFLAGS"
 CPPFLAGS="$backup_CPPFLAGS"
 
-AM_PATH_LIBGCRYPT("1.7.0")
+AM_PATH_LIBGCRYPT("1.6.0")
 if test "x$LIBGCRYPT_LIBS" = "x"; then
-	AC_MSG_ERROR([libgcrypt >= 1.7.0 is needed])
+	AC_MSG_ERROR([libgcrypt >= 1.6.0 is needed])
 fi
 backup_CPPLAGS="$CPPFLAGS"
 CPPFLAGS="$LIBGCRYPT_CFLAGS $backup_CPPFLAGS"

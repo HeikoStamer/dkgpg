@@ -1043,9 +1043,11 @@ void run_instance
 	gcry_sexp_release(key);
 	
 	// at the end: deliver some more rounds for still waiting parties
-	time_t synctime = aiounicast::aio_timeout_extremely_long;
+	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": waiting approximately " << (synctime * (T_RBC + 1)) << " seconds for stalled parties" << std::endl;
+		std::cerr << "INFO: P_" << whoami << ": waiting approximately " <<
+			(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
+			std::endl;
 	rbc->Sync(synctime);
 
 	// export generated public keys in OpenPGP armor format

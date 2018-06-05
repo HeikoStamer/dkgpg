@@ -133,6 +133,9 @@ void tcpip_init
 void tcpip_bindports
 	(const uint16_t start, const bool broadcast)
 {
+	if (opt_verbose > 2)
+		std::cerr << "INFO: tcpip_bindports(" << start << ", " <<
+			(broadcast ? "true" : "false") << ") called" << std::endl;
 	uint16_t peers_size = 0;
 	if (peers.size() <= DKGPG_MAX_N)
 	{
@@ -150,7 +153,10 @@ void tcpip_bindports
 	uint16_t local_end = local_start + peers_size;
 	size_t i = 0;
 	if (broadcast)
-		local_start += peers_size * peers_size; // different port range
+	{
+		local_start += peers_size * peers_size; // use different port range
+		local_end += peers_size * peers_size;
+	}
 	for (uint16_t port = local_start; port < local_end; port++, i++)
 	{
 		struct addrinfo hints = { 0 }, *res, *rp;
@@ -242,10 +248,13 @@ void tcpip_bindports
 size_t tcpip_connect
 	(const uint16_t start, const bool broadcast)
 {
+	if (opt_verbose > 2)
+		std::cerr << "INFO: tcpip_connect(" << start << ", " <<
+			(broadcast ? "true" : "false") << ") called" << std::endl;
 	for (size_t i = 0; i < peers.size(); i++)
 	{
-		if ((broadcast && !tcpip_broadcast_pipe2socket_out.count(i)) ||
-			(!broadcast && !tcpip_pipe2socket_out.count(i)))
+		if ((broadcast && (tcpip_broadcast_pipe2socket_out.count(i) == 0)) ||
+			(!broadcast && (tcpip_pipe2socket_out.count(i) == 0)))
 		{
 			uint16_t peers_size = 0;
 			if (peers.size() <= DKGPG_MAX_N)
@@ -267,7 +276,7 @@ size_t tcpip_connect
 			hints.ai_socktype = SOCK_STREAM;
 			hints.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG;
 			if (broadcast)
-				port += peers_size * peers_size; // different port range
+				port += peers_size * peers_size; // use different port range
 			std::stringstream ports;
 			ports << port;
 			if ((ret = getaddrinfo(peers[i].c_str(), (ports.str()).c_str(),
@@ -349,6 +358,8 @@ size_t tcpip_connect
 void tcpip_accept
 	()
 {
+	if (opt_verbose > 2)
+		std::cerr << "INFO: tcpip_accept(...) called" << std::endl;
 	while ((tcpip_pipe2socket_in.size() < peers.size()) ||
 		(tcpip_broadcast_pipe2socket_in.size() < peers.size()))
 	{

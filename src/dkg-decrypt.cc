@@ -395,7 +395,7 @@ bool verify_decryption_share_interactive_publiccoin
 }
 
 bool combine_decryption_shares
-	(gcry_mpi_t gk, const GennaroJareckiKrawczykRabinDKG *dkg,
+	(const gcry_mpi_t gk, const GennaroJareckiKrawczykRabinDKG *dkg,
 	 std::vector<size_t> &parties, std::vector<mpz_ptr> &shares)
 {
 	// initialize
@@ -473,12 +473,17 @@ bool combine_decryption_shares
 		}
 
 		// copy the result from R to gk
-		if (!mpz_get_gcry_mpi(gk, R))
+		gcry_mpi_t gk_tmp;
+		gk_tmp = gcry_mpi_new(2048);
+		if (!mpz_get_gcry_mpi(gk_tmp, R))
 		{
 			std::cerr << "ERROR: converting interpolated result failed" <<
 				std::endl;
+			gcry_mpi_release(gk_tmp);
 			throw false;
 		}
+		gcry_mpi_set(gk, gk_tmp);
+		gcry_mpi_release(gk_tmp);
 
 		// finish
 		throw true;

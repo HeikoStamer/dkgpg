@@ -515,7 +515,7 @@ bool decrypt_session_key
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::
 		AsymmetricDecryptElgamal(gk, myk, elgkey, out);
 	gcry_sexp_release(elgkey);
-	if (!ret) // FIXME
+	if (ret)
 	{
 		std::cerr << "ERROR: AsymmetricDecryptElgamal() failed" <<
 			" with rc = " << gcry_err_code(ret) << std::endl;

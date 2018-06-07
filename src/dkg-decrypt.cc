@@ -515,7 +515,7 @@ bool decrypt_session_key
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::
 		AsymmetricDecryptElgamal(gk, myk, elgkey, out);
 	gcry_sexp_release(elgkey);
-	if (ret)
+	if (!ret) // FIXME
 	{
 		std::cerr << "ERROR: AsymmetricDecryptElgamal() failed" <<
 			" with rc = " << gcry_err_code(ret) << std::endl;
@@ -641,9 +641,9 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if ((msg->PKESKs.size() == 0) || (msg->encrypted_message.size() == 0))
+	if (msg->encrypted_message.size() == 0)
 	{
-		std::cerr << "ERROR: no PKESK or no encrypted data found" << std::endl;
+		std::cerr << "ERROR: no encrypted data found" << std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;
@@ -1683,10 +1683,9 @@ int main
 			delete prv;
 			return -1;
 		}
-		if ((msg->PKESKs.size() == 0) || (msg->encrypted_message.size() == 0))
+		if (msg->encrypted_message.size() == 0)
 		{
-			std::cerr << "ERROR: no PKESK or no encrypted data found" <<
-				std::endl;
+			std::cerr << "ERROR: no encrypted data found" << std::endl;
 			delete msg;
 			delete dkg;
 			delete ring;
@@ -1703,7 +1702,7 @@ int main
 				{
 					std::cerr << "WARNING: PKESK wildcard keyid found; " <<
 							"try to decrypt message anyway" << std::endl;
-					esk = msg->PKESKs[i];
+					esk = msg->PKESKs[i]; // FIXME: loop for more than one
 				}
 				else if (CallasDonnerhackeFinneyShawThayerRFC4880::
 					OctetsCompare((msg->PKESKs[i])->keyid, ssb->pub->id))

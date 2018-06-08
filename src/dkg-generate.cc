@@ -1657,7 +1657,7 @@ int main
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	opt_verbose = 1;
-	opt_e = 3600;
+	opt_e = 7200;
 	if (mpz_wrandom_ui() % 2)
 	{
 		// sometimes test a non-FIPS CRS

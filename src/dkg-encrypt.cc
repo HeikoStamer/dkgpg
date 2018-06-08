@@ -53,47 +53,63 @@ int main
 			(arg.find("-s") == 0) || (arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
-			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
+			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_ifilename == NULL))
 			{
 				ifilename = argv[i+1];
 				opt_ifilename = (char*)ifilename.c_str();
 			}
-			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) && (opt_ofilename == NULL))
+			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_ofilename == NULL))
 			{
 				ofilename = argv[i+1];
 				opt_ofilename = (char*)ofilename.c_str();
 			}
-			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) && (opt_s == NULL))
+			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_s == NULL))
 			{
 				s = argv[i+1];
 				opt_s = (char*)s.c_str();
 			}
-			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_k == NULL))
 			{
 				rfilename = argv[i+1];
 				opt_k = (char*)rfilename.c_str();
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-b") == 0)  || (arg.find("-v") == 0) || 
-			 (arg.find("-h") == 0) || (arg.find("-V") == 0) || (arg.find("-w") == 0) ||
-			 (arg.find("-t") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
+			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
+			(arg.find("-V") == 0) || (arg.find("-w") == 0) ||
+			(arg.find("-t") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary        write encrypted message in binary format (only if -i)" << std::endl;
-				std::cout << "  -h, --help          print this help" << std::endl;
-				std::cout << "  -i FILENAME         read message rather from FILENAME than STDIN" << std::endl;
-				std::cout << "  -k FILENAME         use keyring FILENAME containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME         write encrypted message rather to FILENAME than STDOUT" << std::endl;
-				std::cout << "  -s STRING           select only encryption-capable subkeys containing STRING" << std::endl;
-				std::cout << "  -t, --throw-keyids  throw included key IDs for somewhat improved privacy" << std::endl;
-				std::cout << "  -v, --version       print the version number" << std::endl;
-				std::cout << "  -V, --verbose       turn on verbose output" << std::endl;
-				std::cout << "  -w, --weak          allow weak keys" << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
+				std::cout << "  -b, --binary        write encrypted message" <<
+					" in binary format (only if -i)" << std::endl;
+				std::cout << "  -h, --help          print this help" <<
+					std::endl;
+				std::cout << "  -i FILENAME         read message rather" <<
+					" from FILENAME than STDIN" << std::endl;
+				std::cout << "  -k FILENAME         use keyring FILENAME" <<
+					" containing external revocation keys" << std::endl;
+				std::cout << "  -o FILENAME         write encrypted message" <<
+					" rather to FILENAME than STDOUT" << std::endl;
+				std::cout << "  -s STRING           select only encryption" <<
+					"-capable subkeys containing STRING" << std::endl;
+				std::cout << "  -t, --throw-keyids  throw included key IDs" <<
+					" for somewhat improved privacy" << std::endl;
+				std::cout << "  -v, --version       print the version" <<
+					" number" << std::endl;
+				std::cout << "  -V, --verbose       turn on verbose output" <<
+					std::endl;
+				std::cout << "  -w, --weak          allow weak keys" <<
+					std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
@@ -130,7 +146,8 @@ int main
 	// check command line arguments
 	if (kfilename.length() == 0)
 	{
-		std::cerr << "ERROR: argument KEYFILE is missing; usage: " << usage << std::endl;
+		std::cerr << "ERROR: argument KEYFILE is missing; usage: " <<
+			usage << std::endl;
 		return -1;
 	}
 
@@ -141,7 +158,8 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " <<
+			version_libTMCG() << std::endl;
 
 	// read the public key
 	std::string armored_pubkey;
@@ -204,68 +222,92 @@ int main
 	{
 		// subkey not selected?
 		std::string kid;
-		CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
 		if (opt_s && (kid.find(s) == kid.npos))
 			continue;
 		// encryption-capable subkey?
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
 		    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08) ||
-		    (!primary->subkeys[j]->AccumulateFlags() && ((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
-				(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) || (primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))))
+		    (!primary->subkeys[j]->AccumulateFlags() &&
+			((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+				(primary->subkeys[j]->pkalgo ==
+				TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
+				(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))))
 		{
 			if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
 			{
 				if (opt_verbose)
-					std::cerr << "WARNING: weak subkey for encryption ignored" << std::endl;
+					std::cerr << "WARNING: weak subkey for encryption" <<
+						" ignored" << std::endl;
 			}
-			else if ((primary->subkeys[j]->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
-			         (primary->subkeys[j]->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) &&
-			         (primary->subkeys[j]->pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL))
+			else if ((primary->subkeys[j]->pkalgo != 
+						TMCG_OPENPGP_PKALGO_RSA) &&
+			         (primary->subkeys[j]->pkalgo !=
+						TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) &&
+			         (primary->subkeys[j]->pkalgo !=
+						TMCG_OPENPGP_PKALGO_ELGAMAL))
 			{
 				if (opt_verbose)
-					std::cerr << "WARNING: subkey with unsupported public-key algorithm for encryption ignored" << std::endl;
+					std::cerr << "WARNING: subkey with unsupported public-" <<
+						"key algorithm for encryption ignored" << std::endl;
 			}
 			else
 			{
 				selected.push_back(primary->subkeys[j]);
-				if ((std::find(primary->subkeys[j]->psa.begin(), primary->subkeys[j]->psa.end(), 9) == primary->subkeys[j]->psa.end()) &&
-				    (std::find(primary->psa.begin(), primary->psa.end(), 9) == primary->psa.end()))
+				if ((std::find(primary->subkeys[j]->psa.begin(),
+					primary->subkeys[j]->psa.end(), 9) ==
+						primary->subkeys[j]->psa.end()) &&
+				    (std::find(primary->psa.begin(), primary->psa.end(), 9) ==
+						primary->psa.end()))
 				{
 					if (opt_verbose)
-						std::cerr << "WARNING: AES-256 is none of the preferred symmetric algorithms" << std::endl;
+						std::cerr << "WARNING: AES-256 is none of the" <<
+							" preferred symmetric algorithms;"
+							"use AES-256 anyway" << std::endl;
 				}
-				if (((primary->subkeys[j]->AccumulateFeatures() & 0x01) != 0x01) &&
+				if (((primary->subkeys[j]->AccumulateFeatures() & 0x01) !=
+						0x01) &&
 				    ((primary->AccumulateFeatures() & 0x01) != 0x01))
 				{
 					if (opt_verbose)
-						std::cerr << "WARNING: recipient does not state support for modification detection (MDC)" << std::endl;
+						std::cerr << "WARNING: recipient does not state" <<
+							" support for modification detection (MDC);" <<
+							"use MDC anyway" << std::endl;
 				}
 			}
 		}
 	}
 
-	// check the primary key, if no encryption-capable subkeys have been selected
+	// check primary key, if no encryption-capable subkeys have been selected
 	if (!selected.size())
 	{	
 		if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
 		    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
-		    (!primary->AccumulateFlags() && (primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
-			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) && (primary->pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL)))
+		    (!primary->AccumulateFlags() && (primary->pkalgo !=
+				TMCG_OPENPGP_PKALGO_RSA) &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_ELGAMAL)))
 		{
-			std::cerr << "ERROR: no encryption-capable public key found" << std::endl;
+			std::cerr << "ERROR: no encryption-capable public key found" <<
+				std::endl;
 			delete primary;
 			delete ring;
 			return -1;
 		}
-		if (std::find(primary->psa.begin(), primary->psa.end(), TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
+		if (std::find(primary->psa.begin(), primary->psa.end(),
+			TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
 		{
 			if (opt_verbose)
-				std::cerr << "WARNING: AES-256 is none of the preferred symmetric algorithms" << std::endl;
+				std::cerr << "WARNING: AES-256 is none of the preferred" <<
+					" symmetric algorithms; use AES-256 anyway" << std::endl;
 		}
 		if ((primary->AccumulateFeatures() & 0x01) != 0x01)
 		{
 			if (opt_verbose)
-				std::cerr << "WARNING: recipient does not state support for modification detection (MDC)" << std::endl;
+				std::cerr << "WARNING: recipient does not state support" <<
+					" for modification detection (MDC);" <<
+					"use MDC anyway" << std::endl;
 		}
 	}
 
@@ -297,32 +339,43 @@ int main
 	}
 #endif
 
-	// encrypt the provided message
+	// encrypt the provided message and create MDC
 	gcry_error_t ret;
-	tmcg_openpgp_octets_t lit, seskey, prefix, enc, mdc_hashing, hash, mdc, seipd;
+	tmcg_openpgp_octets_t lit, seskey, prefix, enc;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
-	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit, seskey, prefix, true, enc); // seskey and prefix only
+	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit,
+		seskey, prefix, true, enc); // seskey and prefix only
 	if (ret)
 	{
-		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
+			gcry_err_code(ret) << ")" << std::endl;
 		delete primary;
 		delete ring;
 		return ret;
 	}
+	tmcg_openpgp_octets_t mdc_hashing, hash, mdc, seipd;
 	enc.clear();
-	mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end()); // "it includes the prefix data described above" [RFC4880]
-	mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end()); // "it includes all of the plaintext" [RFC4880]
-	mdc_hashing.push_back(0xD3); // "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
+	// "it includes the prefix data described above" [RFC4880]
+	mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end());
+	// "it includes all of the plaintext" [RFC4880]
+	mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end());
+	// "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
+	mdc_hashing.push_back(0xD3);
 	mdc_hashing.push_back(0x14);
 	hash.clear();
-	CallasDonnerhackeFinneyShawThayerRFC4880::HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash); // "passed through the SHA-1 hash function" [RFC4880]
+	// "passed through the SHA-1 hash function" [RFC4880]
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketMdcEncode(hash, mdc);
-	lit.insert(lit.end(), mdc.begin(), mdc.end()); // append Modification Detection Code packet
-	seskey.clear(); // generate a fresh session key, but keep the previous prefix
-	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit, seskey, prefix, false, enc); // encryption of literal packet
+	lit.insert(lit.end(), mdc.begin(), mdc.end()); // append MDC packet
+	// generate a fresh session key, but keep the previous prefix
+	seskey.clear();
+	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit,
+		seskey, prefix, false, enc); // encryption of literal packet + MDC
 	if (ret)
 	{
-		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
+			gcry_err_code(ret) << ")" << std::endl;
 		delete primary;
 		delete ring;
 		return ret;
@@ -332,61 +385,80 @@ int main
 	// encrypt the session key (create PKESK packet)
 	tmcg_openpgp_octets_t all;
 	if (opt_verbose > 1)
-		std::cerr << "INFO: " << selected.size() << " subkeys selected for encryption of session key" << std::endl;
+		std::cerr << "INFO: " << selected.size() << " subkeys selected for" <<
+			" encryption of session key" << std::endl;
 	for (size_t j = 0; j < selected.size(); j++)
 	{
 		tmcg_openpgp_octets_t pkesk, subkeyid;
 		if (opt_t)
 		{
-			// An implementation MAY accept or use a Key ID of zero as a "wild card"
-			// or "speculative" Key ID. In this case, the receiving implementation
-			// would try all available private keys, checking for a valid decrypted
-			// session key. This format helps reduce traffic analysis of messages. [RFC4880]
+			// An implementation MAY accept or use a Key ID of zero as a
+			// "wild card" or "speculative" Key ID. In this case, the
+			// receiving implementation would try all available private keys,
+			// checking for a valid decrypted session key. This format helps
+			// reduce traffic analysis of messages. [RFC4880]
 			for (size_t i = 0; i < 8; i++)
 				subkeyid.push_back(0x00);
 		}
 		else
-			subkeyid.insert(subkeyid.end(), selected[j]->id.begin(), selected[j]->id.end());
+			subkeyid.insert(subkeyid.end(),
+				selected[j]->id.begin(), selected[j]->id.end());
 		if ((selected[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
 		    (selected[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY))
 		{
 			gcry_mpi_t me;
 			me = gcry_mpi_new(2048);
-			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricEncryptRSA(seskey, selected[j]->key, me);
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				AsymmetricEncryptRSA(seskey, selected[j]->key, me);
 			if (ret)
 			{
-				std::cerr << "ERROR: AsymmetricEncryptRSA() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+				std::cerr << "ERROR: AsymmetricEncryptRSA() failed (rc = " <<
+					gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
 				delete ring;
 				return ret;
 			}
-			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(subkeyid, me, pkesk);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketPkeskEncode(subkeyid, me, pkesk);
 			gcry_mpi_release(me);
 		}
 		else if (selected[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
 		{	
-			// Note that OpenPGP ElGamal encryption in $Z^*_p$ provides only OW-CPA security under the CDH assumption. In
-			// order to achieve at least IND-CPA (aka semantic) security under DDH assumption the encoded message $m$ must
-			// be an element of the prime-order subgroup $G_q$ generated by $g$ (see algebraic structure of DKG).
-			// Unfortunately, the probability that this happens is negligible, if the size of prime $q$ is much smaller
-			// than the size of $p$. We cannot enforce $m\in G_q$ since $m$ is padded according to OpenPGP (PKCS#1).
+			// Note that OpenPGP ElGamal encryption in $Z^*_p$ provides only
+			// OW-CPA security under the CDH assumption. In order to achieve
+			// at least IND-CPA (aka semantic) security under DDH assumption
+			// the encoded message $m$ must be an element of the prime-order
+			// subgroup $G_q$ generated by $g$ (algebraic structure of tElG).
+			// Unfortunately, the probability that this happens is negligible,
+			// if the size of prime $q$ is much smaller than the size of $p$.
+			// We cannot enforce $m\in G_q$ since $m$ is padded according to
+			// OpenPGP (PKCS#1). Thus, one bit of session key is leaked here.
 			gcry_mpi_t gk, myk;
 			gk = gcry_mpi_new(2048);
 			myk = gcry_mpi_new(2048);
-			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricEncryptElgamal(seskey, selected[j]->key, gk, myk);
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				AsymmetricEncryptElgamal(seskey, selected[j]->key, gk, myk);
 			if (ret)
 			{
-				std::cerr << "ERROR: AsymmetricEncryptElgamal() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+				std::cerr << "ERROR: AsymmetricEncryptElgamal() failed" <<
+					" (rc = " << gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
 				delete ring;
 				return ret;
 			}
-			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(subkeyid, gk, myk, pkesk);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketPkeskEncode(subkeyid, gk, myk, pkesk);
 			gcry_mpi_release(gk);
 			gcry_mpi_release(myk);
 		}
 		else
-			std::cerr << "ERROR: public-key algorithm " << (int)selected[j]->pkalgo << " not supported" << std::endl;
+		{
+			std::cerr << "ERROR: public-key algorithm " <<
+				(int)selected[j]->pkalgo << " not supported" << std::endl;
+			delete primary;
+			delete ring;
+			return -1;
+		}
 		all.insert(all.end(), pkesk.begin(), pkesk.end());
 	}
 	if (!selected.size())
@@ -394,10 +466,11 @@ int main
 		tmcg_openpgp_octets_t pkesk, keyid;
 		if (opt_t)
 		{
-			// An implementation MAY accept or use a Key ID of zero as a "wild card"
-			// or "speculative" Key ID. In this case, the receiving implementation
-			// would try all available private keys, checking for a valid decrypted
-			// session key. This format helps reduce traffic analysis of messages. [RFC4880]
+			// An implementation MAY accept or use a Key ID of zero as a
+			// "wild card" or "speculative" Key ID. In this case, the
+			// receiving implementation would try all available private keys,
+			// checking for a valid decrypted session key. This format helps
+			// reduce traffic analysis of messages. [RFC4880]
 			for (size_t i = 0; i < 8; i++)
 				keyid.push_back(0x00);
 		}
@@ -408,42 +481,53 @@ int main
 		{
 			gcry_mpi_t me;
 			me = gcry_mpi_new(2048);
-			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricEncryptRSA(seskey, primary->key, me);
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				AsymmetricEncryptRSA(seskey, primary->key, me);
 			if (ret)
 			{
-				std::cerr << "ERROR: AsymmetricEncryptRSA() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+				std::cerr << "ERROR: AsymmetricEncryptRSA() failed (rc = " <<
+					gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
 				delete ring;
 				return ret;
 			}
-			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(keyid, me, pkesk);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketPkeskEncode(keyid, me, pkesk);
 			gcry_mpi_release(me);
 		}
 		else if (primary->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
 		{	
-			// Note that OpenPGP ElGamal encryption in $Z^*_p$ provides only OW-CPA security under the CDH assumption. In
-			// order to achieve at least IND-CPA (aka semantic) security under DDH assumption the encoded message $m$ must
-			// be an element of the prime-order subgroup $G_q$ generated by $g$ (see algebraic structure of DKG).
-			// Unfortunately, the probability that this happens is negligible, if the size of prime $q$ is much smaller
-			// than the size of $p$. We cannot enforce $m\in G_q$ since $m$ is padded according to OpenPGP (PKCS#1).
+			// Note that OpenPGP ElGamal encryption in $Z^*_p$ provides only
+			// OW-CPA security under the CDH assumption. In order to achieve
+			// at least IND-CPA (aka semantic) security under DDH assumption
+			// the encoded message $m$ must be an element of the prime-order
+			// subgroup $G_q$ generated by $g$ (algebraic structure of tElG).
+			// Unfortunately, the probability that this happens is negligible,
+			// if the size of prime $q$ is much smaller than the size of $p$.
+			// We cannot enforce $m\in G_q$ since $m$ is padded according to
+			// OpenPGP (PKCS#1). Thus one bit of session key is leaked here.
 			gcry_mpi_t gk, myk;
 			gk = gcry_mpi_new(2048);
 			myk = gcry_mpi_new(2048);
-			ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricEncryptElgamal(seskey, primary->key, gk, myk);
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				AsymmetricEncryptElgamal(seskey, primary->key, gk, myk);
 			if (ret)
 			{
-				std::cerr << "ERROR: AsymmetricEncryptElgamal() failed (rc = " << gcry_err_code(ret) << ")" << std::endl;
+				std::cerr << "ERROR: AsymmetricEncryptElgamal() failed" <<
+					" (rc = " << gcry_err_code(ret) << ")" << std::endl;
 				delete primary;
 				delete ring;
 				return ret;
 			}
-			CallasDonnerhackeFinneyShawThayerRFC4880::PacketPkeskEncode(keyid, gk, myk, pkesk);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketPkeskEncode(keyid, gk, myk, pkesk);
 			gcry_mpi_release(gk);
 			gcry_mpi_release(myk);
 		}
 		else
 		{
-			std::cerr << "ERROR: public-key algorithm " << (int)primary->pkalgo << " not supported" << std::endl;
+			std::cerr << "ERROR: public-key algorithm " <<
+				(int)primary->pkalgo << " not supported" << std::endl;
 			delete primary;
 			delete ring;
 			return -1;
@@ -451,10 +535,11 @@ int main
 		all.insert(all.end(), pkesk.begin(), pkesk.end());
 	}
 
-	// concatenate SEIPD and encode the packages in ASCII armor and finally print result to stdout
+	// append SEIPD and encode all packages in ASCII armor
 	std::string armored_message;
 	all.insert(all.end(), seipd.begin(), seipd.end());
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
 
 	// write out the result
 	if (opt_ofilename != NULL)
@@ -487,3 +572,4 @@ int main
 	
 	return 0;
 }
+

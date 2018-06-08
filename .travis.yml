@@ -14,5 +14,5 @@ language: cpp
 compiler:
   - clang
   - gcc
-script: autoreconf -v -i -f -I /tmp/share/aclocal && ./configure --with-libTMCG-prefix=/tmp && make && make check
+script: autoreconf -v -i -f -I /tmp/share/aclocal && ./configure --with-libTMCG-prefix=/tmp && make && travis_wait 30 make check
 

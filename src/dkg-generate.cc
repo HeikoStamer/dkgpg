@@ -55,35 +55,41 @@ std::vector<std::string>	peers;
 bool						instance_forked = false;
 
 std::string					passphrase, userid, passwords, hostname, port;
-tmcg_openpgp_octets_t		keyid, subkeyid, pub, sub, uidsig, subsig, sec, ssb, uid;
+tmcg_openpgp_octets_t		keyid, subkeyid, pub, sub;
+tmcg_openpgp_octets_t		uidsig, subsig, sec, ssb, uid;
 std::map<size_t, size_t>	idx2dkg, dkg2idx;
-mpz_t					dss_p, dss_q, dss_g, dss_h, dss_x_i, dss_xprime_i, dss_y;
-size_t					dss_n, dss_t, dss_i;
+mpz_t						dss_p, dss_q, dss_g, dss_h, dss_y;
+mpz_t						dss_x_i, dss_xprime_i;
+size_t						dss_n, dss_t, dss_i;
 std::vector<size_t>			dss_qual, dss_x_rvss_qual;
 std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-mpz_t					dkg_p, dkg_q, dkg_g, dkg_h, dkg_x_i, dkg_xprime_i, dkg_y;
-size_t					dkg_n, dkg_t, dkg_i;
+mpz_t						dkg_p, dkg_q, dkg_g, dkg_h, dkg_y;
+mpz_t						dkg_x_i, dkg_xprime_i;
+size_t						dkg_n, dkg_t, dkg_i;
 std::vector<size_t>			dkg_qual;
-std::vector<mpz_ptr>			dkg_v_i;
+std::vector<mpz_ptr>		dkg_v_i;
 std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-gcry_mpi_t 				dsa_p, dsa_q, dsa_g, dsa_y, dsa_x, elg_p, elg_q, elg_g, elg_y, elg_x;
+gcry_mpi_t					dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
+gcry_mpi_t					elg_p, elg_q, elg_g, elg_y, elg_x;
 
-int 					opt_verbose = 0;
-bool					libgcrypt_secmem = false;
-char					*opt_crs = NULL;
-char					*opt_passwords = NULL;
-char					*opt_hostname = NULL;
-unsigned long int		opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N, opt_e = 0, opt_p = 55000, opt_W = 5;
+int 						opt_verbose = 0;
+bool						libgcrypt_secmem = false;
+char						*opt_crs = NULL;
+char						*opt_passwords = NULL;
+char						*opt_hostname = NULL;
+unsigned long int			opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N;
+unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
 
-bool					fips = false;
-std::stringstream		crss;
-mpz_t 					cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
-size_t					cache_avail = 0;
+bool						fips = false;
+std::stringstream			crss;
+mpz_t 						cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
+size_t						cache_avail = 0;
 
-size_t					T, S;
+size_t						T, S;
 
 void run_instance
-	(const size_t whoami, const time_t keytime, const time_t keyexptime, const size_t num_xtests)
+	(const size_t whoami, const time_t keytime, const time_t keyexptime,
+	 const size_t num_xtests)
 {
 	// create communication handles for all players
 	std::vector<int> uP_in, uP_out, bP_in, bP_out;
@@ -96,18 +102,24 @@ void run_instance
 			std::string pwd;
 			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 			{
-				std::cerr << "ERROR: P_" << whoami << ": " << "cannot read password for protecting channel to P_" << i << std::endl;
+				std::cerr << "ERROR: P_" << whoami << ": " << "cannot read" <<
+					" password for protecting channel to P_" << i << std::endl;
 				exit(-1);
 			}
 			key << pwd;
 			if (((i + 1) < peers.size()) && !TMCG_ParseHelper::nx(passwords, '/'))
 			{
-				std::cerr << "ERROR: P_" << whoami << ": " << "cannot skip to next password for protecting channel to P_" << (i + 1) << std::endl;
+				std::cerr << "ERROR: P_" << whoami << ": " << "cannot skip" <<
+					" to next password for protecting channel to P_" <<
+					(i + 1) << std::endl;
 				exit(-1);
 			}
 		}
 		else
-			key << "dkg-generate::P_" << (i + whoami); // use a simple key -- we assume that GNUnet provides secure channels
+		{
+			// use simple key -- we assume that GNUnet provides secure channels
+			key << "dkg-generate::P_" << (i + whoami);
+		}
 		uP_in.push_back(pipefd[i][whoami][0]);
 		uP_out.push_back(pipefd[whoami][i][1]);
 		uP_key.push_back(key.str());
@@ -119,33 +131,44 @@ void run_instance
 	// create VTMF instance from CRS
 	BarnettSmartVTMF_dlog *vtmf;
 	if (fips)
-		vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false);
+		vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
+			false); // without VTMF-verifiable generation of $g$ (FIPS mode)
 	else	
-		vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true); // with verifiable generation of $g$
+		vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
+			true); // with VTMF-verifiable generation of $g$ (VTMF-vgog)
 	// check the constructed VTMF instance
 	if (!vtmf->CheckGroup())
 	{
-		std::cerr << "ERROR: P_" << whoami << ": " << "group G from CRS is incorrectly generated!" << std::endl;
+		std::cerr << "ERROR: P_" << whoami << ": " << "group G from CRS is" <<
+			" incorrectly generated!" << std::endl;
 		delete vtmf;
 		exit(-1);
 	}
 
 	// create asynchronous authenticated unicast channels
-	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami,
+		uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin,
+		(opt_W * 60));
 
 	// create asynchronous authenticated unicast channels for broadcast protocol
-	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami,
+		bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin,
+		(opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
 	std::string myID = "dkg-generate|";
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
-	myID += T; // include parameterized t-resiliance in the ID of broadcast protocol to enforce equal parameter set
+	// include parameters in the ID of broadcast protocol to enforce equal set
+	myID += T;
 	myID += "|";
-	myID += S; // include parameterized s-resiliance in the ID of broadcast protocol to enforce equal parameter set
+	myID += S;
 	myID += "|";
-	size_t T_RBC = (peers.size() - 1) / 3; // assume maximum asynchronous t-resilience for RBC
-	CachinKursawePetzoldShoupRBC *rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	// assume maximum asynchronous t-resilience for RBC
+	size_t T_RBC = (peers.size() - 1) / 3;
+	CachinKursawePetzoldShoupRBC *rbc =
+		new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2,
+			aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
@@ -166,10 +189,13 @@ void run_instance
 		mpz_clear(xtest);
 	}
 			
-	// create and exchange temporary keys in order to bootstrap the $h$-generation for DKG/tDSS [JL00]
-	// TODO: replace N-time NIZK by one interactive (distributed) zero-knowledge proof of knowledge, i.e., removes ROM assumption here
+	// create and exchange temporary VTMF keys in order to bootstrap the
+	// $h$-generation for tElG and tDSS/DSA protocols [JL00]
+	// TODO: replace N-time NIZK by one interactive (distributed) zero-knowledge
+	//       proof of knowledge, i.e., removes ROM assumption here
 	if (opt_verbose)
-		std::cerr << "INFO: generate h by using VTMF key generation protocol" << std::endl;
+		std::cerr << "INFO: generate h by using VTMF key generation protocol" <<
+			 std::endl;
 	mpz_t nizk_c, nizk_r, h_j;
 	mpz_init(nizk_c), mpz_init(nizk_r), mpz_init(h_j);
 	vtmf->KeyGenerationProtocol_GenerateKey();
@@ -183,107 +209,137 @@ void run_instance
 		{
 			if (!rbc->DeliverFrom(h_j, i))
 			{
-				std::cerr << "WARNING: P_" << whoami << ": no VTMF key received from P_" << i << std::endl;
+				std::cerr << "WARNING: P_" << whoami << ": no VTMF key" <<
+					" received from P_" << i << std::endl;
 			}
 			if (!rbc->DeliverFrom(nizk_c, i))
 			{
-				std::cerr << "WARNING: P_" << whoami << ": no NIZK c received from " << i << std::endl;
+				std::cerr << "WARNING: P_" << whoami << ": no NIZK c" <<
+					" received from " << i << std::endl;
 			}
 			if (!rbc->DeliverFrom(nizk_r, i))
 			{
-				std::cerr << "WARNING: P_" << whoami << ": no NIZK r received from " << i << std::endl;
+				std::cerr << "WARNING: P_" << whoami << ": no NIZK r" <<
+					" received from " << i << std::endl;
 			}
-			std::stringstream lej;
-			lej << h_j << std::endl << nizk_c << std::endl << nizk_r << std::endl;
-			if (!vtmf->KeyGenerationProtocol_UpdateKey(lej))
+			std::stringstream l;
+			l << h_j << std::endl << nizk_c << std::endl << nizk_r << std::endl;
+			if (!vtmf->KeyGenerationProtocol_UpdateKey(l))
 			{
-				std::cerr << "WARNING: P_" << whoami << ": VTMF key of P_" << i << " was not correctly generated!" << std::endl;
+				std::cerr << "WARNING: P_" << whoami << ": VTMF key of P_" <<
+					i << " was not correctly generated!" << std::endl;
 			}
 		}
 	}
 	vtmf->KeyGenerationProtocol_Finalize();
 	mpz_clear(nizk_c), mpz_clear(nizk_r), mpz_clear(h_j);
 
-	// create an instance of tDSS
+	// create an instance of tDSS/DSA
 	CanettiGennaroJareckiKrawczykRabinDSS *dss;
 	if (opt_verbose)
-		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(" << peers.size() << ", " << S << ", " << whoami << ", ...)" << std::endl;
+		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(" <<
+			peers.size() << ", " << S << ", " << whoami << ", ...)" <<
+			std::endl;
 	if (fips)
-		dss = new CanettiGennaroJareckiKrawczykRabinDSS(peers.size(), S, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+		dss = new CanettiGennaroJareckiKrawczykRabinDSS(peers.size(), S, whoami,
+			vtmf->p, vtmf->q, vtmf->g, vtmf->h,
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false, true);
 	else
-		dss = new CanettiGennaroJareckiKrawczykRabinDSS(peers.size(), S, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
-			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true, true); // with verifiable generation of $g$
+		dss = new CanettiGennaroJareckiKrawczykRabinDSS(peers.size(), S, whoami,
+			vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true, true); // with VTMF-vgog
 	if (!dss->CheckGroup())
 	{
-		std::cerr << "ERROR: P_" << whoami << ": " << "tDSS parameters are not correctly generated!" << std::endl;
-		delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami << ": " << "tDSS parameters are" <<
+			" not correctly generated!" << std::endl;
+		delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	// tDSS: generate shared $x$ and extract $y = g^x \bmod p$, if s-resilience is not zero
 	if (S > 0)
 	{
+		// tDSS/DSA: generate shared $x$ and extract $y = g^x \bmod p$
 		std::stringstream err_log;
 		if (opt_verbose)
-			std::cerr << "INFO: P_" << whoami << ": dss.Generate()" << std::endl;
-		if (!dss->Generate(aiou, rbc, err_log, false, cache, cache_mod, &cache_avail))
+			std::cerr << "INFO: P_" << whoami << ": dss.Generate()" <<
+				std::endl;
+		if (!dss->Generate(aiou, rbc, err_log, false, cache, cache_mod,
+			&cache_avail))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": " << "tDSS Generate() failed" << std::endl;
-			std::cerr << "ERROR: P_" << whoami << ": log follows " << std::endl << err_log.str();
-			delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			std::cerr << "ERROR: P_" << whoami << ": " <<
+				"tDSS Generate() failed" << std::endl;
+			std::cerr << "ERROR: P_" << whoami << ": log follows " <<
+				std::endl << err_log.str();
+			delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		if (opt_verbose > 1)
-			std::cerr << "INFO: P_" << whoami << ": log follows " << std::endl << err_log.str();
+			std::cerr << "INFO: P_" << whoami << ": log follows " <<
+				std::endl << err_log.str();
 	}
 
-	// create an instance of DKG
+	// create an instance of tElG
 	GennaroJareckiKrawczykRabinDKG *dkg;
 	if (opt_verbose)
-		std::cerr << "INFO: GennaroJareckiKrawczykRabinDKG(" << peers.size() << ", " << T << ", " << whoami << ", ...)" << std::endl;
+		std::cerr << "INFO: GennaroJareckiKrawczykRabinDKG(" << peers.size() <<
+			", " << T << ", " << whoami << ", ...)" << std::endl;
 	if (fips)
-		dkg = new GennaroJareckiKrawczykRabinDKG(peers.size(), T, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+		dkg = new GennaroJareckiKrawczykRabinDKG(peers.size(), T, whoami,
+			vtmf->p, vtmf->q, vtmf->g, vtmf->h,
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false, true);
 	else
-		dkg = new GennaroJareckiKrawczykRabinDKG(peers.size(), T, whoami, vtmf->p, vtmf->q, vtmf->g, vtmf->h,
-			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true, true); // with verifiable generation of $g$
+		dkg = new GennaroJareckiKrawczykRabinDKG(peers.size(), T, whoami,
+			vtmf->p, vtmf->q, vtmf->g, vtmf->h,
+			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, true, true); // with VTMF-vgog
 	if (!dkg->CheckGroup())
 	{
-		std::cerr << "ERROR: P_" << whoami << ": " << "DKG parameters are not correctly generated!" << std::endl;
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami << ": " <<
+			"DKG parameters are not correctly generated!" << std::endl;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-			
-	// DKG: generate shared $x$ and extract $y = g^x \bmod p$
 	if (T > 0)
 	{
+		// tElG: generate shared $x$ and extract $y = g^x \bmod p$
 		std::stringstream err_log;
 		if (opt_verbose)
-			std::cerr << "INFO: P_" << whoami << ": dkg.Generate()" << std::endl;
-		if (!dkg->Generate(aiou, rbc, err_log, false, cache, cache_mod, &cache_avail))
+			std::cerr << "INFO: P_" << whoami << ": dkg.Generate()" <<
+				std::endl;
+		if (!dkg->Generate(aiou, rbc, err_log, false, cache, cache_mod,
+			&cache_avail))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": " << "DKG Generate() failed" << std::endl;
-			std::cerr << "ERROR: P_" << whoami << ": log follows " << std::endl << err_log.str();
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			std::cerr << "ERROR: P_" << whoami << ": " <<
+				"DKG Generate() failed" << std::endl;
+			std::cerr << "ERROR: P_" << whoami << ": log follows " <<
+				std::endl << err_log.str();
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		if (opt_verbose > 1)
-			std::cerr << "INFO: P_" << whoami << ": log follows " << std::endl << err_log.str();
-	
+			std::cerr << "INFO: P_" << whoami << ": log follows " <<
+				std::endl << err_log.str();	
 		// check the generated key share
 		if (opt_verbose)
-			std::cerr << "INFO: P_" << whoami << ": dkg.CheckKey()" << std::endl;
+			std::cerr << "INFO: P_" << whoami << ": dkg.CheckKey()" <<
+				std::endl;
 		if (!dkg->CheckKey())
 		{
-			std::cerr << "ERROR: P_" << whoami << ": " << "DKG CheckKey() failed" << std::endl;
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			std::cerr << "ERROR: P_" << whoami << ": " <<
+				"DKG CheckKey() failed" << std::endl;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 	}
 
-	// participants must agree on a common key creation time (OpenPGP), otherwise subkeyid does not match
+	// all participants must agree on a common key creation time (OpenPGP),
+	// because otherwise key ID and subkey ID does not match
 	if (opt_verbose)
-		std::cerr << "INFO: agree on a key creation time for OpenPGP" << std::endl;
+		std::cerr << "INFO: agree on a key creation time for OpenPGP" <<
+			std::endl;
 	time_t ckeytime = 0;
 	std::vector<time_t> tvs;
 	mpz_t mtv;
@@ -302,7 +358,8 @@ void run_instance
 			}
 			else
 			{
-				std::cerr << "WARNING: P_" << whoami << ": no key creation time received from " << i << std::endl;
+				std::cerr << "WARNING: P_" << whoami << ": no key creation" <<
+					" time received from " << i << std::endl;
 			}
 		}
 	}
@@ -310,13 +367,17 @@ void run_instance
 	std::sort(tvs.begin(), tvs.end());
 	if (tvs.size() < (peers.size() - T_RBC))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": not enough timestamps received" << std::endl;
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami << ": not enough timestamps" <<
+			" received" << std::endl;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	ckeytime = tvs[tvs.size()/2]; // use a median value as some kind of gentle agreement
+	// use a median value as some kind of gentle agreement
+	ckeytime = tvs[tvs.size()/2];
 	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": canonicalized key creation time = " << ckeytime << std::endl;
+		std::cerr << "INFO: P_" << whoami << ": canonicalized key creation" <<
+			" time = " << ckeytime << std::endl;
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
@@ -328,75 +389,94 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 	else
 	{
-		std::cerr << "ERROR: P_" << whoami << ": selecting hash algorithm failed for |q| = " << mpz_sizeinbase(vtmf->q, 2L) << std::endl;
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami << ": selecting hash algorithm" <<
+			" failed for |q| = " << mpz_sizeinbase(vtmf->q, 2L) << std::endl;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 
-	// create an OpenPGP DSA-based primary key resp. ElGamal-based subkey using computed values from tDSS resp. DKG protocols
-	std::string out, crcout, armor;
-	tmcg_openpgp_octets_t all, pub, sec, uid, uidsig, sub, ssb, subsig, keyid, dsaflags, elgflags;
-	tmcg_openpgp_octets_t pub_hashing, sub_hashing;
-	tmcg_openpgp_octets_t uidsig_hashing, subsig_hashing, uidsig_left, subsig_left;
-	tmcg_openpgp_octets_t hash, empty;
-	time_t sigtime;
-	gcry_sexp_t key;
-	gcry_mpi_t p, q, g, y, x, r, s;
-	gcry_error_t ret;
+	// create an OpenPGP DSA-based primary key resp. ElGamal-based subkey using
+	// computed values from tDSS/DSA resp. tElG protocols of LibTMCG
 	mpz_t dsa_y, dsa_x, dsa_m, dsa_r, dsa_s;
-	mpz_init(dsa_y), mpz_init(dsa_x), mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
+	mpz_init(dsa_y), mpz_init(dsa_x);
+	mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
 	if (S > 0)
 	{
-		// use values of the shared DSA signing key, if s-resilience is not equal zero
+		// use tDSS/DSA values for primary key, if s-resilience is not zero
 		mpz_set(dsa_x, dss->x_i);
 		mpz_set(dsa_y, dss->y);
 	}
 	else
 	{
-		// generate individual DSA signing key, if s-resilience is set to zero
-		mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, dsa_x, vtmf->q); // choose private key for DSA
-		mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p); // compute public key for DSA
+		// generate a non-shared DSA primary key, if s-resilience is zero
+		mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, dsa_x, vtmf->q);
+		mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p);
 	}
+	// extract further public parameters for OpenPGP key structures
+	std::string out, crcout, armor;
+	tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
+	tmcg_openpgp_octets_t sub, ssb, subsig, keyid, dsaflags, elgflags;
+	tmcg_openpgp_octets_t pub_hashing, sub_hashing;
+	tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
+	tmcg_openpgp_octets_t subsig_hashing, subsig_left;
+	tmcg_openpgp_octets_t hash, empty;
+	time_t sigtime;
+	gcry_sexp_t key;
+	gcry_mpi_t p, q, g, y, x, r, s;
+	gcry_error_t ret;
 	p = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(p, vtmf->p))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for p" << std::endl;
-		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		std::cerr << "ERROR: P_" << whoami <<
+			": mpz_get_gcry_mpi() failed for p" << std::endl;
+		mpz_clear(dsa_y), mpz_clear(dsa_x);
+		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		gcry_mpi_release(p);
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	q = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(q, vtmf->q))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for q" << std::endl;
-		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		std::cerr << "ERROR: P_" << whoami <<
+			": mpz_get_gcry_mpi() failed for q" << std::endl;
+		mpz_clear(dsa_y), mpz_clear(dsa_x);
+		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	g = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(g, vtmf->g))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for g" << std::endl;
-		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		std::cerr << "ERROR: P_" << whoami <<
+			": mpz_get_gcry_mpi() failed for g" << std::endl;
+		mpz_clear(dsa_y), mpz_clear(dsa_x);
+		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	y = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(y, dsa_y))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_y" << std::endl;
-		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		std::cerr << "ERROR: P_" << whoami <<
+			": mpz_get_gcry_mpi() failed for dsa_y" << std::endl;
+		mpz_clear(dsa_y), mpz_clear(dsa_x);
+		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
 		gcry_mpi_release(y);
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	if (libgcrypt_secmem)
@@ -405,36 +485,45 @@ void run_instance
 		x = gcry_mpi_new(2048);
 	if (!mpz_get_gcry_mpi(x, dsa_x))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_x" << std::endl;
-		mpz_clear(dsa_y), mpz_clear(dsa_x), mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		gcry_mpi_release(p);
-		gcry_mpi_release(q);
-		gcry_mpi_release(g);
-		gcry_mpi_release(y);
-		gcry_mpi_release(x);
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
-		exit(-1);
-	}
-	mpz_clear(dsa_y), mpz_clear(dsa_x);
-	size_t erroff;
-	ret = gcry_sexp_build(&key, &erroff, "(key-data (public-key (dsa (p %M) (q %M) (g %M) (y %M)))"
-		" (private-key (dsa (p %M) (q %M) (g %M) (y %M) (x %M))))", p, q, g, y, p, q, g, y, x);
-	if (ret)
-	{
-		std::cerr << "ERROR: P_" << whoami << ": gcry_sexp_build() failed" << std::endl;
+		std::cerr << "ERROR: P_" << whoami <<
+			": mpz_get_gcry_mpi() failed for dsa_x" << std::endl;
+		mpz_clear(dsa_y), mpz_clear(dsa_x);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		gcry_mpi_release(p);
 		gcry_mpi_release(q);
 		gcry_mpi_release(g);
 		gcry_mpi_release(y);
 		gcry_mpi_release(x);
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketPubEncode(ckeytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, pub); // use common key creation time
+	mpz_clear(dsa_y), mpz_clear(dsa_x);
+	size_t erroff;
+	ret = gcry_sexp_build(&key, &erroff,
+		"(key-data (public-key (dsa (p %M) (q %M) (g %M) (y %M)))"
+		" (private-key (dsa (p %M) (q %M) (g %M) (y %M) (x %M))))",
+		p, q, g, y, p, q, g, y, x);
+	if (ret)
+	{
+		std::cerr << "ERROR: P_" << whoami <<
+			": gcry_sexp_build() failed" << std::endl;
+		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		gcry_mpi_release(p);
+		gcry_mpi_release(q);
+		gcry_mpi_release(g);
+		gcry_mpi_release(y);
+		gcry_mpi_release(x);
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
+		exit(-1);
+	}
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketPubEncode(ckeytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, pub);
 	if (S > 0)
 	{
-		// create an OpenPGP private key as experimental algorithm ID 107 to store everything from tDSS
+		// create an OpenPGP private key as experimental algorithm ID 107
+		// store everything required from tDSS/DSA there
 		gcry_mpi_t h, n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
 		std::vector<gcry_mpi_t> qual, x_rvss_qual;
 		std::vector<std::string> capl; // canonicalized peer list
@@ -442,7 +531,8 @@ void run_instance
 		h = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(h, dss->h))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->h" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dss->h" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -451,7 +541,8 @@ void run_instance
 			gcry_mpi_release(x);
 			gcry_mpi_release(h);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		n = gcry_mpi_set_ui(NULL, dss->n);
@@ -481,7 +572,8 @@ void run_instance
 				tmp = gcry_mpi_new(2048);
 				if (!mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
 				{
-					std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
+					std::cerr << "ERROR: P_" << whoami <<
+						": mpz_get_gcry_mpi() failed for C_ik" << std::endl;
 					mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 					gcry_mpi_release(p);
 					gcry_mpi_release(q);
@@ -503,7 +595,8 @@ void run_instance
 							gcry_mpi_release(c_ik[jj][kk]);
 					gcry_mpi_release(tmp);
 					gcry_sexp_release(key);
-					delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+					delete dkg, delete dss;
+					delete rbc, delete vtmf, delete aiou, delete aiou2;
 					exit(-1); 
 				}
 				c_ik[j].push_back(tmp);
@@ -515,7 +608,8 @@ void run_instance
 			x_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(x_i, dss->x_i))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->x_i" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dss->x_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -537,7 +631,8 @@ void run_instance
 					gcry_mpi_release(c_ik[j][k]);
 			gcry_mpi_release(x_i);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		if (libgcrypt_secmem)
@@ -546,7 +641,8 @@ void run_instance
 			xprime_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dss->xprime_i" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dss->xprime_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -569,11 +665,14 @@ void run_instance
 			gcry_mpi_release(x_i);
 			gcry_mpi_release(xprime_i);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncodeExperimental107(ckeytime, p, q, g, h, y, 
-			n, t, i, qualsize, qual, x_rvss_qualsize, x_rvss_qual, capl, c_ik, x_i, xprime_i, passphrase, sec);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSecEncodeExperimental107(ckeytime, p, q, g, h, y, n, t, i,
+				qualsize, qual, x_rvss_qualsize, x_rvss_qual, capl, c_ik,
+				x_i, xprime_i, passphrase, sec);
 		gcry_mpi_release(h);
 		gcry_mpi_release(n);
 		gcry_mpi_release(t);
@@ -591,24 +690,34 @@ void run_instance
 		gcry_mpi_release(xprime_i);
 	}
 	else
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketSecEncode(ckeytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, x, passphrase, sec);
+	{
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSecEncode(ckeytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, x,
+				passphrase, sec);
+	}
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
 	CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
-	// RFC 4880: "In a V4 key, the primary key MUST be a key capable of certification."
+	// "In a V4 key, the primary key MUST be a key capable of certification."
 	if (S > 0)
 	{
-		dsaflags.push_back(0x01 | 0x02 | 0x10); // key may be used to certify other keys, to sign data and has been split by a secret-sharing mechanism
-		sigtime = ckeytime; // use common key creation time as OpenPGP signature creation time
+		// key may be used to certify other keys, to sign data and has been
+		// split by a secret-sharing mechanism
+		dsaflags.push_back(0x01 | 0x02 | 0x10);
+		// reuse key creation time as signature creation time
+		sigtime = ckeytime;
 	}
 	else
 	{
-		dsaflags.push_back(0x01 | 0x02); // key may be used to certify other keys and to sign data
+		// key may be used to certify other keys and to sign data
+		dsaflags.push_back(0x01 | 0x02);
+		// for a non-shared DSA primary key no common timestamp required 
 		sigtime = time(NULL); // current time
 	}
-	// TODO: create a direct-key signature (0x1f) with the above key flags
-	// positive certification (0x13) of uid and pub
+	// create an additional direct-key signature (0x1f) with above key flags
+// TODO
+	// create a positive certification (0x13) of the included user ID
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
 			hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
@@ -627,7 +736,8 @@ void run_instance
 		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 		if (ret)
 		{
-			std::cerr << "ERROR: P_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": gcry_mpi_scan() failed for h" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -635,12 +745,14 @@ void run_instance
 			gcry_mpi_release(y);
 			gcry_mpi_release(x);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		if (!mpz_set_gcry_mpi(h, dsa_m))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
 			gcry_mpi_release(h);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
@@ -649,17 +761,22 @@ void run_instance
 			gcry_mpi_release(y);
 			gcry_mpi_release(x);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		gcry_mpi_release(h);
 		std::stringstream err_log_sign;
 		if (opt_verbose)
-			std::cerr << "INFO: P_" << whoami << ": dss.Sign() for self signature on uid" << std::endl;
-		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc, err_log_sign))
+			std::cerr << "INFO: P_" << whoami <<
+				": dss.Sign() for self signature on uid" << std::endl;
+		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc,
+			err_log_sign))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": " << "tDSS Sign() failed" << std::endl;
-			std::cerr << "ERROR: P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
+			std::cerr << "ERROR: P_" << whoami << ": tDSS Sign() failed" <<
+				std::endl;
+			std::cerr << "ERROR: P_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -667,15 +784,18 @@ void run_instance
 			gcry_mpi_release(y);
 			gcry_mpi_release(x);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		if (opt_verbose > 1)
-			std::cerr << "INFO: P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
+			std::cerr << "INFO: P_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
 		r = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(r, dsa_r))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -684,13 +804,15 @@ void run_instance
 			gcry_mpi_release(x);
 			gcry_mpi_release(r);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		s = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(s, dsa_s))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -700,7 +822,8 @@ void run_instance
 			gcry_mpi_release(r);
 			gcry_mpi_release(s);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 	}
@@ -708,10 +831,12 @@ void run_instance
 	{
 		r = gcry_mpi_new(2048);
 		s = gcry_mpi_new(2048);
-		ret = CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricSignDSA(hash, key, r, s);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AsymmetricSignDSA(hash, key, r, s);
 		if (ret)
 		{
-			std::cerr << "ERROR: P_" << whoami << ": CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricSignDSA() failed" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": AsymmetricSignDSA() failed" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -721,7 +846,8 @@ void run_instance
 			gcry_mpi_release(r);
 			gcry_mpi_release(s);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 	}
@@ -734,29 +860,34 @@ void run_instance
 	if (T > 0)
 	{
 		y = gcry_mpi_new(2048);
-		if (!mpz_get_gcry_mpi(y, dkg->y)) // computed by DKG (cf. LibTMCG source code)
+		// some parameters are computed by tElG protocols of LibTMCG
+		if (!mpz_get_gcry_mpi(y, dkg->y))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->y" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dkg->y" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
 			gcry_mpi_release(g);
 			gcry_mpi_release(y);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSubEncode(ckeytime, TMCG_OPENPGP_PKALGO_ELGAMAL, p, q, g, y,
 				sub); // use common key creation time
-		// create an OpenPGP private subkey as experimental algorithm ID 109 to store everything from DKG
+		// create an OpenPGP private subkey as experimental algorithm ID 109
+		// to store everything required for tElG protocols
 		gcry_mpi_t h, n, t, i, qualsize, x_i, xprime_i;
 		std::vector<gcry_mpi_t> qual, v_i;
 		std::vector< std::vector<gcry_mpi_t> > c_ik;
 		h = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(h, dkg->h))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->h" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dkg->h" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -764,7 +895,8 @@ void run_instance
 			gcry_mpi_release(y);
 			gcry_mpi_release(h);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		n = gcry_mpi_set_ui(NULL, dkg->n);
@@ -782,7 +914,8 @@ void run_instance
 			v_i[j] = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(v_i[j], dkg->v_i[j]))
 			{
-				std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->v_i[j]" << std::endl;
+				std::cerr << "ERROR: P_" << whoami <<
+					": mpz_get_gcry_mpi() failed for dkg->v_i[j]" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
@@ -802,7 +935,8 @@ void run_instance
 						gcry_mpi_release(c_ik[jj][kk]);
 				gcry_mpi_release(v_i[j]);
 				gcry_sexp_release(key);
-				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+				delete dkg, delete dss;
+				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1); 
 			}
 		}
@@ -815,7 +949,8 @@ void run_instance
 				tmp = gcry_mpi_new(2048);
 				if (!mpz_get_gcry_mpi(tmp, dkg->C_ik[j][k]))
 				{
-					std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->C_ik[j][k]" << std::endl;
+					std::cerr << "ERROR: P_" << whoami <<
+						": mpz_get_gcry_mpi() failed for C_ik" << std::endl;
 					mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 					gcry_mpi_release(p);
 					gcry_mpi_release(q);
@@ -835,7 +970,8 @@ void run_instance
 							gcry_mpi_release(c_ik[jj][kk]);
 					gcry_mpi_release(tmp);
 					gcry_sexp_release(key);
-					delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+					delete dkg, delete dss;
+					delete rbc, delete vtmf, delete aiou, delete aiou2;
 					exit(-1); 
 				}
 				c_ik[j].push_back(tmp);
@@ -847,7 +983,8 @@ void run_instance
 			x_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(x_i, dkg->x_i))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->x_i" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dkg->x_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -867,7 +1004,8 @@ void run_instance
 					gcry_mpi_release(c_ik[j][k]);
 			gcry_mpi_release(x_i);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		if (libgcrypt_secmem)
@@ -876,7 +1014,8 @@ void run_instance
 			xprime_i = gcry_mpi_new(2048);
 		if (!mpz_get_gcry_mpi(xprime_i, dkg->xprime_i))
 		{
-			std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dkg->xprime_i" << std::endl;
+			std::cerr << "ERROR: P_" << whoami <<
+				": mpz_get_gcry_mpi() failed for dkg->xprime_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);
@@ -897,7 +1036,8 @@ void run_instance
 			gcry_mpi_release(x_i);
 			gcry_mpi_release(xprime_i);
 			gcry_sexp_release(key);
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 		CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -944,62 +1084,74 @@ void run_instance
 			ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 			if (ret)
 			{
-				std::cerr << "ERROR: P_" << whoami << ": gcry_mpi_scan() failed for h" << std::endl;
+				std::cerr << "ERROR: P_" << whoami <<
+					": gcry_mpi_scan() failed for h" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
 				gcry_sexp_release(key);
-				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+				delete dkg, delete dss;
+				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
 			if (!mpz_set_gcry_mpi(h, dsa_m))
 			{
-				std::cerr << "ERROR: P_" << whoami << ": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
+				std::cerr << "ERROR: P_" << whoami <<
+					": mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
 				gcry_mpi_release(h);
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
 				gcry_sexp_release(key);
-				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+				delete dkg, delete dss;
+				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
 			gcry_mpi_release(h);
 			std::stringstream err_log_sign;
 			if (opt_verbose)
-				std::cerr << "INFO: P_" << whoami << ": dss.Sign() for subkey binding signature" << std::endl;
+				std::cerr << "INFO: P_" << whoami <<
+					": dss.Sign() for subkey binding signature" << std::endl;
 			if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc, err_log_sign))
 			{
-				std::cerr << "ERROR: P_" << whoami << ": " << "tDSS Sign() failed" << std::endl;
-				std::cerr << "ERROR: P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
+				std::cerr << "ERROR: P_" << whoami << ": tDSS Sign() failed" <<
+					std::endl;
+				std::cerr << "ERROR: P_" << whoami << ": log follows " <<
+					std::endl << err_log_sign.str();
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
 				gcry_sexp_release(key);
-				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+				delete dkg, delete dss;
+				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
 			if (opt_verbose > 1)
-				std::cerr << "INFO: P_" << whoami << ": log follows " << std::endl << err_log_sign.str();
+				std::cerr << "INFO: P_" << whoami << ": log follows " <<
+					std::endl << err_log_sign.str();
 			r = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(r, dsa_r))
 			{
-				std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
+				std::cerr << "ERROR: P_" << whoami <<
+					": mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
 				gcry_mpi_release(g);
 				gcry_mpi_release(r);
 				gcry_sexp_release(key);
-				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+				delete dkg, delete dss;
+				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
 			s = gcry_mpi_new(2048);
 			if (!mpz_get_gcry_mpi(s, dsa_s))
 			{
-				std::cerr << "ERROR: P_" << whoami << ": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
+				std::cerr << "ERROR: P_" << whoami <<
+					": mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
@@ -1007,7 +1159,8 @@ void run_instance
 				gcry_mpi_release(r);
 				gcry_mpi_release(s);
 				gcry_sexp_release(key);
-				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+				delete dkg, delete dss;
+				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
 		}
@@ -1019,7 +1172,8 @@ void run_instance
 				AsymmetricSignDSA(hash, key, r, s);
 			if (ret)
 			{
-				std::cerr << "ERROR: P_" << whoami << ": CallasDonnerhackeFinneyShawThayerRFC4880::AsymmetricSignDSA() failed" << std::endl;
+				std::cerr << "ERROR: P_" << whoami <<
+					": AsymmetricSignDSA() failed" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
@@ -1027,7 +1181,8 @@ void run_instance
 				gcry_mpi_release(r);
 				gcry_mpi_release(s);
 				gcry_sexp_release(key);
-				delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+				delete dkg, delete dss;
+				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
 		}
@@ -1066,15 +1221,19 @@ void run_instance
 	std::ofstream pubofs((pubfilename.str()).c_str(), std::ofstream::out);
 	if (!pubofs.good())
 	{
-		std::cerr << "ERROR: P_" << whoami << ": opening public key file failed" << std::endl;
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami <<
+			": opening public key file failed" << std::endl;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	pubofs << armor;
 	if (!pubofs.good())
 	{
-		std::cerr << "ERROR: P_" << whoami << ": writing public key file failed" << std::endl;
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami << 
+			": writing public key file failed" << std::endl;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	pubofs.close();

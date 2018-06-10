@@ -1155,6 +1155,9 @@ void run_instance
 			else
 				content.insert(content.end(), (msg->literal_data).begin(),
 					(msg->literal_data).end());
+			if (msg->filename == "_CONSOLE")
+				std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
+					std::endl;
 		}
 		// output result
 		if (opt_ofilename != NULL)

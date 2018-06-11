@@ -731,8 +731,11 @@ void run_instance
 		gcry_mpi_t h;
 		size_t buflen = 0;
 		memset(buffer, 0, sizeof(buffer));
-		for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer))); i++, buflen++)
-			buffer[i] = hash[i];
+		for (size_t i = 0; i < hash.size(); i++, buflen++)
+		{
+			if (i < sizeof(buffer))
+				buffer[i] = hash[i];
+		}
 		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 		if (ret)
 		{
@@ -1058,9 +1061,14 @@ void run_instance
 		gcry_mpi_release(x_i);
 		gcry_mpi_release(xprime_i);
 		gcry_mpi_release(y);
-		elgflags.push_back(0x04 | 0x10); // key may be used to encrypt communications and has been split by a secret-sharing mechanism
+		// key may be used to encrypt communications and has been split by
+		// a secret-sharing mechanism
+		elgflags.push_back(0x04 | 0x10);
 		if (S > 0)
-			sigtime = ckeytime; // use common key creation time as OpenPGP signature creation time
+		{
+			// use common key creation time as OpenPGP signature creation time
+			sigtime = ckeytime;
+		}
 		else
 			sigtime = time(NULL); // otherwise use current time
 		// Subkey Binding Signature (0x18) of sub
@@ -1079,8 +1087,11 @@ void run_instance
 			gcry_mpi_t h;
 			size_t buflen = 0;
 			memset(buffer, 0, sizeof(buffer));
-			for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer))); i++, buflen++)
-				buffer[i] = hash[i];
+			for (size_t i = 0; i < hash.size(); i++, buflen++)
+			{
+				if (i < sizeof(buffer))
+					buffer[i] = hash[i];
+			}
 			ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 			if (ret)
 			{
@@ -1114,7 +1125,8 @@ void run_instance
 			if (opt_verbose)
 				std::cerr << "INFO: P_" << whoami <<
 					": dss.Sign() for subkey binding signature" << std::endl;
-			if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc, err_log_sign))
+			if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc,
+				err_log_sign))
 			{
 				std::cerr << "ERROR: P_" << whoami << ": tDSS Sign() failed" <<
 					std::endl;
@@ -1257,35 +1269,45 @@ void run_instance
 		{
 			if (!check_strict_permissions((secfilename.str()).c_str()))
 			{
-				std::cerr << "WARNING: weak permissions of existing private key file detected" << std::endl;
+				std::cerr << "WARNING: weak permissions of existing private" <<
+					" key file detected" << std::endl;
 				if (!set_strict_permissions((secfilename.str()).c_str()))
 				{
-					std::cerr << "ERROR: P_" << whoami << ": setting permissions for private key file failed" << std::endl;
-					delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+					std::cerr << "ERROR: P_" << whoami << ": setting" <<
+						" permissions for private key file failed" << std::endl;
+					delete dkg, delete dss;
+					delete rbc, delete vtmf, delete aiou, delete aiou2;
 					exit(-1);
 				}
 			}
-			std::cerr << "WARNING: existing private key file have been overwritten" << std::endl;
+			std::cerr << "WARNING: existing private key file have been" <<
+				" overwritten" << std::endl;
 		}
 		else
 		{
-			std::cerr << "ERROR: P_" << whoami << ": creating private key file failed" << std::endl;
-			delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+			std::cerr << "ERROR: P_" << whoami << ": creating private key" <<
+				" file failed" << std::endl;
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
 	}
 	std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out);
 	if (!secofs.good())
 	{
-		std::cerr << "ERROR: P_" << whoami << ": opening private key file failed" << std::endl;
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami << ": opening private key file" <<
+			" failed" << std::endl;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	secofs << armor;
 	if (!secofs.good())
 	{
-		std::cerr << "ERROR: P_" << whoami << ": writing private key file failed" << std::endl;
-		delete dkg, delete dss, delete rbc, delete vtmf, delete aiou, delete aiou2;
+		std::cerr << "ERROR: P_" << whoami << ": writing private key file" <<
+			" failed" << std::endl;
+		delete dkg, delete dss;
+		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
 	secofs.close();
@@ -1305,14 +1327,20 @@ void run_instance
 	// release handles (unicast channel)
 	uP_in.clear(), uP_out.clear(), uP_key.clear();
 	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": aiou.numRead = " << aiou->numRead <<
-			" aiou.numWrite = " << aiou->numWrite << std::endl;
+	{
+		std::cerr << "INFO: P_" << whoami << ": unicast channels";
+		aiou->PrintStatistics(std::cerr);
+		std::cerr << std::endl;
+	}
 
 	// release handles (broadcast channel)
 	bP_in.clear(), bP_out.clear(), bP_key.clear();
 	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": aiou2.numRead = " << aiou2->numRead <<
-			" aiou2.numWrite = " << aiou2->numWrite << std::endl;
+	{
+		std::cerr << "INFO: P_" << whoami << ": broadcast channel";
+		aiou2->PrintStatistics(std::cerr);
+		std::cerr << std::endl;
+	}
 
 	// release asynchronous unicast and broadcast
 	delete aiou, delete aiou2;
@@ -1320,16 +1348,20 @@ void run_instance
 
 bool fips_verify
 	(mpz_srcptr fips_p, mpz_srcptr fips_q, mpz_srcptr fips_g,
-	mpz_srcptr fips_hashalgo, mpz_srcptr fips_dps, mpz_srcptr fips_counter, mpz_srcptr fips_index)
+	 mpz_srcptr fips_hashalgo, mpz_srcptr fips_dps, mpz_srcptr fips_counter,
+	 mpz_srcptr fips_index)
 {
 		// 1. $L = \mathbf{len}(p)$.
 		size_t fips_L = mpz_sizeinbase(fips_p, 2L);
 		// 2. $N = \mathbf{len}(q)$.
 		size_t fips_N = mpz_sizeinbase(fips_q, 2L);
-		// 3. Check that the $(L, N)$ pair is in the list of acceptable $(L, N)$ pairs.
-		//    If the pair is not in the list, the return INVALID.
-		if (!((fips_L == 2048) && (fips_N == 256)) && !((fips_L == 3072) && (fips_N == 256)))
+		// 3. Check that the $(L, N)$ pair is in the list of acceptable $(L, N)$
+		//    pairs. If the pair is not in the list, the return INVALID.
+		if (!((fips_L == 2048) && (fips_N == 256)) &&
+			!((fips_L == 3072) && (fips_N == 256)))
+		{
 			return false;
+		}
 		// 4. If $counter > (4L - 1)$, the return INVALID.
 		if (mpz_cmp_ui(fips_counter, (4L * fips_L) - 1L) > 0)
 			return false;
@@ -1350,22 +1382,25 @@ bool fips_verify
 		mpz_add_ui(computed_q, computed_q, 1L);
 		if (mpz_odd_p(U))
 			mpz_sub_ui(computed_q, computed_q, 1L);
-		// 9. Test whether or not $computed\_q$ is prime as specified in Appendix C.3.
-		//    If $(computed\_q \neq q)$ or ($computed\_q$ is not prime), the return INVALID.
+		// 9. Test whether or not $computed\_q$ is prime as specified in
+		//    Appendix C.3. If $(computed\_q \neq q)$ or ($computed\_q$ is not
+		//    prime), the return INVALID.
 		if (mpz_cmp(computed_q, fips_q) || !mpz_probab_prime_p(computed_q, 56))
 		{
 			mpz_clear(U), mpz_clear(computed_q);
 			return false;
 		}
 		// 10. $n = \lceil L / outlen \rceil - 1$.
-		size_t fips_n = (fips_L / (mpz_fhash_len(mpz_get_ui(fips_hashalgo)) * 8)) - 1;
+		size_t outlen = mpz_fhash_len((int)mpz_get_ui(fips_hashalgo)) * 8;
+		size_t fips_n = (fips_L / outlen) - 1;
 		// 11. $b = L - 1 - (n * outlen)$.
-		size_t fips_b = fips_L - 1 - (fips_n * mpz_fhash_len(mpz_get_ui(fips_hashalgo)) * 8);
+		size_t fips_b = fips_L - 1 - (fips_n * outlen);
 		// 12. $offset = 1$.
 		size_t fips_offset = 1;
 		// 13. For $i = 0$ to $counter$ do
 		mpz_t q2, W, X, c, computed_p;
-		mpz_init(q2), mpz_init(W), mpz_init(X), mpz_init(c), mpz_init(computed_p);
+		mpz_init(q2), mpz_init(W), mpz_init(X), mpz_init(c);
+		mpz_init(computed_p);
 		std::vector<mpz_ptr> V_j;
 		for (size_t j = 0; j <= fips_n; j++)
 		{
@@ -1380,16 +1415,19 @@ bool fips_verify
 			// 13.1 For $j = 0$ to $n$ do
 			for (size_t j = 0; j <= fips_n; j++)
 			{
-				// $V_j = \mathbf{Hash}((domain_parameter_seed + offset + j) \bmod 2^{seedlen})$.
+				// $V_j = \mathbf{Hash}((domain_parameter_seed + offset + j)
+				//        \bmod 2^{seedlen})$.
 				mpz_t tmp;
 				mpz_init_set(tmp, fips_dps);
 				mpz_add_ui(tmp, tmp, fips_offset);
 				mpz_add_ui(tmp, tmp, j);
 				mpz_tdiv_r_2exp(tmp, tmp, fips_seedlen);
-				mpz_fhash(V_j[j], mpz_get_ui(fips_hashalgo), tmp);
+				mpz_fhash(V_j[j], (int)mpz_get_ui(fips_hashalgo), tmp);
 				mpz_clear(tmp);
 			}
-			// 13.2 $W = V_0 + (V_1 * 2^{outlen}) + \cdots + (V_{n-1} * 2^{(n-1)*outlen}) + ((V_n \bmod 2^b) * 2^{n*outlen})$.
+			// 13.2 $W = V_0 + (V_1 * 2^{outlen}) + \cdots +
+			//           (V_{n-1} * 2^{(n-1)*outlen}) +
+			//           ((V_n \bmod 2^b) * 2^{n*outlen})$.
 			mpz_set_ui(W, 0L);
 			for (size_t j = 0; j <= fips_n; j++)
 			{
@@ -1397,7 +1435,7 @@ bool fips_verify
 				mpz_init_set(tmp, V_j[j]);
 				if (j == fips_n)
 					mpz_tdiv_r_2exp(tmp, tmp, fips_b);
-				mpz_mul_2exp(tmp, tmp, (j * mpz_fhash_len(mpz_get_ui(fips_hashalgo)) * 8));
+				mpz_mul_2exp(tmp, tmp, (j * outlen));
 				mpz_add(W, W, tmp);
 				mpz_clear(tmp);
 			}
@@ -1416,18 +1454,22 @@ bool fips_verify
 				fips_offset += (fips_n + 1);
 				continue;
 			}
-			// 13.7 Test whether or not $computed\_p$ is prime as specified in Appendix C.3.
-			// 13.8 If $computed\_p$ is determined to be prime, then go to step 14. 
+			// 13.7 Test whether or not $computed\_p$ is prime as specified in
+			//      Appendix C.3.
+			// 13.8 If $computed\_p$ is determined to be prime, then go to
+			//      step 14. 
 			if (mpz_probab_prime_p(computed_p, 56))
 				break;
 			// 13.9 $offset = offset + n + 1$.
 			fips_offset += (fips_n + 1);
 		}
-		// 14. If ($(i \neq counter)$ or $(computed\_p \neq p)$ or ($computed\_p$ is not a prime)),
-		//     then return INVALID.
-		if ((fips_i != mpz_get_ui(fips_counter)) || mpz_cmp(computed_p, fips_p) || !mpz_probab_prime_p(computed_p, 56))
+		// 14. If ($(i \neq counter)$ or $(computed\_p \neq p)$ or
+		//     ($computed\_p$ is not a prime)), then return INVALID.
+		if ((fips_i != mpz_get_ui(fips_counter)) ||
+			mpz_cmp(computed_p, fips_p) || !mpz_probab_prime_p(computed_p, 56))
 		{
-			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
+			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W);
+			mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
 			for (size_t j = 0; j <= fips_n; j++)
 			{
 				mpz_clear(V_j[j]);
@@ -1439,7 +1481,8 @@ bool fips_verify
 		// 1. If ($index$ is incorrect), then return INVALID.
 		if (mpz_cmp_ui(fips_index, 108L))
 		{		
-			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
+			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W);
+			mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
 			for (size_t j = 0; j <= fips_n; j++)
 			{
 				mpz_clear(V_j[j]);
@@ -1453,7 +1496,8 @@ bool fips_verify
 		mpz_sub_ui(q2, q2, 1L);
 		if ((mpz_cmp_ui(fips_g, 2L) < 0) || (mpz_cmp(fips_g, q2) > 0))
 		{
-			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
+			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W);
+			mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
 			for (size_t j = 0; j <= fips_n; j++)
 			{
 				mpz_clear(V_j[j]);
@@ -1466,7 +1510,8 @@ bool fips_verify
 		mpz_powm(q2, fips_g, fips_q, fips_p);
 		if (mpz_cmp_ui(q2, 1L))
 		{
-			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
+			mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W);
+			mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
 			for (size_t j = 0; j <= fips_n; j++)
 			{
 				mpz_clear(V_j[j]);
@@ -1495,7 +1540,8 @@ bool fips_verify
 			// 8. If $(count = 0)$, then return INVALID.
 			if (!mpz_cmp_ui(count, 0L))
 			{
-				mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
+				mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2);
+				mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
 				for (size_t j = 0; j <= fips_n; j++)
 				{
 					mpz_clear(V_j[j]);
@@ -1507,16 +1553,19 @@ bool fips_verify
 			}
 			// 9. $U = domain_parameter_seed || "ggen" || index || count$.
 			// 10. $W = \mathbf{Hash}(U)$.
-			mpz_fhash_ggen(W, mpz_get_ui(fips_hashalgo), fips_dps, "ggen", fips_index, count);
+			mpz_fhash_ggen(W, (int)mpz_get_ui(fips_hashalgo), fips_dps, "ggen",
+				fips_index, count);
 			// 11. $computed\_g = W^e \bmod p$.
 			mpz_powm(computed_g, W, e, fips_p);
 			// 12. If $(computed\_g < 2)$, the go to step 7.
 			if (mpz_cmp_ui(computed_g, 2L) < 0)
 				continue;
-			// 13. If $(computed\_g = g)$, then return VALID, else return INVALID.
+			// 13. If $(computed\_g = g)$, then return VALID, else return
+			//     INVALID.
 			if (mpz_cmp(computed_g, fips_g))
 			{
-				mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
+				mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2);
+				mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
 				for (size_t j = 0; j <= fips_n; j++)
 				{
 					mpz_clear(V_j[j]);
@@ -1529,7 +1578,8 @@ bool fips_verify
 			break;
 		}
 		// release
-		mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W), mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
+		mpz_clear(U), mpz_clear(computed_q), mpz_clear(q2), mpz_clear(W);
+		mpz_clear(X), mpz_clear(c), mpz_clear(computed_p);
 		for (size_t j = 0; j <= fips_n; j++)
 		{
 			mpz_clear(V_j[j]);
@@ -1537,6 +1587,7 @@ bool fips_verify
 		}
 		V_j.clear();
 		mpz_clear(e), mpz_clear(count), mpz_clear(computed_g);
+		// verification of domain parameters successful
 		return true;
 }
 
@@ -1566,7 +1617,8 @@ void fork_instance
 			/* BEGIN child code: participant P_i */
 			time_t keytime = time(NULL);
 #ifdef GNUNET
-			run_instance(whoami, keytime, gnunet_opt_keyexptime, gnunet_opt_xtests);
+			run_instance(whoami, keytime, gnunet_opt_keyexptime,
+				gnunet_opt_xtests);
 #else
 			run_instance(whoami, keytime, opt_e, 0);
 #endif
@@ -1699,8 +1751,9 @@ int main
 	};
 	if (GNUNET_STRINGS_get_utf8_args(argc, argv, &argc, &argv) != GNUNET_OK)
 	{
-		std::cerr << "ERROR: GNUNET_STRINGS_get_utf8_args() failed" << std::endl;
-    		return -1;
+		std::cerr << "ERROR: GNUNET_STRINGS_get_utf8_args() failed" <<
+			std::endl;
+    	return -1;
 	}
 	if (GNUNET_GETOPT_run(usage, options, argc, argv) == GNUNET_SYSERR)
 	{
@@ -1723,70 +1776,104 @@ int main
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
 
-
 	// create peer list from remaining arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
 		// ignore options
-		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) || (arg.find("-t") == 0) || (arg.find("-w") == 0) || (arg.find("-W") == 0) || 
-			(arg.find("-L") == 0) || (arg.find("-l") == 0) || (arg.find("-g") == 0) || (arg.find("-x") == 0) ||
-			(arg.find("-s") == 0) || (arg.find("-e") == 0) || (arg.find("-P") == 0) || (arg.find("-H") == 0))
+		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) ||
+			(arg.find("-t") == 0) || (arg.find("-w") == 0) ||
+			(arg.find("-W") == 0) || (arg.find("-L") == 0) ||
+			(arg.find("-l") == 0) || (arg.find("-g") == 0) ||
+			(arg.find("-x") == 0) || (arg.find("-s") == 0) ||
+			(arg.find("-e") == 0) || (arg.find("-P") == 0) ||
+			(arg.find("-H") == 0))
 		{
 			size_t idx = ++i;
-			if ((arg.find("-g") == 0) && (idx < (size_t)(argc - 1)) && (opt_crs == NULL))
+			if ((arg.find("-g") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_crs == NULL))
 			{
-				crs = argv[i+1]; // overwrite included CRS
+				crs = argv[i+1]; // overwrite included fallback CRS
 				opt_crs = (char*)crs.c_str();
 			}
-			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
+			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_hostname == NULL))
 			{
 				hostname = argv[i+1];
 				opt_hostname = (char*)hostname.c_str();
 			}
-			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
+			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_passwords == NULL))
 			{
 				passwords = argv[i+1];
 				opt_passwords = (char*)passwords.c_str();
 			}
-			if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) && (opt_t == DKGPG_MAX_N))
+			if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_t == DKGPG_MAX_N))
+			{
 				opt_t = strtoul(argv[i+1], NULL, 10);
-			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) && (opt_s == DKGPG_MAX_N))
+			}
+			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_s == DKGPG_MAX_N))
+			{
 				opt_s = strtoul(argv[i+1], NULL, 10);
-			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
+			}
+			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_e == 0))
+			{
 				opt_e = strtoul(argv[i+1], NULL, 10);
-			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
+			}
+			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
+				(port.length() == 0))
+			{
 				port = argv[i+1];
-			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
+			}
+			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_W == 5))
+			{
 				opt_W = strtoul(argv[i+1], NULL, 10);
+			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 #ifndef GNUNET
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -e TIME        expiration time of generated keys in seconds" << std::endl;
-				std::cout << "  -g STRING      common reference string that defines underlying DDH-hard group" << std::endl;
-				std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
-				std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl; 
-				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
-				std::cout << "  -s INTEGER     resilience of threshold DSS protocol (signature scheme)" << std::endl;
-				std::cout << "  -t INTEGER     resilience of DKG protocol (threshold decryption)" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
+				std::cout << "  -e TIME        expiration time of generated" <<
+					" keys in seconds" << std::endl;
+				std::cout << "  -g STRING      common reference string that" <<
+					" defines underlying DDH-hard group" << std::endl;
+				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
+					" of this peer within PEERS" << std::endl;
+				std::cout << "  -p INTEGER     start port for built-in" <<
+					" TCP/IP message exchange service" << std::endl; 
+				std::cout << "  -P STRING      exchanged passwords to" <<
+					" protect private and broadcast channels" << std::endl;
+				std::cout << "  -s INTEGER     resilience of threshold DSS" <<
+					" protocol (signature scheme)" << std::endl;
+				std::cout << "  -t INTEGER     resilience of tElG protocol" <<
+					" (threshold decryption)" << std::endl;
+				std::cout << "  -v, --version  print the version number" <<
+					std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" <<
+					std::endl;
+				std::cout << "  -W TIME        timeout for point-to-point" <<
+					" messages in minutes" << std::endl;
 #endif
 				return 0; // not continue
 			}
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
-				std::cout << "dkg-generate v" << version << " without GNUNET support" << std::endl;
+				std::cout << "dkg-generate v" << version <<
+					" without GNUNET support" << std::endl;
 #endif
 				return 0; // not continue
 			}
@@ -1806,7 +1893,8 @@ int main
 		}
 		else
 		{
-			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" <<
+				std::endl;
 			return -1;
 		}
 	}
@@ -1846,21 +1934,24 @@ int main
 	// check command line arguments
 	if ((opt_hostname != NULL) && (opt_passwords == NULL))
 	{
-		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
+		std::cerr << "ERROR: option \"-P\" is necessary due to insecure" <<
+			" network" << std::endl;
 		return -1;
 	}
 	if (peers.size() < 1)
 	{
-		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
+		std::cerr << "ERROR: no peers given as argument; usage: " <<
+			usage << std::endl;
 		return -1;
 	}
 
-	// canonicalize peer list and setup threshold values
+	// canonicalize peer list and setup threshold values for tDSS/DSA and tElG
 	std::sort(peers.begin(), peers.end());
-	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it =
+		std::unique(peers.begin(), peers.end());
 	peers.resize(std::distance(peers.begin(), it));
-	T = (peers.size() - 1) / 2; // default: maximum t-resilience for DKG (RBC is not affected by this)
-	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS (RBC is also not affected by this)
+	T = (peers.size() - 1) / 2; // default: maximum t-resilience for tElG
+	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS/DSA
 	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
@@ -1876,11 +1967,13 @@ int main
 	// lock memory
 	if (!lock_memory())
 	{
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required for memory protection" << std::endl;
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
+			" for memory protection" << std::endl;
 		// at least try to use libgcrypt's secure memory
 		if (!gcry_check_version(TMCG_LIBGCRYPT_VERSION))
 		{
-			std::cerr << "ERROR: libgcrypt version >= " << TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
+			std::cerr << "ERROR: libgcrypt version >= " <<
+				TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
 			return -1;
 		}
 		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
@@ -1898,7 +1991,8 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
 
 	// read userid and passphrase
 #ifdef DKGPG_TESTSUITE
@@ -1909,17 +2003,21 @@ int main
 	std::getline(std::cin, userid);
 	std::cin.clear();
 	std::string passphrase_check;
+	std::string ps1 = "2. Passphrase to protect your part of the private key";
+	std::string ps2 = "Please repeat the given passphrase to continue";
 	do
 	{
 		passphrase = "", passphrase_check = "";
-		if (!get_passphrase("2. Passphrase to protect your part of the private key", passphrase))
+		if (!get_passphrase(ps1, passphrase))
 			return -1;
-		if (!get_passphrase("Please repeat the given passphrase to continue", passphrase_check))
+		if (!get_passphrase(ps2, passphrase_check))
 			return -1;
 		if (passphrase != passphrase_check)
-			std::cerr << "WARNING: passphrase does not match; please try again" << std::endl;
+			std::cerr << "WARNING: passphrase does not match;" <<
+				" please try again" << std::endl;
 		else if (passphrase == "")
-			std::cerr << "WARNING: no key protection due to empty passphrase" << std::endl;
+			std::cerr << "WARNING: no key protection due to empty passphrase" <<
+				std::endl;
 	}
 	while (passphrase != passphrase_check);
 #endif
@@ -1943,35 +2041,44 @@ int main
 	if (TMCG_ParseHelper::cm(crs, "crs", '|'))
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: verifying domain parameters (according to LibTMCG::VTMF constructor)" << std::endl;
+			std::cerr << "INFO: verifying domain parameters (according to" <<
+				" LibTMCG::VTMF constructor)" << std::endl;
 	}
 	else if (TMCG_ParseHelper::cm(crs, "fips-crs", '|'))
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: verifying domain parameters (according to FIPS 186-4 section A.1.1.2)" << std::endl;
+			std::cerr << "INFO: verifying domain parameters (according to" <<
+				" FIPS 186-4 section A.1.1.2)" << std::endl;
 		fips = true;
 	}
 	else
 	{
-		std::cerr << "ERROR: common reference string (CRS) is not valid!" << std::endl;
+		std::cerr << "ERROR: common reference string (CRS) is not valid" <<
+			std::endl;
 		return -1;
 	}
 	// parse p, q, g, k from CRS
 	std::string mpz_str;
 	mpz_t crsmpz, fips_p, fips_q, fips_g;
-	mpz_init(crsmpz), mpz_init(fips_p), mpz_init(fips_q), mpz_init(fips_g);
+	mpz_init(crsmpz);
+	mpz_init(fips_p), mpz_init(fips_q), mpz_init(fips_g);
 	for (size_t i = 0; i < 4; i++)
 	{
 		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
-			mpz_clear(crsmpz), mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(crsmpz);
+			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			return -1;
 		}
-		else if ((mpz_set_str(crsmpz, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(crs, '|'))
+		else if ((mpz_set_str(crsmpz, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			!TMCG_ParseHelper::nx(crs, '|'))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
-			mpz_clear(crsmpz), mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(crsmpz);
+			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			return -1;
 		}
 		crss << crsmpz << std::endl;
@@ -1994,7 +2101,8 @@ int main
 				std::cerr << "INFO: g";
 		}
 		if ((opt_verbose > 1) && (i < 3))
-			std::cerr << " (" << mpz_sizeinbase(crsmpz, 2L) << " bits) = " << crsmpz << std::endl;
+			std::cerr << " (" << mpz_sizeinbase(crsmpz, 2L) << " bits) = " <<
+				crsmpz << std::endl;
 	}
 	mpz_clear(crsmpz);
 	if (fips)
@@ -2004,91 +2112,121 @@ int main
 		mpz_init_set_ui(fips_counter, 0L), mpz_init_set_ui(fips_index, 0L);
 		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
-		if ((mpz_set_str(fips_hashalgo, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(crs, '|'))
+		if ((mpz_set_str(fips_hashalgo, mpz_str.c_str(),
+			TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(crs, '|'))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
-			return -1;
-		}
-		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
-			return -1;
-		}
-		if ((mpz_set_str(fips_dps, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) || (!TMCG_ParseHelper::nx(crs, '|')))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
 		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
-		if ((mpz_set_str(fips_counter, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) || (!TMCG_ParseHelper::nx(crs, '|')))
+		if ((mpz_set_str(fips_dps, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			(!TMCG_ParseHelper::nx(crs, '|')))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
 		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
-		if ((mpz_set_str(fips_index, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) || (!TMCG_ParseHelper::nx(crs, '|')))
+		if ((mpz_set_str(fips_counter, mpz_str.c_str(),
+			TMCG_MPZ_IO_BASE) < 0) || (!TMCG_ParseHelper::nx(crs, '|')))
 		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted!" << std::endl;
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return -1;
+		}
+		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return -1;
+		}
+		if ((mpz_set_str(fips_index, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			(!TMCG_ParseHelper::nx(crs, '|')))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
 		if (mpz_get_ui(fips_hashalgo) != GCRY_MD_SHA256) 
 		{
-			std::cerr << "ERROR: hash function is not approved according to FIPS 186-4!" << std::endl;
+			std::cerr << "ERROR: hash function is not approved according to" <<
+				" FIPS 186-4" << std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
-		// check the domain parameters according to FIPS 186-4 sections A.1.1.3 and A.2.4
-		if (!fips_verify(fips_p, fips_q, fips_g, fips_hashalgo, fips_dps, fips_counter, fips_index))
+		// check the domain parameters according to FIPS 186-4 sections
+		// A.1.1.3 and A.2.4
+		if (!fips_verify(fips_p, fips_q, fips_g, fips_hashalgo, fips_dps,
+			fips_counter, fips_index))
 		{
-			std::cerr << "ERROR: domain parameters are not set according to FIPS 186-4!" << std::endl;
+			std::cerr << "ERROR: domain parameters are not set according to" <<
+				" FIPS 186-4" << std::endl;
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
 			return -1;
 		}
 		// release
-		mpz_clear(fips_hashalgo), mpz_clear(fips_dps), mpz_clear(fips_counter), mpz_clear(fips_index);
+		mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+		mpz_clear(fips_counter), mpz_clear(fips_index);
 	}
 	// initialize cache
-	std::cerr << "3. We need a lot of entropy to cache very strong randomness for key generation." << std::endl;
-	std::cerr << "   Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
-	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, ((2 * (S + 1)) + (2 * (T + 1))), fips_q);
+	std::cerr << "3. We need a lot of entropy to cache very strong" <<
+		" randomness for key generation." << std::endl;
+	std::cerr << "   Please use other programs, move the mouse, and type on" <<
+		" your keyboard: " << std::endl; 
+	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail,
+		((2 * (S + 1)) + (2 * (T + 1))), fips_q);
 	std::cerr << "Thank you!" << std::endl;
 	mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 	// initialize return code
 	int ret = 0;
-	// create underlying point-to-point channels, if built-in TCP/IP service requested
+	// create underlying point-to-point channels, if built-in TCP/IP requested
 	if (opt_hostname != NULL)
 	{
 		if (port.length())
-			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from options
+			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from "-p"
 		if ((opt_p < 1) || (opt_p > 65535))
 		{
 			std::cerr << "ERROR: no valid TCP start port given" << std::endl;
@@ -2181,7 +2319,8 @@ int main
 		),
 		GNUNET_GETOPT_OPTION_END
 	};
-	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
+	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run,
+		argv[0]);
 	GNUNET_free((void *) argv);
 	// release cache
 	mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
@@ -2191,11 +2330,14 @@ int main
 	else
 		return -1;
 #else
-	std::cerr << "WARNING: GNUnet CADET is required for the message exchange of this program" << std::endl;
+	std::cerr << "WARNING: GNUnet CADET is required for the message exchange" <<
+		" of this program" << std::endl;
 #endif
 
-	std::cerr << "INFO: running local test with " << peers.size() << " participants" << std::endl;
-	std::cerr << "WARNING: due to cache issues the generated shares are identical, don't use them!" << std::endl;
+	std::cerr << "INFO: running local test with " << peers.size() <<
+		" participants" << std::endl;
+	std::cerr << "WARNING: due to cache issues the generated shares will be" <<
+		" identical, don't use them!" << std::endl;
 	// open pipes
 	for (size_t i = 0; i < peers.size(); i++)
 	{
@@ -2227,7 +2369,8 @@ int main
 		{
 			std::cerr << "ERROR: protocol instance ";
 			if (WIFSIGNALED(wstatus))
-				std::cerr << pid[i] << " terminated by signal " << WTERMSIG(wstatus) << std::endl;
+				std::cerr << pid[i] << " terminated by signal " <<
+					WTERMSIG(wstatus) << std::endl;
 			if (WCOREDUMP(wstatus))
 				std::cerr << pid[i] << " dumped core" << std::endl;
 			ret = -1; // fatal error
@@ -2235,7 +2378,9 @@ int main
 		else if (WIFEXITED(wstatus))
 		{
 			if (opt_verbose)
-				std::cerr << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+				std::cerr << "INFO: protocol instance " << pid[i] <<
+					" terminated with exit status " << WEXITSTATUS(wstatus) <<
+					std::endl;
 			if (WEXITSTATUS(wstatus))
 				ret = -2; // error
 		}
@@ -2243,8 +2388,11 @@ int main
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
 				perror("ERROR: dkg-generate (close)");
-			if ((close(broadcast_pipefd[i][j][0]) < 0) || (close(broadcast_pipefd[i][j][1]) < 0))
+			if ((close(broadcast_pipefd[i][j][0]) < 0) ||
+				(close(broadcast_pipefd[i][j][1]) < 0))
+			{
 				perror("ERROR: dkg-generate (close)");
+			}
 		}
 	}
 	

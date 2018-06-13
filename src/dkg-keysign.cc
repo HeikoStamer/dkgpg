@@ -425,9 +425,9 @@ void run_instance
 		size_t buflen = 0;
 		gcry_error_t ret;
 		memset(buffer, 0, sizeof(buffer));
-		for (size_t i = 0; i < sizeof(buffer); i++, buflen++)
+		for (size_t i = 0; i < hash.size(); i++, buflen++)
 		{
-			if (i < hash.size())
+			if (i < sizeof(buffer))
 				buffer[i] = hash[i];
 		}
 		r = gcry_mpi_new(2048);
@@ -463,7 +463,9 @@ void run_instance
 		gcry_mpi_release(h);
 		std::stringstream err_log_sign;
 		if (opt_verbose)
-			std::cerr << "INFO: S_" << whoami << ": dss.Sign()" << std::endl;
+			std::cerr << "INFO: S_" << whoami << ": dss.Sign() with m = " <<
+				dsa_m << " of size |m| = " << mpz_sizeinbase(dsa_m, 2L) <<
+				" bits" << std::endl;
 		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s,
 			prv->tdss_idx2dkg, prv->tdss_dkg2idx, aiou, rbc, err_log_sign))
 		{

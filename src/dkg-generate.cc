@@ -107,7 +107,8 @@ void run_instance
 				exit(-1);
 			}
 			key << pwd;
-			if (((i + 1) < peers.size()) && !TMCG_ParseHelper::nx(passwords, '/'))
+			if (((i + 1) < peers.size()) &&
+				!TMCG_ParseHelper::nx(passwords, '/'))
 			{
 				std::cerr << "ERROR: P_" << whoami << ": " << "cannot skip" <<
 					" to next password for protecting channel to P_" <<
@@ -641,8 +642,8 @@ void run_instance
 			xprime_i = gcry_mpi_new(2048);
 		if (!tmcg_mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 		{
-			std::cerr << "ERROR: P_" << whoami <<
-				": tmcg_mpz_get_gcry_mpi() failed for dss->xprime_i" << std::endl;
+			std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+				" failed for dss->xprime_i" << std::endl;
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			gcry_mpi_release(p);
 			gcry_mpi_release(q);

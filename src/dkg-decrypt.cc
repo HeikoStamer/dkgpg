@@ -93,7 +93,7 @@ void compute_decryption_share
 	// compute the decryption share
 	mpz_t nizk_gk, r_i, R, foo;
 	mpz_init(nizk_gk), mpz_init(r_i), mpz_init(R), mpz_init(foo);
-	mpz_spowm(R, dkg->g, dkg->x_i, dkg->p);
+	tmcg_mpz_spowm(R, dkg->g, dkg->x_i, dkg->p);
 	if (mpz_cmp(R, dkg->v_i[dkg->i]))
 	{
 		std::cerr << "ERROR: check of DKG public verification key failed" <<
@@ -101,7 +101,7 @@ void compute_decryption_share
 		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
 		exit(-1);
 	}
-	if (!mpz_set_gcry_mpi(gk, nizk_gk))
+	if (!tmcg_mpz_set_gcry_mpi(gk, nizk_gk))
 	{
 		std::cerr << "ERROR: converting message component failed" << std::endl;
 		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
@@ -114,22 +114,22 @@ void compute_decryption_share
 		mpz_clear(nizk_gk), mpz_clear(r_i), mpz_clear(R), mpz_clear(foo);
 		exit(-1);
 	}
-	mpz_spowm(r_i, nizk_gk, dkg->x_i, dkg->p);
+	tmcg_mpz_spowm(r_i, nizk_gk, dkg->x_i, dkg->p);
 	// compute NIZK argument for decryption share, e.g. see [CGS97]
 	// proof of knowledge (equality of discrete logarithms)
 	mpz_t a, b, omega, c, r, c2;
 	mpz_init(c), mpz_init(r), mpz_init(c2), mpz_init(a), mpz_init(b);
 	mpz_init(omega);
 	// commitment
-	mpz_srandomm(omega, dkg->q);
-	mpz_spowm(a, nizk_gk, omega, dkg->p);
-	mpz_spowm(b, dkg->g, omega, dkg->p);
+	tmcg_mpz_srandomm(omega, dkg->q);
+	tmcg_mpz_spowm(a, nizk_gk, omega, dkg->p);
+	tmcg_mpz_spowm(b, dkg->g, omega, dkg->p);
 	// challenge
 	// Here we use the well-known "Fiat-Shamir heuristic" to make
 	// the PoK non-interactive, i.e. we turn it into a statistically
 	// zero-knowledge (Schnorr signature scheme style) proof of
 	// knowledge (SPK) in the random oracle model.
-	mpz_shash(c, 6, a, b, r_i, dkg->v_i[dkg->i], nizk_gk, dkg->g);
+	tmcg_mpz_shash(c, 6, a, b, r_i, dkg->v_i[dkg->i], nizk_gk, dkg->g);
 	// response
 	mpz_mul(r, c, dkg->x_i);
 	mpz_neg(r, r);
@@ -151,7 +151,7 @@ void prove_decryption_share_interactive_publiccoin
 {
 	mpz_t nizk_gk, foo;
 	mpz_init(nizk_gk), mpz_init(foo);
-	if (!mpz_set_gcry_mpi(gk, nizk_gk))
+	if (!tmcg_mpz_set_gcry_mpi(gk, nizk_gk))
 	{
 		std::cerr << "ERROR: converting message component failed" << std::endl;
 		mpz_clear(nizk_gk), mpz_clear(foo);
@@ -175,9 +175,9 @@ void prove_decryption_share_interactive_publiccoin
 	mpz_init(c), mpz_init(r), mpz_init(c2), mpz_init(a), mpz_init(b);
 	mpz_init(omega);
 	// 1. commitment
-	mpz_srandomm(omega, dkg->q);
-	mpz_spowm(a, dkg->g, omega, dkg->p);
-	mpz_spowm(b, nizk_gk, omega, dkg->p);
+	tmcg_mpz_srandomm(omega, dkg->q);
+	tmcg_mpz_spowm(a, dkg->g, omega, dkg->p);
+	tmcg_mpz_spowm(b, nizk_gk, omega, dkg->p);
 	rbc->Broadcast(a);
 	rbc->Broadcast(b);
 	// 2. challenge
@@ -210,7 +210,7 @@ bool verify_decryption_share
 	try
 	{
 		// convert message component
-		if (!mpz_set_gcry_mpi(gk, nizk_gk))
+		if (!tmcg_mpz_set_gcry_mpi(gk, nizk_gk))
 		{
 			std::cerr << "ERROR: converting message component failed" <<
 				std::endl;
@@ -253,7 +253,7 @@ bool verify_decryption_share
 		// check the NIZK argument for sanity
 		if (mpz_cmpabs(r_out, dkg->q) >= 0)  // check the size of r
 			throw false;
-		size_t c_len = mpz_shash_len() * 8;
+		size_t c_len = tmcg_mpz_shash_len() * 8;
 		if (mpz_sizeinbase(c_out, 2L) > c_len) // check the size of c
 			throw false;
 		// verify proof of knowledge (equality of discrete logarithms), [CGS97]
@@ -265,7 +265,7 @@ bool verify_decryption_share
 		mpz_powm(c2, dkg->v_i[idx_dkg], c_out, dkg->p);
 		mpz_mul(b, b, c2);
 		mpz_mod(b, b, dkg->p);
-		mpz_shash(c2, 6, a, b, r_i_out, dkg->v_i[idx_dkg], nizk_gk, dkg->g);
+		tmcg_mpz_shash(c2, 6, a, b, r_i_out, dkg->v_i[idx_dkg], nizk_gk, dkg->g);
 		if (mpz_cmp(c2, c_out))
 			throw false;		
 
@@ -302,7 +302,7 @@ bool verify_decryption_share_interactive_publiccoin
 	try
 	{
 		// convert message component
-		if (!mpz_set_gcry_mpi(gk, nizk_gk))
+		if (!tmcg_mpz_set_gcry_mpi(gk, nizk_gk))
 		{
 			std::cerr << "ERROR: converting message component failed" <<
 				std::endl;
@@ -475,7 +475,7 @@ bool combine_decryption_shares
 		// copy the result from R to gk
 		gcry_mpi_t gk_tmp;
 		gk_tmp = gcry_mpi_new(2048);
-		if (!mpz_get_gcry_mpi(gk_tmp, R))
+		if (!tmcg_mpz_get_gcry_mpi(gk_tmp, R))
 		{
 			std::cerr << "ERROR: converting interpolated result failed" <<
 				std::endl;
@@ -820,7 +820,7 @@ void run_instance
 	// initialize for interactive part
 	mpz_t crs_p, crs_q, crs_g, crs_k;
 	mpz_init(crs_p), mpz_init(crs_q), mpz_init(crs_g), mpz_init(crs_k);
-	if (!mpz_set_gcry_mpi(ssb->pub->elg_p, crs_p))
+	if (!tmcg_mpz_set_gcry_mpi(ssb->pub->elg_p, crs_p))
 	{
 		std::cerr << "ERROR: converting group parameters failed" << std::endl;
 		mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
@@ -831,7 +831,7 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (!mpz_set_gcry_mpi(ssb->telg_q, crs_q))
+	if (!tmcg_mpz_set_gcry_mpi(ssb->telg_q, crs_q))
 	{
 		std::cerr << "ERROR: converting group parameters failed" << std::endl;
 		mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
@@ -842,7 +842,7 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (!mpz_set_gcry_mpi(ssb->pub->elg_g, crs_g))
+	if (!tmcg_mpz_set_gcry_mpi(ssb->pub->elg_g, crs_g))
 	{
 		std::cerr << "ERROR: converting group parameters failed" << std::endl;
 		mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
@@ -1777,11 +1777,11 @@ int main
 		compute_decryption_share(esk->gk, dkg, dds);
 		tmcg_openpgp_octets_t dds_input;
 		// bluring the decryption share make NSA's mass spying a bit harder
-		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
-		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
-		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
-		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
-		dds_input.push_back((tmcg_openpgp_byte_t)(mpz_wrandom_ui() % 256));
+		dds_input.push_back((tmcg_openpgp_byte_t)(tmcg_mpz_wrandom_ui() % 256));
+		dds_input.push_back((tmcg_openpgp_byte_t)(tmcg_mpz_wrandom_ui() % 256));
+		dds_input.push_back((tmcg_openpgp_byte_t)(tmcg_mpz_wrandom_ui() % 256));
+		dds_input.push_back((tmcg_openpgp_byte_t)(tmcg_mpz_wrandom_ui() % 256));
+		dds_input.push_back((tmcg_openpgp_byte_t)(tmcg_mpz_wrandom_ui() % 256));
 		for (size_t i = 0; i < dds.length(); i++)
 			dds_input.push_back(dds[i]);
 		std::string dds_radix;

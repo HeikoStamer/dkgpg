@@ -379,10 +379,10 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (!mpz_set_gcry_mpi(h, dsa_m))
+	if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": mpz_set_gcry_mpi() failed" <<
-			" for dsa_m" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
+			" failed for dsa_m" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
@@ -414,10 +414,10 @@ void run_instance
 	if (opt_verbose > 1)
 		std::cerr << "INFO: R_" << whoami << ": log follows " << std::endl <<
 			err_log_sign.str();
-	if (!mpz_get_gcry_mpi(r, dsa_r))
+	if (!tmcg_mpz_get_gcry_mpi(r, dsa_r))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed" <<
-			" for dsa_r" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+			" failed for dsa_r" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
@@ -426,10 +426,10 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (!mpz_get_gcry_mpi(s, dsa_s))
+	if (!tmcg_mpz_get_gcry_mpi(s, dsa_s))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed" <<
-			" for dsa_s" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+			" failed for dsa_s" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
@@ -460,9 +460,9 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-		if (!mpz_set_gcry_mpi(h, dsa_m))
+		if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
 		{
-			std::cerr << "ERROR: R_" << whoami << ": mpz_set_gcry_mpi()" <<
+			std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
 				" failed for dsa_m" << std::endl;
 			gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -495,9 +495,9 @@ void run_instance
 		if (opt_verbose > 1)
 			std::cerr << "INFO: R_" << whoami << ": log follows " <<
 				std::endl << err_log_sign2.str();
-		if (!mpz_get_gcry_mpi(r, dsa_r))
+		if (!tmcg_mpz_get_gcry_mpi(r, dsa_r))
 		{
-			std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi()" <<
+			std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
 				" failed for dsa_r" << std::endl;
 			gcry_mpi_release(r), gcry_mpi_release(s);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -507,9 +507,9 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-		if (!mpz_get_gcry_mpi(s, dsa_s))
+		if (!tmcg_mpz_get_gcry_mpi(s, dsa_s))
 		{
-			std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi()" <<
+			std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
 				" failed for dsa_s" << std::endl;
 			gcry_mpi_release(r), gcry_mpi_release(s);
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);

@@ -288,9 +288,10 @@ void run_instance
 	std::vector<gcry_mpi_t> qual, x_rvss_qual;
 	std::vector< std::vector<gcry_mpi_t> > c_ik;
 	x_i = gcry_mpi_snew(2048);
-	if (!mpz_get_gcry_mpi(x_i, dss->x_i))
+	if (!tmcg_mpz_get_gcry_mpi(x_i, dss->x_i))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for x_i" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+			" failed for x_i" << std::endl;
 		gcry_mpi_release(x_i);
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
@@ -299,9 +300,10 @@ void run_instance
 		exit(-1);
 	}
 	xprime_i = gcry_mpi_snew(2048);
-	if (!mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
+	if (!tmcg_mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for xprime_i" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+			" failed for xprime_i" << std::endl;
 		gcry_mpi_release(x_i);
 		gcry_mpi_release(xprime_i);
 		delete rbc, delete aiou, delete aiou2;
@@ -332,9 +334,11 @@ void run_instance
 		{
 			gcry_mpi_t tmp;
 			tmp = gcry_mpi_new(2048);
-			if (!mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
+			if (!tmcg_mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
 			{
-				std::cerr << "ERROR: R_" << whoami << ": mpz_get_gcry_mpi() failed for dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
+				std::cerr << "ERROR: R_" << whoami <<
+					": tmcg_mpz_get_gcry_mpi() failed for" <<
+					" dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
 				gcry_mpi_release(x_i);
 				gcry_mpi_release(xprime_i);
 				gcry_mpi_release(n);
@@ -820,9 +824,10 @@ int main
 	// initialize cache
 	mpz_t dss_q;
 	mpz_init(dss_q);
-	if (!mpz_set_gcry_mpi(primary->dsa_q, dss_q))
+	if (!tmcg_mpz_set_gcry_mpi(primary->dsa_q, dss_q))
 	{
-		std::cerr << "ERROR: mpz_set_gcry_mpi() failed for dss_q" << std::endl;
+		std::cerr << "ERROR: tmcg_mpz_set_gcry_mpi() failed for dss_q" <<
+			std::endl;
 		mpz_clear(dss_q);
 		delete primary;
 		return -1;
@@ -830,7 +835,7 @@ int main
 	delete primary;
 	std::cerr << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
 	std::cerr << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
-	mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * peers.size()), dss_q);
+	tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * peers.size()), dss_q);
 	std::cerr << "Thank you!" << std::endl;
 	mpz_clear(dss_q);
 
@@ -859,7 +864,7 @@ int main
 		tcpip_close();
 		tcpip_done();
 		// release cache
-		mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 		return ret;
 	}
 
@@ -918,7 +923,7 @@ int main
 	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
 	GNUNET_free((void *) argv);
 	// release cache
-	mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 	if (ret == GNUNET_OK)
 		return 0;
 	else
@@ -982,7 +987,7 @@ int main
 	}
 	
 	// release cache
-	mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 	// finish	
 	return ret;
 }

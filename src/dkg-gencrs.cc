@@ -108,7 +108,7 @@ int main
 
 #ifdef DKGPG_TESTSUITE
 	factor = 1;
-	if (mpz_wrandom_ui() % 2)
+	if (tmcg_mpz_wrandom_ui() % 2)
 		fips = "DKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPG";
 	opt_verbose = 1;
 #endif
@@ -179,9 +179,10 @@ int main
 			return -1;
 		}
 		// 3. $n = \lceil L / outlen \rceil - 1$.
-		size_t n = (L / (mpz_fhash_len(hash_algo) * 8)) - 1;
+		size_t outlen = tmcg_mpz_fhash_len(hash_algo) * 8;
+		size_t n = (L / outlen) - 1;
 		// 4. $b = L - 1 - (n * outlen)$.
-		size_t b = L - 1 - (n * mpz_fhash_len(hash_algo) * 8);
+		size_t b = L - 1 - (n * outlen);
 		// 5.
 		size_t counter = 0;
 		mpz_t U, q, q2, W, X, c, p;
@@ -199,7 +200,7 @@ int main
 			while (1)
 			{
 				// 6. $U = \mathbf{Hash}(domain\_parameter\_seed)\bmod 2^{N-1}$.
-				mpz_fhash(U, hash_algo, domain_parameter_seed);
+				tmcg_mpz_fhash(U, hash_algo, domain_parameter_seed);
 				mpz_tdiv_r_2exp(U, U, N - 1);
 				if (opt_verbose)
 					std::cerr << "INFO: U = " << U << std::endl;
@@ -237,7 +238,7 @@ int main
 					mpz_add_ui(tmp, tmp, offset);
 					mpz_add_ui(tmp, tmp, j);
 					mpz_tdiv_r_2exp(tmp, tmp, seedlen);
-					mpz_fhash(V_j[j], hash_algo, tmp);
+					tmcg_mpz_fhash(V_j[j], hash_algo, tmp);
 					if (opt_verbose > 1)
 						std::cerr << "INFO: V_j[" << j << "] = " << V_j[j] <<
 							std::endl;
@@ -253,7 +254,7 @@ int main
 					mpz_init_set(tmp, V_j[j]);
 					if (j == n)
 						mpz_tdiv_r_2exp(tmp, tmp, b);
-					mpz_mul_2exp(tmp, tmp, (j * mpz_fhash_len(hash_algo) * 8));
+					mpz_mul_2exp(tmp, tmp, (j * outlen));
 					mpz_add(W, W, tmp);
 					mpz_clear(tmp);
 				}
@@ -333,8 +334,8 @@ int main
 			}
 			// 7. $U = domain_parameter_seed || "ggen" || index || count$.
 			// 8. $W = \mathbf{Hash}(U)$.
-			mpz_fhash_ggen(W, hash_algo, domain_parameter_seed, "ggen", index,
-				count);
+			tmcg_mpz_fhash_ggen(W, hash_algo, domain_parameter_seed, "ggen",
+				index, count);
 			// 9. $g = W^e \bmod p$.
 			mpz_powm(g, W, e, p);
 			// 10. If $(g < 2)$, the go to step 5.
@@ -402,7 +403,7 @@ int main
 					" value (wrong base)" << std::endl;
 				return -1;
 			}
-			mpz_lprime_prefix(p, q, k, TMCG_DDH_SIZE + (factor * 1024),
+			tmcg_mpz_lprime_prefix(p, q, k, TMCG_DDH_SIZE + (factor * 1024),
 				TMCG_DLSE_SIZE + (factor * 128), TMCG_MR_ITERATIONS);
 			mpz_t foo, bar;
 			mpz_init(foo), mpz_init(bar);
@@ -413,7 +414,7 @@ int main
 			U << "LibTMCG|" << p << "|" << q << "|ggen|";
 			do
 			{
-				mpz_shash(bar, U.str());
+				tmcg_mpz_shash(bar, U.str());
 				mpz_powm(g, bar, k, p); // $g := [bar]^k \bmod p$
 				U << g << "|";
 				mpz_powm(bar, g, q, p);

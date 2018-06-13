@@ -903,8 +903,8 @@ int main
 	{
 		mpz_t rsa_n, rsa_e;
 		mpz_init(rsa_n), mpz_init(rsa_e);
-		if (!mpz_set_gcry_mpi(primary->rsa_n, rsa_n) ||
-			!mpz_set_gcry_mpi(primary->rsa_e, rsa_e))
+		if (!tmcg_mpz_set_gcry_mpi(primary->rsa_n, rsa_n) ||
+			!tmcg_mpz_set_gcry_mpi(primary->rsa_e, rsa_e))
 		{
 			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
@@ -923,10 +923,10 @@ int main
 		mpz_t dsa_p, dsa_q, dsa_g, dsa_y, dsa_r;
 		mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g), mpz_init(dsa_y);
 		mpz_init(dsa_r);
-		if (!mpz_set_gcry_mpi(primary->dsa_p, dsa_p) ||
-			!mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
-		    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) ||
-			!mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
+		if (!tmcg_mpz_set_gcry_mpi(primary->dsa_p, dsa_p) ||
+			!tmcg_mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
+		    !tmcg_mpz_set_gcry_mpi(primary->dsa_g, dsa_g) ||
+			!tmcg_mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
 		{
 			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
 			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
@@ -944,7 +944,7 @@ int main
 		{
 			if (primary->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
-				if (!mpz_set_gcry_mpi(primary->selfsigs[i]->dsa_r, dsa_r))
+				if (!tmcg_mpz_set_gcry_mpi(primary->selfsigs[i]->dsa_r, dsa_r))
 				{
 					std::cerr << "WARNING: bad signature (cannot convert" <<
 						" dsa_r)" << std::endl << "\t";
@@ -963,7 +963,7 @@ int main
 		{
 			if (primary->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
-				if (!mpz_set_gcry_mpi(primary->keyrevsigs[i]->dsa_r, dsa_r))
+				if (!tmcg_mpz_set_gcry_mpi(primary->keyrevsigs[i]->dsa_r, dsa_r))
 				{
 					std::cerr << "WARNING: bad signature (cannot convert" <<
 						" dsa_r)" << std::endl << "\t";
@@ -982,7 +982,7 @@ int main
 		{
 			if (primary->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
-				if (!mpz_set_gcry_mpi(primary->certrevsigs[i]->dsa_r, dsa_r))
+				if (!tmcg_mpz_set_gcry_mpi(primary->certrevsigs[i]->dsa_r, dsa_r))
 				{
 					std::cerr << "WARNING: bad signature (cannot convert" <<
 						" dsa_r)" << std::endl << "\t";
@@ -1004,7 +1004,7 @@ int main
 				TMCG_OpenPGP_Signature *sig = primary->userids[j]->selfsigs[i]; 
 				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1024,7 +1024,7 @@ int main
 				TMCG_OpenPGP_Signature *sig = primary->userids[j]->revsigs[i];
 				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1049,7 +1049,7 @@ int main
 				TMCG_OpenPGP_Signature *sig = uat->selfsigs[i];
 				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1069,7 +1069,7 @@ int main
 				TMCG_OpenPGP_Signature *sig = uat->revsigs[i];
 				if (sig->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sig->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1177,8 +1177,8 @@ int main
 		{
 			mpz_t rsa_n, rsa_e;
 			mpz_init(rsa_n), mpz_init(rsa_e);
-			if (!mpz_set_gcry_mpi(sub->rsa_n, rsa_n) ||
-				!mpz_set_gcry_mpi(sub->rsa_e, rsa_e))
+			if (!tmcg_mpz_set_gcry_mpi(sub->rsa_n, rsa_n) ||
+				!tmcg_mpz_set_gcry_mpi(sub->rsa_e, rsa_e))
 			{
 				std::cerr << "ERROR: cannot convert RSA key material" <<
 					std::endl;
@@ -1198,9 +1198,9 @@ int main
 			mpz_t elg_p, elg_g, elg_y, dsa_q;
 			mpz_init(elg_p), mpz_init(elg_g), mpz_init(elg_y);
 			mpz_init(dsa_q);
-			if (!mpz_set_gcry_mpi(sub->elg_p, elg_p) ||
-				!mpz_set_gcry_mpi(sub->elg_g, elg_g) ||
-			    !mpz_set_gcry_mpi(sub->elg_y, elg_y))
+			if (!tmcg_mpz_set_gcry_mpi(sub->elg_p, elg_p) ||
+				!tmcg_mpz_set_gcry_mpi(sub->elg_g, elg_g) ||
+			    !tmcg_mpz_set_gcry_mpi(sub->elg_y, elg_y))
 			{
 				std::cerr << "ERROR: cannot convert ElGamal key material" <<
 					std::endl;
@@ -1215,7 +1215,7 @@ int main
 			}
 			if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
-				if (!mpz_set_gcry_mpi(primary->dsa_q, dsa_q))
+				if (!tmcg_mpz_set_gcry_mpi(primary->dsa_q, dsa_q))
 				{
 					std::cerr << "ERROR: cannot convert DSA key material" <<
 						std::endl;
@@ -1240,10 +1240,10 @@ int main
 			mpz_t dsa_p, dsa_q, dsa_g, dsa_y;
 			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g);
 			mpz_init(dsa_y);
-			if (!mpz_set_gcry_mpi(sub->dsa_p, dsa_p) ||
-				!mpz_set_gcry_mpi(sub->dsa_q, dsa_q) ||
-			    !mpz_set_gcry_mpi(sub->dsa_g, dsa_g) ||
-				!mpz_set_gcry_mpi(sub->dsa_y, dsa_y))
+			if (!tmcg_mpz_set_gcry_mpi(sub->dsa_p, dsa_p) ||
+				!tmcg_mpz_set_gcry_mpi(sub->dsa_q, dsa_q) ||
+			    !tmcg_mpz_set_gcry_mpi(sub->dsa_g, dsa_g) ||
+				!tmcg_mpz_set_gcry_mpi(sub->dsa_y, dsa_y))
 			{
 				std::cerr << "ERROR: cannot convert DSA key material" <<
 					std::endl;
@@ -1277,10 +1277,10 @@ int main
 			mpz_t dsa_p, dsa_q, dsa_g, dsa_y, dsa_r;
 			mpz_init(dsa_p), mpz_init(dsa_q), mpz_init(dsa_g);
 			mpz_init(dsa_y), mpz_init(dsa_r);
-			if (!mpz_set_gcry_mpi(primary->dsa_p, dsa_p) ||
-				!mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
-			    !mpz_set_gcry_mpi(primary->dsa_g, dsa_g) ||
-				!mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
+			if (!tmcg_mpz_set_gcry_mpi(primary->dsa_p, dsa_p) ||
+				!tmcg_mpz_set_gcry_mpi(primary->dsa_q, dsa_q) ||
+			    !tmcg_mpz_set_gcry_mpi(primary->dsa_g, dsa_g) ||
+				!tmcg_mpz_set_gcry_mpi(primary->dsa_y, dsa_y))
 			{
 				std::cerr << "ERROR: cannot convert DSA primary key material" <<
 					std::endl;
@@ -1297,7 +1297,7 @@ int main
 			{
 				if (sub->selfsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sub->selfsigs[i]->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sub->selfsigs[i]->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1316,7 +1316,7 @@ int main
 			{
 				if (sub->bindsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sub->bindsigs[i]->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sub->bindsigs[i]->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1335,7 +1335,7 @@ int main
 			{
 				if (sub->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sub->keyrevsigs[i]->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sub->keyrevsigs[i]->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1354,7 +1354,7 @@ int main
 			{
 				if (sub->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 				{
-					if (!mpz_set_gcry_mpi(sub->certrevsigs[i]->dsa_r, dsa_r))
+					if (!tmcg_mpz_set_gcry_mpi(sub->certrevsigs[i]->dsa_r, dsa_r))
 					{
 						std::cerr << "WARNING: bad signature (cannot convert" <<
 							" dsa_r)" << std::endl << "\t";
@@ -1400,3 +1400,4 @@ int main
 	
 	return 0;
 }
+

@@ -110,7 +110,7 @@ int main
 	factor = 1;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		fips = "DKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPG";
-	opt_verbose = 1;
+	opt_verbose = 2;
 #endif
 
 	// initialize LibTMCG

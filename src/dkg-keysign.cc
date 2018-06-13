@@ -952,7 +952,7 @@ int main
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_e = 44203;
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
-	opt_verbose = 1;
+	opt_verbose = 2;
 #endif
 
 	// check command line arguments

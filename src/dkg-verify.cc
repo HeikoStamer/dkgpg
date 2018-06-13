@@ -170,7 +170,7 @@ int main
 	kfilename = "Test1_dkg-pub.asc";
 	ifilename = "Test1_output.bin";
 	opt_ifilename = (char*)ifilename.c_str();
-	opt_verbose = 1;
+	opt_verbose = 2;
 #endif
 	// check command line arguments
 	if ((kfilename.length() == 0) || (ifilename.length() == 0))

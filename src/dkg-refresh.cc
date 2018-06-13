@@ -724,7 +724,7 @@ int main
 	peers.push_back("Test1");
 	peers.push_back("Test4");
 	peers.push_back("Test3");
-	opt_verbose = 1;
+	opt_verbose = 2;
 #endif
 
 	// check command line arguments

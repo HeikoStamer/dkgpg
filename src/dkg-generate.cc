@@ -1906,7 +1906,7 @@ int main
 	peers.push_back("Test2");
 	peers.push_back("Test3");
 	peers.push_back("Test4");
-	opt_verbose = 1;
+	opt_verbose = 2;
 	opt_e = 10800;
 	if (tmcg_mpz_wrandom_ui() % 2)
 	{

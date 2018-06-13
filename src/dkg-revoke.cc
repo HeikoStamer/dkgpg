@@ -889,7 +889,7 @@ int main
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	opt_r = 3;
-	opt_verbose = 1;
+	opt_verbose = 2;
 #endif
 
 	// check command line arguments

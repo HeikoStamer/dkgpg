@@ -135,7 +135,7 @@ int main
 	}
 #ifdef DKGPG_TESTSUITE
 	peers.push_back("Test1");
-	opt_verbose = 1;
+	opt_verbose = 2;
 #endif
 
 	// check command line arguments

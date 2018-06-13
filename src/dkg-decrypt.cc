@@ -1485,7 +1485,7 @@ int main
 	peers.push_back("Test4");
 	ifilename = "Test1_output.bin";
 	opt_ifilename = (char*)ifilename.c_str();
-	opt_verbose = 1;
+	opt_verbose = 2;
 	opt_binary = true;
 #endif
 

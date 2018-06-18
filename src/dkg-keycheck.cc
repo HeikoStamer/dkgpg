@@ -1102,7 +1102,7 @@ int main
 	for (size_t j = 0; j < primary->userids.size(); j++)
 	{
 		std::cout << "OpenPGP User ID: " << std::endl << "\t";
-		std::cout << primary->userids[j]->userid << std::endl;
+		std::cout << primary->userids[j]->userid_sanitized << std::endl;
 	}
 	// show information w.r.t. (valid) subkeys
 	for (size_t j = 0; j < primary->subkeys.size(); j++)

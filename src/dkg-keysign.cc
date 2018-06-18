@@ -412,12 +412,12 @@ void run_instance
 				empty, trailer, hashalgo, hash, left);
 		if (opt_r)
 			std::cerr << "INFO: going to revoke signature on user ID \"" <<
-				primary->userids[j]->userid << "\" of key with fingerprint " <<
-				fpr << std::endl;
+				primary->userids[j]->userid_sanitized << "\" of key with" <<
+				" fingerprint " << fpr << std::endl;
 		else
 			std::cerr << "INFO: going to sign user ID \"" <<
-				primary->userids[j]->userid << "\" of key with fingerprint " <<
-				fpr << std::endl;
+				primary->userids[j]->userid_sanitized << "\" of key with" <<
+				" fingerprint " << fpr << std::endl;
 		// sign the hash
 		tmcg_openpgp_byte_t buffer[1024];
 		gcry_mpi_t r, s, h;

@@ -126,7 +126,7 @@ Bugs, Contribution, GIT
   You can get the latest sources from the source repository by using the
   command
 
-    git clone https://git.savannah.nongnu.org/git/dkgpg.git
+    git clone https://git.savannah.gnu.org/git/dkgpg
 
   The GNU C++ compiler from GCC and the GNU Make program is required.
   Additionally you will need the following free software packages:

@@ -349,8 +349,11 @@ void run_instance
 	size_t buflen = 0;
 	gcry_error_t ret;
 	memset(buffer, 0, sizeof(buffer));
-	for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer))); i++, buflen++)
-		buffer[i] = hash[i];
+	for (size_t i = 0; i < hash.size(); i++, buflen++)
+	{
+		if (i < sizeof(buffer))
+			buffer[i] = hash[i];
+	}
 	r = gcry_mpi_new(2048);
 	s = gcry_mpi_new(2048);
 	mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
@@ -661,12 +664,14 @@ int main
 		    (arg.find("-U") == 0) || (arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
-			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
+			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_ifilename == NULL))
 			{
 				ifilename = argv[i+1];
 				opt_ifilename = (char*)ifilename.c_str();
 			}
-			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) && (opt_ofilename == NULL))
+			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_ofilename == NULL))
 			{
 				ofilename = argv[i+1];
 				opt_ofilename = (char*)ofilename.c_str();
@@ -677,27 +682,39 @@ int main
 				kfilename = argv[i+1];
 				opt_k = (char*)kfilename.c_str();
 			}
-			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
+			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_hostname == NULL))
 			{
 				hostname = argv[i+1];
 				opt_hostname = (char*)hostname.c_str();
 			}
-			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
+			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_passwords == NULL))
 			{
 				passwords = argv[i+1];
 				opt_passwords = (char*)passwords.c_str();
 			}
-			if ((arg.find("-U") == 0) && (idx < (size_t)(argc - 1)) && (opt_URI == NULL))
+			if ((arg.find("-U") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_URI == NULL))
 			{
 				URI = argv[i+1];
 				opt_URI = (char*)URI.c_str();
 			}
-			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) && (opt_e == 0))
+			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_e == 0))
+			{
 				opt_e = strtoul(argv[i+1], NULL, 10);
-			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
+			}
+			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
+				(port.length() == 0))
+			{
 				port = argv[i+1];
-			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
+			}
+			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_W == 5))
+			{
 				opt_W = strtoul(argv[i+1], NULL, 10);
+			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
@@ -769,23 +786,27 @@ int main
 	// check command line arguments
 	if ((opt_hostname != NULL) && (opt_passwords == NULL))
 	{
-		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
+		std::cerr << "ERROR: option \"-P\" required due to insecure network" <<
+			std::endl;
 		return -1;
 	}
 	if (opt_ifilename == NULL)
 	{
-		std::cerr << "ERROR: option -i required to specify an input file" << std::endl;
+		std::cerr << "ERROR: option \"-i\" required to specify an input file" <<
+			std::endl;
 		return -1;
 	}
 	if (peers.size() < 1)
 	{
-		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
+		std::cerr << "ERROR: no peers given as argument; usage: " <<
+			usage << std::endl;
 		return -1;
 	}
 
 	// canonicalize peer list
 	std::sort(peers.begin(), peers.end());
-	std::vector<std::string>::iterator it = std::unique(peers.begin(), peers.end());
+	std::vector<std::string>::iterator it =
+		std::unique(peers.begin(), peers.end());
 	peers.resize(std::distance(peers.begin(), it));
 	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
 	{
@@ -977,7 +998,7 @@ int main
 					WTERMSIG(wstatus) << std::endl;
 			if (WCOREDUMP(wstatus))
 				std::cerr << pid[i] << " dumped core" << std::endl;
-			ret = -1;
+			ret = -1; // fatal error
 		}
 		else if (WIFEXITED(wstatus))
 		{

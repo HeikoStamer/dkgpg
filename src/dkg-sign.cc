@@ -501,7 +501,21 @@ void run_instance
 		ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
 	if (opt_t)
 	{
-// TODO: extend sigstr as required by cleartext signature framework
+		std::string ct_head = "-----BEGIN PGP SIGNED MESSAGE-----\r\n";
+		std::string ct_hash = "Hash: "; // corresponding Hash Armor Header
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			AlgorithmHashTextName(hashalgo, ct_hash);
+		ct_hash += "\r\n\r\n"; // blank line not included into message digest
+		std::string ct_body;
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			DashEscapeFile(opt_ifilename, ct_body))
+		{
+			std::cerr << "ERROR: S_" << whoami << ": DashEscapeFile()" <<
+				" failed; cannot process input file \"" << opt_ifilename <<
+				"\"" << std::endl;
+			exit(-1);
+		}	
+		sigstr = ct_head + ct_hash + ct_body + "\r\n" + sigstr;
 	}
 	if (opt_ofilename != NULL)
 	{

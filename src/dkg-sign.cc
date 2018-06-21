@@ -68,6 +68,7 @@ char						*opt_hostname = NULL;
 char						*opt_URI = NULL;
 char						*opt_k = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
+bool						opt_t = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime,
@@ -326,20 +327,43 @@ void run_instance
 		std::cerr << "INFO: hashing the input file \"" << opt_ifilename <<
 			"\"" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left;
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		PacketSigPrepareDetachedSignature(TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
-			hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
-	if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-		BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
+	if (opt_t)
 	{
-		std::cerr << "ERROR: S_" << whoami << ": BinaryDocumentHash()" <<
-			" failed; cannot process input file \"" << opt_ifilename << "\"" <<
-			std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete ring;
-		delete prv;
-		exit(-1);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareDetachedSignature(
+				TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+				hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
+		{
+			std::cerr << "ERROR: S_" << whoami << ": TextDocumentHash()" <<
+				" failed; cannot process input file \"" << opt_ifilename <<
+				"\"" << std::endl;
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
+	}
+	else
+	{
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareDetachedSignature(
+				TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, hashalgo, csigtime,
+				sigexptime, URI, prv->pub->id, trailer);
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
+		{
+			std::cerr << "ERROR: S_" << whoami << ": BinaryDocumentHash()" <<
+				" failed; cannot process input file \"" << opt_ifilename <<
+				"\"" << std::endl;
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
 	}
 
 	// sign the hash
@@ -475,6 +499,10 @@ void run_instance
 	std::string sigstr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
+	if (opt_t)
+	{
+// TODO: extend sigstr as required by cleartext signature framework
+	}
 	if (opt_ofilename != NULL)
 	{
 		if (!write_message(opt_ofilename, sigstr))
@@ -497,6 +525,7 @@ unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
+int gnunet_opt_text = 0;
 #endif
 
 void fork_instance
@@ -584,6 +613,11 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
+		),
+		GNUNET_GETOPT_option_flag('t',
+			"text",
+			"create cleartext signature",
+			&gnunet_opt_text
 		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
@@ -718,30 +752,46 @@ int main
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
-			(arg.find("-h") == 0) || (arg.find("-V") == 0))
+			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
+			(arg.find("-t") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 #ifndef GNUNET
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -e TIME        expiration time of generated signature in seconds" << std::endl;
-				std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME    create detached signature from FILENAME" << std::endl;
+				std::cout << "  -e TIME        expiration time of generated" <<
+					" signature in seconds" << std::endl;
+				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
+					" of this peer within PEERS" << std::endl;
+				std::cout << "  -i FILENAME    create detached signature" <<
+					" from FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME    write detached signature to FILENAME" << std::endl;
-				std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl;
-				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
-				std::cout << "  -U STRING      policy URI tied to generated signatures" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
+				std::cout << "  -o FILENAME    write detached signature to" <<
+					" FILENAME" << std::endl;
+				std::cout << "  -p INTEGER     start port for built-in" <<
+					" TCP/IP message exchange service" << std::endl;
+				std::cout << "  -P STRING      exchanged passwords to" <<
+					" protect private and broadcast channels" << std::endl;
+				std::cout << "  -t, --text     create cleartext signature" <<
+					std::endl;
+				std::cout << "  -U STRING      policy URI tied to generated" <<
+					" signatures" << std::endl;
+				std::cout << "  -v, --version  print the version number" <<
+					std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" <<
+					std::endl;
+				std::cout << "  -W TIME        timeout for point-to-point" <<
+					" messages in minutes" << std::endl;
 #endif
 				return 0; // not continue
 			}
+			if ((arg.find("-t") == 0) || (arg.find("--text") == 0))
+				opt_t = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
@@ -823,11 +873,13 @@ int main
 	// lock memory
 	if (!lock_memory())
 	{
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required for memory protection" << std::endl;
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
+			" for memory protection" << std::endl;
 		// at least try to use libgcrypt's secure memory
 		if (!gcry_check_version(TMCG_LIBGCRYPT_VERSION))
 		{
-			std::cerr << "ERROR: libgcrypt version >= " << TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
+			std::cerr << "ERROR: libgcrypt version >= " <<
+				TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
 			return -1;
 		}
 		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
@@ -844,15 +896,16 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
 	
 	// initialize return code
 	int ret = 0;
-	// create underlying point-to-point channels, if built-in TCP/IP service requested
+	// create underlying point-to-point channels, if built-in TCP/IP requested
 	if (opt_hostname != NULL)
 	{
 		if (port.length())
-			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from options
+			opt_p = strtoul(port.c_str(), NULL, 10); // start port from options
 		if ((opt_p < 1) || (opt_p > 65535))
 		{
 			std::cerr << "ERROR: no valid TCP start port given" << std::endl;
@@ -923,6 +976,11 @@ int main
 			"STRING",
 			"policy URI tied to signature",
 			&gnunet_opt_URI
+		),
+		GNUNET_GETOPT_option_flag('t',
+			"text",
+			"create cleartext signature",
+			&gnunet_opt_text
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",

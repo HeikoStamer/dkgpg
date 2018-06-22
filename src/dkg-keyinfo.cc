@@ -516,7 +516,7 @@ int main
 		size_t capl_idx = CAPL.size();
 		for (size_t i = 0; i < CAPL.size(); i++)
 		{
-			if (migrate_peer_from == CAPL[i])
+			if (CAPL[i] == migrate_peer_from)
 				capl_idx = i;
 			CAPL_new.push_back(CAPL[i]);
 		}

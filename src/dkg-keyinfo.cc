@@ -61,7 +61,15 @@ int main
 				if ((migrate_peer_from.length() == 0) &&
 					(migrate_peer_to.length() == 0))
 				{
-					migrate_peer_from = argv[i+1], migrate_peer_to = argv[i+2];
+					migrate_peer_from = argv[i+1];
+					migrate_peer_to = argv[i+2];
+					if ((migrate_peer_from.length() > 255) ||
+						(migrate_peer_to.length() > 255))
+					{
+						std::cerr << "ERROR: migration peer identity" <<
+							" too long" << std::endl;
+						return -1;
+					}
 				}
 				else
 					std::cerr << "WARNING: duplicate option \"" << arg <<

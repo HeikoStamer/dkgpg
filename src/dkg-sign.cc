@@ -373,11 +373,17 @@ void run_instance
 	size_t buflen = 0;
 	gcry_error_t ret;
 	memset(buffer, 0, sizeof(buffer));
+	if (opt_verbose > 1)
+		std::cerr << std::hex << "INFO: hash = ";
 	for (size_t i = 0; i < hash.size(); i++, buflen++)
 	{
 		if (i < sizeof(buffer))
 			buffer[i] = hash[i];
+		if (opt_verbose > 1)
+			std::cerr << (int)hash[i] << " ";
 	}
+	if (opt_verbose > 1)
+		std::cerr << std::dec << std::endl;
 	r = gcry_mpi_new(2048);
 	s = gcry_mpi_new(2048);
 	mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
@@ -394,6 +400,8 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
+	if (opt_verbose > 1)
+		std::cerr << "INFO: S_" << whoami << ": h = " << h << std::endl;
 	if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
 	{
 		std::cerr << "ERROR: S_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
@@ -515,8 +523,8 @@ void run_instance
 				" failed; cannot process input file \"" << opt_ifilename <<
 				"\"" << std::endl;
 			exit(-1);
-		}	
-		sigstr = ct_head + ct_hash + ct_body + "\r\n" + sigstr;
+		}
+		sigstr = ct_head + ct_hash + ct_body + sigstr;
 	}
 	if (opt_ofilename != NULL)
 	{

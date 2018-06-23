@@ -350,8 +350,8 @@ void run_instance
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareDetachedSignature(
-				TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, hashalgo, csigtime,
-				sigexptime, URI, prv->pub->id, trailer);
+				TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
+				hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 			BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
 		{
@@ -373,16 +373,16 @@ void run_instance
 	size_t buflen = 0;
 	gcry_error_t ret;
 	memset(buffer, 0, sizeof(buffer));
-	if (opt_verbose > 1)
+	if (opt_verbose)
 		std::cerr << std::hex << "INFO: hash = ";
 	for (size_t i = 0; i < hash.size(); i++, buflen++)
 	{
 		if (i < sizeof(buffer))
 			buffer[i] = hash[i];
-		if (opt_verbose > 1)
+		if (opt_verbose)
 			std::cerr << (int)hash[i] << " ";
 	}
-	if (opt_verbose > 1)
+	if (opt_verbose)
 		std::cerr << std::dec << std::endl;
 	r = gcry_mpi_new(2048);
 	s = gcry_mpi_new(2048);

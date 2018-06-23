@@ -502,10 +502,11 @@ void run_instance
 	if (opt_t)
 	{
 		std::string ct_head = "-----BEGIN PGP SIGNED MESSAGE-----\r\n";
-		std::string ct_hash = "Hash: "; // corresponding Hash Armor Header
+		std::string ct_hash; // construct corresponding Hash Armor Header
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			AlgorithmHashTextName(hashalgo, ct_hash);
-		ct_hash += "\r\n\r\n"; // blank line not included into message digest
+		// additional blank line is not included into message digest
+		ct_hash = "Hash: " + ct_hash + "\r\n\r\n";
 		std::string ct_body;
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 			DashEscapeFile(opt_ifilename, ct_body))

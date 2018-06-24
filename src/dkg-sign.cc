@@ -524,7 +524,7 @@ void run_instance
 				"\"" << std::endl;
 			exit(-1);
 		}
-		sigstr = ct_head + ct_hash + ct_body + sigstr;
+		sigstr = ct_head + ct_hash + ct_body + "\r\n" + sigstr;
 	}
 	if (opt_ofilename != NULL)
 	{

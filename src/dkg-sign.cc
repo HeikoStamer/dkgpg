@@ -608,7 +608,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"create detached signature from FILENAME",
+			"create signature from FILENAME",
 			&gnunet_opt_ifilename
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -622,7 +622,7 @@ int main
 		GNUNET_GETOPT_option_string('o',
 			"output",
 			"FILENAME",
-			"write detached signature to FILENAME",
+			"write generated signature to FILENAME",
 			&gnunet_opt_ofilename
 		),
 		GNUNET_GETOPT_option_string('p',
@@ -790,11 +790,11 @@ int main
 					" signature in seconds" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME    create detached signature" <<
-					" from FILENAME" << std::endl;
+				std::cout << "  -i FILENAME    create signature from" <<
+					" FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME    write detached signature to" <<
+				std::cout << "  -o FILENAME    write generated signature to" <<
 					" FILENAME" << std::endl;
 				std::cout << "  -p INTEGER     start port for built-in" <<
 					" TCP/IP message exchange service" << std::endl;
@@ -967,7 +967,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"create detached signature from FILENAME",
+			"create signature from FILENAME",
 			&gnunet_opt_ifilename
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -979,7 +979,7 @@ int main
 		GNUNET_GETOPT_option_string('o',
 			"output",
 			"FILENAME",
-			"write detached signature to FILENAME",
+			"write generated signature to FILENAME",
 			&gnunet_opt_ofilename
 		),
 		GNUNET_GETOPT_option_string('p',

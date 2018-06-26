@@ -35,7 +35,8 @@ Overview
 --------
   Distributed Privacy Guard contains a bunch of command-line programs: 
   The program dkg-generate provides an implementation for DSA/DSS and the
-  ElGamal cryptosystem. For key generation and refresh it needs a lot of strong
+  ElGamal cryptosystem. For key generation and key refresh (the latter is
+  done by a separated program called dkg-refresh) it needs a lot of strong
   quality randomness (cf. D. Eastlake, J. Schiller, and S. Crocker: Randomness
   Requirements for Security, Network Working Group, Request for Comments:
   4086, June 2005) obtained from the GNU Crypto Library (libgcrypt), that
@@ -44,44 +45,54 @@ Overview
 
   Due to the interactiveness of the protocols a lot of messages between
   participating parties have to be exchanged in a secure way. We employ GNUnet,
-  and in particular its mesh routed CADET service, to establish private and
-  broadcast channels for this message exchange. A reliable broadcast protocol
-  from LibTMCG is used as mechanism to achieve some validity, consistency, and
-  totality in a most likely asynchronous communication environment. However,
-  there are still some limitations due to the predefined timeout values. Such
-  problems may be recognized by looking for timeout error messages on STDERR.
+  and in particular its mesh routed CADET service, to establish private point-
+  to-point and separated broadcast channels for this message exchange. A
+  reliable broadcast protocol (RBC) from LibTMCG is used as mechanism to
+  achieve some validity, consistency, and totality in a most likely asynchronous
+  communication environment. However, there are still limitations and predefined
+  timeout values (use option "-W" to adjust). Timing problems may be recognized
+  by looking for self-explanatory error messages on STDERR.
 
   The program dkg-encrypt encrypts a text message for a given public key in
   OpenPGP format. It uses AES256 as fixed symmetric cipher and ElGamal as
-  public-key algorithm. Of course, a similar encryption can be done by any
-  OpenPGP-compatible implementation. Conversely, a corresponding threshold
-  decryption protocol (see Ronald Cramer, Rosario Gennaro, and Berry
-  Schoenmakers: A Secure and Optimally Efficient Multi-Authority Election
-  Scheme, Advances in Cryptology – EUROCRYPT ’97, LNCS 1233, pp. 103–118, 1997)
-  has been implemented in the program dkg-decrypt. It provides an interactive
-  version and a non-interactive version for computing, verifying, and combining
-  the required decryption shares. Finally, it outputs the decrypted message.
+  public-key algorithm. Of course, a similar encryption can be achieved by any
+  OpenPGP-compatible implementation, the program is includes for completeness.
+  Conversely, a corresponding threshold decryption protocol (see Ronald Cramer,
+  Rosario Gennaro, and Berry Schoenmakers: A Secure and Optimally Efficient
+  Multi-Authority Election Scheme, Advances in Cryptology – EUROCRYPT ’97,
+  LNCS 1233, pp. 103–118, 1997) has been implemented by the program dkg-decrypt.
+  It provides an interactive version and a non-interactive version for
+  computing, verifying, and combining the required decryption shares from
+  participating players. Finally, it outputs the decrypted message.
 
   The program dkg-sign creates a detached signature on a binary file for a 
   shared DSA/DSS key, if a threshold of the parties work together in an
   interactive signing protocol. Such a detached signature can be verified with
-  any OpenPGP-compatible implementation. Thus DKGPG solves the problem of
-  distributed code-signing without secret key splitting (e.g. libgfshare) and
-  laborious reconstruction ceremonies (e.g. DNSSEC root signing key). Last
-  but not least, the program dkg-keysign generates certification signatures
-  in a similar manner for each valid user ID of a given public key.
+  any OpenPGP-compatible implementation or the included programm dkg-verify.
+  Thus DKGPG solves the problem of distributed code-signing without secret key
+  splitting (e.g. libgfshare) and laborious reconstruction ceremonies (e.g.
+  as used for DNSSEC root signing key). Last but not least, the program
+  dkg-keysign generates certification signatures in a similar manner for each
+  selected and valid user ID of a given public key. The program dkg-revoke
+  generates corresponding revocation signatures (aka revocation certificates).
+
+  The programs dkg-keycheck and dkg-keyinfo provide basic information on
+  given OpenPGP public and private keys, respectively.  
 
   Please consult the manual pages for detailed information on the programs.
 
   Note that for building dkg-generate, dkg-sign, dkg-keysign, dkg-revoke,
   dkg-refresh and the interactive version of dkg-decrypt with GNUnet support
-  the development files for a very recent version (at least v0.11.x, which is
-  when writing these lines still not yet released) must be present at
-  configure-time resp. compile-time of DKGPG. However, as alternative to
-  GNUnet a simple TCP/IP based service for the message exchange is included
-  (option "-H <hostname>"). With torsocks and some port forwarding rules for
-  a hidden service (see manual page for details) this allows running DKGPG
-  programs over Tor. A local network can be used for message transmission, too. 
+  the development files and environment of a very recent version (at least
+  v0.11.x, which is when writing these lines still not yet released) must be
+  present. However, as workaround for systems without GNUnet a simple TCP/IP
+  based service for the message exchange is included (option "-H <hostname>").
+  To keep confidentiality and integrity of point-to-point channels in this
+  workaround, some mutually chosen passwords (option "-P <password list>") are
+  required. Moreover, with torsocks and some port forwarding rules for a hidden
+  service (see manual page for details) the TCP/IP based service allows running
+  the interactive DKGPG programs over Tor. Of course a local network can be
+  used for message transmission, too. 
 
 Requirements
 ------------

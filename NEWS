@@ -7,6 +7,12 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.0.7   This release contains a lot of small improvements, in particular due to
+        the new OpenPGP structures from LibTMCG. The option "-k" (keyring) has
+        been added to further programs. OpenPGP cleartext signatures can now be
+        generated with dkg-sign by option "-t" and the output of potentially
+        malicious user IDs has been sanitized in dkg-keycheck, dkg-keyinfo, and
+        dkg-keysign. Finally, the source code has been cleaned up.
 1.0.6   Again some important improvements have been introduced, e.g., the
         support for external revocation keys when validating a public key
         or new options for different signature types of dkg-keysign. The most

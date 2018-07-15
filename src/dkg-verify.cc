@@ -330,7 +330,8 @@ int main
 		    (!primary->subkeys[j]->AccumulateFlags() &&
 			((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
 			(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) ||
-			(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA))))
+			(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA) ||
+			(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA))))
 		{
 			if (CallasDonnerhackeFinneyShawThayerRFC4880::
 				OctetsCompare(signature->issuer, primary->subkeys[j]->id))
@@ -353,7 +354,8 @@ int main
 		    (!primary->AccumulateFlags() &&
 			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
 			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) &&
-			(primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA)))
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA) &&
+			(primary->pkalgo != TMCG_OPENPGP_PKALGO_ECDSA)))
 		{
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
 			delete signature;

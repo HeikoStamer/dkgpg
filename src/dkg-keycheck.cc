@@ -1088,6 +1088,12 @@ int main
 		mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 		mpz_clear(dsa_y), mpz_clear(dsa_r);
 	}
+	else if (primary->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA)
+	{
+		std::cout << "Public-key algorithm: " << std::endl <<
+			"\tECDSA" << std::endl;
+// TODO
+	}
 	else
 	{
 		std::cerr << "ERROR: public-key algorithm not supported" << std::endl;
@@ -1259,6 +1265,18 @@ int main
 			dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
 			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 			mpz_clear(dsa_y);
+		}
+		else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ECDH)
+		{
+			std::cout << "Public-key algorithm: " << std::endl <<
+				"\tECDH" << std::endl;
+// TODO
+		}
+		else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA)
+		{
+			std::cout << "Public-key algorithm: " << std::endl <<
+				"\tECDSA" << std::endl;
+// TODO
 		}
 		else
 		{

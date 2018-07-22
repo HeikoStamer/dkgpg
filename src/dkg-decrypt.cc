@@ -1335,12 +1335,12 @@ int main
 		),
 		GNUNET_GETOPT_OPTION_END
 	};
-	if (GNUNET_STRINGS_get_utf8_args(argc, argv, &argc, &argv) != GNUNET_OK)
-	{
-		std::cerr << "ERROR: GNUNET_STRINGS_get_utf8_args() failed" <<
-			std::endl;
-   		return -1;
-	}
+//	if (GNUNET_STRINGS_get_utf8_args(argc, argv, &argc, &argv) != GNUNET_OK)
+//	{
+//		std::cerr << "ERROR: GNUNET_STRINGS_get_utf8_args() failed" <<
+//			std::endl;
+//		return -1;
+//	}
 	if (GNUNET_GETOPT_run(usage, options, argc, argv) == GNUNET_SYSERR)
 	{
 		std::cerr << "ERROR: GNUNET_GETOPT_run() failed" << std::endl;
@@ -2038,7 +2038,7 @@ int main
 	};
 	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run,
 		argv[0]);
-	GNUNET_free((void *) argv);
+//	GNUNET_free((void *) argv);
 	if (ret == GNUNET_OK)
 		return 0;
 	else

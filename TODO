@@ -8,7 +8,7 @@ in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
 * dkg-keycheck: add some further checks on private key, if option "-p" given
-* dkg-sign, dkg-keysign, dkg-decrypt: add option "-y" (yet-another-openpgp-tool)
+* dkg-decrypt: add option "-y" (yet-another-openpgp-tool)
 * dkg-decrypt: add a fake image header (png) for bluring decryption shares
 * dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())

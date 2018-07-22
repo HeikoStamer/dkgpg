@@ -1090,9 +1090,13 @@ int main
 	}
 	else if (primary->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA)
 	{
+		unsigned int curvebits = 0;
+		const char *curvename = gcry_pk_get_curve(primary->key, 0, &curvebits);
+		if (curvename == NULL)
+			curvename = "unknown";
 		std::cout << "Public-key algorithm: " << std::endl <<
-			"\tECDSA" << std::endl;
-// TODO
+			"\tECDSA with curve \"" << curvename << "\" with " <<
+			curvebits << " bits" << std::endl;
 	}
 	else
 	{
@@ -1268,15 +1272,23 @@ int main
 		}
 		else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ECDH)
 		{
+			unsigned int curvebits = 0;
+			const char *curvename = gcry_pk_get_curve(sub->key, 0, &curvebits);
+			if (curvename == NULL)
+				curvename = "unknown";
 			std::cout << "Public-key algorithm: " << std::endl <<
-				"\tECDH" << std::endl;
-// TODO
+				"\tECDH with curve \"" << curvename << "\" with " <<
+				curvebits << " bits" << std::endl;
 		}
 		else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA)
 		{
+			unsigned int curvebits = 0;
+			const char *curvename = gcry_pk_get_curve(sub->key, 0, &curvebits);
+			if (curvename == NULL)
+				curvename = "unknown";
 			std::cout << "Public-key algorithm: " << std::endl <<
-				"\tECDSA" << std::endl;
-// TODO
+				"\tECDSA with curve \"" << curvename << "\" with " <<
+				curvebits << " bits" << std::endl;
 		}
 		else
 		{

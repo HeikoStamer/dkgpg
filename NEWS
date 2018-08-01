@@ -33,7 +33,7 @@ the Internet <https://www.gnu.org/licenses>.
 1.0.2   This release brings small improvements for dkg-keyinfo and fixes
         some bugs and memory leaks. It also adjusts the flags of shared DSA
         keys generated with dkg-generate due to a hidden RFC 4880 requirement.
-        DKGPG now additionally contains the program dkg-keycheck for analyzing
+        Now DKGPG additionally contains the program dkg-keycheck for analyzing
         other public DSA and ElGamal keys w.r.t. some basic properties.  
 1.0.1   Small improvements have been achieved in this maintenance release:
         First, the program dkg-keyinfo now contains the option "-m" to migrate
@@ -42,7 +42,7 @@ the Internet <https://www.gnu.org/licenses>.
         position within the canonicalized peer list as the old one. Moreover,
         all active parties are required to do this migration in a coordinated
         way since the peer list is stored as part of the private key. Second,
-        the echo of passphrase characters are removed when reading from STDIN.
+        the echo of passphrase characters is removed when reading from STDIN.
         Finally, some memory leaks found by Valgrind have been fixed. Please
         note that this release requires LibTMCG version >= 1.3.5.
 1.0.0	This is the initial release of Distributed Privacy Guard (DKGPG).

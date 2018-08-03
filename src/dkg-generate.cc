@@ -259,7 +259,7 @@ void run_instance
 		gcry_mpi_release(s);
 		gcry_mpi_release(x);
 		gcry_mpi_release(y);
-		// generate a non-shared ElGamal subkey within the same group
+		// generate a non-shared ElGamal subkey with same domain parameter set
 		mpz_t elg_y, elg_x;
 		mpz_init(elg_y), mpz_init(elg_x);
 		tmcg_mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, elg_x, vtmf->q);

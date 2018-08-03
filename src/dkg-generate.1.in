@@ -1,4 +1,4 @@
-.TH DKG\-GENERATE "1" "March 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-GENERATE "1" "August 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-generate \- distributed key generation for OpenPGP
@@ -14,7 +14,7 @@ This program invokes the t\-resilient distributed key generation protocol
 in
 .I "Journal of Cryptology, Vol. 20(1), 2007"
 from LibTMCG.
-Additionally, it can perform the adaptively\-secure threshold DSS protocol
+Additionally, it will perform the adaptively\-secure threshold DSS protocol
 (tDSS) by Canetti et al. for generating a shared DSA key as proposed in the
 extended version of a paper appeared under the title
 .I "Adaptive Security for Threshold Cryptosystems"
@@ -27,16 +27,16 @@ only local test instances with limited useability are started by default.
 .PP
 For each party either an individual or a shared DSA signing key is generated.
 This key acts as OpenPGP's primary key. Then the shared ElGamal encryption key
-is arranged as subkey. Thus each party should verify after key generation, that
-the published public key of the group contains this shared ElGamal key, if no
-shared DSA signing key is used as integrity measure. The program generates two
-different files: First, one file that stores the individual private key shares
-in ASCII\-armored OpenPGP format (experimental public\-key algorithm IDs 107
-and 109), and second, another file that contains the public keys again in
-ASCII\-armored format. These files have a common prefix of their filename: the
-GNUnet peer identity or the hostname of the calling party, i.e., the
-corresponding string from the n\-element list
-.IR "PEERS". 
+(tElg) is arranged as subkey. Thus each party should verify after key
+generation, that the published public key of the group contains this shared
+ElGamal subkey, if no shared DSA signing key is used as some kind of integrity
+measure. The program generates two different files: First, one file that stores
+the individual private key shares in ASCII\-armored OpenPGP format (experimental
+public\-key algorithm IDs 107 and 109), and second, another file that contains
+the public key again in ASCII\-armored format. These files have a common prefix
+of their filename: the GNUnet peer identity or the hostname of the calling
+party, i.e., the corresponding string from the n\-element list
+.IR "PEERS".
 The first file must be kept confidential. A passphrase can be used to protect
 the private keys by OpenPGP iterated and salted S2K encryption scheme. If an
 empty passphrase is entered, then the corresponding secrets are stored in plain
@@ -48,30 +48,40 @@ t+1 participants are needed to recover a key share or to decrypt a OpenPGP
 message. This parameter can be adjusted by using the option "\-t". The default
 value is (n\-1)/2 where n is the number of participants. If the program is
 called with a zero t\-resilience (i.e. "\-t 0"), then no ElGamal encryption
-subkey is generated. It is always ensured by clipping that t <= n holds.
+subkey is generated. It is always ensured by clipping that t <= n holds. Note
+that t+1 malicious participants together are able to compute the secrets of
+the remaining parties of such a shared key.
 .PP
 The option "\-s" defines the parameter s, i.e., the s\-resilience of the tDSS
 protocol. At least 2s+1 participants are required to create a signature of the
 shared DSA primary key, however, s+1 parties can recover all secret key shares.
 The default value for s is (n\-1)/2. The generation of an unique shared DSA
-key is disabled, if parameter s is set to zero. In that case individual DSA keys
-are generated which allow full control over the shared encryption subkey.
+key is disabled, if parameter s is set to zero. In that case for each party an
+individual DSA key is generated, which allows full control over the shared
+encryption subkey.
 .PP
-The underlying DDH\-hard group, i.e., a large prime\-order subgroup of special
-form (sometimes called Schnorr group), can be tweaked by using the option "\-g"
-with a common reference string (CRS) also known as domain parameter set. The
-included program
+There is one big exception to the above description: if option "\-y" is given,
+then any threshold parameters are ignored and the program generates a non-shared
+DSA primary key and a non-shared ElGamal subkey as usual OpenPGP-compliant
+applications (e.g. GnuPG) would do.
+.PP
+The underlying DDH\-hard abelian group, i.e., a large prime\-order subgroup of
+special form (sometimes called Schnorr group), can be tweaked by using the
+option "\-g" with a common reference string (CRS) also known as domain parameter
+set. The included program
 .BR dkg\-gencrs
-generates such a string on that all participants must agree. The security
-level is increased for each remaining dummy argument of dkg\-gencrs.
-The generated domain parameters are verifiable up to a certain
-level. In particular there is an option for compliance with FIPS 186\-4.
+generates such a random string on that all participants must agree. The security
+level is increased step by step for each dummy argument of dkg\-gencrs. The
+generated domain parameters are verifiable up to a certain level. In particular
+there exists an option ("\-f") for compliance with FIPS 186\-4.
 However, it is recommended that this crucial part of the setup is either
-accomplished by some trusted members or all participants together.
-Without option "\-g" a hard coded group with |p| = 2048 bit and |q| = 256 bit
+accomplished by some trusted members or all participants together on a
+trustworthy system (e.g. fresh GNU/Linux installation on a virtual machine).
+Without option "\-g" a hard coded CRS with |p| = 3072 bit and |q| = 256 bit
 is used by default. It was created by the author of the program at random
-and is fully compatible with DSA as defined in RFC 4880. Other choices may
-not be supported by all OpenPGP implementations.
+and is fully compatible with DSA as defined in FIPS 186\-4. Choices of domain
+parameters with |p| > 3072 bit may not be supported by other OpenPGP
+implementations.
 .PP
 With the option "\-w" the number of minutes can be adjusted until DKG/tDSS
 protocols are started. The default value is 5. It is crucial for the key
@@ -107,9 +117,13 @@ numbers are determined by the unique position in the canonicalized peer list.
 Since the communication of TCP/IP is not protected by the network itself
 the option "\-P" is mandatory in that case.
 .PP
+Please note that in the case of option "\-y" no communication channels are
+needed and thus PEERS should contain only one element and all other
+communication options should be omitted.
+.PP
 The included program 
 .BR dkg\-keyinfo
-shows some basic information about threshold parameter and the private key.
+shows some basic information about threshold parameters and the private key.
 Finally, the program
 .BR dkg\-refresh
 updates the individual DSA key shares and thus provides so\-called proactive
@@ -166,6 +180,9 @@ minutes to wait until start of key generation protocol
 .TP
 \fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
 timeout for point\-to\-point messages in minutes
+.TP
+\fB\-y\fR, \fB\-\-yaot\fR
+yet another OpenPGP tool
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT

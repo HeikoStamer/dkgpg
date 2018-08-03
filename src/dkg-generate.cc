@@ -74,6 +74,7 @@ gcry_mpi_t					elg_p, elg_q, elg_g, elg_y, elg_x;
 
 int 						opt_verbose = 0;
 bool						libgcrypt_secmem = false;
+bool						opt_y = false;
 char						*opt_crs = NULL;
 char						*opt_passwords = NULL;
 char						*opt_hostname = NULL;
@@ -91,6 +92,335 @@ void run_instance
 	(const size_t whoami, const time_t keytime, const time_t keyexptime,
 	 const size_t num_xtests)
 {
+	if (opt_y)
+	{
+		// create VTMF instance from CRS
+		BarnettSmartVTMF_dlog *vtmf;
+		if (fips)
+			vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
+				false); // without VTMF-verifiable generation of $g$ (FIPS mode)
+		else	
+			vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
+				true); // with VTMF-verifiable generation of $g$ (VTMF-vgog)
+		// check the constructed VTMF instance
+		if (!vtmf->CheckGroup())
+		{
+			std::cerr << "ERROR: group G from CRS is bad" << std::endl;
+			delete vtmf;
+			exit(-1);
+		}
+		// select hash algorithm for OpenPGP based on |q| (size in bit)
+		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+		if (mpz_sizeinbase(vtmf->q, 2L) == 256)
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
+		else if (mpz_sizeinbase(vtmf->q, 2L) == 384)
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
+		else if (mpz_sizeinbase(vtmf->q, 2L) == 512)
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
+		else
+		{
+			std::cerr << "ERROR: selecting hash algorithm failed for |q| = " <<
+				mpz_sizeinbase(vtmf->q, 2L) << std::endl;
+			delete vtmf;
+			exit(-1);
+		}
+		// generate a non-shared DSA primary key
+		mpz_t dsa_y, dsa_x;
+		mpz_init(dsa_y), mpz_init(dsa_x);
+		tmcg_mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, dsa_x, vtmf->q);
+		tmcg_mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p);
+		// extract parameters for OpenPGP key structures
+		std::string out, crcout, armor;
+		tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
+		tmcg_openpgp_octets_t sub, ssb, subsig, keyid, dsaflags, elgflags;
+		tmcg_openpgp_octets_t pub_hashing, sub_hashing;
+		tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
+		tmcg_openpgp_octets_t subsig_hashing, subsig_left;
+		tmcg_openpgp_octets_t hash, empty;
+		time_t sigtime;
+		gcry_sexp_t key;
+		gcry_mpi_t p, q, g, y, x, r, s;
+		gcry_error_t ret;
+		p = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(p, vtmf->p))
+		{
+			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
+			mpz_clear(dsa_y), mpz_clear(dsa_x);
+			gcry_mpi_release(p);
+			delete vtmf;
+			exit(-1);
+		}
+		q = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(q, vtmf->q))
+		{
+			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
+			mpz_clear(dsa_y), mpz_clear(dsa_x);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			delete vtmf;
+			exit(-1);
+		}
+		g = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(g, vtmf->g))
+		{
+			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
+			mpz_clear(dsa_y), mpz_clear(dsa_x);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			delete vtmf;
+			exit(-1);
+		}
+		y = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(y, dsa_y))
+		{
+			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
+			mpz_clear(dsa_y), mpz_clear(dsa_x);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			delete vtmf;
+			exit(-1);
+		}
+		if (libgcrypt_secmem)
+			x = gcry_mpi_snew(2048);
+		else	
+			x = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(x, dsa_x))
+		{
+			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
+			mpz_clear(dsa_y), mpz_clear(dsa_x);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			delete vtmf;
+			exit(-1);
+		}
+		mpz_clear(dsa_y), mpz_clear(dsa_x);
+		size_t erroff;
+		ret = gcry_sexp_build(&key, &erroff,
+			"(key-data (public-key (dsa (p %M) (q %M) (g %M) (y %M)))"
+			" (private-key (dsa (p %M) (q %M) (g %M) (y %M) (x %M))))",
+			p, q, g, y, p, q, g, y, x);
+		if (ret)
+		{
+			std::cerr << "ERROR: gcry_sexp_build() failed" << std::endl;
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			delete vtmf;
+			exit(-1);
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketPubEncode(keytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, pub);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSecEncode(keytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, x,
+				passphrase, sec);
+		for (size_t i = 6; i < pub.size(); i++)
+			pub_hashing.push_back(pub[i]);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyidCompute(pub_hashing, keyid);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
+		dsaflags.push_back(0x01 | 0x02);
+		sigtime = time(NULL); // current time
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
+				hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
+		hash.clear();
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			CertificationHash(pub_hashing, userid, empty, uidsig_hashing,
+			hashalgo, hash, uidsig_left);
+		r = gcry_mpi_new(2048);
+		s = gcry_mpi_new(2048);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AsymmetricSignDSA(hash, key, r, s);
+		if (ret)
+		{
+			std::cerr << "ERROR: AsymmetricSignDSA() failed" << std::endl;
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_mpi_release(r);
+			gcry_mpi_release(s);
+			gcry_sexp_release(key);
+			delete vtmf;
+			exit(-1);
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigEncode(uidsig_hashing, uidsig_left, r, s, uidsig);
+		gcry_mpi_release(r);
+		gcry_mpi_release(s);
+		gcry_mpi_release(x);
+		gcry_mpi_release(y);
+		// generate a non-shared ElGamal subkey within the same group
+		mpz_t elg_y, elg_x;
+		mpz_init(elg_y), mpz_init(elg_x);
+		tmcg_mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, elg_x, vtmf->q);
+		tmcg_mpz_spowm(elg_y, vtmf->g, elg_x, vtmf->p);
+		// extract further parameters for OpenPGP key structures
+		y = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(y, elg_y))
+		{
+			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
+			mpz_clear(elg_y), mpz_clear(elg_x);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_sexp_release(key);
+			delete vtmf;
+			exit(-1);
+		}
+		if (libgcrypt_secmem)
+			x = gcry_mpi_snew(2048);
+		else	
+			x = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(x, elg_x))
+		{
+			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
+			mpz_clear(elg_y), mpz_clear(elg_x);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			delete vtmf;
+			exit(-1);
+		}
+		mpz_clear(elg_y), mpz_clear(elg_x);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSubEncode(keytime, TMCG_OPENPGP_PKALGO_ELGAMAL, p, q, g, y,
+				sub);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSsbEncode(keytime, TMCG_OPENPGP_PKALGO_ELGAMAL, p, q, g, y,
+				x, passphrase, ssb);
+		gcry_mpi_release(x);
+		gcry_mpi_release(y);
+		elgflags.push_back(0x04 | 0x08);
+		sigtime = time(NULL); // current time
+		// Subkey Binding Signature (0x18) of sub
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
+				hashalgo, sigtime, keyexptime, elgflags, keyid, subsig_hashing);
+		for (size_t i = 6; i < sub.size(); i++)
+			sub_hashing.push_back(sub[i]);
+		hash.clear();
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash,
+				subsig_left);
+		r = gcry_mpi_new(2048);
+		s = gcry_mpi_new(2048);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AsymmetricSignDSA(hash, key, r, s);
+		if (ret)
+		{
+			std::cerr << "ERROR: AsymmetricSignDSA() failed" << std::endl;
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(r);
+			gcry_mpi_release(s);
+			gcry_sexp_release(key);
+			delete vtmf;
+			exit(-1);
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigEncode(subsig_hashing, subsig_left, r, s, subsig);
+		gcry_mpi_release(r);
+		gcry_mpi_release(s);
+		// release
+		gcry_mpi_release(p);
+		gcry_mpi_release(q);
+		gcry_mpi_release(g);
+		gcry_sexp_release(key);
+		delete vtmf;
+		// export generated public keys in OpenPGP armor format
+		std::stringstream pubfilename;
+		pubfilename << peers[whoami] << "-pub.asc";
+		armor = "", all.clear();
+		all.insert(all.end(), pub.begin(), pub.end());
+		all.insert(all.end(), uid.begin(), uid.end());
+		all.insert(all.end(), uidsig.begin(), uidsig.end());
+		all.insert(all.end(), sub.begin(), sub.end());
+		all.insert(all.end(), subsig.begin(), subsig.end());
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, armor);
+		if (opt_verbose > 1)
+			std::cout << armor << std::endl;
+		std::ofstream pubofs((pubfilename.str()).c_str(), std::ofstream::out);
+		if (!pubofs.good())
+		{
+			std::cerr << "ERROR: opening public key file failed" << std::endl;
+			exit(-1);
+		}
+		pubofs << armor;
+		if (!pubofs.good())
+		{
+			std::cerr << "ERROR: writing public key file failed" << std::endl;
+			exit(-1);
+		}
+		pubofs.close();
+		// export generated private keys in OpenPGP armor format
+		std::stringstream secfilename;
+		secfilename << peers[whoami] << "-sec.asc";
+		armor = "", all.clear();
+		all.insert(all.end(), sec.begin(), sec.end());
+		all.insert(all.end(), uid.begin(), uid.end());
+		all.insert(all.end(), uidsig.begin(), uidsig.end());
+		all.insert(all.end(), ssb.begin(), ssb.end());
+		all.insert(all.end(), subsig.begin(), subsig.end());
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
+		if (opt_verbose > 1)
+			std::cout << armor << std::endl;
+		if (!create_strict_permissions((secfilename.str()).c_str()))
+		{
+			if (errno == EEXIST)
+			{
+				if (!check_strict_permissions((secfilename.str()).c_str()))
+				{
+					std::cerr << "WARNING: weak permissions of existing" <<
+						" private key file detected" << std::endl;
+					if (!set_strict_permissions((secfilename.str()).c_str()))
+					{
+						std::cerr << "ERROR: setting permissions for" <<
+						" private key file failed" << std::endl;
+						exit(-1);
+					}
+				}
+				std::cerr << "WARNING: existing private key file has been" <<
+					" overwritten" << std::endl;
+			}
+			else
+			{
+				std::cerr << "ERROR: creating private key file failed" <<
+					std::endl;
+				exit(-1);
+			}
+		}
+		std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out);
+		if (!secofs.good())
+		{
+			std::cerr << "ERROR: opening private key file failed" << std::endl;
+			exit(-1);
+		}
+		secofs << armor;
+		if (!secofs.good())
+		{
+			std::cerr << "ERROR: writing private key file failed" << std::endl;
+			exit(-1);
+		}
+		secofs.close();
+		exit(0);
+	}
+
 	// create communication handles for all players
 	std::vector<int> uP_in, uP_out, bP_in, bP_out;
 	std::vector<std::string> uP_key, bP_key;
@@ -169,7 +499,7 @@ void run_instance
 	size_t T_RBC = (peers.size() - 1) / 3;
 	CachinKursawePetzoldShoupRBC *rbc =
 		new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2,
-			aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
@@ -192,8 +522,6 @@ void run_instance
 			
 	// create and exchange temporary VTMF keys in order to bootstrap the
 	// $h$-generation for tElG and tDSS/DSA protocols [JL00]
-	// TODO: replace N-time NIZK by one interactive (distributed) zero-knowledge
-	//       proof of knowledge, i.e., removes ROM assumption here
 	if (opt_verbose)
 		std::cerr << "INFO: generate h by using VTMF key generation protocol" <<
 			 std::endl;
@@ -1606,6 +1934,7 @@ unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
+int gnunet_opt_y = 0;
 #endif
 
 void fork_instance
@@ -1750,6 +2079,11 @@ int main
 			"number of exchange tests",
 			&gnunet_opt_xtests
 		),
+		GNUNET_GETOPT_option_flag('y',
+			"yaot",
+			"yet another OpenPGP tool",
+			&gnunet_opt_y
+		),
 		GNUNET_GETOPT_OPTION_END
 	};
 //	if (GNUNET_STRINGS_get_utf8_args(argc, argv, &argc, &argv) != GNUNET_OK)
@@ -1839,7 +2173,8 @@ int main
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
-			(arg.find("-h") == 0) || (arg.find("-V") == 0))
+			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
+			(arg.find("-y") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -1869,6 +2204,8 @@ int main
 					std::endl;
 				std::cout << "  -W TIME        timeout for point-to-point" <<
 					" messages in minutes" << std::endl;
+				std::cout << "  -y, --yaot     yet another OpenPGP tool" <<
+					std::endl;
 #endif
 				return 0; // not continue
 			}
@@ -1882,6 +2219,8 @@ int main
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
+			if ((arg.find("-y") == 0) || (arg.find("--yaot") == 0))
+				opt_y = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -1935,7 +2274,7 @@ int main
 #endif
 
 	// check command line arguments
-	if ((opt_hostname != NULL) && (opt_passwords == NULL))
+	if ((opt_hostname != NULL) && (opt_passwords == NULL) && !opt_y)
 	{
 		std::cerr << "ERROR: option \"-P\" is necessary due to insecure" <<
 			" network" << std::endl;
@@ -1955,12 +2294,17 @@ int main
 	peers.resize(std::distance(peers.begin(), it));
 	T = (peers.size() - 1) / 2; // default: maximum t-resilience for tElG
 	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS/DSA
-	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
+	if (((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)) && !opt_y)
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
 	}
-	if (opt_verbose)
+	if ((peers.size() != 1) && opt_y)
+	{
+		std::cerr << "ERROR: too many peers given" << std::endl;
+		return -1;
+	}
+	if (opt_verbose && !opt_y)
 	{
 		std::cerr << "INFO: canonicalized peer list = " << std::endl;
 		for (size_t i = 0; i < peers.size(); i++)
@@ -2226,7 +2570,7 @@ int main
 	// initialize return code
 	int ret = 0;
 	// create underlying point-to-point channels, if built-in TCP/IP requested
-	if (opt_hostname != NULL)
+	if ((opt_hostname != NULL) && !opt_y)
 	{
 		if (port.length())
 			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from "-p"
@@ -2250,6 +2594,14 @@ int main
 		// release cache
 		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 		// finish
+		return ret;
+	}
+	else if (opt_y)
+	{
+		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
+		run_instance(0, time(NULL), opt_e, 0);
+		// release cache
+		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
 		return ret;
 	}
 
@@ -2319,6 +2671,11 @@ int main
 			NULL,
 			"number of exchange tests",
 			&gnunet_opt_xtests
+		),
+		GNUNET_GETOPT_option_flag('y',
+			"yaot",
+			"yet another OpenPGP tool",
+			&gnunet_opt_y
 		),
 		GNUNET_GETOPT_OPTION_END
 	};

@@ -2562,9 +2562,12 @@ int main
 	std::cerr << "3. We need a lot of entropy to cache very strong" <<
 		" randomness for key generation." << std::endl;
 	std::cerr << "   Please use other programs, move the mouse, and type on" <<
-		" your keyboard: " << std::endl; 
-	tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail,
-		((2 * (S + 1)) + (2 * (T + 1))), fips_q);
+		" your keyboard: " << std::endl;
+	if (opt_y)
+		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, 2, fips_q);
+	else
+		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail,
+			((2 * (S + 1)) + (2 * (T + 1))), fips_q);
 	std::cerr << "Thank you!" << std::endl;
 	mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 	// initialize return code

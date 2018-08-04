@@ -24,6 +24,10 @@
 #endif
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	#undef GNUNET
+#endif
 #endif
 
 // copy infos from DKGPG package before overwritten by GNUnet headers
@@ -125,6 +129,9 @@ void run_instance
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
+#ifdef DKGPG_TESTSUITE_Y
+		passphrase = "TestY";
+#else
 		if (!get_passphrase("Enter passphrase to unlock private key",
 			passphrase))
 		{
@@ -132,6 +139,7 @@ void run_instance
 			delete ring;
 			exit(-1);
 		}
+#endif
 #endif
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PrivateKeyBlockParse(armored_seckey, opt_verbose, passphrase, prv);
@@ -969,6 +977,18 @@ int main
 	opt_ofilename = (char*)ofilename.c_str();
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	yfilename = "TestY-sec.asc";
+	opt_y = (char*)yfilename.c_str();
+	ifilename = "TestY_output.asc";
+	opt_ifilename = (char*)ifilename.c_str();
+	ofilename = "TestY_output.sig";
+	opt_ofilename = (char*)ofilename.c_str();
+	opt_e = 4242;
+	URI = "https://savannah.nongnu.org/projects/dkgpg/";
+	opt_verbose = 2;
+#endif
 #endif
 
 	// check command line arguments

@@ -24,6 +24,10 @@
 #endif
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	#undef GNUNET
+#endif
 #endif
 
 // copy infos from DKGPG package before overwritten by GNUnet headers
@@ -583,6 +587,9 @@ void run_instance
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
+#ifdef DKGPG_TESTSUITE_Y
+		passphrase = "TestY";
+#else
 		if (!get_passphrase("Enter passphrase to unlock private key",
 			passphrase))
 		{
@@ -590,6 +597,7 @@ void run_instance
 			delete ring;
 			exit(-1);
 		}
+#endif
 #endif
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PrivateKeyBlockParse(armored_seckey, opt_verbose, passphrase, prv);
@@ -1241,6 +1249,15 @@ void run_instance
 		tmsg.push_back(test_msg[i]);
 	if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(content, tmsg))
 		exit(-2);
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	std::string test_msg = "This is just another simple test message.";
+	tmcg_openpgp_octets_t tmsg;
+	for (size_t i = 0; i < test_msg.length(); i++)
+		tmsg.push_back(test_msg[i]);
+	if (!CallasDonnerhackeFinneyShawThayerRFC4880::OctetsCompare(content, tmsg))
+		exit(-2);
+#endif
 #endif
 }
 
@@ -1555,6 +1572,14 @@ int main
 	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 2;
 	opt_binary = true;
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	yfilename = "TestY-sec.asc";
+	opt_y = (char*)yfilename.c_str();
+	ifilename = "TestY_output.asc";
+	opt_ifilename = (char*)ifilename.c_str();
+	opt_verbose = 2;
+#endif
 #endif
 
 	// check command line arguments

@@ -356,9 +356,10 @@ bool roca_check
 	return false;
 }
 
-void rsa_check
+int rsa_check
 	(mpz_srcptr rsa_n, mpz_srcptr rsa_e)
 {
+	int ret = 0;
 	std::cout << "Public-key algorithm: " << std::endl << "\tRSA" << std::endl;
 	std::cout << "Security level of public key: " << std::endl << "\t";
 	std::cout << "|n| = " << mpz_sizeinbase(rsa_n, 2L) << " bit, ";
@@ -369,7 +370,10 @@ void rsa_check
 	std::cout << std::endl << "\t";
 	std::cout << "n ";
 	if (mpz_probab_prime_p(rsa_n, TMCG_MR_ITERATIONS))
+	{
 		std::cout << "IS PROBABLE PRIME" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
 	else
 		std::cout << "is not probable prime" << std::endl << "\t";
 	for (size_t i = 1; i < 4; i++)
@@ -382,7 +386,10 @@ void rsa_check
 	for (size_t i = 0; i < PRIMES_SIZE; i++)
 	{
 		if (mpz_divisible_ui_p(rsa_n, primes[i]))
+		{
 			std::cout << primes[i] << " * ";
+			ret = -3; // return with non-null status code
+		}
 	}
 	std::cout << "..." << std::endl << "\t";
 	std::cout << "Legendre-Jacobi symbol (i/n): ";
@@ -402,22 +409,33 @@ void rsa_check
 	}
 	std::cout << "#(+1) = " << pos << " #(-1) = " << neg << std::endl << "\t";
 	if (roca_check(rsa_n))
+	{
 		std::cout << "n is SUSPICIOUS for the ROCA vulnerability" <<
 			std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "e is ";
 	if (!mpz_probab_prime_p(rsa_e, TMCG_MR_ITERATIONS))
+	{
 		std::cout << "NOT ";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "probable prime" << std::endl << "\t";
 	std::cout << "e is ";
 	if (mpz_cmp_ui(rsa_e, 41) < 0)
+	{
 		std::cout << "VERY SMALL" << std::endl;
+		ret = -3; // return with non-null status code
+	}
 	else
 		std::cout << "okay" << std::endl;
+	return ret;
 }
 
-void dsa_check
+int dsa_check
 	(mpz_srcptr dsa_p, mpz_srcptr dsa_q, mpz_srcptr dsa_g, mpz_srcptr dsa_y)
 {
+	int ret = 0;
 	std::cout << "Public-key algorithm: " << std::endl << "\tDSA" << std::endl;
 	std::cout << "Security level of DSA domain parameter set: " <<
 		std::endl << "\t";
@@ -427,7 +445,10 @@ void dsa_check
 	std::cout << std::endl << "\t";
 	std::cout << "p is ";
 	if (!mpz_probab_prime_p(dsa_p, TMCG_MR_ITERATIONS))
+	{
 		std::cout << "NOT ";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "probable prime" << std::endl << "\t";
 	mpz_t pm1;
 	mpz_init_set(pm1, dsa_p);
@@ -449,7 +470,10 @@ void dsa_check
 	std::cout << std::endl << "\t";
 	std::cout << "q is ";
 	if (!mpz_probab_prime_p(dsa_q, TMCG_MR_ITERATIONS))
+	{
 		std::cout << "NOT ";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "probable prime" << std::endl << "\t";
 	mpz_set(pm1, dsa_q);
 	mpz_sub_ui(pm1, pm1, 1L);
@@ -467,7 +491,10 @@ void dsa_check
 	std::cout << "g is ";
 	mpz_powm(pm1, dsa_g, dsa_q, dsa_p);
 	if (mpz_cmp_ui(pm1, 1L))
+	{
 		std::cout << "NOT ";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "generator of G_q" << std::endl << "\t";
 	mpz_t tmp, foo, bar;
 	mpz_init(tmp), mpz_init_set_ui(foo, 2L), mpz_init(bar);
@@ -485,7 +512,10 @@ void dsa_check
 	std::cout << "y is ";
 	mpz_powm(pm1, dsa_y, dsa_q, dsa_p);
 	if (mpz_cmp_ui(pm1, 1L))
+	{
 		std::cout << "NOT ";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "element of G_q" << std::endl << "\t";
 	bool trivial = false;
 	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
@@ -507,17 +537,22 @@ void dsa_check
 	if (!trivial)
 		std::cout << "y is not trivial" << std::endl << "\t";
 	else
+	{
 		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " <<
 			TRIVIAL_SIZE << ")" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "Legendre-Jacobi symbol (y/p) is " <<
 		mpz_jacobi(dsa_y, dsa_p) << std::endl;
 	mpz_clear(pm1);
 	mpz_clear(tmp);
+	return ret;
 }
 
-void elg_check
+int elg_check
 	(mpz_srcptr elg_p, mpz_srcptr elg_g, mpz_srcptr elg_y, mpz_srcptr dsa_q)
 {
+	int ret = 0;
 	mpz_t pm1, tmp, bar;
 	std::cout << "Public-key algorithm: " << std::endl <<
 		"\tElGamal" << std::endl;
@@ -528,7 +563,10 @@ void elg_check
 		std::endl << "\t";
 	std::cout << "p is ";
 	if (!mpz_probab_prime_p(elg_p, TMCG_MR_ITERATIONS))
+	{
 		std::cout << "NOT ";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "probable prime" << std::endl << "\t";
 	mpz_init_set(pm1, elg_p);
 	mpz_sub_ui(pm1, pm1, 1L);
@@ -568,8 +606,11 @@ void elg_check
 		mpz_ui_pow_ui(bar, it->first, it->second);
 		mpz_powm(tmp, elg_g, bar, elg_p);
 		if (!mpz_cmp_ui(tmp, 1L))
+		{
 			std::cout << "is VERY SMALL (" << it->first << "^" <<
 				it->second << " elements) ";
+			ret = -3; // return with non-null status code
+		}
 		else
 			std::cout << "is okay ";
 	}
@@ -605,25 +646,36 @@ void elg_check
 	if (!trivial)
 		std::cout << "y is not trivial" << std::endl << "\t";
 	else
+	{
 		std::cout << "y is TRIVIAL, i.e., y = g^c mod p (for some |c| < " <<
 			TRIVIAL_SIZE << ")" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
 	std::cout << "Legendre-Jacobi symbol (y/p) is " <<
 		mpz_jacobi(elg_y, elg_p) << std::endl;
 	mpz_clear(pm1);
+	return ret;
 }
 
-void sig_check_dsa
+int sig_check_dsa
 	(mpz_srcptr dsa_p, mpz_srcptr dsa_q, mpz_srcptr dsa_g, mpz_srcptr dsa_y,
 	 mpz_srcptr dsa_r)
 {
+	int ret = 0;
 	if (!mpz_cmp_ui(dsa_r, 1L))
+	{
 		std::cout << "r is WEAK (i.e. k = 0)" << std::endl << "\t";
+		ret = -4; // return with non-null status code
+	}
 	mpz_t pm1, tmp;
 	bool suspicious = false;
 	mpz_init(pm1), mpz_init(tmp);
 	mpz_mod(pm1, dsa_y, dsa_q);
 	if (!mpz_cmp(dsa_r, pm1))
+	{
 		std::cout << "r is WEAK (i.e. k = x)" << std::endl << "\t";
+		ret = -4; // return with non-null status code
+	}
 	for (size_t i = 0; i < TRIVIAL_SIZE; i++)
 	{
 		mpz_powm_ui(tmp, dsa_g, i, dsa_p);
@@ -641,8 +693,12 @@ void sig_check_dsa
 		}
 	}
 	if (suspicious)
+	{
 		std::cout << "r is SUSPICIOUS (small k used)" << std::endl << "\t";
+		ret = -4; // return with non-null status code
+	}
 	mpz_clear(pm1), mpz_clear(tmp);
+	return ret;
 }
 
 int main
@@ -721,6 +777,19 @@ int main
 		kfilename = arg;
 	}
 
+#ifdef DKGPG_TESTSUITE_Y
+	if (tmcg_mpz_wrandom_ui() % 2)
+	{
+		kfilename = "TestY-pub.asc";
+	}
+	else
+	{
+		kfilename = "TestY-sec.asc";
+		opt_private = true;
+	}
+	opt_verbose = 2;
+#endif
+
 	// check command line arguments
 	if (kfilename.length() == 0)
 	{
@@ -798,6 +867,9 @@ int main
 			PrivateKeyBlockParse(armored_pubkey, opt_verbose, passphrase, prv);
 		if (!parse_ok)
 		{
+#ifdef DKGPG_TESTSUITE_Y
+			passphrase = "TestY";
+#else
 			if (!get_passphrase("Enter passphrase to unlock private key",
 				passphrase))
 			{
@@ -805,6 +877,7 @@ int main
 				delete ring;
 				return -1;
 			}
+#endif
 			parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 				PrivateKeyBlockParse(armored_pubkey, opt_verbose, passphrase,
 				prv);
@@ -835,6 +908,7 @@ int main
 	}
 
 	// show information w.r.t. primary key
+	int ret = 0;
 	std::string kid, fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyidCompute(primary->pub_hashing, kid);
@@ -854,7 +928,10 @@ int main
 		// compute validity period of the primary key after key creation time
 		time_t ekeytime = primary->creationtime + primary->expirationtime;
 		if (ekeytime < time(NULL))
+		{
 			std::cout << "[EXPIRED] ";
+			ret = -2; // return with non-null status code
+		}
 		std::cout << ctime(&ekeytime);
 	}
 	std::cout << "OpenPGP Revocation Keys: " << std::endl;
@@ -915,7 +992,7 @@ int main
 			delete ring;
 			return -1;
 		}
-		rsa_check(rsa_n, rsa_e);
+		ret = rsa_check(rsa_n, rsa_e);
 		mpz_clear(rsa_n), mpz_clear(rsa_e);
 	}
 	else if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
@@ -938,7 +1015,7 @@ int main
 			delete ring;
 			return -1;
 		}
-		dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
+		ret = dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
 		// additional part for checking DSA signatures
 		for (size_t i = 0; i < primary->selfsigs.size(); i++)
 		{
@@ -951,7 +1028,7 @@ int main
 				}
 				else
 				{
-					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+					ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 					sigs.push_back(primary->selfsigs[i]);
 				}
 			}
@@ -970,7 +1047,7 @@ int main
 				}
 				else
 				{
-					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+					ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 					sigs.push_back(primary->keyrevsigs[i]);
 				}
 			}
@@ -989,7 +1066,7 @@ int main
 				}
 				else
 				{
-					sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+					ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 					sigs.push_back(primary->certrevsigs[i]);
 				}
 			}
@@ -1011,7 +1088,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sig);
 					}
 				}
@@ -1031,7 +1108,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sig);
 					}
 				}
@@ -1056,7 +1133,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sig);
 					}
 				}
@@ -1076,7 +1153,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sig);
 					}
 				}
@@ -1135,7 +1212,7 @@ int main
 			std::cout << "undefined" << std::endl;
 		else
 		{
-			// compute validity period of the primary key after key creation
+			// compute validity period of the subkey after key creation
 			time_t ekeytime = sub->creationtime + sub->expirationtime;
 			if (ekeytime < time(NULL))
 				std::cout << "[EXPIRED] ";
@@ -1200,7 +1277,7 @@ int main
 				delete ring;
 				return -1;
 			}
-			rsa_check(rsa_n, rsa_e);
+			ret = rsa_check(rsa_n, rsa_e);
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
 		}
 		else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
@@ -1241,7 +1318,7 @@ int main
 			}
 			else
 				mpz_set_ui(dsa_q, 0L);
-			elg_check(elg_p, elg_g, elg_y, dsa_q);
+			ret = elg_check(elg_p, elg_g, elg_y, dsa_q);
 			mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
 			mpz_clear(dsa_q);
 		}
@@ -1266,7 +1343,7 @@ int main
 				delete ring;
 				return -1;
 			}
-			dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
+			ret = dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
 			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 			mpz_clear(dsa_y);
 		}
@@ -1334,7 +1411,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sub->selfsigs[i]);
 					}
 				}
@@ -1353,7 +1430,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sub->bindsigs[i]);
 					}
 				}
@@ -1372,7 +1449,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sub->keyrevsigs[i]);
 					}
 				}
@@ -1391,7 +1468,7 @@ int main
 					}
 					else
 					{
-						sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
+						ret = sig_check_dsa(dsa_p, dsa_q, dsa_g, dsa_y, dsa_r);
 						sigs.push_back(sub->certrevsigs[i]);
 					}
 				}
@@ -1417,6 +1494,7 @@ int main
 			{
 				std::cout << "WEAKNESS: DSA value r is EQUAL for both" <<
 					" signatures (e.g. same k used)" << std::endl;
+				ret = -2; // return with non-null status code
 			}
 		}
 	}
@@ -1428,6 +1506,6 @@ int main
 		delete primary;
 	delete ring;
 	
-	return 0;
+	return ret;
 }
 

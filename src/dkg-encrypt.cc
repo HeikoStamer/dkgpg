@@ -217,6 +217,13 @@ int main
 	ofilename = "Test1_output.bin";
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 2;
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	kfilename = "TestY-pub.asc";
+	ofilename = "TestY_output.asc";
+	opt_ofilename = (char*)ofilename.c_str();
+	opt_verbose = 2;
+#endif
 #endif
 
 	// check command line arguments
@@ -393,6 +400,11 @@ int main
 	for (size_t i = 0; i < test_msg.length(); i++)
 		msg.push_back(test_msg[i]);
 #else
+#ifdef DKGPG_TESTSUITE_Y
+	std::string test_msg = "This is just another simple test message.";
+	for (size_t i = 0; i < test_msg.length(); i++)
+		msg.push_back(test_msg[i]);
+#else
 	if (opt_ifilename != NULL)
 	{
 		std::string input_msg;
@@ -412,6 +424,7 @@ int main
 			msg.push_back(c);
 		std::cin.clear();
 	}
+#endif
 #endif
 
 	// encrypt the provided message and create MDC

@@ -24,9 +24,10 @@
 #endif
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
-#endif
+#else
 #ifdef DKGPG_TESTSUITE_Y
 	#undef GNUNET
+#endif
 #endif
 #include "dkg-gnunet-common.hh"
 

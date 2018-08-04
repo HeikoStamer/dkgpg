@@ -171,6 +171,13 @@ int main
 	ifilename = "Test1_output.bin";
 	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 2;
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	kfilename = "TestY-pub.asc";
+	ifilename = "TestY_output.asc";
+	opt_ifilename = (char*)ifilename.c_str();
+	opt_verbose = 2;
+#endif
 #endif
 	// check command line arguments
 	if ((kfilename.length() == 0) || (ifilename.length() == 0))
@@ -287,10 +294,20 @@ int main
 		return -1;
 	}
 #else
+#ifdef DKGPG_TESTSUITE_Y
+	std::string sigfilename = "TestY_output.sig";
+	if (!read_message(sigfilename, armored_signature))
+	{
+		delete primary;
+		delete ring;
+		return -1;
+	}
+#else
 	char c;
 	while (std::cin.get(c))
 		armored_signature += c;
 	std::cin.clear();
+#endif
 #endif
 
 	// parse the signature

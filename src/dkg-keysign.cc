@@ -24,6 +24,10 @@
 #endif
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	#undef GNUNET
+#endif
 #endif
 
 // copy infos from DKGPG package before overwritten by GNUnet headers
@@ -132,6 +136,9 @@ void run_instance
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
+#ifdef DKGPG_TESTSUITE_Y
+		passphrase = "TestY";
+#else
 		if (!get_passphrase("Enter passphrase to unlock private key",
 			passphrase))
 		{
@@ -139,6 +146,7 @@ void run_instance
 			delete ring;
 			exit(-1);
 		}
+#endif
 #endif
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PrivateKeyBlockParse(armored_seckey, opt_verbose, passphrase, prv);
@@ -1076,6 +1084,18 @@ int main
 	opt_e = 44203;
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	yfilename = "TestY-sec.asc";
+	opt_y = (char*)yfilename.c_str();
+	ifilename = "TestY-pub.asc";
+	opt_ifilename = (char*)ifilename.c_str();
+	ofilename = "TestY-pub_signed.asc";
+	opt_ofilename = (char*)ofilename.c_str();
+	opt_e = 44203;
+	URI = "https://savannah.nongnu.org/projects/dkgpg/";
+	opt_verbose = 2;
+#endif
 #endif
 
 	// check command line arguments
@@ -1143,7 +1163,6 @@ int main
 	if (opt_verbose)
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
-	
 	
 	// initialize return code
 	int ret = 0;

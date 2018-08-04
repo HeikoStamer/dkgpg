@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-08-04] added another test suite for testing programs with option "-y"
 * [2018-08-03] dkg-generate: added option "-y" (yet-another-openpgp-tool)
 * [2018-08-03] dkg-decrypt: added option "-y" (yet-another-openpgp-tool)
 * [2018-07-22] dkg-keysign: added option "-y" (yet-another-openpgp-tool)

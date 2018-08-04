@@ -25,6 +25,9 @@
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
 #endif
+#ifdef DKGPG_TESTSUITE_Y
+	#undef GNUNET
+#endif
 
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
@@ -2272,6 +2275,36 @@ int main
 			"0000000000000000000000000000000000000000000000000|";
 	}
 #endif
+#ifdef DKGPG_TESTSUITE_Y
+	peers.push_back("TestY");
+	opt_y = true;
+	opt_verbose = 2;
+	opt_e = 10800;
+	if (tmcg_mpz_wrandom_ui() % 2)
+	{
+		// sometimes test a non-FIPS CRS
+		crs = "crs|VMyMoPc2vb51ofxb4f2rebOSONnfhitfGcYxdav2D4wqBTeZrC"
+			"E000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000001|uDwReTJvQLAzuFRRO"
+			"6qqtd1MvZaQaSBxTzKOJjAbUA3|UQ51BEgx2Et2uVFsRwcj6wvIh"
+			"Vr78A3nWht7i9COt8bRjAd3bLFE4f2j6ueWjGusTW6n2mwczSpCV"
+			"f0jzpvou6Rt3B3AlNbJJC8i4436z63OiLco2wNsC8DxDq6mCe1Bi"
+			"Jeatdes9sV29tH9G4nMtI4RZi1Tcb4DZBJm1LehNGJVmXqznonEZ"
+			"UTAyHfuoxf02P0rc4z4rPRM8a80sqTwYLEzHfcJsTs9Qvp8jwbhb"
+			"VscxTGxItIkOWDTHm7H3JH5kMDRwGJBTeAmPztoOkGq7BOUlpKxi"
+			"NWe4fVKzn7CMyvVyQyvcbJwMP8WqtJfuZamgKASsekXDRt62JUC5"
+			"MCOuuCd|YakYaYak000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000000"
+			"0000000000000000000000000000000000000000000000000|";
+	}
+#endif
 
 	// check command line arguments
 	if ((opt_hostname != NULL) && (opt_passwords == NULL) && !opt_y)
@@ -2346,6 +2379,10 @@ int main
 	userid = "TestGroup <testing@localhost>";
 	passphrase = "Test";
 #else
+#ifdef DKGPG_TESTSUITE_Y
+	userid = "TestGroupY <testing@localhost>";
+	passphrase = "TestY";
+#else
 	std::cerr << "1. Please enter an OpenPGP-style user ID (name <email>): ";
 	std::getline(std::cin, userid);
 	std::cin.clear();
@@ -2367,6 +2404,7 @@ int main
 				std::endl;
 	}
 	while (passphrase != passphrase_check);
+#endif
 #endif
 
 #ifdef GNUNET

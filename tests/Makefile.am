@@ -18,7 +18,8 @@
 
 
 TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-keysign t-dkg-encrypt\
- t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-refresh t-dkg-revoke
+ t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-refresh t-dkg-revoke\
+ y-dkg-generate
 
 AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@\
  @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
@@ -29,6 +30,11 @@ noinst_PROGRAMS = $(TESTS)
 t_dkg_gencrs_SOURCES = t-dkg-gencrs.cc
 t_dkg_gencrs_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 t_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+ t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-io.hh t-dkg-io.cc\
+ t-dkg-generate.cc
+y_dkg_generate_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+ @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
+y_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-io.hh t-dkg-io.cc\
  t-dkg-generate.cc
 t_dkg_keyinfo_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-common.hh t-dkg-common.cc\

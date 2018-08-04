@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180715])
+AC_REVISION([20180804])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.8], [HeikoStamer@gmx.net], [dkgpg],
@@ -215,11 +215,11 @@ AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.hh:src/dkg-tcpip-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.cc:src/dkg-tcpip-common.cc])
 AC_CONFIG_LINKS([tests/t-dkg-gnunet-common.hh:src/dkg-gnunet-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-gnunet-common.cc:src/dkg-gnunet-common.cc])
-AC_CONFIG_LINKS([tests/t-dkg-generate.cc:src/dkg-generate.cc])
 AC_CONFIG_LINKS([tests/t-dkg-io.hh:src/dkg-io.hh])
 AC_CONFIG_LINKS([tests/t-dkg-io.cc:src/dkg-io.cc])
 AC_CONFIG_LINKS([tests/t-dkg-common.hh:src/dkg-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-common.cc:src/dkg-common.cc])
+AC_CONFIG_LINKS([tests/t-dkg-generate.cc:src/dkg-generate.cc])
 AC_CONFIG_LINKS([tests/t-dkg-keyinfo.cc:src/dkg-keyinfo.cc])
 AC_CONFIG_LINKS([tests/t-dkg-keysign.cc:src/dkg-keysign.cc])
 AC_CONFIG_LINKS([tests/t-dkg-encrypt.cc:src/dkg-encrypt.cc])

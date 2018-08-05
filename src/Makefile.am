@@ -37,6 +37,8 @@ dkg_encrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIB
 dkg_decrypt_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-decrypt.cc
+dkg_decrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@\
+ @GNUNET_LIBS@ @COMP_LIBS@
 dkg_sign_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-sign.cc

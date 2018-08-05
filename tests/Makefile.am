@@ -29,26 +29,24 @@ LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 noinst_PROGRAMS = $(TESTS)
 
 t_dkg_gencrs_SOURCES = t-dkg-gencrs.cc
-t_dkg_gencrs_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 t_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-io.hh t-dkg-io.cc\
  t-dkg-generate.cc
 t_dkg_keyinfo_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-keyinfo.cc
-t_dkg_keyinfo_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 t_dkg_keysign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-keysign.cc
 t_dkg_encrypt_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-encrypt.cc
-t_dkg_encrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 t_dkg_decrypt_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-decrypt.cc
+t_dkg_decrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@\
+ @COMP_LIBS@
 t_dkg_sign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-sign.cc
 t_dkg_verify_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-verify.cc
-t_dkg_verify_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 t_dkg_refresh_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-refresh.cc
@@ -77,6 +75,8 @@ y_dkg_decrypt_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
 y_dkg_decrypt_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-decrypt.cc
+y_dkg_decrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@ @COMP_LIBS@
 y_dkg_sign_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 y_dkg_sign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\

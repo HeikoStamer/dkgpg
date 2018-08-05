@@ -107,6 +107,8 @@ Requirements
     https://gnupg.org/download/index.html
   * GNU Privacy Guard Error Code Library (libgpg-error), version >= 1.12,
     https://gnupg.org/download/index.html
+  * zlib Compression Library (libz), version >= 1.2.3
+    https://zlib.net/
 
   The DKGPG package was tested (++ successful, -- erroneous) on the following
   platforms with the given compilers, respectively:

@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180804])
+AC_REVISION([20180805])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.8], [HeikoStamer@gmx.net], [dkgpg],
@@ -102,6 +102,10 @@ fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)
 
+AC_CHECK_LIB(z, inflateInit2_, , AC_MSG_ERROR([zlib is required]))
+COMP_LIBS="-lz"
+AC_SUBST(COMP_LIBS)
+
 # Checks for required header files
 AC_HEADER_STDC
 AC_HEADER_TIME
@@ -110,6 +114,8 @@ AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
  limits.h list map sstream stdint.h stdio.h string string.h sys/stat.h\
  sys/select.h sys/types.h time.h unistd.h vector], , 
 	AC_MSG_ERROR([some headers are missing]))
+
+AC_CHECK_HEADERS([zlib.h], , AC_MSG_ERROR([zlib header is missing]))
 
 # Checks for required typedefs, structures, and compiler characteristics
 AC_C_CONST

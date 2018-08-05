@@ -47,6 +47,8 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include <sys/wait.h>
 #include <signal.h>
 
+#include <zlib.h>
+
 #include <libTMCG.hh>
 #include <aiounicast_select.hh>
 
@@ -570,6 +572,26 @@ bool check_esk
 		}
 		gcry_mpi_release(tmp);
 	}
+	else if ((esk->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL) &&
+		(ssb->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))
+	{
+		// check whether $0 < g^k < p$.
+		if ((gcry_mpi_cmp_ui(esk->gk, 0L) <= 0) ||
+			(gcry_mpi_cmp(esk->gk, ssb->pub->elg_p) >= 0))
+		{
+			if (opt_verbose > 1)
+				std::cerr << "ERROR: 0 < g^k < p not satisfied" << std::endl;
+			return false;
+		}
+		// check whether $0 < my^k < p$.
+		if ((gcry_mpi_cmp_ui(esk->myk, 0L) <= 0) ||
+			(gcry_mpi_cmp(esk->myk, ssb->pub->elg_p) >= 0))
+		{
+			if (opt_verbose > 1)
+				std::cerr << "ERROR: 0 < my^k < p not satisfied" << std::endl;
+			return false;
+		}
+	}
 	else if ((esk->pkalgo == TMCG_OPENPGP_PKALGO_RSA) &&
 		(ssb->pkalgo == TMCG_OPENPGP_PKALGO_RSA))
 	{
@@ -582,9 +604,106 @@ bool check_esk
 			return false;
 		}
 	}
-// TODO
-
 	return true;
+}
+
+bool decompress
+	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_octets_t &infmsg)
+{
+	int rc = 0;
+	z_stream zs;
+    unsigned char zin[4096];
+    unsigned char zout[4096];
+    zs.zalloc = Z_NULL;
+    zs.zfree = Z_NULL;
+    zs.opaque = Z_NULL;
+    zs.avail_in = 0;
+    zs.next_in = Z_NULL;
+	static const char* myZlibVersion = ZLIB_VERSION;
+	if (zlibVersion()[0] != myZlibVersion[0])
+	{
+		if (opt_verbose > 1)
+			std::cerr << "ERROR: incompatible zlib version" << std::endl;
+		return false;
+	}
+	else if (std::strcmp(zlibVersion(), ZLIB_VERSION) != 0)
+	{
+		if (opt_verbose > 1)
+			std::cerr << "WARNING: different zlib version" << std::endl;
+	}
+	switch (msg->compalgo)
+	{
+		case TMCG_OPENPGP_COMPALGO_ZIP:
+			rc = inflateInit2(&zs, -15);
+			break;
+		case TMCG_OPENPGP_COMPALGO_ZLIB:
+			rc = inflateInit(&zs);
+			break;
+		default:
+			if (opt_verbose > 1)
+				std::cerr << "ERROR: compression alorithm " <<
+					(int)msg->compalgo << " is not supported" << std::endl;
+			return false;
+	}
+	if (rc != Z_OK)
+	{
+		if (opt_verbose)
+		{
+			std::cerr << "ZLIB ERROR: " << (int)rc;
+			if (zs.msg != NULL)
+				std::cerr << " " << zs.msg;
+			std::cerr << std::endl;
+		}
+		return false;
+	}
+	size_t cnt = 0;
+	do
+	{
+		size_t zlen = 0;
+		memset(zin, 0, sizeof(zin));
+		memset(zout, 0, sizeof(zout));
+		if ((cnt == 0) && (msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
+		{
+			zin[zlen++] = 0xFF; // fake zlib header
+			zin[zlen++] = 0xFF;
+			zin[zlen++] = 0xFF;
+			zin[zlen++] = 0xFF;
+		}
+		for (size_t i = zlen; i < sizeof(zin); i++)
+		{
+			if (cnt >= (msg->compressed_data).size())
+				break;
+			zin[i] = (msg->compressed_data)[cnt];
+			zlen++, cnt++;
+		}
+		zs.avail_in = zlen;
+		zs.next_in = zin;
+		zs.avail_out = sizeof(zout);
+		zs.next_out = zout;
+		rc = inflate(&zs, Z_NO_FLUSH);
+		switch (rc)
+		{
+			case Z_NEED_DICT:
+				rc = Z_DATA_ERROR;
+			case Z_DATA_ERROR:
+			case Z_MEM_ERROR:
+			case Z_STREAM_ERROR:
+				if (opt_verbose)
+				{
+					std::cerr << "ZLIB ERROR: " << (int)rc;
+					if (zs.msg != NULL)
+						std::cerr << " " << zs.msg;
+					std::cerr << std::endl;
+				}
+				(void)inflateEnd(&zs);
+				return false;
+		}
+		for (size_t i = 0; i < (sizeof(zout) - zs.avail_out); i++)
+			infmsg.push_back(zout[i]);
+	}
+	while ((rc != Z_STREAM_END) && (rc != Z_BUF_ERROR));
+	(void)inflateEnd(&zs);
+	return (rc == Z_STREAM_END);
 }
 
 void run_instance
@@ -1169,6 +1288,7 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
+		// decrypt the session key
 		if (!decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
 			ssb->pub->elg_y, esk->gk, esk->myk, seskey))
 		{
@@ -1181,6 +1301,7 @@ void run_instance
 	}
 	else
 	{
+		// decrypt the session key
 		if (!ssb->Decrypt(esk, opt_verbose, seskey))
 		{
 			std::cerr << "ERROR: PKESK decryption failed" << std::endl;
@@ -1193,7 +1314,7 @@ void run_instance
 	}
 
 	// do remaining decryption work
-	tmcg_openpgp_octets_t content, decmsg;
+	tmcg_openpgp_octets_t content, decmsg, infmsg;
 	if (!msg->Decrypt(seskey, opt_verbose, decmsg))
 	{
 		std::cerr << "ERROR: message decryption failed" << std::endl;
@@ -1227,14 +1348,27 @@ void run_instance
 	{
 		if ((msg->compressed_message).size() != 0)
 		{
-			std::cerr << "ERROR: compression is not supported" << std::endl;
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
+			if (!decompress(msg, infmsg))
+			{
+				std::cerr << "ERROR: decompression failed" << std::endl;
+				delete msg;
+				delete dkg;
+				delete ring;
+				delete prv;
+				exit(-1);
+			}
+			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(infmsg,
+				opt_verbose, msg))
+			{
+				std::cerr << "ERROR: message parsing failed" << std::endl;
+				delete msg;
+				delete dkg;
+				delete ring;
+				delete prv;
+				exit(-1);
+			}
 		}
-		else if ((msg->literal_data).size() == 0)
+		if ((msg->literal_data).size() == 0)
 		{
 			std::cerr << "ERROR: empty literal data in decrypted message" <<
 				std::endl;
@@ -1854,45 +1988,14 @@ int main
 			delete prv;
 			return -1;
 		}
-		else
+		if (!check_esk(esk, ssb))
 		{
-			// check whether $0 < g^k < p$.
-			if ((gcry_mpi_cmp_ui(esk->gk, 0L) <= 0) ||
-				(gcry_mpi_cmp(esk->gk, ssb->pub->elg_p) >= 0))
-			{
-				std::cerr << "ERROR: 0 < g^k < p not satisfied" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
-			}
-			// check whether $0 < my^k < p$.
-			if ((gcry_mpi_cmp_ui(esk->myk, 0L) <= 0) ||
-				(gcry_mpi_cmp(esk->myk, ssb->pub->elg_p) >= 0))
-			{
-				std::cerr << "ERROR: 0 < my^k < p not satisfied" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
-			}
-			// check whether $(g^k)^q \equiv 1 \pmod{p}$.
-			gcry_mpi_t tmp;
-			tmp = gcry_mpi_new(2048);
-			gcry_mpi_powm(tmp, esk->gk, ssb->telg_q, ssb->pub->elg_p);
-			if (gcry_mpi_cmp_ui(tmp, 1L))
-			{
-				std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" <<
-					std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
-			}
-			gcry_mpi_release(tmp);
+			std::cerr << "ERROR: bad ESK detected" << std::endl;
+			delete msg;
+			delete dkg;
+			delete ring;
+			delete prv;
+			return -1;
 		}
 		// compute and process decryption shares
 		std::string dds;
@@ -1968,7 +2071,7 @@ int main
 			delete [] interpol_shares[i];
 		}
 		interpol_shares.clear(), interpol_parties.clear();
-		tmcg_openpgp_octets_t content, decmsg, seskey;
+		tmcg_openpgp_octets_t content, decmsg, infmsg, seskey;
 		if (res)
 		{
 			if (!decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
@@ -2011,17 +2114,30 @@ int main
 			}
 			else
 			{
-				if ((msg->compressed_message).size())
+				if ((msg->compressed_message).size() != 0)
 				{
-					std::cerr << "ERROR: compression is not supported" <<
-						std::endl;
-					delete msg;
-					delete dkg;
-					delete ring;
-					delete prv;
-					return -1;
+					if (!decompress(msg, infmsg))
+					{
+						std::cerr << "ERROR: decompression failed" << std::endl;
+						delete msg;
+						delete dkg;
+						delete ring;
+						delete prv;
+						return -1;
+					}
+					if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+						MessageParse(infmsg, opt_verbose, msg))
+					{
+						std::cerr << "ERROR: message parsing failed" <<
+							std::endl;
+						delete msg;
+						delete dkg;
+						delete ring;
+						delete prv;
+						return -1;
+					}
 				}
-				else if ((msg->literal_data).size() == 0)
+				if ((msg->literal_data).size() == 0)
 				{
 					std::cerr << "ERROR: empty literal data in decrypted" <<
 						" message" << std::endl;
@@ -2032,9 +2148,11 @@ int main
 					return -1;
 				}
 				else
+				{
 					content.insert(content.end(),
 						(msg->literal_data).begin(),
 						(msg->literal_data).end());
+				}
 			}
 		}
 		// release

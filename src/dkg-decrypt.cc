@@ -534,6 +534,59 @@ bool decrypt_session_key
 	return true;
 }
 
+bool check_esk
+	(const TMCG_OpenPGP_PKESK* esk, const TMCG_OpenPGP_PrivateSubkey* ssb)
+{
+	if ((esk->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL) &&
+		(ssb->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9))
+	{
+		// check whether $0 < g^k < p$.
+		if ((gcry_mpi_cmp_ui(esk->gk, 0L) <= 0) ||
+			(gcry_mpi_cmp(esk->gk, ssb->pub->elg_p) >= 0))
+		{
+			if (opt_verbose > 1)
+				std::cerr << "ERROR: 0 < g^k < p not satisfied" << std::endl;
+			return false;
+		}
+		// check whether $0 < my^k < p$.
+		if ((gcry_mpi_cmp_ui(esk->myk, 0L) <= 0) ||
+			(gcry_mpi_cmp(esk->myk, ssb->pub->elg_p) >= 0))
+		{
+			if (opt_verbose > 1)
+				std::cerr << "ERROR: 0 < my^k < p not satisfied" << std::endl;
+			return false;
+		}
+		// check whether $(g^k)^q \equiv 1 \pmod{p}$.
+		gcry_mpi_t tmp;
+		tmp = gcry_mpi_new(2048);
+		gcry_mpi_powm(tmp, esk->gk, ssb->telg_q, ssb->pub->elg_p);
+		if (gcry_mpi_cmp_ui(tmp, 1L))
+		{
+			if (opt_verbose > 1)
+				std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" <<
+					std::endl;
+			gcry_mpi_release(tmp);
+			return false;
+		}
+		gcry_mpi_release(tmp);
+	}
+	else if ((esk->pkalgo == TMCG_OPENPGP_PKALGO_RSA) &&
+		(ssb->pkalgo == TMCG_OPENPGP_PKALGO_RSA))
+	{
+		// check whether $0 < m^e < n$.
+		if ((gcry_mpi_cmp_ui(esk->me, 0L) <= 0) ||
+			(gcry_mpi_cmp(esk->me, ssb->pub->rsa_n) >= 0))
+		{
+			if (opt_verbose > 1)
+				std::cerr << "ERROR: 0 < m^e < n not satisfied" << std::endl;
+			return false;
+		}
+	}
+// TODO
+
+	return true;
+}
+
 void run_instance
 	(size_t whoami, const size_t num_xtests)
 {
@@ -749,46 +802,14 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if ((ssb->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9) && (opt_y == NULL))
+	if (!check_esk(esk, ssb))
 	{
-		// check whether $0 < g^k < p$.
-		if ((gcry_mpi_cmp_ui(esk->gk, 0L) <= 0) ||
-			(gcry_mpi_cmp(esk->gk, ssb->pub->elg_p) >= 0))
-		{
-			std::cerr << "ERROR: 0 < g^k < p not satisfied" << std::endl;
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
-		// check whether $0 < my^k < p$.
-		if ((gcry_mpi_cmp_ui(esk->myk, 0L) <= 0) ||
-			(gcry_mpi_cmp(esk->myk, ssb->pub->elg_p) >= 0))
-		{
-			std::cerr << "ERROR: 0 < my^k < p not satisfied" << std::endl;
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
-		// check whether $(g^k)^q \equiv 1 \pmod{p}$.
-		gcry_mpi_t tmp;
-		tmp = gcry_mpi_new(2048);
-		gcry_mpi_powm(tmp, esk->gk, ssb->telg_q, ssb->pub->elg_p);
-		if (gcry_mpi_cmp_ui(tmp, 1L))
-		{
-			std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" <<
-				std::endl;
-			gcry_mpi_release(tmp);
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
-		gcry_mpi_release(tmp);
+		std::cerr << "ERROR: bad ESK detected" << std::endl;
+		delete msg;
+		delete dkg;
+		delete ring;
+		delete prv;
+		exit(-1);
 	}
 
 	// decrypt session key from PKESK
@@ -937,8 +958,8 @@ void run_instance
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false);
 		if (!vtmf->CheckGroup())
 		{
-			std::cerr << "ERROR: D_" << whoami << ": " << "VTMF: Group G was not" <<
-				" correctly generated!" << std::endl;
+			std::cerr << "ERROR: D_" << whoami << ": " << "VTMF: Group G was" <<
+				" not correctly generated!" << std::endl;
 			delete vtmf;
 			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
 			delete aiou, delete aiou2, delete rbc;
@@ -948,10 +969,12 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-		// create and exchange keys to bootstrap the $h$-generation for EDCF [JL00]
+		// create/exchange keys to bootstrap the $h$-generation for EDCF [JL00]
 		if (opt_verbose)
-			std::cerr << "INFO: generate h for EDCF by using VTMF key generation" <<
-				" protocol" << std::endl;
+		{
+			std::cerr << "INFO: generate h for EDCF by using VTMF key" <<
+				" generation protocol" << std::endl;
+		}
 		mpz_t nizk_c, nizk_r, h_j;
 		mpz_init(nizk_c), mpz_init(nizk_r), mpz_init(h_j);
 		vtmf->KeyGenerationProtocol_GenerateKey();
@@ -983,8 +1006,8 @@ void run_instance
 					std::endl;
 				if (!vtmf->KeyGenerationProtocol_UpdateKey(lej))
 				{
-					std::cerr << "WARNING: D_" << whoami << ": VTMF public key" <<
-						" of D_" << i << " was not correctly generated!" <<
+					std::cerr << "WARNING: D_" << whoami << ": VTMF public" <<
+						" key of D_" << i << " was not correctly generated!" <<
 						std::endl;
 				}
 			}
@@ -1011,14 +1034,16 @@ void run_instance
 		if (verify_decryption_share(esk->gk, dkg, dds, idx_tmp, r_i, c, r))
 		{
 			assert((idx_tmp == dkg->i));
-			// use this decryption share as first point for Lagrange interpolation
+			// use this share as first point for Lagrange interpolation
 			mpz_ptr tmp1 = new mpz_t();
 			mpz_init_set(tmp1, r_i);
 			interpol_parties.push_back(dkg->i), interpol_shares.push_back(tmp1);
 		}
 		else
-			std::cerr << "WARNING: verification of own decryption share failed" <<
-				" for D_" << whoami << std::endl;
+		{
+			std::cerr << "WARNING: verification of own decryption share" <<
+				" failed for D_" << whoami << std::endl;
+		}
 		// collect other decryption shares
 		if (opt_verbose)
 			std::cerr << "INFO: start collecting other decryption shares" <<
@@ -1046,11 +1071,11 @@ void run_instance
 				// verify decryption share interactively
 				std::stringstream err_log;
 				size_t idx_dkg = mpz_get_ui(idx);
-				if (!verify_decryption_share_interactive_publiccoin(esk->gk, dkg,
-					i, idx_dkg, r_i, aiou, rbc, edcf, err_log))
+				if (!verify_decryption_share_interactive_publiccoin(esk->gk,
+					dkg, i, idx_dkg, r_i, aiou, rbc, edcf, err_log))
 				{
-					std::cerr << "WARNING: bad decryption share of P_" << idx_dkg <<
-						" received from D_" << i << std::endl;
+					std::cerr << "WARNING: bad decryption share of P_" <<
+						idx_dkg << " received from D_" << i << std::endl;
 					if (opt_verbose)
 						std::cerr << err_log.str() << std::endl;
 					complaints.push_back(i);
@@ -1190,8 +1215,8 @@ void run_instance
 	}
 	if (!msg->CheckMDC(opt_verbose))
 	{
-		std::cerr << "ERROR: message was modified (security issue)" <<
-			std::endl;
+		std::cerr << "ERROR: message was modified (security issue) or" <<
+			" not integrity protected" << std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;
@@ -1200,7 +1225,7 @@ void run_instance
 	}
 	else
 	{
-		if ((msg->compressed_message).size())
+		if ((msg->compressed_message).size() != 0)
 		{
 			std::cerr << "ERROR: compression is not supported" << std::endl;
 			delete msg;
@@ -1220,8 +1245,11 @@ void run_instance
 			exit(-1);
 		}
 		else
+		{
+			// copy the content of literal data packet
 			content.insert(content.end(), (msg->literal_data).begin(),
 				(msg->literal_data).end());
+		}
 		if (msg->filename == "_CONSOLE")
 			std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
 				std::endl;

@@ -607,18 +607,18 @@ bool check_esk
 	return true;
 }
 
-bool decompress
+bool decompress_libz
 	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_octets_t &infmsg)
 {
 	int rc = 0;
 	z_stream zs;
-    unsigned char zin[4096];
-    unsigned char zout[4096];
-    zs.zalloc = Z_NULL;
-    zs.zfree = Z_NULL;
-    zs.opaque = Z_NULL;
-    zs.avail_in = 0;
-    zs.next_in = Z_NULL;
+	unsigned char zin[4096];
+	unsigned char zout[4096];
+	zs.zalloc = Z_NULL;
+	zs.zfree = Z_NULL;
+	zs.opaque = Z_NULL;
+	zs.avail_in = 0;
+	zs.next_in = Z_NULL;
 	static const char* myZlibVersion = ZLIB_VERSION;
 	if (zlibVersion()[0] != myZlibVersion[0])
 	{
@@ -802,38 +802,45 @@ void run_instance
 	}
 
 	// select admissible private subkey for decryption
-	// FIXME: currently always the first valid non-weak subkey is selected
+	// FIXME: currently always the last valid non-weak subkey is selected
 	GennaroJareckiKrawczykRabinDKG *dkg = NULL;
 	TMCG_OpenPGP_PrivateSubkey *ssb = NULL;
-	for (size_t i = 0; i < prv->private_subkeys.size(); i++)
+	if (opt_y == NULL)
 	{
-		ssb = prv->private_subkeys[i];
-		if (!ssb->pub->valid || ssb->weak(opt_verbose))
+		for (size_t i = 0; i < prv->private_subkeys.size(); i++)
 		{
-			if (opt_verbose > 1)
-				std::cerr << "WARNING: invalid or weak subkey at position " <<
-					i << " found; private subkey ignored" << std::endl;
-			ssb = NULL;
-			continue;
+			TMCG_OpenPGP_PrivateSubkey *ssb2 = prv->private_subkeys[i];
+			if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
+			{
+				if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
+				{
+					if ((ssb != NULL) && (opt_verbose > 1))
+						std::cerr << "WARNING: more than one valid subkey" <<
+							" found; last subkey selected" << std::endl;
+					ssb = ssb2;
+				}
+				else
+				{
+					if (opt_verbose > 1)
+						std::cerr << "WARNING: invalid or weak subkey at" <<
+							" position " << i << " found and ignored" <<
+							std::endl;
+				}
+			}
+			else
+			{
+				if (opt_verbose > 1)
+					std::cerr << "WARNING: non-tElG subkey at position " <<
+						i << " found and ignored" << std::endl;
+			}
 		}
-		if ((ssb->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL9) && (opt_y == NULL))
+		if (ssb == NULL)
 		{
-			if (opt_verbose > 1)
-				std::cerr << "WARNING: non-tElG subkey at position " <<
-					i << " found; private subkey ignored" << std::endl;
-			ssb = NULL;
-			continue;
+			std::cerr << "ERROR: no admissible subkey found" << std::endl;
+			delete ring;
+			delete prv;
+			exit(-1);
 		}
-	}
-	if (ssb == NULL)
-	{
-		std::cerr << "ERROR: no admissible private subkey found" << std::endl;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
-	if ((ssb->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9) && (opt_y == NULL))
-	{
 		// create an instance of tElG by stored parameters from private key
 		if (!init_tElG(ssb, opt_verbose, dkg))
 		{
@@ -845,7 +852,44 @@ void run_instance
 	}
 	else
 	{
-		// create a dummy instance
+		for (size_t i = 0; i < prv->private_subkeys.size(); i++)
+		{
+			TMCG_OpenPGP_PrivateSubkey *ssb2 = prv->private_subkeys[i];
+			if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
+			{
+				if (opt_verbose > 1)
+					std::cerr << "WARNING: tElG subkey at position " <<
+						i << " found and ignored" << std::endl;
+				continue;
+			}
+			if ((ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+				(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
+				(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))
+			{
+				if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
+				{
+					if ((ssb != NULL) && (opt_verbose > 1))
+						std::cerr << "WARNING: more than one valid subkey" <<
+							" found; last subkey selected" << std::endl;
+					ssb = ssb2;
+				}
+				else
+				{
+					if (opt_verbose > 1)
+						std::cerr << "WARNING: invalid or weak subkey at" <<
+							" position " << i << " found and ignored" <<
+							std::endl;
+				}
+			}
+		}
+		if (ssb == NULL)
+		{
+			std::cerr << "ERROR: no admissible subkey found" << std::endl;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
+		// create a dummy instance of DKG
 		std::stringstream dkg_in;
 		dkg_in << "dummy" << std::endl;
 		dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
@@ -1354,7 +1398,7 @@ void run_instance
 	{
 		if ((msg->compressed_message).size() != 0)
 		{
-			if (!decompress(msg, infmsg))
+			if (!decompress_libz(msg, infmsg))
 			{
 				std::cerr << "ERROR: decompression failed" << std::endl;
 				delete msg;
@@ -2122,7 +2166,7 @@ int main
 			{
 				if ((msg->compressed_message).size() != 0)
 				{
-					if (!decompress(msg, infmsg))
+					if (!decompress_libz(msg, infmsg))
 					{
 						std::cerr << "ERROR: decompression failed" << std::endl;
 						delete msg;

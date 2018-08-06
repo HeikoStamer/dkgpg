@@ -657,30 +657,35 @@ bool decompress
 		return false;
 	}
 	size_t cnt = 0;
+	memset(zin, 0, sizeof(zin));
+	if ((msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
+	{
+		zin[0] = 0xFF; // fake zlib header
+		zin[1] = 0xFF;
+		zin[2] = 0xFF;
+		zin[3] = 0xFF;
+		zs.avail_in = 4;
+		zs.next_in = zin;
+	}
 	do
 	{
-		size_t zlen = 0;
-		memset(zin, 0, sizeof(zin));
+		if (zs.avail_in == 0)
+		{
+			size_t zlen = 0;
+			for (size_t i = 0; i < sizeof(zin); i++)
+			{
+				if (cnt >= (msg->compressed_data).size())
+					break;
+				zin[i] = (msg->compressed_data)[cnt];
+				zlen++, cnt++;
+			}
+			zs.avail_in = zlen;
+			zs.next_in = zin;
+		}
 		memset(zout, 0, sizeof(zout));
-		if ((cnt == 0) && (msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
-		{
-			zin[zlen++] = 0xFF; // fake zlib header
-			zin[zlen++] = 0xFF;
-			zin[zlen++] = 0xFF;
-			zin[zlen++] = 0xFF;
-		}
-		for (size_t i = zlen; i < sizeof(zin); i++)
-		{
-			if (cnt >= (msg->compressed_data).size())
-				break;
-			zin[i] = (msg->compressed_data)[cnt];
-			zlen++, cnt++;
-		}
-		zs.avail_in = zlen;
-		zs.next_in = zin;
 		zs.avail_out = sizeof(zout);
 		zs.next_out = zout;
-		rc = inflate(&zs, Z_NO_FLUSH);
+		rc = inflate(&zs, Z_SYNC_FLUSH);
 		switch (rc)
 		{
 			case Z_NEED_DICT:
@@ -697,6 +702,7 @@ bool decompress
 				}
 				(void)inflateEnd(&zs);
 				return false;
+				break;
 		}
 		for (size_t i = 0; i < (sizeof(zout) - zs.avail_out); i++)
 			infmsg.push_back(zout[i]);

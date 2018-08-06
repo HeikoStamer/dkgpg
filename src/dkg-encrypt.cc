@@ -339,10 +339,10 @@ int main
 			{
 				selected.push_back(primary->subkeys[j]);
 				if ((std::find(primary->subkeys[j]->psa.begin(),
-					primary->subkeys[j]->psa.end(), 9) ==
-						primary->subkeys[j]->psa.end()) &&
-				    (std::find(primary->psa.begin(), primary->psa.end(), 9) ==
-						primary->psa.end()))
+					primary->subkeys[j]->psa.end(), TMCG_OPENPGP_SKALGO_AES256)
+						== primary->subkeys[j]->psa.end()) &&
+				    (std::find(primary->psa.begin(), primary->psa.end(),
+						TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end()))
 				{
 					if (opt_verbose)
 						std::cerr << "WARNING: AES-256 is none of the" <<

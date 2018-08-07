@@ -1960,29 +1960,44 @@ int main
 		}
 		GennaroJareckiKrawczykRabinDKG *dkg = NULL;
 		TMCG_OpenPGP_PrivateSubkey *ssb = NULL;
-		if (prv->private_subkeys.size() && (prv->private_subkeys[0]->pkalgo ==
-			TMCG_OPENPGP_PKALGO_EXPERIMENTAL9))
+		for (size_t i = 0; i < prv->private_subkeys.size(); i++)
 		{
-			ssb = prv->private_subkeys[0];
-			if (!ssb->pub->valid || ssb->weak(opt_verbose))
+			TMCG_OpenPGP_PrivateSubkey *ssb2 = prv->private_subkeys[i];
+			if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
 			{
-				std::cerr << "ERROR: subkey is invalid or weak" << std::endl;
-				delete ring;
-				delete prv;
-				return -1;
+				if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
+				{
+					if ((ssb != NULL) && (opt_verbose > 1))
+						std::cerr << "WARNING: more than one valid subkey" <<
+							" found; last subkey selected" << std::endl;
+					ssb = ssb2;
+				}
+				else
+				{
+					if (opt_verbose > 1)
+						std::cerr << "WARNING: invalid or weak subkey at" <<
+							" position " << i << " found and ignored" <<
+							std::endl;
+				}
 			}
-			// create an instance of tElG by stored parameters from private key
-			if (!init_tElG(ssb, opt_verbose, dkg))
+			else
 			{
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
+				if (opt_verbose > 1)
+					std::cerr << "WARNING: non-tElG subkey at position " <<
+						i << " found and ignored" << std::endl;
 			}
 		}
-		else
+		if (ssb == NULL)
 		{
-			std::cerr << "ERROR: first subkey is not a tElG key" << std::endl;
+			std::cerr << "ERROR: no admissible subkey found" << std::endl;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
+		// create an instance of tElG by stored parameters from private key
+		if (!init_tElG(ssb, opt_verbose, dkg))
+		{
+			delete dkg;
 			delete ring;
 			delete prv;
 			return -1;

@@ -852,33 +852,48 @@ void run_instance
 	}
 	else
 	{
-		for (size_t i = 0; i < prv->private_subkeys.size(); i++)
+		if (prv->private_subkeys.size() == 0)
 		{
-			TMCG_OpenPGP_PrivateSubkey *ssb2 = prv->private_subkeys[i];
-			if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
+			if (prv->pkalgo == TMCG_OPENPGP_PKALGO_RSA)
 			{
-				if (opt_verbose > 1)
-					std::cerr << "WARNING: tElG subkey at position " <<
-						i << " found and ignored" << std::endl;
-				continue;
+				ssb = new TMCG_OpenPGP_PrivateSubkey(prv->pkalgo,
+					prv->pub->creationtime, prv->pub->expirationtime,
+					prv->pub->rsa_n, prv->pub->rsa_e, prv->rsa_p, prv->rsa_q,
+					prv->rsa_u, prv->rsa_d, prv->packet);
+				prv->private_subkeys.push_back(ssb);
 			}
-			if ((ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
-				(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
-				(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))
+		}
+		else
+		{
+			for (size_t i = 0; i < prv->private_subkeys.size(); i++)
 			{
-				if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
-				{
-					if ((ssb != NULL) && (opt_verbose > 1))
-						std::cerr << "WARNING: more than one valid subkey" <<
-							" found; last subkey selected" << std::endl;
-					ssb = ssb2;
-				}
-				else
+				TMCG_OpenPGP_PrivateSubkey *ssb2 = prv->private_subkeys[i];
+				if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
 				{
 					if (opt_verbose > 1)
-						std::cerr << "WARNING: invalid or weak subkey at" <<
-							" position " << i << " found and ignored" <<
-							std::endl;
+						std::cerr << "WARNING: tElG subkey at position " <<
+							i << " found and ignored" << std::endl;
+					continue;
+				}
+				if ((ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
+					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))
+				{
+					if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
+					{
+						if ((ssb != NULL) && (opt_verbose > 1))
+							std::cerr << "WARNING: more than one valid" <<
+								" subkey found; last subkey selected" <<
+								std::endl;
+						ssb = ssb2;
+					}
+					else
+					{
+						if (opt_verbose > 1)
+							std::cerr << "WARNING: invalid or weak subkey at" <<
+								" position " << i << " found and ignored" <<
+								std::endl;
+					}
 				}
 			}
 		}

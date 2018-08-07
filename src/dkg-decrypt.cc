@@ -852,6 +852,7 @@ void run_instance
 	}
 	else
 	{
+		// FIXME: check key flags (encryption capability)
 		if (prv->private_subkeys.size() == 0)
 		{
 			if (prv->pkalgo == TMCG_OPENPGP_PKALGO_RSA)

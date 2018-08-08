@@ -217,12 +217,16 @@ int main
 	ofilename = "Test1_output.bin";
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 2;
+	if (tmcg_mpz_wrandom_ui() % 2)
+		opt_t = true;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	kfilename = "TestY-pub.asc";
 	ofilename = "TestY_output.asc";
 	opt_ofilename = (char*)ofilename.c_str();
 	opt_verbose = 2;
+	if (tmcg_mpz_wrandom_ui() % 2)
+		opt_t = true;
 #endif
 #endif
 

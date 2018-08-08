@@ -802,7 +802,7 @@ void run_instance
 	}
 
 	// select admissible private subkey for decryption
-	// FIXME: currently always the last valid non-weak subkey is selected
+	// TODO: currently always the last valid non-weak subkey is selected
 	GennaroJareckiKrawczykRabinDKG *dkg = NULL;
 	TMCG_OpenPGP_PrivateSubkey *ssb = NULL;
 	if (opt_y == NULL)
@@ -852,7 +852,7 @@ void run_instance
 	}
 	else
 	{
-		// FIXME: check key flags (encryption capability)
+		// FIXME: check key flags for encryption capability 
 		if (prv->private_subkeys.size() == 0)
 		{
 			if (prv->pkalgo == TMCG_OPENPGP_PKALGO_RSA)
@@ -930,7 +930,7 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	const TMCG_OpenPGP_PKESK *esk = NULL;
+	std::vector<const TMCG_OpenPGP_PKESK*> esks;
 	if (opt_y == NULL)
 	{
 		for (size_t i = 0; i < (msg->PKESKs).size(); i++)
@@ -942,7 +942,7 @@ void run_instance
 				{
 					std::cerr << "WARNING: PKESK wildcard keyid found; " <<
 							"try to decrypt message anyway" << std::endl;
-					esk = msg->PKESKs[i]; // FIXME: loop for more than one
+					esks.push_back(msg->PKESKs[i]);
 				}
 				else if (CallasDonnerhackeFinneyShawThayerRFC4880::
 					OctetsCompare((msg->PKESKs[i])->keyid, ssb->pub->id))
@@ -950,8 +950,9 @@ void run_instance
 					if (opt_verbose > 1)
 						std::cerr << "INFO: PKESK found with matching " <<
 							"subkey ID" << std::endl;
-					esk = msg->PKESKs[i];
-					break;
+					esks.clear();
+					esks.push_back(msg->PKESKs[i]);
+					break; // admissible PKESK found
 				}
 			}
 		}
@@ -965,7 +966,7 @@ void run_instance
 			{
 				std::cerr << "WARNING: PKESK wildcard keyid found; " <<
 						"try to decrypt message anyway" << std::endl;
-				esk = msg->PKESKs[i]; // FIXME: loop for more than one
+				esks.push_back(msg->PKESKs[i]);
 			}
 			else if (CallasDonnerhackeFinneyShawThayerRFC4880::
 				OctetsCompare((msg->PKESKs[i])->keyid, ssb->pub->id))
@@ -973,12 +974,13 @@ void run_instance
 				if (opt_verbose > 1)
 					std::cerr << "INFO: PKESK found with matching " <<
 						"subkey ID" << std::endl;
-				esk = msg->PKESKs[i];
-				break;
+				esks.clear();
+				esks.push_back(msg->PKESKs[i]);
+				break; // admissible PKESK found
 			}
 		}
 	}
-	if (esk == NULL)
+	if (esks.size() == 0)
 	{
 		std::cerr << "ERROR: no admissible PKESK found" << std::endl;
 		delete msg;
@@ -987,17 +989,9 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (!check_esk(esk, ssb))
-	{
-		std::cerr << "ERROR: bad ESK detected" << std::endl;
-		delete msg;
-		delete dkg;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
 
 	// decrypt session key from PKESK
+	bool seskey_decrypted = false;
 	tmcg_openpgp_octets_t seskey;
 	if (opt_y == NULL)
 	{
@@ -1059,7 +1053,7 @@ void run_instance
 		std::string myID = "dkg-decrypt|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
-		// include parameterized t-resiliance of DKG in the ID of broadcast protocol
+		// include parameterized t-resiliance of DKG in the ID of RBC protocol
 		myID += dkg->t;
 		// assume maximum asynchronous t-resilience for RBC
 		size_t T_RBC = (peers.size() - 1) / 3;
@@ -1207,113 +1201,149 @@ void run_instance
 				", " << T_EDCF << ", ...)" << std::endl;
 		JareckiLysyanskayaEDCF *edcf = new JareckiLysyanskayaEDCF(peers.size(),
 			T_EDCF, vtmf->p, vtmf->q, vtmf->g, vtmf->h);
-		// initialize shares
-		mpz_t idx, r_i, c, r;
-		mpz_init(idx), mpz_init(r_i), mpz_init(c), mpz_init(r);
-		std::vector<size_t> interpol_parties;
-		std::vector<mpz_ptr> interpol_shares;
-		// compute own decryption share and store it
-		std::string dds;
-		size_t idx_tmp;
-		compute_decryption_share(esk->gk, dkg, dds);
-		if (verify_decryption_share(esk->gk, dkg, dds, idx_tmp, r_i, c, r))
+		for (size_t j = 0; j < esks.size(); j++)
 		{
-			assert((idx_tmp == dkg->i));
-			// use this share as first point for Lagrange interpolation
-			mpz_ptr tmp1 = new mpz_t();
-			mpz_init_set(tmp1, r_i);
-			interpol_parties.push_back(dkg->i), interpol_shares.push_back(tmp1);
-		}
-		else
-		{
-			std::cerr << "WARNING: verification of own decryption share" <<
-				" failed for D_" << whoami << std::endl;
-		}
-		// collect other decryption shares
-		if (opt_verbose)
-			std::cerr << "INFO: start collecting other decryption shares" <<
-				std::endl;
-		std::vector<size_t> complaints;
-		for (size_t i = 0; i < peers.size(); i++)
-		{
-			if (i != whoami)
+			if (!check_esk(esks[j], ssb))
 			{
-				mpz_set_ui(idx, dkg->n), mpz_set_ui(r_i, 1L);
-				// receive index
-				if (!rbc->DeliverFrom(idx, i))
-				{
-					std::cerr << "WARNING: DeliverFrom(idx, i) failed for D_" <<
-						i << std::endl;
-					complaints.push_back(i);
-				}
-				// receive a decryption share
-				if (!rbc->DeliverFrom(r_i, i))
-				{
-					std::cerr << "WARNING: DeliverFrom(r_i, i) failed for D_" <<
-						i << std::endl;
-					complaints.push_back(i);
-				}
-				// verify decryption share interactively
-				std::stringstream err_log;
-				size_t idx_dkg = mpz_get_ui(idx);
-				if (!verify_decryption_share_interactive_publiccoin(esk->gk,
-					dkg, i, idx_dkg, r_i, aiou, rbc, edcf, err_log))
-				{
-					std::cerr << "WARNING: bad decryption share of P_" <<
-						idx_dkg << " received from D_" << i << std::endl;
-					if (opt_verbose)
-						std::cerr << err_log.str() << std::endl;
-					complaints.push_back(i);
-				}
-				if (std::find(complaints.begin(), complaints.end(), i) ==
-					complaints.end())
-				{
-					if (opt_verbose)
-						std::cerr << "INFO: D_" << whoami << ": good decryption" <<
-							" share of P_" << idx_dkg << " received from D_" <<
-							i << std::endl;
-					if (opt_verbose > 1)
-						std::cerr << err_log.str() << std::endl;
-					// collect only verified decryption shares
-					mpz_ptr tmp1 = new mpz_t();
-					mpz_init_set(tmp1, r_i);
-					interpol_parties.push_back(idx_dkg);
-					interpol_shares.push_back(tmp1);
-				}
+				if (opt_verbose)
+					std::cerr << "WARNING: bad PKESK detected and ignored" <<
+						std::endl;
+				continue; // try next PKESK
+			}
+			// initialize shares
+			mpz_t idx, r_i, c, r;
+			mpz_init(idx), mpz_init(r_i), mpz_init(c), mpz_init(r);
+			std::vector<size_t> interpol_parties;
+			std::vector<mpz_ptr> interpol_shares;
+			// compute own decryption share and store it
+			std::string dds;
+			size_t idx_tmp;
+			compute_decryption_share(esks[j]->gk, dkg, dds);
+			if (verify_decryption_share(esks[j]->gk, dkg, dds, idx_tmp, r_i,
+				c, r))
+			{
+				assert((idx_tmp == dkg->i));
+				// use this share as first point for Lagrange interpolation
+				mpz_ptr tmp1 = new mpz_t();
+				mpz_init_set(tmp1, r_i);
+				interpol_parties.push_back(dkg->i);
+				interpol_shares.push_back(tmp1);
 			}
 			else
 			{
-				if (verify_decryption_share(esk->gk, dkg, dds, idx_tmp, r_i, c, r))
-					mpz_set_ui(idx, idx_tmp);
-				else
-					mpz_set_ui(idx, dkg->n); // indicates an error
-				// broadcast own index and decryption share
-				rbc->Broadcast(idx);
-				rbc->Broadcast(r_i);
-				// prove own decryption share interactively
-				std::stringstream err_log;
-				prove_decryption_share_interactive_publiccoin(esk->gk, dkg, r_i,
-					aiou, rbc, edcf, err_log);
-				if (opt_verbose)
-					std::cerr << "INFO: prove_decryption_share_interactive_" <<
-						"publiccoin() finished" << std::endl;
-				if (opt_verbose > 1)
-					std::cerr << "INFO: D_" << whoami << ": log follows" <<
-						std::endl << err_log.str();
+				std::cerr << "WARNING: verification of own decryption share" <<
+					" failed for D_" << whoami << std::endl;
 			}
-		}
-		// Lagrange interpolation
-		bool res = combine_decryption_shares(esk->gk, dkg, interpol_parties,
-			interpol_shares);
-		// release shares
-		mpz_clear(idx), mpz_clear(r_i), mpz_clear(c), mpz_clear(r);
-		mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
-		for (size_t i = 0; i < interpol_shares.size(); i++)
-		{
-			mpz_clear(interpol_shares[i]);
-			delete [] interpol_shares[i];
-		}
-		interpol_shares.clear(), interpol_parties.clear();
+			// collect other decryption shares
+			if (opt_verbose)
+				std::cerr << "INFO: start collecting other decryption shares" <<
+					std::endl;
+			std::vector<size_t> complaints;
+			for (size_t i = 0; i < peers.size(); i++)
+			{
+				if (i != whoami)
+				{
+					mpz_set_ui(idx, dkg->n), mpz_set_ui(r_i, 1L);
+					// receive index
+					if (!rbc->DeliverFrom(idx, i))
+					{
+						std::cerr << "WARNING: DeliverFrom(idx, i) failed" <<
+							" for D_" << i << std::endl;
+						complaints.push_back(i);
+					}
+					// receive a decryption share
+					if (!rbc->DeliverFrom(r_i, i))
+					{
+						std::cerr << "WARNING: DeliverFrom(r_i, i) failed" <<
+							" for D_" << i << std::endl;
+						complaints.push_back(i);
+					}
+					// verify decryption share interactively
+					std::stringstream err_log;
+					size_t idx_dkg = mpz_get_ui(idx);
+					if (!verify_decryption_share_interactive_publiccoin(
+						esks[j]->gk, dkg, i, idx_dkg, r_i, aiou, rbc, edcf,
+						err_log))
+					{
+						std::cerr << "WARNING: bad decryption share of P_" <<
+							idx_dkg << " received from D_" << i << std::endl;
+						if (opt_verbose)
+							std::cerr << err_log.str() << std::endl;
+						complaints.push_back(i);
+					}
+					if (std::find(complaints.begin(), complaints.end(), i) ==
+						complaints.end())
+					{
+						if (opt_verbose)
+							std::cerr << "INFO: D_" << whoami << ": good" <<
+								" decryption share of P_" << idx_dkg <<
+								" received from D_" << i << std::endl;
+						if (opt_verbose > 1)
+							std::cerr << err_log.str() << std::endl;
+						// collect only verified decryption shares
+						mpz_ptr tmp1 = new mpz_t();
+						mpz_init_set(tmp1, r_i);
+						interpol_parties.push_back(idx_dkg);
+						interpol_shares.push_back(tmp1);
+					}
+				}
+				else
+				{
+					if (verify_decryption_share(esks[j]->gk, dkg, dds, idx_tmp,
+						r_i, c, r))
+					{
+						mpz_set_ui(idx, idx_tmp);
+					}
+					else
+						mpz_set_ui(idx, dkg->n); // indicates an error
+					// broadcast own index and decryption share
+					rbc->Broadcast(idx);
+					rbc->Broadcast(r_i);
+					// prove own decryption share interactively
+					std::stringstream err_log;
+					prove_decryption_share_interactive_publiccoin(esks[j]->gk,
+						dkg, r_i, aiou, rbc, edcf, err_log);
+					if (opt_verbose)
+						std::cerr << "INFO: prove_decryption_share_" <<
+							"interactive_publiccoin() finished" << std::endl;
+					if (opt_verbose > 1)
+						std::cerr << "INFO: D_" << whoami << ": log follows" <<
+							std::endl << err_log.str();
+				}
+			}
+			// Lagrange interpolation
+			bool res = combine_decryption_shares(esks[j]->gk, dkg,
+				interpol_parties, interpol_shares);
+			// release shares
+			mpz_clear(idx), mpz_clear(r_i), mpz_clear(c), mpz_clear(r);
+			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
+			for (size_t i = 0; i < interpol_shares.size(); i++)
+			{
+				mpz_clear(interpol_shares[i]);
+				delete [] interpol_shares[i];
+			}
+			interpol_shares.clear(), interpol_parties.clear();
+			if (!res)
+			{
+				if (opt_verbose)
+					std::cerr << "WARNING: recombination of shares failed;" <<
+						" PKESK ignored" << std::endl;
+				continue; // try next PKESK
+			}
+			// decrypt the session key
+			if (!decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
+				ssb->pub->elg_y, esks[j]->gk, esks[j]->myk, seskey))
+			{
+				continue; // try next PKESK
+			}
+			else
+			{
+				if (opt_verbose > 1)
+					std::cerr << "INFO: PKESK decryption succeeded" << std::endl;				
+				seskey_decrypted = true;
+				break;
+			}
+		}			
 		// at the end: deliver some more rounds for waiting parties
 		time_t synctime = aiounicast::aio_timeout_long;
 		if (opt_verbose)
@@ -1345,41 +1375,39 @@ void run_instance
 		}
 		// release asynchronous unicast and broadcast
 		delete aiou, delete aiou2;
-		if (!res)
-		{
-			std::cerr << "ERROR: recombination of shares failed" << std::endl;
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
-		// decrypt the session key
-		if (!decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
-			ssb->pub->elg_y, esk->gk, esk->myk, seskey))
-		{
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
 	}
 	else
 	{
-		// decrypt the session key
-		if (!ssb->Decrypt(esk, opt_verbose, seskey))
+		for (size_t j = 0; j < esks.size(); j++)
 		{
-			std::cerr << "ERROR: PKESK decryption failed" << std::endl;
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
+			// try to decrypt the session key
+			if (!ssb->Decrypt(esks[j], opt_verbose, seskey))
+			{
+				if (opt_verbose)
+					std::cerr << "WARNING: PKESK decryption failed;" <<
+						" PKESK ignored" << std::endl;
+				continue; // try next PKESK
+			}
+			else
+			{
+				if (opt_verbose > 1)
+					std::cerr << "INFO: PKESK decryption succeeded" << std::endl;				
+				seskey_decrypted = true;
+				break;
+			}
 		}
 	}
 
 	// do remaining decryption work
+	if (!seskey_decrypted)
+	{
+		std::cerr << "ERROR: every PKESK decryption failed" << std::endl;
+		delete msg;
+		delete dkg;
+		delete ring;
+		delete prv;
+		exit(-1);
+	}
 	tmcg_openpgp_octets_t content, decmsg, infmsg;
 	if (!msg->Decrypt(seskey, opt_verbose, decmsg))
 	{
@@ -2043,11 +2071,12 @@ int main
 			if ((msg->PKESKs[i])->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
 			{
 				if (CallasDonnerhackeFinneyShawThayerRFC4880::
-					OctetsCompareZero((msg->PKESKs[i])->keyid))
+					OctetsCompareZero((msg->PKESKs[i])->keyid) &&
+					check_esk(msg->PKESKs[i], ssb))
 				{
 					std::cerr << "WARNING: PKESK wildcard keyid found; " <<
 							"try to decrypt message anyway" << std::endl;
-					esk = msg->PKESKs[i]; // FIXME: loop for more than one
+					esk = msg->PKESKs[i];
 				}
 				else if (CallasDonnerhackeFinneyShawThayerRFC4880::
 					OctetsCompare((msg->PKESKs[i])->keyid, ssb->pub->id))

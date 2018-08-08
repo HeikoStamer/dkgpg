@@ -314,7 +314,7 @@ int main
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyidCompute(prv->pub->pub_hashing, kid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(prv->pub->pub_hashing, fpr);
+		FingerprintComputePretty(prv->pub->pub_hashing, fpr);
 	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << "\t";
 	std::cout << kid << std::endl;
 	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << "\t";
@@ -339,7 +339,7 @@ int main
 		tmcg_openpgp_octets_t f(rk.key_fingerprint,
 			 rk.key_fingerprint+sizeof(rk.key_fingerprint));
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintConvert(f, fpr);
+			FingerprintConvertPretty(f, fpr);
 		std::cout << "\t" << fpr << std::endl;
 	}
 	if (prv->pub->revkeys.size() == 0)
@@ -425,7 +425,7 @@ int main
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyidCompute(sub->pub->sub_hashing, kid2);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintCompute(sub->pub->sub_hashing, fpr2);
+			FingerprintComputePretty(sub->pub->sub_hashing, fpr2);
 		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << "\t";
 		std::cout << kid2 << std::endl;
 		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << "\t";
@@ -450,7 +450,7 @@ int main
 			tmcg_openpgp_octets_t f(rk.key_fingerprint,
 				 rk.key_fingerprint+sizeof(rk.key_fingerprint));
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				FingerprintConvert(f, fpr2);
+				FingerprintConvertPretty(f, fpr2);
 			std::cout << "\t" << fpr2 << std::endl;
 		}
 		if (sub->pub->revkeys.size() == 0)

@@ -394,53 +394,63 @@ void run_instance
 	// certification (revocation) signatures
 	std::string fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(primary->pub_hashing, fpr);
+		FingerprintComputePretty(primary->pub_hashing, fpr);
 	tmcg_openpgp_octets_t trailer, acc;
 	if (opt_y == NULL)
 	{
 		if (opt_r)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION,
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else if (opt_1)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION,
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else if (opt_2)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION,
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else if (opt_3)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION,
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 	}
 	else
 	{
 		if (opt_r)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION,
-					prv->pkalgo, hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION, prv->pkalgo,
+					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else if (opt_1)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION,
-					prv->pkalgo, hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION, prv->pkalgo,
+					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else if (opt_2)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION,
-					prv->pkalgo, hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION, prv->pkalgo,
+					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else if (opt_3)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-					prv->pkalgo, hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION, prv->pkalgo,
+					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 		else
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION,
-					prv->pkalgo, hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+				PacketSigPrepareCertificationSignature(
+					TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION, prv->pkalgo,
+					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
 	}
 	acc.insert(acc.end(), primary->packet.begin(), primary->packet.end());
 
@@ -459,11 +469,11 @@ void run_instance
 		if (opt_r)
 			std::cerr << "INFO: going to revoke signature on user ID \"" <<
 				primary->userids[j]->userid_sanitized << "\" of key with" <<
-				" fingerprint " << fpr << std::endl;
+				" fingerprint [ " << fpr << " ]" << std::endl;
 		else
 			std::cerr << "INFO: going to sign user ID \"" <<
 				primary->userids[j]->userid_sanitized << "\" of key with" <<
-				" fingerprint " << fpr << std::endl;
+				" fingerprint [ " << fpr << "]" << std::endl;
 
 		// prepare the hash value
 		tmcg_openpgp_byte_t buffer[1024];
@@ -492,8 +502,8 @@ void run_instance
 			ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 			if (ret)
 			{
-				std::cerr << "ERROR: S_" << whoami << ": gcry_mpi_scan() failed" <<
-					" for h" << std::endl;
+				std::cerr << "ERROR: S_" << whoami << ": gcry_mpi_scan()" <<
+					" failed for h" << std::endl;
 				delete rbc, delete aiou, delete aiou2;
 				delete dss;
 				delete primary;

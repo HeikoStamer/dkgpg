@@ -9,7 +9,7 @@ in the sources of this package and additionally can be obtained from Internet
 
 * [2018-08-08] dkg-encrypt: added fingerprint support for option "-s"
 * [2018-08-08] dkg-decrypt: added support for more than one admissible PKESK
-* [2018-08-06] dkg-decrypt: changed selecting of decryption subkey
+* [2018-08-06] dkg-decrypt: refined selecting of the decryption subkey
 * [2018-08-05] dkg-decrypt: added zlib support for compressed messages
 * [2018-08-04] added another test suite for testing programs with option "-y"
 * [2018-08-03] dkg-generate: added option "-y" (yet-another-openpgp-tool)

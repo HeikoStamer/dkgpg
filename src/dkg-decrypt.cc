@@ -876,6 +876,16 @@ void run_instance
 							i << " found and ignored" << std::endl;
 					continue;
 				}
+				if (ssb2->pub->AccumulateFlags() &&
+					((ssb2->pub->AccumulateFlags() & 0x04) != 0x04) &&
+					((ssb2->pub->AccumulateFlags() & 0x08) != 0x08))
+				{
+					if (opt_verbose > 1)
+						std::cerr << "WARNING: non encryption-capable subkey" <<
+							" at position " << i << " found and ignored" <<
+							std::endl;
+					continue;
+				}
 				if ((ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
 					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
 					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))

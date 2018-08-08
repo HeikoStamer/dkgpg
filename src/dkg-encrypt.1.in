@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "March 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "August 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \- simple message encryption with AES\-256 according to OpenPGP
@@ -16,7 +16,7 @@ an encryption-capable primary key (used to last resort), for which the actual
 encryption is performed. If more than one valid admissible encryption subkey
 is found in the key block, than the generated symmetric session key is
 encrypted for each of these keys. This behaviour can be tweaked by the option
-"\-s", which limits the selected subkeys based on their key IDs.
+"\-s", which limits the selected subkey based on its key ID or fingerprint.
 .PP
 First, AES\-256 is applied as symmetric cipher with a randomly chosen 256\-bit
 session key. Finally, the session key is transformed by PKCS#1 v1.5 block
@@ -56,7 +56,7 @@ use keyring FILENAME containing external revocation keys
 write encrypted message rather to FILENAME than STDOUT
 .TP
 \fB\-s\fR \fI\,STRING\/\fR
-select only encryption-capable subkeys with key ID containing STRING
+select only encryption-capable subkeys with key ID or fingerprint equals STRING
 .TP
 \fB\-t\fR, \fB\-\-throw\-keyids\fR
 throw included key IDs for somewhat improved privacy

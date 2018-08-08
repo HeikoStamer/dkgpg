@@ -177,7 +177,7 @@ int main
 				std::cout << "  -o FILENAME         write encrypted message" <<
 					" rather to FILENAME than STDOUT" << std::endl;
 				std::cout << "  -s STRING           select only encryption" <<
-					"-capable subkeys containing STRING" << std::endl;
+					"-capable subkeys with fingerprint equals STRING" << std::endl;
 				std::cout << "  -t, --throw-keyids  throw included key IDs" <<
 					" for somewhat improved privacy" << std::endl;
 				std::cout << "  -v, --version       print the version" <<
@@ -308,10 +308,12 @@ int main
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
 		// subkey not selected?
-		std::string kid;
+		std::string kid, fpr;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
-		if (opt_s && (kid.find(s) == kid.npos))
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintCompute(primary->subkeys[j]->sub_hashing, fpr);
+		if (opt_s && (kid != s) && (fpr != s))
 			continue;
 		// encryption-capable subkey?
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
@@ -393,7 +395,7 @@ int main
 			if (opt_verbose)
 				std::cerr << "WARNING: recipient does not state support" <<
 					" for modification detection (MDC);" <<
-					"use MDC anyway" << std::endl;
+					"use MDC protection anyway" << std::endl;
 		}
 	}
 

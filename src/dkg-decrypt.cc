@@ -48,6 +48,9 @@ static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 #include <signal.h>
 
 #include <zlib.h>
+#ifdef LIBBZ
+#include <bzlib.h>
+#endif
 
 #include <libTMCG.hh>
 #include <aiounicast_select.hh>
@@ -641,7 +644,7 @@ bool decompress_libz
 			break;
 		default:
 			if (opt_verbose > 1)
-				std::cerr << "ERROR: compression alorithm " <<
+				std::cerr << "ERROR: compression algorithm " <<
 					(int)msg->compalgo << " is not supported" << std::endl;
 			return false;
 	}
@@ -711,6 +714,69 @@ bool decompress_libz
 	(void)inflateEnd(&zs);
 	return (rc == Z_STREAM_END);
 }
+
+#ifdef LIBBZ
+bool decompress_libbz
+	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_octets_t &infmsg)
+{
+	int rc = 0;
+	bz_stream zs;
+	char zin[4096];
+	char zout[4096];
+	zs.bzalloc = NULL;
+	zs.bzfree = NULL;
+	zs.opaque = NULL;
+	zs.avail_in = 0;
+	zs.next_in = NULL;
+	rc = BZ2_bzDecompressInit(&zs, 0, 0);
+	if (rc != BZ_OK)
+	{
+		if (opt_verbose)
+			std::cerr << "BZLIB ERROR: " << (int)rc << std::endl;
+		return false;
+	}
+	size_t cnt = 0;
+	memset(zin, 0, sizeof(zin));
+	do
+	{
+		if (zs.avail_in == 0)
+		{
+			size_t zlen = 0;
+			for (size_t i = 0; i < sizeof(zin); i++)
+			{
+				if (cnt >= (msg->compressed_data).size())
+					break;
+				zin[i] = (msg->compressed_data)[cnt];
+				zlen++, cnt++;
+			}
+			zs.avail_in = zlen;
+			zs.next_in = zin;
+		}
+		memset(zout, 0, sizeof(zout));
+		zs.avail_out = sizeof(zout);
+		zs.next_out = zout;
+		rc = BZ2_bzDecompress(&zs);
+		switch (rc)
+		{
+			case BZ_DATA_ERROR:
+			case BZ_DATA_ERROR_MAGIC:
+			case BZ_MEM_ERROR:
+				if (opt_verbose)
+				{
+					std::cerr << "BZLIB ERROR: " << (int)rc << std::endl;
+				}
+				BZ2_bzDecompressEnd(&zs);
+				return false;
+				break;
+		}
+		for (size_t i = 0; i < (sizeof(zout) - zs.avail_out); i++)
+			infmsg.push_back(zout[i]);
+	}
+	while ((rc != BZ_STREAM_END) && (rc != BZ_PARAM_ERROR));
+	BZ2_bzDecompressEnd(&zs);
+	return (rc == BZ_STREAM_END);
+}
+#endif
 
 void run_instance
 	(size_t whoami, const size_t num_xtests)
@@ -852,7 +918,6 @@ void run_instance
 	}
 	else
 	{
-		// FIXME: check key flags for encryption capability 
 		if (prv->private_subkeys.size() == 0)
 		{
 			if (prv->pkalgo == TMCG_OPENPGP_PKALGO_RSA)
@@ -1390,7 +1455,7 @@ void run_instance
 	{
 		for (size_t j = 0; j < esks.size(); j++)
 		{
-			// try to decrypt the session key
+			// try to decrypt the session key from this PKESK packet
 			if (!ssb->Decrypt(esks[j], opt_verbose, seskey))
 			{
 				if (opt_verbose)
@@ -1450,9 +1515,31 @@ void run_instance
 	}
 	else
 	{
-		if ((msg->compressed_message).size() != 0)
+		if ((msg->compressed_data).size() != 0)
 		{
-			if (!decompress_libz(msg, infmsg))
+			bool decompress_ok = false;
+			switch (msg->compalgo)
+			{
+				case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
+					for (size_t i = 0; i < (msg->compressed_data).size(); i++)
+						infmsg.push_back(msg->compressed_data[i]);
+					decompress_ok = true; // no compression
+				case TMCG_OPENPGP_COMPALGO_ZIP:
+				case TMCG_OPENPGP_COMPALGO_ZLIB:
+					decompress_ok = decompress_libz(msg, infmsg);
+					break;
+#ifdef LIBBZ
+				case TMCG_OPENPGP_COMPALGO_BZIP2:
+					decompress_ok = decompress_libbz(msg, infmsg);
+					break;
+#endif
+				default:
+					if (opt_verbose > 1)
+						std::cerr << "WARNING: compression algorithm " <<
+							(int)msg->compalgo << " is not supported" <<
+							std::endl;
+			}
+			if (!decompress_ok)
 			{
 				std::cerr << "ERROR: decompression failed" << std::endl;
 				delete msg;
@@ -2234,9 +2321,31 @@ int main
 			}
 			else
 			{
-				if ((msg->compressed_message).size() != 0)
+				if ((msg->compressed_data).size() != 0)
 				{
-					if (!decompress_libz(msg, infmsg))
+					bool decompress_ok = false;
+					switch (msg->compalgo)
+					{
+						case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
+							for (size_t i = 0; i < (msg->compressed_data).size(); i++)
+								infmsg.push_back(msg->compressed_data[i]);
+							decompress_ok = true; // no compression
+						case TMCG_OPENPGP_COMPALGO_ZIP:
+						case TMCG_OPENPGP_COMPALGO_ZLIB:
+							decompress_ok = decompress_libz(msg, infmsg);
+							break;
+#ifdef LIBBZ
+						case TMCG_OPENPGP_COMPALGO_BZIP2:
+							decompress_ok = decompress_libbz(msg, infmsg);
+							break;
+#endif
+						default:
+							if (opt_verbose > 1)
+								std::cerr << "WARNING: compression algorithm " <<
+									(int)msg->compalgo << " is not supported" <<
+									std::endl;
+					}
+					if (!decompress_ok)
 					{
 						std::cerr << "ERROR: decompression failed" << std::endl;
 						delete msg;
@@ -2245,8 +2354,8 @@ int main
 						delete prv;
 						return -1;
 					}
-					if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-						MessageParse(infmsg, opt_verbose, msg))
+					if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(
+						infmsg, opt_verbose, msg))
 					{
 						std::cerr << "ERROR: message parsing failed" <<
 							std::endl;

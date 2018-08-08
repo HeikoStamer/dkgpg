@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180805])
+AC_REVISION([20180808])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.8], [HeikoStamer@gmx.net], [dkgpg],
@@ -104,6 +104,9 @@ AC_SUBST(LIBTMCG_CFLAGS)
 
 AC_CHECK_LIB(z, inflateInit2_, , AC_MSG_ERROR([zlib is required]))
 COMP_LIBS="-lz"
+AC_CHECK_LIB(bz2, BZ2_bzDecompressInit, [libbz=1 COMP_LIBS="$COMP_LIBS -lbz2"
+ AC_DEFINE(LIBBZ, 1, [Defined if libbzip2 is available])],
+ AC_MSG_WARN([libbzip2 is recommended]))
 AC_SUBST(COMP_LIBS)
 
 # Checks for required header files
@@ -116,6 +119,10 @@ AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
 	AC_MSG_ERROR([some headers are missing]))
 
 AC_CHECK_HEADERS([zlib.h], , AC_MSG_ERROR([zlib header is missing]))
+if test "x$libbz" == "x1"
+then
+AC_CHECK_HEADERS([bzlib.h], , AC_MSG_ERROR([bzlib header is missing]))
+fi
 
 # Checks for required typedefs, structures, and compiler characteristics
 AC_C_CONST

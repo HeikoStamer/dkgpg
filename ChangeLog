@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-08-08] dkg-decrypt: added bzip2 support for compressed messages
 * [2018-08-08] dkg-encrypt: added fingerprint support for option "-s"
 * [2018-08-08] dkg-decrypt: added support for more than one admissible PKESK
 * [2018-08-06] dkg-decrypt: refined selecting of the decryption subkey

@@ -1524,6 +1524,7 @@ void run_instance
 					for (size_t i = 0; i < (msg->compressed_data).size(); i++)
 						infmsg.push_back(msg->compressed_data[i]);
 					decompress_ok = true; // no compression
+					break;
 				case TMCG_OPENPGP_COMPALGO_ZIP:
 				case TMCG_OPENPGP_COMPALGO_ZLIB:
 					decompress_ok = decompress_libz(msg, infmsg);
@@ -2330,6 +2331,7 @@ int main
 							for (size_t i = 0; i < (msg->compressed_data).size(); i++)
 								infmsg.push_back(msg->compressed_data[i]);
 							decompress_ok = true; // no compression
+							break;
 						case TMCG_OPENPGP_COMPALGO_ZIP:
 						case TMCG_OPENPGP_COMPALGO_ZLIB:
 							decompress_ok = decompress_libz(msg, infmsg);

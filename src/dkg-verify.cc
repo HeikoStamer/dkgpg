@@ -39,12 +39,13 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	ifilename, kfilename, rfilename;
+	std::string	ifilename, kfilename, rfilename, sfilename;
 	int 		opt_verbose = 0;
 	bool		opt_binary = false, opt_weak = false;
 	char		*opt_ifilename = NULL;
 	char		*opt_sigfrom = NULL, *opt_sigto = NULL;
 	char		*opt_k = NULL;
+	char		*opt_s = NULL;
 	std::string	sigfrom_str, sigto_str;
 	struct tm	sigfrom_tm = { 0 }, sigto_tm = { 0 };
 	time_t		sigfrom = 1243810800, sigto = time(NULL);
@@ -117,6 +118,22 @@ int main
 			}
 			continue;
 		}
+		else if (arg.find("-s") == 0)
+		{
+			size_t idx = ++i;
+			if ((idx < (size_t)(argc - 1)) && (opt_s == NULL))
+			{
+				sfilename = argv[i+1];
+				opt_s = (char*)sfilename.c_str();
+			}
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
+			}
+			continue;
+		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
 				 (arg.find("-v") == 0) || (arg.find("-h") == 0) ||
 				 (arg.find("-V") == 0) || (arg.find("-w") == 0))
@@ -136,6 +153,8 @@ int main
 					" FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
+				std::cout << "  -s FILENAME    read signature from FILENAME" <<
+					" instead of STDIN" << std::endl; 
 				std::cout << "  -t TIMESPEC    signature made after given" <<
 					" TIMESPEC is not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
@@ -170,19 +189,29 @@ int main
 	kfilename = "Test1_dkg-pub.asc";
 	ifilename = "Test1_output.bin";
 	opt_ifilename = (char*)ifilename.c_str();
+	sfilename = "Test1_output.sig";
+	opt_s = (char*)sfilename.c_str();
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	kfilename = "TestY-pub.asc";
 	ifilename = "TestY_output.asc";
 	opt_ifilename = (char*)ifilename.c_str();
+	sfilename = "TestY_output.sig";
+	opt_s = (char*)sfilename.c_str();
 	opt_verbose = 2;
 #endif
 #endif
 	// check command line arguments
-	if ((kfilename.length() == 0) || (ifilename.length() == 0))
+	if (!opt_k && (kfilename.length() == 0))
 	{
-		std::cerr << "ERROR: some filename missing; usage: " << usage <<
+		std::cerr << "ERROR: argument KEYFILE missing; usage: " << usage <<
+			std::endl;
+		return -1;
+	}
+	if (ifilename.length() == 0)
+	{
+		std::cerr << "ERROR: mandatory option \"-i\" missing; usage: " << usage <<
 			std::endl;
 		return -1;
 	}
@@ -221,13 +250,16 @@ int main
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
 
-	// read the public key
+	// read the public key from KEYFILE
 	std::string armored_pubkey;
-	if (opt_binary && !read_binary_key_file(kfilename,
+	if (kfilename.length() > 0)
+	{
+		if (opt_binary && !read_binary_key_file(kfilename,
 			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
-		return -1;
-	if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
-		return -1;
+			return -1;
+		if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
+			return -1;
+	}
 
 	// read the keyring
 	std::string armored_pubring;
@@ -237,10 +269,56 @@ int main
 	if (opt_k && !opt_binary && !read_key_file(rfilename, armored_pubring))
 		return -1;
 
+	// read the signature from stdin or from file
+	std::string armored_signature;
+	if (opt_s != NULL)
+	{
+		if (!opt_binary && !read_message(sfilename, armored_signature))
+			return -1;
+		if (opt_binary && !read_binary_signature(sfilename, armored_signature))
+			return -1;
+	}
+	else
+	{
+		char c;
+		while (std::cin.get(c))
+			armored_signature += c;
+		std::cin.clear();
+	}
+
+	// parse the signature
+	TMCG_OpenPGP_Signature *signature = NULL;
+	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		SignatureParse(armored_signature, opt_verbose, signature);
+	if (parse_ok)
+	{
+		if (signature->type == TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT)
+		{
+			std::cerr << "ERROR: signature on canonical text document" <<
+				" not supported" << std::endl;
+			delete signature;
+			return -1;
+		}
+		else if (signature->type != TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT)
+		{
+			std::cerr << "ERROR: wrong signature type " <<
+				(int)signature->type << " found" << std::endl;
+			delete signature;
+			return -1;
+		}
+	}
+	else
+	{
+		std::cerr << "ERROR: cannot parse resp. use the provided signature" <<
+			std::endl;
+		return -1;
+	}
+	if (opt_verbose)
+		signature->PrintInfo();
+
 	// parse the keyring, the public key block and corresponding signatures
 	TMCG_OpenPGP_Pubkey *primary = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
-	bool parse_ok;
 	if (opt_k)
 	{
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -253,6 +331,39 @@ int main
 	}
 	else
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
+	if (kfilename.length() == 0)
+	{
+		// try to extract the public key from keyring based on issuer_fingerprint
+		std::string fpr;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintConvertPlain(signature->issuerfpr, fpr);
+		if (opt_verbose > 1)
+			std::cerr << "INFO: lookup for issuer public key with" <<
+				" fingerprint " << fpr << std::endl;
+		const TMCG_OpenPGP_Pubkey *key = ring->find(fpr);
+		if (key == NULL)
+		{
+			// try to extract the public key from keyring based on issuer
+			std::string kid;
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				KeyidConvert(signature->issuer, kid);
+			if (opt_verbose > 1)
+				std::cerr << "INFO: lookup for issuer public key with" <<
+					" keyid " << kid << std::endl;
+			key = ring->find_by_keyid(kid);
+			if (key == NULL)
+			{
+				std::cerr << "ERROR: issuer public key not found in keyring" <<
+					std::endl; 
+				delete ring;
+				delete signature;
+				return -1;
+			}
+		}
+
+// TODO: construct armored_pubkey from key->packet with function in LibTMCG
+
+	}
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
@@ -263,6 +374,7 @@ int main
 			std::cerr << "ERROR: primary key is not valid" << std::endl;
 			delete primary;
 			delete ring;
+			delete signature;
 			return -1;
 		}
 		primary->CheckSubkeys(ring, opt_verbose);
@@ -273,6 +385,7 @@ int main
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
 			delete primary;
 			delete ring;
+			delete signature;
 			return -1;
 		}
 	}
@@ -280,64 +393,11 @@ int main
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		delete ring;
+		delete signature;
 		return -1;
 	}
 
-	// read the signature from stdin
-	std::string armored_signature;
-#ifdef DKGPG_TESTSUITE
-	std::string sigfilename = "Test1_output.sig";
-	if (!read_message(sigfilename, armored_signature))
-	{
-		delete primary;
-		delete ring;
-		return -1;
-	}
-#else
-#ifdef DKGPG_TESTSUITE_Y
-	std::string sigfilename = "TestY_output.sig";
-	if (!read_message(sigfilename, armored_signature))
-	{
-		delete primary;
-		delete ring;
-		return -1;
-	}
-#else
-	char c;
-	while (std::cin.get(c))
-		armored_signature += c;
-	std::cin.clear();
-#endif
-#endif
-
-	// parse the signature
-	TMCG_OpenPGP_Signature *signature = NULL;
-	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-		SignatureParse(armored_signature, opt_verbose, signature);
-	if (parse_ok)
-	{
-		if (signature->type != TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT)
-		{
-			std::cerr << "ERROR: wrong signature type " <<
-				(int)signature->type << " found" << std::endl;
-			delete signature;
-			delete primary;
-			delete ring;
-			return -1;
-		}
-	}
-	else
-	{
-		std::cerr << "ERROR: cannot parse resp. use the provided signature" <<
-			std::endl;
-		delete primary;
-		delete ring;
-		return -1;
-	}
-	if (opt_verbose)
-		signature->PrintInfo();
-
-	// select corresponding key of the issuer from subkeys
+	// select corresponding public key of the issuer from subkeys
 	bool subkey_selected = false;
 	size_t subkey_idx = 0, keyusage = 0;
 	time_t ckeytime = 0, ekeytime = 0;
@@ -477,7 +537,7 @@ int main
 	// release signature
 	delete signature;
 
-	// release primary key and keyring structures
+	// release primary key and keyring
 	delete primary;
 	delete ring;
 

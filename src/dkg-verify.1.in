@@ -1,4 +1,4 @@
-.TH DKG\-VERIFY "1" "March 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-VERIFY "1" "August 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-verify \- verifies a detached signature of a file according to OpenPGP
@@ -10,12 +10,14 @@ dkg\-verify \- verifies a detached signature of a file according to OpenPGP
 
 .SH DESCRIPTION
 This program verifies a detached signature read from STDIN according to the
-OpenPGP standard. KEYFILE must contain the ASCII\-armored public key, for which
+OpenPGP standard. KEYFILE represents the ASCII\-armored public key, for which
 the verification is performed. That means, KEYFILE must contain the
-corresponding public key of the signature issuer and optionally by "\-k" some
-external revocation keys can be provided. Currently, only DSA/DSS and RSA are
-permitted as public-key algorithms. The input file for which the signature is
-checked must be specified by the mandatory option "\-i".
+corresponding public key of the signature issuer, and optionally by "\-k" some
+external revocation keys can be provided. Currently, only DSA/DSS, RSA and ECDSA
+are permitted as public-key algorithms. The input file for which the signature is
+checked must be specified by the mandatory option "\-i". Instead of reading the
+detached signature from STDIN, by option "\-s" a file containing this signature
+can be supplied.
 .PP
 By "\-f" and "\-t" the user can provide a validity period, i.e., signatures
 made before the TIMESPEC of option "\-f" or after the TIMESPEC of option "\-t"
@@ -31,7 +33,7 @@ is invalid or no admissible public key is found in KEYFILE.
 Arguments mandatory for long options are also mandatory for short options.
 .TP
 \fB\-b\fR, \fB\-\-binary\fR
-consider KEYFILE and FILENAME as binary input
+consider KEYFILE and each FILENAME as binary input
 .TP
 \fB\-f\fR \fI\,TIMESPEC\/\fR
 signature made before given TIMESPEC is not valid
@@ -40,10 +42,13 @@ signature made before given TIMESPEC is not valid
 print this list of options
 .TP
 \fB\-i\fR \fI\,FILENAME\/\fR
-verify detached signature from FILENAME
+verify detached signature on FILENAME
 .TP
 \fB\-k\fR \fI\,FILENAME\/\fR
 use keyring FILENAME containing external revocation keys
+.TP
+\fB\-s\fR \fI\,FILENAME\/\fR
+read detached signature from FILENAME instead of STDIN
 .TP
 \fB\-t\fR \fI\,TIMESPEC\/\fR
 signature made after given TIMESPEC is not valid
@@ -75,7 +80,7 @@ Home page of Distributed Privacy Guard (DKGPG):
 
 .SH "THANKS"
 The author thanks Daniel Kahn Gillmor for his valuable suggestions regarding
-this program.
+useful extensions of this program.
 
 .SH "COPYRIGHT"
 .TP

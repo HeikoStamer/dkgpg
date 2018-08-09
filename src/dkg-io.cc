@@ -162,6 +162,31 @@ bool create_strict_permissions
 	return true;
 }
 
+bool read_binary_signature
+	(const std::string &filename, std::string &result)
+{
+	// read the signature from file and convert to ASCII armor
+	tmcg_openpgp_octets_t input;
+	std::ifstream ifs(filename.c_str(), std::ifstream::in);
+	if (!ifs.is_open())
+	{
+		std::cerr << "ERROR: cannot open input file" << std::endl;
+		return false;
+	}
+	char c;
+	while (ifs.get(c))
+		input.push_back(c);
+	if (!ifs.eof())
+	{
+		ifs.close();
+		std::cerr << "ERROR: reading from input file until EOF failed" << std::endl;
+		return false;
+	}
+	ifs.close();
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, input, result);
+	return true;
+}
+
 bool read_message
 	(const std::string &filename, std::string &result)
 {

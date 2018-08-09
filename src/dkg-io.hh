@@ -55,6 +55,8 @@
 		(const std::string &filename);
 	bool create_strict_permissions
 		(const std::string &filename);
+	bool read_binary_signature
+		(const std::string &filename, std::string &result);
 	bool read_message
 		(const std::string &filename, std::string &result);
 	bool read_binary_message

@@ -360,9 +360,11 @@ int main
 				return -1;
 			}
 		}
-
-// TODO: construct armored_pubkey from key->packet with function in LibTMCG
-
+		tmcg_openpgp_octets_t pkts;
+		key->Export(pkts);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts,
+				armored_pubkey);
 	}
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);

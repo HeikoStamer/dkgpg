@@ -39,10 +39,10 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	ifilename, kfilename, rfilename, sfilename;
+	std::string	filename, ifilename, kfilename, sfilename;
 	int 		opt_verbose = 0;
 	bool		opt_binary = false, opt_weak = false;
-	char		*opt_ifilename = NULL;
+	char		*opt_i = NULL;
 	char		*opt_sigfrom = NULL, *opt_sigto = NULL;
 	char		*opt_k = NULL;
 	char		*opt_s = NULL;
@@ -57,10 +57,10 @@ int main
 		if (arg.find("-i") == 0)
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_ifilename == NULL))
+			if ((idx < (size_t)(argc - 1)) && (opt_i == NULL))
 			{
 				ifilename = argv[i+1];
-				opt_ifilename = (char*)ifilename.c_str();
+				opt_i = (char*)ifilename.c_str();
 			}
 			else
 			{
@@ -107,8 +107,8 @@ int main
 			size_t idx = ++i;
 			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
 			{
-				rfilename = argv[i+1];
-				opt_k = (char*)rfilename.c_str();
+				kfilename = argv[i+1];
+				opt_k = (char*)kfilename.c_str();
 			}
 			else
 			{
@@ -183,33 +183,33 @@ int main
 			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
 			return -1;
 		}
-		kfilename = arg;
+		filename = arg;
 	}
 #ifdef DKGPG_TESTSUITE
-	kfilename = "Test1_dkg-pub.asc";
+	filename = "Test1_dkg-pub.asc";
 	ifilename = "Test1_output.bin";
-	opt_ifilename = (char*)ifilename.c_str();
+	opt_i = (char*)ifilename.c_str();
 	sfilename = "Test1_output.sig";
 	opt_s = (char*)sfilename.c_str();
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
-	kfilename = "TestY-pub.asc";
+	filename = "TestY-pub.asc";
 	ifilename = "TestY_output.asc";
-	opt_ifilename = (char*)ifilename.c_str();
+	opt_i = (char*)ifilename.c_str();
 	sfilename = "TestY_output.sig";
 	opt_s = (char*)sfilename.c_str();
 	opt_verbose = 2;
 #endif
 #endif
 	// check command line arguments
-	if (!opt_k && (kfilename.length() == 0))
+	if ((opt_k == NULL) && (filename.length() == 0))
 	{
 		std::cerr << "ERROR: argument KEYFILE missing; usage: " << usage <<
 			std::endl;
 		return -1;
 	}
-	if (ifilename.length() == 0)
+	if (opt_i == NULL)
 	{
 		std::cerr << "ERROR: mandatory option \"-i\" missing; usage: " << usage <<
 			std::endl;
@@ -252,21 +252,21 @@ int main
 
 	// read the public key from KEYFILE
 	std::string armored_pubkey;
-	if (kfilename.length() > 0)
+	if (filename.length() > 0)
 	{
-		if (opt_binary && !read_binary_key_file(kfilename,
+		if (opt_binary && !read_binary_key_file(filename,
 			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
 			return -1;
-		if (!opt_binary && !read_key_file(kfilename, armored_pubkey))
+		if (!opt_binary && !read_key_file(filename, armored_pubkey))
 			return -1;
 	}
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k && opt_binary && !read_binary_key_file(rfilename,
+	if ((opt_k != NULL) && opt_binary && !read_binary_key_file(kfilename,
 			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
 		return -1;
-	if (opt_k && !opt_binary && !read_key_file(rfilename, armored_pubring))
+	if ((opt_k != NULL) && !opt_binary && !read_key_file(kfilename, armored_pubring))
 		return -1;
 
 	// read the signature from stdin or from file
@@ -331,7 +331,7 @@ int main
 	}
 	else
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
-	if (kfilename.length() == 0)
+	if (filename.length() == 0)
 	{
 		// try to extract the public key from keyring based on issuer_fingerprint
 		std::string fpr;
@@ -532,9 +532,9 @@ int main
 	bool verify_ok = false;
 	if (subkey_selected)
 		verify_ok = signature->Verify(primary->subkeys[subkey_idx]->key,
-			opt_ifilename, opt_verbose);
+			ifilename, opt_verbose);
 	else
-		verify_ok = signature->Verify(primary->key, opt_ifilename, opt_verbose);
+		verify_ok = signature->Verify(primary->key, ifilename, opt_verbose);
 
 	// release signature
 	delete signature;
@@ -547,14 +547,14 @@ int main
 	{
 		if (opt_verbose)
 			std::cerr << "INFO: Bad signature for input file \"" <<
-				opt_ifilename << "\"" << std::endl;
+				ifilename << "\"" << std::endl;
 		return -3;
 	}
 	else
 	{
 		if (opt_verbose)
 			std::cerr << "INFO: Good signature for input file \"" <<
-				opt_ifilename << "\"" << std::endl;
+				ifilename << "\"" << std::endl;
 	}
 	return 0;
 }

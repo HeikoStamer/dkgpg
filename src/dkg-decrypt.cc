@@ -692,7 +692,6 @@ bool decompress_libz
 		switch (rc)
 		{
 			case Z_NEED_DICT:
-				rc = Z_DATA_ERROR;
 			case Z_DATA_ERROR:
 			case Z_MEM_ERROR:
 			case Z_STREAM_ERROR:

@@ -108,15 +108,16 @@ bool encrypt_session_key
 int main
 	(int argc, char **argv)
 {
-	static const char *usage = "dkg-encrypt [OPTIONS] KEYFILE";
+	static const char *usage = "dkg-encrypt [OPTIONS] KEYSPEC";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	kfilename, ifilename, ofilename, s, rfilename;
+	std::vector<std::string> keyspec;
+	std::string	ifilename, ofilename, s, kfilename;
 	int		opt_verbose = 0;
-	bool		opt_binary = false, opt_weak = false, opt_t = false;
-	char		*opt_ifilename = NULL;
-	char		*opt_ofilename = NULL;
+	bool		opt_binary = false, opt_weak = false, opt_t = false, opt_r = false;
+	char		*opt_i = NULL;
+	char		*opt_o = NULL;
 	char		*opt_s = NULL;
 	char		*opt_k = NULL;
 
@@ -130,16 +131,16 @@ int main
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ifilename == NULL))
+				(opt_i == NULL))
 			{
 				ifilename = argv[i+1];
-				opt_ifilename = (char*)ifilename.c_str();
+				opt_i = (char*)ifilename.c_str();
 			}
 			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ofilename == NULL))
+				(opt_o == NULL))
 			{
 				ofilename = argv[i+1];
-				opt_ofilename = (char*)ofilename.c_str();
+				opt_o = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_s == NULL))
@@ -150,15 +151,15 @@ int main
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_k == NULL))
 			{
-				rfilename = argv[i+1];
-				opt_k = (char*)rfilename.c_str();
+				kfilename = argv[i+1];
+				opt_k = (char*)kfilename.c_str();
 			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
 			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
 			(arg.find("-V") == 0) || (arg.find("-w") == 0) ||
-			(arg.find("-t") == 0))
+			(arg.find("-t") == 0) || (arg.find("-r") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -176,6 +177,8 @@ int main
 					" containing external revocation keys" << std::endl;
 				std::cout << "  -o FILENAME         write encrypted message" <<
 					" rather to FILENAME than STDOUT" << std::endl;
+				std::cout << "  -r, --recipients    select key(s) from given" <<
+					" keyring by KEYSPEC" << std::endl; 
 				std::cout << "  -s STRING           select only encryption" <<
 					"-capable subkeys with fingerprint equals STRING" << std::endl;
 				std::cout << "  -t, --throw-keyids  throw included key IDs" <<
@@ -190,6 +193,8 @@ int main
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
 				opt_binary = true;
+			if ((arg.find("-r") == 0) || (arg.find("--recipients") == 0))
+				opt_r = true;
 			if ((arg.find("-t") == 0) || (arg.find("--throw-keyids") == 0))
 				opt_t = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
@@ -208,22 +213,22 @@ int main
 			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
 			return -1;
 		}
-		kfilename = arg;
+		keyspec.push_back(arg);
 	}
 #ifdef DKGPG_TESTSUITE
-	kfilename = "Test1_dkg-pub.asc";
+	keyspec.push_back("Test1_dkg-pub.asc");
 	if (!opt_binary)
 		opt_binary = true;
 	ofilename = "Test1_output.bin";
-	opt_ofilename = (char*)ofilename.c_str();
+	opt_o = (char*)ofilename.c_str();
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
 #else
 #ifdef DKGPG_TESTSUITE_Y
-	kfilename = "TestY-pub.asc";
+	keyspec.push_back("TestY-pub.asc");
 	ofilename = "TestY_output.asc";
-	opt_ofilename = (char*)ofilename.c_str();
+	opt_o = (char*)ofilename.c_str();
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
@@ -231,10 +236,16 @@ int main
 #endif
 
 	// check command line arguments
-	if (kfilename.length() == 0)
+	if (keyspec.size() < 1)
 	{
-		std::cerr << "ERROR: argument KEYFILE is missing; usage: " <<
+		std::cerr << "ERROR: argument KEYSPEC is missing; usage: " <<
 			usage << std::endl;
+		return -1;
+	}
+	if (!opt_r && (keyspec.size() > 1))
+	{
+		std::cerr << "ERROR: wrong KEYSPEC; more than one file" <<
+			"is not supported" << std::endl;
 		return -1;
 	}
 
@@ -248,21 +259,23 @@ int main
 		std::cerr << "INFO: using LibTMCG version " <<
 			version_libTMCG() << std::endl;
 
-	// read the public key
+	// read the public key from file
 	std::string armored_pubkey;
-	if (!read_key_file(kfilename, armored_pubkey))
-		return -1;
+	if (!opt_r)
+	{
+		if (!read_key_file(keyspec[0], armored_pubkey))
+			return -1;
+	}
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k && !read_key_file(rfilename, armored_pubring))
+	if ((opt_k != NULL) && !read_key_file(kfilename, armored_pubring))
 		return -1;
 
-	// parse the keyring, the public key block and corresponding signatures
-	TMCG_OpenPGP_Pubkey *primary = NULL;
+	// parse the keyring
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k)
+	if (opt_k != NULL)
 	{
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PublicKeyringParse(armored_pubring, opt_verbose, ring);
@@ -274,130 +287,6 @@ int main
 	}
 	else
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
-	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
-	if (parse_ok)
-	{
-		primary->CheckSelfSignatures(ring, opt_verbose);
-		if (!primary->valid)
-		{
-			std::cerr << "ERROR: primary key is not valid" << std::endl;
-			delete primary;
-			delete ring;
-			return -1;
-		}
-		primary->CheckSubkeys(ring, opt_verbose);
-		primary->Reduce(); // keep only valid subkeys
-		if (primary->weak(opt_verbose) && !opt_weak)
-		{
-			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
-			delete primary;
-			delete ring;
-			return -1;
-		}
-	}
-	else
-	{
-		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
-		delete ring;
-		return -1;
-	}
-
-	// select encryption-capable subkeys
-	std::vector<TMCG_OpenPGP_Subkey*> selected;
-	for (size_t j = 0; j < primary->subkeys.size(); j++)
-	{
-		// subkey not selected?
-		std::string kid, fpr;
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintCompute(primary->subkeys[j]->sub_hashing, fpr);
-		if (opt_s && (kid != s) && (fpr != s))
-			continue;
-		// encryption-capable subkey?
-		if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
-		    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08) ||
-		    (!primary->subkeys[j]->AccumulateFlags() &&
-				((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
-				(primary->subkeys[j]->pkalgo ==
-					TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
-				(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))))
-		{
-			if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
-			{
-				if (opt_verbose)
-					std::cerr << "WARNING: weak subkey for encryption" <<
-						" ignored" << std::endl;
-			}
-			else if ((primary->subkeys[j]->pkalgo != 
-						TMCG_OPENPGP_PKALGO_RSA) &&
-			         (primary->subkeys[j]->pkalgo !=
-						TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) &&
-			         (primary->subkeys[j]->pkalgo !=
-						TMCG_OPENPGP_PKALGO_ELGAMAL))
-			{
-				if (opt_verbose)
-					std::cerr << "WARNING: subkey with unsupported public-" <<
-						"key algorithm for encryption ignored" << std::endl;
-			}
-			else
-			{
-				selected.push_back(primary->subkeys[j]);
-				if ((std::find(primary->subkeys[j]->psa.begin(),
-					primary->subkeys[j]->psa.end(), TMCG_OPENPGP_SKALGO_AES256)
-						== primary->subkeys[j]->psa.end()) &&
-				    (std::find(primary->psa.begin(), primary->psa.end(),
-						TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end()))
-				{
-					if (opt_verbose)
-						std::cerr << "WARNING: AES-256 is none of the" <<
-							" preferred symmetric algorithms;"
-							"use AES-256 anyway" << std::endl;
-				}
-				if (((primary->subkeys[j]->AccumulateFeatures() & 0x01) !=
-						0x01) &&
-				    ((primary->AccumulateFeatures() & 0x01) != 0x01))
-				{
-					if (opt_verbose)
-						std::cerr << "WARNING: recipient does not state" <<
-							" support for modification detection (MDC);" <<
-							"use MDC anyway" << std::endl;
-				}
-			}
-		}
-	}
-
-	// check primary key, if no encryption-capable subkeys have been selected
-	if (selected.size() == 0)
-	{	
-		if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
-		    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
-		    (!primary->AccumulateFlags() &&
-				(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
-				(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY)))
-		{
-			std::cerr << "ERROR: no encryption-capable RSA public key found" <<
-				std::endl;
-			delete primary;
-			delete ring;
-			return -1;
-		}
-		if (std::find(primary->psa.begin(), primary->psa.end(),
-			TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
-		{
-			if (opt_verbose)
-				std::cerr << "WARNING: AES-256 is none of the preferred" <<
-					" symmetric algorithms; use AES-256 anyway" << std::endl;
-		}
-		if ((primary->AccumulateFeatures() & 0x01) != 0x01)
-		{
-			if (opt_verbose)
-				std::cerr << "WARNING: recipient does not state support" <<
-					" for modification detection (MDC);" <<
-					"use MDC protection anyway" << std::endl;
-		}
-	}
 
 	// read message from stdin or file
 	tmcg_openpgp_octets_t msg;
@@ -411,12 +300,11 @@ int main
 	for (size_t i = 0; i < test_msg.length(); i++)
 		msg.push_back(test_msg[i]);
 #else
-	if (opt_ifilename != NULL)
+	if (opt_i != NULL)
 	{
 		std::string input_msg;
-		if (!read_message(opt_ifilename, input_msg))
+		if (!read_message(ifilename, input_msg))
 		{
-			delete primary;
 			delete ring;
 			return -1;
 		}
@@ -443,7 +331,6 @@ int main
 	{
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
 			gcry_err_code(ret) << ")" << std::endl;
-		delete primary;
 		delete ring;
 		return ret;
 	}
@@ -470,63 +357,218 @@ int main
 	{
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
 			gcry_err_code(ret) << ")" << std::endl;
-		delete primary;
 		delete ring;
 		return ret;
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSeipdEncode(enc, seipd);
 
-	// encrypt the session key (create PKESK packet)
+	// iterate through all specified encryption keys
 	tmcg_openpgp_octets_t all;
-	if (opt_verbose > 1)
-		std::cerr << "INFO: " << selected.size() << " subkeys selected for" <<
-			" encryption of session key" << std::endl;
-	for (size_t j = 0; j < selected.size(); j++)
+	for (size_t k = 0; k < keyspec.size(); k++)
 	{
-		tmcg_openpgp_octets_t pkesk, subkeyid;
-		if (opt_t)
+		TMCG_OpenPGP_Pubkey *primary = NULL;
+		if (opt_r)
 		{
-			// An implementation MAY accept or use a Key ID of zero as a
-			// "wild card" or "speculative" Key ID. In this case, the
-			// receiving implementation would try all available private keys,
-			// checking for a valid decrypted session key. This format helps
-			// reduce traffic analysis of messages. [RFC4880]
-			for (size_t i = 0; i < 8; i++)
-				subkeyid.push_back(0x00);
+			// try to extract the public key from keyring by keyspec
+			if (opt_verbose > 1)
+				std::cerr << "INFO: lookup for encryption key with" <<
+					" fingerprint " << keyspec[k] << std::endl;
+			const TMCG_OpenPGP_Pubkey *key = ring->find_by_keyid(keyspec[k]);
+			if (key == NULL)
+			{
+				std::cerr << "ERROR: encryption key not found in keyring" <<
+					std::endl; 
+				delete ring;
+				return -1;
+			}
+			tmcg_openpgp_octets_t pkts;
+			key->Export(pkts);
+			armored_pubkey = "";
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts,
+					armored_pubkey);
+		}
+
+		// parse the public key block and check corresponding signatures
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+		if (parse_ok)
+		{
+			primary->CheckSelfSignatures(ring, opt_verbose);
+			if (!primary->valid)
+			{
+				std::cerr << "ERROR: primary key is not valid" << std::endl;
+				delete primary;
+				delete ring;
+				return -1;
+			}
+			primary->CheckSubkeys(ring, opt_verbose);
+			primary->Reduce(); // keep only valid subkeys
+			if (primary->weak(opt_verbose) && !opt_weak)
+			{
+				std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
+				delete primary;
+				delete ring;
+				return -1;
+			}
 		}
 		else
-			subkeyid.insert(subkeyid.end(),
-				selected[j]->id.begin(), selected[j]->id.end());
-		if (!encrypt_session_key(selected[j], seskey, subkeyid, pkesk))
 		{
-			delete primary;
+			std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 			delete ring;
 			return -1;
 		}
-		all.insert(all.end(), pkesk.begin(), pkesk.end());
-	}
-	if (selected.size() == 0)
-	{
-		tmcg_openpgp_octets_t pkesk, keyid;
-		if (opt_t)
+
+		// select encryption-capable subkeys
+		std::vector<TMCG_OpenPGP_Subkey*> selected;
+		for (size_t j = 0; j < primary->subkeys.size(); j++)
 		{
-			// An implementation MAY accept or use a Key ID of zero as a
-			// "wild card" or "speculative" Key ID. In this case, the
-			// receiving implementation would try all available private keys,
-			// checking for a valid decrypted session key. This format helps
-			// reduce traffic analysis of messages. [RFC4880]
-			for (size_t i = 0; i < 8; i++)
-				keyid.push_back(0x00);
+			// subkey not selected?
+			std::string kid, fpr;
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				FingerprintCompute(primary->subkeys[j]->sub_hashing, fpr);
+			if (opt_s && (kid != s) && (fpr != s))
+				continue;
+			// encryption-capable subkey?
+			if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
+			    ((primary->subkeys[j]->AccumulateFlags() & 0x08) == 0x08) ||
+			    (!primary->subkeys[j]->AccumulateFlags() &&
+					((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+					(primary->subkeys[j]->pkalgo ==
+						TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
+					(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))))
+			{
+				if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
+				{
+					if (opt_verbose)
+						std::cerr << "WARNING: weak subkey for encryption" <<
+							" ignored" << std::endl;
+				}
+				else if ((primary->subkeys[j]->pkalgo != 
+							TMCG_OPENPGP_PKALGO_RSA) &&
+				         (primary->subkeys[j]->pkalgo !=
+							TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) &&
+				         (primary->subkeys[j]->pkalgo !=
+							TMCG_OPENPGP_PKALGO_ELGAMAL))
+				{
+					if (opt_verbose)
+						std::cerr << "WARNING: subkey with unsupported public-" <<
+							"key algorithm for encryption ignored" << std::endl;
+				}
+				else
+				{
+					selected.push_back(primary->subkeys[j]);
+					if ((std::find(primary->subkeys[j]->psa.begin(),
+						primary->subkeys[j]->psa.end(), TMCG_OPENPGP_SKALGO_AES256)
+							== primary->subkeys[j]->psa.end()) &&
+					    (std::find(primary->psa.begin(), primary->psa.end(),
+							TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end()))
+					{
+						if (opt_verbose)
+							std::cerr << "WARNING: AES-256 is none of the" <<
+								" preferred symmetric algorithms;"
+								"use AES-256 anyway" << std::endl;
+					}
+					if (((primary->subkeys[j]->AccumulateFeatures() & 0x01) !=
+							0x01) &&
+					    ((primary->AccumulateFeatures() & 0x01) != 0x01))
+					{
+						if (opt_verbose)
+							std::cerr << "WARNING: recipient does not state" <<
+								" support for modification detection (MDC);" <<
+								"use MDC anyway" << std::endl;
+					}
+				}
+			}
 		}
-		else
-			keyid.insert(keyid.end(), primary->id.begin(), primary->id.end());
-		if (!encrypt_session_key(primary, seskey, keyid, pkesk))
+
+		// check primary key, if no encryption-capable subkeys have been selected
+		if (selected.size() == 0)
+		{	
+			if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
+			    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
+			    (!primary->AccumulateFlags() &&
+					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY)))
+			{
+				std::cerr << "ERROR: no encryption-capable RSA public key found" <<
+					std::endl;
+				delete primary;
+				delete ring;
+				return -1;
+			}
+			if (std::find(primary->psa.begin(), primary->psa.end(),
+				TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
+			{
+				if (opt_verbose)
+					std::cerr << "WARNING: AES-256 is none of the preferred" <<
+						" symmetric algorithms; use AES-256 anyway" << std::endl;
+			}
+			if ((primary->AccumulateFeatures() & 0x01) != 0x01)
+			{
+				if (opt_verbose)
+					std::cerr << "WARNING: recipient does not state support" <<
+						" for modification detection (MDC);" <<
+						"use MDC protection anyway" << std::endl;
+			}
+		}
+
+		// encrypt the session key (create PKESK packet)
+		if (opt_verbose > 1)
+			std::cerr << "INFO: " << selected.size() << " subkeys selected for" <<
+				" encryption of session key" << std::endl;
+		for (size_t j = 0; j < selected.size(); j++)
 		{
-			delete primary;
-			delete ring;
-			return -1;
+			tmcg_openpgp_octets_t pkesk, subkeyid;
+			if (opt_t)
+			{
+				// An implementation MAY accept or use a Key ID of zero as a
+				// "wild card" or "speculative" Key ID. In this case, the
+				// receiving implementation would try all available private keys,
+				// checking for a valid decrypted session key. This format helps
+				// reduce traffic analysis of messages. [RFC4880]
+				for (size_t i = 0; i < 8; i++)
+					subkeyid.push_back(0x00);
+			}
+			else
+				subkeyid.insert(subkeyid.end(),
+					selected[j]->id.begin(), selected[j]->id.end());
+			if (!encrypt_session_key(selected[j], seskey, subkeyid, pkesk))
+			{
+				delete primary;
+				delete ring;
+				return -1;
+			}
+			all.insert(all.end(), pkesk.begin(), pkesk.end());
 		}
-		all.insert(all.end(), pkesk.begin(), pkesk.end());
+		if (selected.size() == 0)
+		{
+			tmcg_openpgp_octets_t pkesk, keyid;
+			if (opt_t)
+			{
+				// An implementation MAY accept or use a Key ID of zero as a
+				// "wild card" or "speculative" Key ID. In this case, the
+				// receiving implementation would try all available private keys,
+				// checking for a valid decrypted session key. This format helps
+				// reduce traffic analysis of messages. [RFC4880]
+				for (size_t i = 0; i < 8; i++)
+					keyid.push_back(0x00);
+			}
+			else
+				keyid.insert(keyid.end(), primary->id.begin(), primary->id.end());
+			if (!encrypt_session_key(primary, seskey, keyid, pkesk))
+			{
+				delete primary;
+				delete ring;
+				return -1;
+			}
+			all.insert(all.end(), pkesk.begin(), pkesk.end());
+		}
+
+		// release primary key
+		delete primary;
 	}
 
 	// append SEIPD and encode all packages in ASCII armor
@@ -536,22 +578,20 @@ int main
 		ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
 
 	// write out the result
-	if (opt_ofilename != NULL)
+	if (opt_o != NULL)
 	{
 		if (opt_binary)
 		{
-			if (!write_message(opt_ofilename, all))
+			if (!write_message(ofilename, all))
 			{
-				delete primary;
 				delete ring;
 				return -1;
 			}
 		}
 		else
 		{
-			if (!write_message(opt_ofilename, armored_message))
+			if (!write_message(ofilename, armored_message))
 			{
-				delete primary;
 				delete ring;
 				return -1;
 			}
@@ -560,8 +600,7 @@ int main
 	else
 		std::cout << armored_message << std::endl;
 
-	// release primary key and keyring structures
-	delete primary;
+	// release keyring
 	delete ring;
 	
 	return 0;

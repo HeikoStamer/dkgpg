@@ -73,7 +73,7 @@ char						*opt_URI = NULL;
 char						*opt_k = NULL;
 char						*opt_y = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
-bool						opt_t = false, opt_E = false;
+bool						opt_t = false, opt_E = false, opt_C = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime,
@@ -350,7 +350,7 @@ void run_instance
 		std::cerr << "INFO: hashing the input file \"" << opt_ifilename <<
 			"\"" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left;
-	if (opt_t)
+	if (opt_t || opt_C)
 	{
 		if (opt_y == NULL)
 		{
@@ -612,7 +612,7 @@ void run_instance
 	std::string sigstr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
-	if (opt_t)
+	if (opt_C)
 	{
 		std::string ct_head = "-----BEGIN PGP SIGNED MESSAGE-----\r\n";
 		std::string ct_hash; // construct corresponding Hash Armor Header
@@ -654,8 +654,9 @@ unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
-int gnunet_opt_text = 0;
+int gnunet_opt_t = 0;
 int gnunet_opt_E = 0;
+int gnunet_opt_C = 0;
 #endif
 
 void fork_instance
@@ -699,6 +700,11 @@ int main
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
+		GNUNET_GETOPT_option_flag('C',
+			"clear",
+			"apply cleartext signature framework (cf. RFC 4880)",
+			&gnunet_opt_C
+		),
 		GNUNET_GETOPT_option_help(about),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
@@ -751,8 +757,8 @@ int main
 		),
 		GNUNET_GETOPT_option_flag('t',
 			"text",
-			"create cleartext signature",
-			&gnunet_opt_text
+			"create canonical text document signature",
+			&gnunet_opt_t
 		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
@@ -912,6 +918,8 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
+				std::cout << "  -C, --clear    apply cleartext signature" <<
+					" framework (cf. RFC 4880)" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -e TIME        expiration time of generated" <<
 					" signature in seconds" << std::endl;
@@ -929,8 +937,8 @@ int main
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
-				std::cout << "  -t, --text     create cleartext signature" <<
-					std::endl;
+				std::cout << "  -t, --text     create canonical text" <<
+					" document signature" << std::endl;
 				std::cout << "  -U STRING      policy URI tied to generated" <<
 					" signatures" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
@@ -944,6 +952,8 @@ int main
 #endif
 				return 0; // not continue
 			}
+			if ((arg.find("-C") == 0) || (arg.find("--clear") == 0))
+				opt_C = true;
 			if ((arg.find("-E") == 0) || (arg.find("--echo") == 0))
 				opt_E = true;
 			if ((arg.find("-t") == 0) || (arg.find("--text") == 0))
@@ -1103,6 +1113,11 @@ int main
 	// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+		GNUNET_GETOPT_option_flag('C',
+			"clear",
+			"apply cleartext signature framework (cf. RFC 4880)",
+			&gnunet_opt_C
+		),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
 			"TIME",
@@ -1158,8 +1173,8 @@ int main
 		),
 		GNUNET_GETOPT_option_flag('t',
 			"text",
-			"create cleartext signature",
-			&gnunet_opt_text
+			"create canonical text document signature",
+			&gnunet_opt_t
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",

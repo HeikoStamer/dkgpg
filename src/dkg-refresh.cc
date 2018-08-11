@@ -115,7 +115,7 @@ void run_instance
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
-		if (!get_passphrase("Enter passphrase to unlock private key",
+		if (!get_passphrase("Enter passphrase to unlock private key", false,
 			passphrase))
 		{
 			std::cerr << "ERROR: cannot read passphrase" << std::endl;

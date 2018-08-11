@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-08-11] dkg-sign,dkg-decrypt: added option "-E" (enable passphrase echo)
 * [2018-08-11] dkg-verify: added support for verifying text document signatures
 * [2018-08-10] dkg-encrypt: added option "-r" (select recipients by fingerprint)
 * [2018-08-09] dkg-verify: look for issuer's key in keyring, if KEYFILE omitted

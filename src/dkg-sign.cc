@@ -73,7 +73,7 @@ char						*opt_URI = NULL;
 char						*opt_k = NULL;
 char						*opt_y = NULL;
 unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
-bool						opt_t = false;
+bool						opt_t = false, opt_E = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime,
@@ -132,7 +132,7 @@ void run_instance
 #ifdef DKGPG_TESTSUITE_Y
 		passphrase = "TestY";
 #else
-		if (!get_passphrase("Enter passphrase to unlock private key",
+		if (!get_passphrase("Enter passphrase to unlock private key", opt_E,
 			passphrase))
 		{
 			std::cerr << "ERROR: cannot read passphrase" << std::endl;
@@ -157,7 +157,7 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
-	if (!prv->pub->valid || prv->weak(opt_verbose))
+	if (!prv->pub->valid || ((opt_y == NULL) && prv->weak(opt_verbose)))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete ring;
@@ -655,6 +655,7 @@ unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
 int gnunet_opt_text = 0;
+int gnunet_opt_E = 0;
 #endif
 
 void fork_instance
@@ -704,6 +705,11 @@ int main
 			"TIME",
 			"expiration time of generated signature in seconds",
 			&gnunet_opt_sigexptime
+		),
+		GNUNET_GETOPT_option_flag('E',
+			"echo",
+			"enable terminal echo when reading passphrase",
+			&gnunet_opt_E
 		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
@@ -897,7 +903,7 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-t") == 0))
+			(arg.find("-t") == 0) || (arg.find("-E") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -909,6 +915,8 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -e TIME        expiration time of generated" <<
 					" signature in seconds" << std::endl;
+				std::cout << "  -E, --echo     enable terminal echo when" <<
+					" reading passphrase" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME    create signature from" <<
@@ -936,6 +944,8 @@ int main
 #endif
 				return 0; // not continue
 			}
+			if ((arg.find("-E") == 0) || (arg.find("--echo") == 0))
+				opt_E = true;
 			if ((arg.find("-t") == 0) || (arg.find("--text") == 0))
 				opt_t = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
@@ -1098,6 +1108,11 @@ int main
 			"TIME",
 			"expiration time of generated signature in seconds",
 			&gnunet_opt_sigexptime
+		),
+		GNUNET_GETOPT_option_flag('E',
+			"echo",
+			"enable terminal echo when reading passphrase",
+			&gnunet_opt_E
 		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",

@@ -70,7 +70,7 @@ std::string						passphrase, ifilename, ofilename, kfilename;
 std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
-bool							opt_binary = false;
+bool							opt_binary = false, opt_E = false;
 char							*opt_ifilename = NULL;
 char							*opt_ofilename = NULL;
 char							*opt_passwords = NULL;
@@ -833,7 +833,7 @@ void run_instance
 #ifdef DKGPG_TESTSUITE_Y
 		passphrase = "TestY";
 #else
-		if (!get_passphrase("Enter passphrase to unlock private key",
+		if (!get_passphrase("Enter passphrase to unlock private key", opt_E,
 			passphrase))
 		{
 			std::cerr << "ERROR: cannot read passphrase" << std::endl;
@@ -1628,6 +1628,7 @@ unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_nonint = 0;
 int gnunet_opt_verbose = 0;
 int gnunet_opt_binary = 0;
+int gnunet_opt_E = 0;
 #endif
 
 void fork_instance
@@ -1674,6 +1675,11 @@ int main
 			&gnunet_opt_binary
 		),
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
+		GNUNET_GETOPT_option_flag('E',
+			"echo",
+			"enable terminal echo when reading passphrase",
+			&gnunet_opt_E
+		),
 		GNUNET_GETOPT_option_help(about),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
@@ -1846,7 +1852,8 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
 			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
-			(arg.find("-n") == 0) || (arg.find("-V") == 0))
+			(arg.find("-n") == 0) || (arg.find("-V") == 0) ||
+			(arg.find("-E") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -1857,6 +1864,8 @@ int main
 					" mandatory for short options." << std::endl;
 				std::cout << "  -b, --binary           consider encrypted" <<
 					" message from FILENAME as binary input" << std::endl;
+				std::cout << "  -E, --echo             enable terminal echo" <<
+					" when reading passphrase" << std::endl;
 				std::cout << "  -h, --help             print this help" <<
 					std::endl;
 				std::cout << "  -H STRING              hostname (e.g. onion" <<
@@ -1886,6 +1895,8 @@ int main
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
 				opt_binary = true;
+			if ((arg.find("-E") == 0) || (arg.find("--echo") == 0))
+				opt_E = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
@@ -2067,7 +2078,7 @@ int main
 			PrivateKeyBlockParse(armored_seckey, opt_verbose, passphrase, prv);
 		if (!parse_ok)
 		{
-			if (!get_passphrase("Enter passphrase to unlock private key",
+			if (!get_passphrase("Enter passphrase to unlock private key", opt_E,
 				passphrase))
 			{
 				std::cerr << "ERROR: cannot read passphrase" << std::endl;
@@ -2445,6 +2456,11 @@ int main
 			"binary",
 			"consider encrypted message from FILENAME as binary input",
 			&gnunet_opt_binary
+		),
+		GNUNET_GETOPT_option_flag('E',
+			"echo",
+			"enable terminal echo when reading passphrase",
+			&gnunet_opt_E
 		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",

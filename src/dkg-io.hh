@@ -43,7 +43,7 @@
 	#include <libTMCG.hh>
 
 	bool get_passphrase
-		(const std::string &prompt, std::string &passphrase);
+		(const std::string &prompt, const bool echo, std::string &passphrase);
 	bool read_key_file
 		(const std::string &filename, std::string &result);
 	bool read_binary_key_file

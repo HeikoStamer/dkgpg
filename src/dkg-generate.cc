@@ -2393,9 +2393,9 @@ int main
 	do
 	{
 		passphrase = "", passphrase_check = "";
-		if (!get_passphrase(ps1, passphrase))
+		if (!get_passphrase(ps1, false, passphrase))
 			return -1;
-		if (!get_passphrase(ps2, passphrase_check))
+		if (!get_passphrase(ps2, false, passphrase_check))
 			return -1;
 		if (passphrase != passphrase_check)
 			std::cerr << "WARNING: passphrase does not match;" <<

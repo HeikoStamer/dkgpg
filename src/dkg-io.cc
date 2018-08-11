@@ -25,33 +25,39 @@
 #include "dkg-io.hh"
 
 bool get_passphrase
-	(const std::string &prompt, std::string &passphrase)
+	(const std::string &prompt, const bool echo, std::string &passphrase)
 {
 	struct termios old_term, new_term;
 	
-	// disable echo on stdin
-	if (tcgetattr(fileno(stdin), &old_term) < 0)
+	if (!echo)
 	{
-		perror("ERROR: get_passphrase (tcgetattr)");
-		return false;
-	}
-	new_term = old_term;
-	new_term.c_lflag &= ~(ECHO | ISIG);
-	new_term.c_lflag |= ECHONL;
-	if (tcsetattr(fileno(stdin), TCSANOW, &new_term) < 0)
-	{
-		perror("ERROR: get_passphrase (tcsetattr)");
-		return false;
+		// disable echo on stdin
+		if (tcgetattr(fileno(stdin), &old_term) < 0)
+		{
+			perror("ERROR: get_passphrase (tcgetattr)");
+			return false;
+		}
+		new_term = old_term;
+		new_term.c_lflag &= ~(ECHO | ISIG);
+		new_term.c_lflag |= ECHONL;
+		if (tcsetattr(fileno(stdin), TCSANOW, &new_term) < 0)
+		{
+			perror("ERROR: get_passphrase (tcsetattr)");
+			return false;
+		}
 	}
 	// read the passphrase
 	std::cerr << prompt.c_str() << ": ";
 	std::getline(std::cin, passphrase);
 	std::cin.clear();
-	// enable echo on stdin
-	if (tcsetattr(fileno(stdin), TCSANOW, &old_term) < 0)
+	if (!echo)
 	{
-		perror("ERROR: get_passphrase (tcsetattr)");
-		return false;
+		// enable echo on stdin
+		if (tcsetattr(fileno(stdin), TCSANOW, &old_term) < 0)
+		{
+			perror("ERROR: get_passphrase (tcsetattr)");
+			return false;
+		}
 	}
 	return true;
 }

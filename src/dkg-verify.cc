@@ -292,14 +292,8 @@ int main
 		SignatureParse(armored_signature, opt_verbose, signature);
 	if (parse_ok)
 	{
-		if (signature->type == TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT)
-		{
-			std::cerr << "ERROR: signature on canonical text document" <<
-				" not supported" << std::endl;
-			delete signature;
-			return -1;
-		}
-		else if (signature->type != TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT)
+		if ((signature->type != TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT))
 		{
 			std::cerr << "ERROR: wrong signature type " <<
 				(int)signature->type << " found" << std::endl;

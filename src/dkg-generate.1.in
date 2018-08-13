@@ -245,27 +245,29 @@ configured in your torrc file:
 .nf
 .RS
 HiddenServiceDir /var/lib/tor/dkg/
-HiddenServicePort 35000 127.0.0.1:35000
-HiddenServicePort 35001 127.0.0.1:35001
-HiddenServicePort 35002 127.0.0.1:35002
-HiddenServicePort 35003 127.0.0.1:35003
-HiddenServicePort 35004 127.0.0.1:35004
-HiddenServicePort 35005 127.0.0.1:35005
-HiddenServicePort 35006 127.0.0.1:35006
-HiddenServicePort 35007 127.0.0.1:35007
-HiddenServicePort 35008 127.0.0.1:35008
-HiddenServicePort 35009 127.0.0.1:35009
-HiddenServicePort 35010 127.0.0.1:35010
-HiddenServicePort 35011 127.0.0.1:35011
-HiddenServicePort 35012 127.0.0.1:35012
-HiddenServicePort 35013 127.0.0.1:35013
-HiddenServicePort 35014 127.0.0.1:35014
-HiddenServicePort 35015 127.0.0.1:35015
-HiddenServicePort 35016 127.0.0.1:35016
-HiddenServicePort 35017 127.0.0.1:35017
-HiddenServicePort 35018 127.0.0.1:35018
-HiddenServicePort 35019 127.0.0.1:35019
-HiddenServicePort 35020 127.0.0.1:35020
+HiddenServicePort 55000 127.0.0.1:55000
+HiddenServicePort 55001 127.0.0.1:55001
+HiddenServicePort 55002 127.0.0.1:55002
+HiddenServicePort 55003 127.0.0.1:55003
+HiddenServicePort 55004 127.0.0.1:55004
+HiddenServicePort 55005 127.0.0.1:55005
+HiddenServicePort 55006 127.0.0.1:55006
+HiddenServicePort 55007 127.0.0.1:55007
+HiddenServicePort 55008 127.0.0.1:55008
+HiddenServicePort 55009 127.0.0.1:55009
+HiddenServicePort 55010 127.0.0.1:55010
+HiddenServicePort 55011 127.0.0.1:55011
+HiddenServicePort 55012 127.0.0.1:55012
+HiddenServicePort 55013 127.0.0.1:55013
+HiddenServicePort 55014 127.0.0.1:55014
+HiddenServicePort 55015 127.0.0.1:55015
+HiddenServicePort 55016 127.0.0.1:55016
+HiddenServicePort 55017 127.0.0.1:55017
+HiddenServicePort 55018 127.0.0.1:55018
+HiddenServicePort 55019 127.0.0.1:55019
+HiddenServicePort 55020 127.0.0.1:55020
+..
+HiddenServicePort 55200 127.0.0.1:55200
 ..
 .RE
 .fi

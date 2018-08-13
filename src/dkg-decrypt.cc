@@ -661,15 +661,6 @@ bool decompress_libz
 	}
 	size_t cnt = 0;
 	memset(zin, 0, sizeof(zin));
-	if ((msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
-	{
-		zin[0] = 0xFF; // fake zlib header
-		zin[1] = 0xFF;
-		zin[2] = 0xFF;
-		zin[3] = 0xFF;
-		zs.avail_in = 4;
-		zs.next_in = zin;
-	}
 	do
 	{
 		if (zs.avail_in == 0)
@@ -684,6 +675,12 @@ bool decompress_libz
 			}
 			zs.avail_in = zlen;
 			zs.next_in = zin;
+		}
+		if ((zs.avail_in < sizeof(zin)) &&
+			(msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
+		{
+			zin[zs.avail_in] = 0xFF; // dummy character to fake zlib structure
+			zs.avail_in++;
 		}
 		memset(zout, 0, sizeof(zout));
 		zs.avail_out = sizeof(zout);
@@ -1054,9 +1051,9 @@ void run_instance
 			}
 		}
 	}
-	if (esks.size() == 0)
+	if ((esks.size() == 0) && (msg->SKESKs.size() == 0))
 	{
-		std::cerr << "ERROR: no admissible PKESK found" << std::endl;
+		std::cerr << "ERROR: no admissible PKESK/SKESK found" << std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;
@@ -1158,8 +1155,10 @@ void run_instance
 		mpz_init(crs_p), mpz_init(crs_q), mpz_init(crs_g), mpz_init(crs_k);
 		if (!tmcg_mpz_set_gcry_mpi(ssb->pub->elg_p, crs_p))
 		{
-			std::cerr << "ERROR: converting group parameters failed" << std::endl;
-			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
+			std::cerr << "ERROR: converting group parameters failed" <<
+				std::endl;
+			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g);
+			mpz_clear(crs_k);
 			delete aiou, delete aiou2, delete rbc;
 			delete msg;
 			delete dkg;
@@ -1169,8 +1168,10 @@ void run_instance
 		}
 		if (!tmcg_mpz_set_gcry_mpi(ssb->telg_q, crs_q))
 		{
-			std::cerr << "ERROR: converting group parameters failed" << std::endl;
-			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
+			std::cerr << "ERROR: converting group parameters failed" <<
+				std::endl;
+			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g);
+			mpz_clear(crs_k);
 			delete aiou, delete aiou2, delete rbc;
 			delete msg;
 			delete dkg;
@@ -1180,8 +1181,10 @@ void run_instance
 		}
 		if (!tmcg_mpz_set_gcry_mpi(ssb->pub->elg_g, crs_g))
 		{
-			std::cerr << "ERROR: converting group parameters failed" << std::endl;
-			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
+			std::cerr << "ERROR: converting group parameters failed" <<
+				std::endl;
+			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g);
+			mpz_clear(crs_k);
 			delete aiou, delete aiou2, delete rbc;
 			delete msg;
 			delete dkg;
@@ -1192,8 +1195,10 @@ void run_instance
 		mpz_sub_ui(crs_k, crs_p, 1L);
 		if (!mpz_cmp_ui(crs_q, 0L))
 		{
-			std::cerr << "ERROR: group parameter q must not be zero" << std::endl;
-			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
+			std::cerr << "ERROR: group parameter q must not be zero" <<
+				std::endl;
+			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g);
+			mpz_clear(crs_k);
 			delete aiou, delete aiou2, delete rbc;
 			delete msg;
 			delete dkg;
@@ -1204,8 +1209,8 @@ void run_instance
 		mpz_div(crs_k, crs_k, crs_q);
 		// create VTMF instance from original CRS (common reference string)
 		std::stringstream crss;
-		crss << crs_p << std::endl << crs_q << std::endl << crs_g << std::endl <<
-			crs_k << std::endl;
+		crss << crs_p << std::endl << crs_q << std::endl << crs_g <<
+			std::endl << crs_k << std::endl;
 		// without verifiable generation of $g$ due to possible FIPS-CRS
 		BarnettSmartVTMF_dlog *vtmf = new BarnettSmartVTMF_dlog(crss,
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false);
@@ -1214,7 +1219,8 @@ void run_instance
 			std::cerr << "ERROR: D_" << whoami << ": " << "VTMF: Group G was" <<
 				" not correctly generated!" << std::endl;
 			delete vtmf;
-			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
+			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g);
+			mpz_clear(crs_k);
 			delete aiou, delete aiou2, delete rbc;
 			delete msg;
 			delete dkg;
@@ -1390,7 +1396,8 @@ void run_instance
 				interpol_parties, interpol_shares);
 			// release shares
 			mpz_clear(idx), mpz_clear(r_i), mpz_clear(c), mpz_clear(r);
-			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g), mpz_clear(crs_k);
+			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g);
+			mpz_clear(crs_k);
 			for (size_t i = 0; i < interpol_shares.size(); i++)
 			{
 				mpz_clear(interpol_shares[i]);
@@ -1413,7 +1420,8 @@ void run_instance
 			else
 			{
 				if (opt_verbose > 1)
-					std::cerr << "INFO: PKESK decryption succeeded" << std::endl;				
+					std::cerr << "INFO: PKESK decryption succeeded" <<
+						std::endl;				
 				seskey_decrypted = true;
 				break;
 			}
@@ -1465,7 +1473,8 @@ void run_instance
 			else
 			{
 				if (opt_verbose > 1)
-					std::cerr << "INFO: PKESK decryption succeeded" << std::endl;				
+					std::cerr << "INFO: PKESK decryption succeeded" <<
+						std::endl;				
 				seskey_decrypted = true;
 				break;
 			}
@@ -1475,12 +1484,105 @@ void run_instance
 	// do remaining decryption work
 	if (!seskey_decrypted)
 	{
-		std::cerr << "ERROR: every PKESK decryption failed" << std::endl;
-		delete msg;
-		delete dkg;
-		delete ring;
-		delete prv;
-		exit(-1);
+		if (msg->SKESKs.size() > 0)
+		{
+			if (opt_verbose > 1)
+				std::cerr << "INFO: every PKESK decryption failed;" <<
+					" now try each SKESK" << std::endl;
+			std::string esk_passphrase;
+			if (!get_passphrase("Enter passphrase for this message", opt_E,
+				esk_passphrase))
+			{
+				std::cerr << "ERROR: cannot read passphrase" << std::endl;
+				delete msg;
+				delete dkg;
+				delete ring;
+				delete prv;
+				exit(-1);
+			}
+			for (size_t i = 0; i < msg->SKESKs.size(); i++)
+			{
+				const TMCG_OpenPGP_SKESK *esk = msg->SKESKs[i];
+				tmcg_openpgp_octets_t esk_seskey;
+				switch (esk->s2k_type)
+				{
+					case TMCG_OPENPGP_STRINGTOKEY_SIMPLE:
+					case TMCG_OPENPGP_STRINGTOKEY_SALTED:
+						CallasDonnerhackeFinneyShawThayerRFC4880::S2KCompute(
+								esk->s2k_hashalgo,
+								CallasDonnerhackeFinneyShawThayerRFC4880::
+									AlgorithmKeyLength(esk->skalgo),
+								esk_passphrase, esk->s2k_salt, false,
+								esk->s2k_count, esk_seskey);
+						break;
+					case TMCG_OPENPGP_STRINGTOKEY_ITERATED:
+						CallasDonnerhackeFinneyShawThayerRFC4880::S2KCompute(
+								esk->s2k_hashalgo,
+								CallasDonnerhackeFinneyShawThayerRFC4880::
+									AlgorithmKeyLength(esk->skalgo),
+								esk_passphrase, esk->s2k_salt, true,
+								esk->s2k_count, esk_seskey);
+						break;
+					default:
+						if (opt_verbose)
+							std::cerr << "WARNING: S2K specifier not" <<
+								" supported; skip SKESK" << std::endl;
+						break;
+				}
+				seskey.clear();
+				if (esk->encrypted_key.size() != 0)
+				{
+					tmcg_openpgp_octets_t decrypted_key, prefix;
+					gcry_error_t ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+						SymmetricDecrypt(esk->encrypted_key, esk_seskey, prefix,
+							false, esk->skalgo, decrypted_key);
+					if (ret)
+					{
+						std::cerr << "ERROR: SymmetricDecrypt() failed" <<
+							" with rc = " << gcry_err_code(ret) << std::endl;
+						delete msg;
+						delete dkg;
+						delete ring;
+						delete prv;
+						exit(-1);
+					}
+					for (size_t j = 0; j < decrypted_key.size(); j++)
+						seskey.push_back(decrypted_key[j]);
+				}
+				else
+				{
+					seskey.push_back(esk->skalgo);
+					for (size_t j = 0; j < esk_seskey.size(); j++)
+						seskey.push_back(esk_seskey[j]);
+				}
+				// quick check, whether decryption of session key was successful
+				tmcg_openpgp_octets_t tmpmsg;				
+				if (msg->Decrypt(seskey, 0, tmpmsg))
+				{
+					seskey_decrypted = true;
+					break;
+				}
+			}
+			if (!seskey_decrypted)
+			{
+				std::cerr << "ERROR: every SKESK decryption failed" <<
+					std::endl;
+				delete msg;
+				delete dkg;
+				delete ring;
+				delete prv;
+				exit(-1);
+			}
+		}
+		else
+		{
+			std::cerr << "ERROR: every PKESK decryption failed" << std::endl;
+			delete msg;
+			delete dkg;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
 	}
 	tmcg_openpgp_octets_t content, decmsg, infmsg;
 	if (!msg->Decrypt(seskey, opt_verbose, decmsg))

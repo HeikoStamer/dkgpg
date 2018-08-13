@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-08-13] dkg-decrypt: added support for symmetric-key decryption
 * [2018-08-11] dkg-sign: added option "-C" (cleartext signature framework)
 * [2018-08-11] dkg-sign,dkg-decrypt: added option "-E" (enable passphrase echo)
 * [2018-08-11] dkg-verify: added support for verifying text document signatures

@@ -937,6 +937,13 @@ void run_instance
 							i << " found and ignored" << std::endl;
 					continue;
 				}
+				if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
+				{
+					if (opt_verbose > 1)
+						std::cerr << "WARNING: tDSS subkey at position " <<
+							i << " found and ignored" << std::endl;
+					continue;
+				}
 				if (ssb2->pub->AccumulateFlags() &&
 					((ssb2->pub->AccumulateFlags() & 0x04) != 0x04) &&
 					((ssb2->pub->AccumulateFlags() & 0x08) != 0x08))
@@ -949,7 +956,8 @@ void run_instance
 				}
 				if ((ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
 					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
-					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))
+					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL) ||
+					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ECDH))
 				{
 					if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
 					{
@@ -971,7 +979,7 @@ void run_instance
 		}
 		if (ssb == NULL)
 		{
-			std::cerr << "ERROR: no admissible subkey found" << std::endl;
+			std::cerr << "ERROR: no admissible primary key resp. subkey found" << std::endl;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -1053,7 +1061,7 @@ void run_instance
 	}
 	if ((esks.size() == 0) && (msg->SKESKs.size() == 0))
 	{
-		std::cerr << "ERROR: no admissible PKESK/SKESK found" << std::endl;
+		std::cerr << "ERROR: no admissible encrypted session key found" << std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;

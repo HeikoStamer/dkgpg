@@ -78,6 +78,31 @@ bool encrypt_session_key
 		gcry_mpi_release(gk);
 		gcry_mpi_release(myk);
 	}
+	else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ECDH)
+	{
+		tmcg_openpgp_octets_t rcpfpr;
+		gcry_mpi_t ecepk;
+		size_t rkwlen = 0;
+		tmcg_openpgp_byte_t rkw[256];
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintCompute(sub->sub_hashing, rcpfpr);
+		ecepk = gcry_mpi_new(1024);
+		memset(rkw, 0, sizeof(rkw));
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AsymmetricEncryptECDH(seskey, sub->key, sub->kdf_hashalgo,
+				sub->kdf_skalgo, sub->ec_curve, rcpfpr, ecepk,
+				rkwlen, rkw);
+		if (ret)
+		{
+			std::cerr << "ERROR: AsymmetricEncryptECDH() failed" <<
+				" (rc = " << gcry_err_code(ret) << ")" << std::endl;
+			gcry_mpi_release(ecepk);
+			return false;
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketPkeskEncode(subkeyid, ecepk, rkwlen, rkw, pkesk);
+		gcry_mpi_release(ecepk);
+	}
 	else
 	{
 		std::cerr << "ERROR: public-key algorithm " << (int)sub->pkalgo <<
@@ -115,11 +140,11 @@ int main
 	std::vector<std::string> keyspec;
 	std::string	ifilename, ofilename, s, kfilename;
 	int		opt_verbose = 0;
-	bool		opt_binary = false, opt_weak = false, opt_t = false, opt_r = false;
-	char		*opt_i = NULL;
-	char		*opt_o = NULL;
-	char		*opt_s = NULL;
-	char		*opt_k = NULL;
+	bool	opt_binary = false, opt_weak = false, opt_t = false, opt_r = false;
+	char	*opt_i = NULL;
+	char	*opt_o = NULL;
+	char	*opt_s = NULL;
+	char	*opt_k = NULL;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -180,7 +205,8 @@ int main
 				std::cout << "  -r, --recipients    select key(s) from given" <<
 					" keyring by KEYSPEC" << std::endl; 
 				std::cout << "  -s STRING           select only encryption" <<
-					"-capable subkeys with fingerprint equals STRING" << std::endl;
+					"-capable subkeys with fingerprint equals STRING" <<
+					std::endl;
 				std::cout << "  -t, --throw-keyids  throw included key IDs" <<
 					" for somewhat improved privacy" << std::endl;
 				std::cout << "  -v, --version       print the version" <<
@@ -336,15 +362,15 @@ int main
 	}
 	tmcg_openpgp_octets_t mdc_hashing, hash, mdc, seipd;
 	enc.clear();
-	// "it includes the prefix data described above" [RFC4880]
+	// "it includes the prefix data described above" [RFC 4880]
 	mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end());
-	// "it includes all of the plaintext" [RFC4880]
+	// "it includes all of the plaintext" [RFC 4880]
 	mdc_hashing.insert(mdc_hashing.end(), lit.begin(), lit.end());
-	// "and the also includes two octets of values 0xD3, 0x14" [RFC4880]
+	// "and the also includes two octets of values 0xD3, 0x14" [RFC 4880]
 	mdc_hashing.push_back(0xD3);
 	mdc_hashing.push_back(0x14);
 	hash.clear();
-	// "passed through the SHA-1 hash function" [RFC4880]
+	// "passed through the SHA-1 hash function" [RFC 4880]
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketMdcEncode(hash, mdc);
@@ -406,7 +432,8 @@ int main
 			primary->Reduce(); // keep only valid subkeys
 			if (primary->weak(opt_verbose) && !opt_weak)
 			{
-				std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
+				std::cerr << "ERROR: weak primary key is not allowed" <<
+					std::endl;
 				delete primary;
 				delete ring;
 				return -1;
@@ -414,7 +441,8 @@ int main
 		}
 		else
 		{
-			std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+			std::cerr << "ERROR: cannot use the provided public key" <<
+				std::endl;
 			delete ring;
 			return -1;
 		}
@@ -438,7 +466,8 @@ int main
 					((primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
 					(primary->subkeys[j]->pkalgo ==
 						TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) ||
-					(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL))))
+					(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL) ||
+					(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ECDH))))
 			{
 				if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
 				{
@@ -451,11 +480,14 @@ int main
 				         (primary->subkeys[j]->pkalgo !=
 							TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY) &&
 				         (primary->subkeys[j]->pkalgo !=
-							TMCG_OPENPGP_PKALGO_ELGAMAL))
+							TMCG_OPENPGP_PKALGO_ELGAMAL) &&
+					 (primary->subkeys[j]->pkalgo !=
+							TMCG_OPENPGP_PKALGO_ECDH))
 				{
 					if (opt_verbose)
-						std::cerr << "WARNING: subkey with unsupported public-" <<
-							"key algorithm for encryption ignored" << std::endl;
+						std::cerr << "WARNING: subkey with unsupported" <<
+							" public-key algorithm for encryption ignored" <<
+							std::endl;
 				}
 				else
 				{
@@ -493,8 +525,8 @@ int main
 					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
 					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY)))
 			{
-				std::cerr << "ERROR: no encryption-capable RSA public key found" <<
-					std::endl;
+				std::cerr << "ERROR: no encryption-capable RSA public key" <<
+					" found" << std::endl;
 				delete primary;
 				delete ring;
 				return -1;
@@ -517,8 +549,8 @@ int main
 
 		// encrypt the session key (create PKESK packet)
 		if (opt_verbose > 1)
-			std::cerr << "INFO: " << selected.size() << " subkeys selected for" <<
-				" encryption of session key" << std::endl;
+			std::cerr << "INFO: " << selected.size() << " subkeys selected" <<
+				" for encryption of session key" << std::endl;
 		for (size_t j = 0; j < selected.size(); j++)
 		{
 			tmcg_openpgp_octets_t pkesk, subkeyid;
@@ -533,8 +565,10 @@ int main
 					subkeyid.push_back(0x00);
 			}
 			else
+			{
 				subkeyid.insert(subkeyid.end(),
 					selected[j]->id.begin(), selected[j]->id.end());
+			}
 			if (!encrypt_session_key(selected[j], seskey, subkeyid, pkesk))
 			{
 				delete primary;
@@ -557,7 +591,10 @@ int main
 					keyid.push_back(0x00);
 			}
 			else
-				keyid.insert(keyid.end(), primary->id.begin(), primary->id.end());
+			{
+				keyid.insert(keyid.end(),
+					primary->id.begin(), primary->id.end());
+			}
 			if (!encrypt_session_key(primary, seskey, keyid, pkesk))
 			{
 				delete primary;

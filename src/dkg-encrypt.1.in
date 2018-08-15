@@ -20,15 +20,16 @@ encrypted for each of these keys. This behaviour can be tweaked by the option
 .PP
 First, AES\-256 is applied as symmetric cipher with a randomly chosen 256\-bit
 session key. Finally, the session key is transformed by PKCS#1 v1.5 block
-encoding and encrypted with the corresponding public\-key algorithm. Note that
+encoding and encrypted with the corresponding public\-key algorithm. For
+ECDH the encoding and encryption rules from RFC 6637 are applied. Note that
 an integrity protection packet (MDC) is always appended.
 .PP
 With the option "\-t" the included key ID is thrown away, i.e., instead a
 "wild card" or speculative key ID is used. This format helps to reduce traffic
 analysis of messages. 
 .PP
-Currently, as public\-key encryption algorithms only RSA and ElGamal are
-supported due to the limitation of LibTMCG.
+Currently, as public\-key encryption algorithms only RSA, ElGamal, and ECDH
+are supported due to the limitation of OpenPGP compliance from LibTMCG.
 .PP
 The encrypted message in ASCII\-armored is written to STDOUT or to an output
 file and can later be processed e.g. with

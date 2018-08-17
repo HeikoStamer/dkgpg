@@ -798,8 +798,18 @@ int main
 		return -1;
 	}
 
+	// lock memory
+	bool force_secmem = false;
+	if (!lock_memory())
+	{
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
+			" for full memory protection" << std::endl;
+		// at least try to use libgcrypt's secure memory
+		force_secmem = true;
+	}
+
 	// initialize LibTMCG
-	if (!init_libTMCG())
+	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;

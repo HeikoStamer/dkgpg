@@ -30,7 +30,7 @@
 #include "dkg-io.hh"
 
 bool encrypt_session_key
-	(const TMCG_OpenPGP_Subkey* sub, const tmcg_openpgp_octets_t &seskey,
+	(const TMCG_OpenPGP_Subkey* sub, const tmcg_openpgp_secure_octets_t &seskey,
 	 const tmcg_openpgp_octets_t &subkeyid, tmcg_openpgp_octets_t &pkesk)
 {
 	gcry_error_t ret;
@@ -113,7 +113,7 @@ bool encrypt_session_key
 }
 
 bool encrypt_session_key
-	(const TMCG_OpenPGP_Pubkey* pub, const tmcg_openpgp_octets_t &seskey,
+	(const TMCG_OpenPGP_Pubkey* pub, const tmcg_openpgp_secure_octets_t &seskey,
 	 const tmcg_openpgp_octets_t &keyid, tmcg_openpgp_octets_t &pkesk)
 {
 	bool ret;
@@ -275,8 +275,18 @@ int main
 		return -1;
 	}
 
+	// lock memory
+	bool force_secmem = false;
+	if (!lock_memory())
+	{
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
+			" for full memory protection" << std::endl;
+		// at least try to use libgcrypt's secure memory
+		force_secmem = true;
+	}
+
 	// initialize LibTMCG
-	if (!init_libTMCG())
+	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
@@ -349,7 +359,8 @@ int main
 
 	// encrypt the provided message and create MDC
 	gcry_error_t ret;
-	tmcg_openpgp_octets_t lit, seskey, prefix, enc;
+	tmcg_openpgp_octets_t lit, prefix, enc;
+	tmcg_openpgp_secure_octets_t seskey;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit,
 		seskey, prefix, true, enc); // seskey and prefix only

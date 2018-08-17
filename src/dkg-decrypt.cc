@@ -510,7 +510,8 @@ bool combine_decryption_shares
 
 bool decrypt_session_key
 	(const gcry_mpi_t p, const gcry_mpi_t g, const gcry_mpi_t y,
-	 const gcry_mpi_t gk, const gcry_mpi_t myk, tmcg_openpgp_octets_t &out)
+	 const gcry_mpi_t gk, const gcry_mpi_t myk,
+	 tmcg_openpgp_secure_octets_t &out)
 {
 	gcry_mpi_t elg_x;
 	gcry_sexp_t elgkey;
@@ -1071,7 +1072,7 @@ void run_instance
 
 	// decrypt session key from PKESK
 	bool seskey_decrypted = false;
-	tmcg_openpgp_octets_t seskey;
+	tmcg_openpgp_secure_octets_t seskey;
 	if (opt_y == NULL)
 	{
 		// create communication handles between all players
@@ -1511,7 +1512,7 @@ void run_instance
 			for (size_t i = 0; i < msg->SKESKs.size(); i++)
 			{
 				const TMCG_OpenPGP_SKESK *esk = msg->SKESKs[i];
-				tmcg_openpgp_octets_t esk_seskey;
+				tmcg_openpgp_secure_octets_t esk_seskey;
 				switch (esk->s2k_type)
 				{
 					case TMCG_OPENPGP_STRINGTOKEY_SIMPLE:
@@ -2094,26 +2095,17 @@ int main
 	}
 
 	// lock memory
+	bool force_secmem = false;
 	if (!lock_memory())
 	{
 		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
-			" for memory protection" << std::endl;
+			" for full memory protection" << std::endl;
 		// at least try to use libgcrypt's secure memory
-		if (!gcry_check_version(TMCG_LIBGCRYPT_VERSION))
-		{
-			std::cerr << "ERROR: libgcrypt version >= " <<
-				TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
-			return -1;
-		}
-		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-		gcry_control(GCRYCTL_USE_SECURE_RNDPOOL);
-		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
-		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+		force_secmem = true;
 	}
 
 	// initialize LibTMCG
-	if (!init_libTMCG())
+	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;
@@ -2399,7 +2391,8 @@ int main
 			delete [] interpol_shares[i];
 		}
 		interpol_shares.clear(), interpol_parties.clear();
-		tmcg_openpgp_octets_t content, decmsg, infmsg, seskey;
+		tmcg_openpgp_octets_t content, decmsg, infmsg;
+		tmcg_openpgp_secure_octets_t seskey;
 		if (res)
 		{
 			if (!decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,

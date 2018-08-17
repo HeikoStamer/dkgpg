@@ -76,7 +76,6 @@ gcry_mpi_t					dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
 gcry_mpi_t					elg_p, elg_q, elg_g, elg_y, elg_x;
 
 int 						opt_verbose = 0;
-bool						libgcrypt_secmem = false;
 bool						opt_y = false;
 char						*opt_crs = NULL;
 char						*opt_passwords = NULL;
@@ -186,10 +185,7 @@ void run_instance
 			delete vtmf;
 			exit(-1);
 		}
-		if (libgcrypt_secmem)
-			x = gcry_mpi_snew(2048);
-		else	
-			x = gcry_mpi_new(2048);
+		x = gcry_mpi_snew(2048);
 		if (!tmcg_mpz_get_gcry_mpi(x, dsa_x))
 		{
 			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
@@ -281,10 +277,7 @@ void run_instance
 			delete vtmf;
 			exit(-1);
 		}
-		if (libgcrypt_secmem)
-			x = gcry_mpi_snew(2048);
-		else	
-			x = gcry_mpi_new(2048);
+		x = gcry_mpi_snew(2048);
 		if (!tmcg_mpz_get_gcry_mpi(x, elg_x))
 		{
 			std::cerr << "ERROR: tmcg_mpz_get_gcry_mpi() failed" << std::endl;
@@ -811,10 +804,7 @@ void run_instance
 		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);
 	}
-	if (libgcrypt_secmem)
-		x = gcry_mpi_snew(2048);
-	else	
-		x = gcry_mpi_new(2048);
+	x = gcry_mpi_snew(2048);
 	if (!tmcg_mpz_get_gcry_mpi(x, dsa_x))
 	{
 		std::cerr << "ERROR: P_" << whoami <<
@@ -934,10 +924,7 @@ void run_instance
 				c_ik[j].push_back(tmp);
 			}
 		}
-		if (libgcrypt_secmem)
-			x_i = gcry_mpi_snew(2048);
-		else		
-			x_i = gcry_mpi_new(2048);
+		x_i = gcry_mpi_snew(2048);
 		if (!tmcg_mpz_get_gcry_mpi(x_i, dss->x_i))
 		{
 			std::cerr << "ERROR: P_" << whoami <<
@@ -967,10 +954,7 @@ void run_instance
 			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		if (libgcrypt_secmem)
-			xprime_i = gcry_mpi_snew(2048);
-		else
-			xprime_i = gcry_mpi_new(2048);
+		xprime_i = gcry_mpi_snew(2048);
 		if (!tmcg_mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 		{
 			std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
@@ -1314,10 +1298,7 @@ void run_instance
 				c_ik[j].push_back(tmp);
 			}
 		}
-		if (libgcrypt_secmem)
-			x_i = gcry_mpi_snew(2048);
-		else
-			x_i = gcry_mpi_new(2048);
+		x_i = gcry_mpi_snew(2048);
 		if (!tmcg_mpz_get_gcry_mpi(x_i, dkg->x_i))
 		{
 			std::cerr << "ERROR: P_" << whoami <<
@@ -1345,10 +1326,7 @@ void run_instance
 			delete rbc, delete vtmf, delete aiou, delete aiou2;
 			exit(-1);
 		}
-		if (libgcrypt_secmem)
-			xprime_i = gcry_mpi_snew(2048);
-		else
-			xprime_i = gcry_mpi_new(2048);
+		xprime_i = gcry_mpi_snew(2048);
 		if (!tmcg_mpz_get_gcry_mpi(xprime_i, dkg->xprime_i))
 		{
 			std::cerr << "ERROR: P_" << whoami <<
@@ -2346,27 +2324,17 @@ int main
 	}
 
 	// lock memory
+	bool force_secmem = false;
 	if (!lock_memory())
 	{
 		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
-			" for memory protection" << std::endl;
+			" for full memory protection" << std::endl;
 		// at least try to use libgcrypt's secure memory
-		if (!gcry_check_version(TMCG_LIBGCRYPT_VERSION))
-		{
-			std::cerr << "ERROR: libgcrypt version >= " <<
-				TMCG_LIBGCRYPT_VERSION << " required" << std::endl;
-			return -1;
-		}
-		gcry_control(GCRYCTL_SUSPEND_SECMEM_WARN);
-		gcry_control(GCRYCTL_USE_SECURE_RNDPOOL);
-		gcry_control(GCRYCTL_INIT_SECMEM, 16384, 0);
-		gcry_control(GCRYCTL_RESUME_SECMEM_WARN);
-		gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
-		libgcrypt_secmem = true;
+		force_secmem = true;
 	}
 
 	// initialize LibTMCG
-	if (!init_libTMCG())
+	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
 		return -1;

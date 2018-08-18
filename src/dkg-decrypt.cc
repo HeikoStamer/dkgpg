@@ -1983,7 +1983,7 @@ int main
 					" address) of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME            read encrypted" <<
 					" message rather from FILENAME than STDIN" << std::endl;
-				std::cout << "  -k FILENAME          use keyring FILENAME" <<
+				std::cout << "  -k FILENAME            use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
 				std::cout << "  -n, --non-interactive  run in" <<
 					" non-interactive mode" << std::endl;
@@ -1999,8 +1999,8 @@ int main
 					" output" << std::endl;
 				std::cout << "  -W TIME                timeout for" <<
 					" point-to-point messages in minutes" << std::endl;
-				std::cout << "  -y FILENAME    yet another OpenPGP tool with" <<
-					" private key in FILENAME" << std::endl;
+				std::cout << "  -y FILENAME            yet another OpenPGP" <<
+					" tool with private key in FILENAME" << std::endl;
 #endif
 				return 0; // not continue
 			}

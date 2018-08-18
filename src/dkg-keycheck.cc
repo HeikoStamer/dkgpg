@@ -708,9 +708,9 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	ifilename, kfilename, rfilename;
+	std::string	ifilename, kfilename, filename;
 	int			opt_verbose = 0;
-	bool		opt_binary = false, opt_reduce = false, opt_private = false;
+	bool		opt_b = false, opt_r = false, opt_p = false, opt_y = false;
 	char		*opt_k = NULL;
 
 	// parse command line arguments
@@ -723,15 +723,15 @@ int main
 			size_t idx = ++i;
 			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
 			{
-				rfilename = argv[i+1];
-				opt_k = (char*)rfilename.c_str();
+				kfilename = argv[i+1];
+				opt_k = (char*)kfilename.c_str();
 			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || 
 		    (arg.find("-r") == 0) || (arg.find("-v") == 0) ||
 		    (arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-p") == 0))
+			(arg.find("-p") == 0) || (arg.find("-y") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -752,14 +752,18 @@ int main
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
 					std::endl;
+				std::cout << "  -y, --yaot     list keys from keyring" <<
+					" FILENAME with user ID containing KEYFILE" << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
-				opt_binary = true;
+				opt_b = true;
 			if ((arg.find("-p") == 0) || (arg.find("--private") == 0))
-				opt_private = true;
+				opt_p = true;
 			if ((arg.find("-r") == 0) || (arg.find("--reduce") == 0))
-				opt_reduce = true;
+				opt_r = true;
+			if ((arg.find("-y") == 0) || (arg.find("--yaot") == 0))
+				opt_y = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 				std::cout << "dkg-keycheck v" << version << std::endl;
@@ -774,38 +778,47 @@ int main
 			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
 			return -1;
 		}
-		kfilename = arg;
+		filename = arg;
 	}
 
 #ifdef DKGPG_TESTSUITE_Y
 	if (tmcg_mpz_wrandom_ui() % 2)
 	{
-		kfilename = "TestY-pub.asc";
+		filename = "TestY-pub.asc";
 	}
 	else
 	{
-		kfilename = "TestY-sec.asc";
-		opt_private = true;
+		filename = "TestY-sec.asc";
+		opt_p = true;
 	}
 	opt_verbose = 2;
 #endif
 
 	// check command line arguments
-	if (kfilename.length() == 0)
+	if (!opt_y && filename.length() == 0)
 	{
 		std::cerr << "ERROR: argument KEYFILE is missing; usage: " <<
 			usage << std::endl;
 		return -1;
 	}
+	if (opt_y && (opt_k == NULL))
+	{
+		std::cerr << "ERROR: no keyring specified (option -k missing)" <<
+			std::endl;
+		return -1;
+	} 
 
 	// lock memory
 	bool force_secmem = false;
-	if (!lock_memory())
+	if (opt_p)
 	{
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
-			" for full memory protection" << std::endl;
-		// at least try to use libgcrypt's secure memory
-		force_secmem = true;
+		if (!lock_memory())
+		{
+			std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK" <<
+				" required for full memory protection" << std::endl;
+			// at least try to use libgcrypt's secure memory
+			force_secmem = true;
+		}
 	}
 
 	// initialize LibTMCG
@@ -819,36 +832,39 @@ int main
 			version_libTMCG() << std::endl;
 
 	// choose input format of key file
-	tmcg_openpgp_armor_t kformat = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 
-	if (opt_private)
-		kformat = TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK;
+	tmcg_openpgp_armor_t format = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 
+	if (opt_p)
+		format = TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK;
 
 	// read the key file
 	std::string armored_pubkey;
-	if (opt_binary)
+	if (!opt_y)
 	{
-		if (!read_binary_key_file(kfilename, kformat, armored_pubkey))
-			return -1;
-	}
-	else
-	{
-		if (!read_key_file(kfilename, armored_pubkey))
-			return -1;
-	}
-
-	// read the keyring
-	tmcg_openpgp_armor_t rformat = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK;
-	std::string armored_pubring;
-	if (opt_k)
-	{
-		if (opt_binary)
+		if (opt_b)
 		{
-			if (!read_binary_key_file(rfilename, rformat, armored_pubring))
+			if (!read_binary_key_file(filename, format, armored_pubkey))
 				return -1;
 		}
 		else
 		{
-			if (!read_key_file(rfilename, armored_pubring))
+			if (!read_key_file(filename, armored_pubkey))
+				return -1;
+		}
+	}
+
+	// read the keyring
+	tmcg_openpgp_armor_t kformat = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK;
+	std::string armored_pubring;
+	if (opt_k)
+	{
+		if (opt_b)
+		{
+			if (!read_binary_key_file(kfilename, kformat, armored_pubring))
+				return -1;
+		}
+		else
+		{
+			if (!read_key_file(kfilename, armored_pubring))
 				return -1;
 		}
 	}
@@ -870,7 +886,15 @@ int main
 	}
 	else
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
-	if (opt_private)
+	if (opt_y)
+	{
+		int ret = 0;
+		if (ring->list(filename) == 0)
+			ret = -1;
+		delete ring;
+		return ret;
+	}
+	else if (opt_p)
 	{
 		std::string passphrase = ""; // first try an empty passphrase
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -898,14 +922,14 @@ int main
 			PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)
 	{
-		if (opt_private)
+		if (opt_p)
 		{
 			primary = prv->pub; // get the public key from private key
 			prv->RelinkPublicSubkeys(); // relink the contained subkeys
 		}
 		primary->CheckSelfSignatures(ring, opt_verbose);
 		primary->CheckSubkeys(ring, opt_verbose);
-		if (opt_reduce)
+		if (opt_r)
 			primary->Reduce();
 		if (primary->weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak primary key detected" << std::endl;
@@ -995,7 +1019,7 @@ int main
 		{
 			std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
 			mpz_clear(rsa_n), mpz_clear(rsa_e);
-			if (opt_private)
+			if (opt_p)
 				delete prv;
 			else
 				delete primary;
@@ -1018,7 +1042,7 @@ int main
 			std::cerr << "ERROR: cannot convert DSA key material" << std::endl;
 			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 			mpz_clear(dsa_y), mpz_clear(dsa_r);
-			if (opt_private)
+			if (opt_p)
 				delete prv;
 			else
 				delete primary;
@@ -1188,7 +1212,7 @@ int main
 	else
 	{
 		std::cerr << "ERROR: public-key algorithm not supported" << std::endl;
-		if (opt_private)
+		if (opt_p)
 			delete prv;
 		else
 			delete primary;
@@ -1280,7 +1304,7 @@ int main
 				std::cerr << "ERROR: cannot convert RSA key material" <<
 					std::endl;
 				mpz_clear(rsa_n), mpz_clear(rsa_e);
-				if (opt_private)
+				if (opt_p)
 					delete prv;
 				else
 					delete primary;
@@ -1303,7 +1327,7 @@ int main
 					std::endl;
 				mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
 				mpz_clear(dsa_q);
-				if (opt_private)
+				if (opt_p)
 					delete prv;
 				else
 					delete primary;
@@ -1318,7 +1342,7 @@ int main
 						std::endl;
 					mpz_clear(elg_p), mpz_clear(elg_g), mpz_clear(elg_y);
 					mpz_clear(dsa_q);
-					if (opt_private)
+					if (opt_p)
 						delete prv;
 					else
 						delete primary;
@@ -1346,7 +1370,7 @@ int main
 					std::endl;
 				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 				mpz_clear(dsa_y);
-				if (opt_private)
+				if (opt_p)
 					delete prv;
 				else
 					delete primary;
@@ -1381,7 +1405,7 @@ int main
 		{
 			std::cerr << "ERROR: public-key algorithm not supported" <<
 				std::endl;
-			if (opt_private)
+			if (opt_p)
 				delete prv;
 			else
 				delete primary;
@@ -1403,7 +1427,7 @@ int main
 					std::endl;
 				mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 				mpz_clear(dsa_y), mpz_clear(dsa_r);
-				if (opt_private)
+				if (opt_p)
 					delete prv;
 				else
 					delete primary;
@@ -1510,7 +1534,7 @@ int main
 	}
 
 	// release primary key and keyring structures
-	if (opt_private)
+	if (opt_p)
 		delete prv;
 	else
 		delete primary;

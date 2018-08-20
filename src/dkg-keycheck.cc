@@ -432,6 +432,99 @@ int rsa_check
 	return ret;
 }
 
+int rsa_check
+	(mpz_srcptr rsa_p, mpz_srcptr rsa_q, mpz_srcptr rsa_d, mpz_srcptr rsa_n, mpz_srcptr rsa_e)
+{
+	int ret = 0;
+	size_t nbits = mpz_sizeinbase(rsa_n, 2L);
+	mpz_t pm1, qm1, tmp, foo, bar;
+	std::cout << "\t";
+	if (!mpz_probab_prime_p(rsa_p, TMCG_MR_ITERATIONS))
+	{
+		std::cout << "p IS NOT PROBABLE PRIME" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	if (!mpz_probab_prime_p(rsa_q, TMCG_MR_ITERATIONS))
+	{
+		std::cout << "q IS NOT PROBABLE PRIME" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_init_set(pm1, rsa_p), mpz_init_set(qm1, rsa_q); 
+	mpz_sub_ui(pm1, pm1, 1L), mpz_sub_ui(qm1, qm1, 1L);
+	mpz_init(tmp);
+	mpz_gcd(tmp, pm1, rsa_e);
+	if (mpz_cmp_ui(tmp, 1L))
+	{
+		std::cout << "p and e ARE NOT RELATIVELY PRIME" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_gcd(tmp, qm1, rsa_e);
+	if (mpz_cmp_ui(tmp, 1L))
+	{
+		std::cout << "q and e ARE NOT RELATIVELY PRIME" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_init(foo), mpz_init(bar);
+	mpz_mul(foo, rsa_p, rsa_q);
+	if (mpz_cmp(foo, rsa_n) != 0)
+	{
+		std::cout << "n IS NOT p * q" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_sub(foo, rsa_q, rsa_p);
+	mpz_abs(foo, foo);
+	mpz_set_ui(bar, 1L);
+	mpz_mul_2exp(bar, bar, (nbits / 2) - 100);
+	if (mpz_cmp(foo, bar) <= 0)
+	{
+		std::cout << "|p - q| IS NOT > 2^(nlen/2 - 100)" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_set_ui(bar, 1L);
+	mpz_mul_2exp(bar, bar, (nbits / 2) - 1);
+	if (mpz_cmp(rsa_p, bar) <= 0)
+	{
+		std::cout << "p IS NOT > 2^(nlen/2 - 1)" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	if (mpz_cmp(rsa_q, bar) <= 0)
+	{
+		std::cout << "q IS NOT > 2^(nlen/2 - 1)" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_set_ui(bar, 1L);
+	mpz_mul_2exp(bar, bar, (nbits / 2));
+	if (mpz_cmp(rsa_d, bar) <= 0)
+	{
+		std::cout << "d IS NOT > 2^(nlen/2)" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_lcm(tmp, pm1, qm1);
+	if (mpz_cmp(rsa_d, tmp) >= 0)
+	{
+		std::cout << "d IS NOT < lcm(p-1,q-1)" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	if (!mpz_invert(foo, rsa_e, tmp))
+	{
+		std::cout << "e IS NOT INVERTIBLE mod lcm(p-1,q-1)" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	if (mpz_cmp(foo, rsa_d))
+	{
+		std::cout << "d IS NOT e^(-1) mod lcm(p-1,q-1)" << std::endl << "\t";
+		ret = -3; // return with non-null status code
+	}
+	mpz_clear(foo), mpz_clear(bar);
+	mpz_clear(tmp), mpz_clear(pm1), mpz_clear(qm1);
+	if (ret == 0)
+		std::cout << "RSA private key -- no conspicuousness found";
+	else
+		std::cout << "RSA private key -- CONSPICUOUSNESS found";
+	std::cout << std::endl;	
+	return ret;
+}
+
 int dsa_check
 	(mpz_srcptr dsa_p, mpz_srcptr dsa_q, mpz_srcptr dsa_g, mpz_srcptr dsa_y)
 {
@@ -1218,6 +1311,44 @@ int main
 			delete primary;
 		delete ring;
 		return -1;
+	}
+	if (opt_p)
+	{
+		if (prv->weak(opt_verbose) && opt_verbose)
+			std::cerr << "WARNING: weak private primary key detected" << std::endl;
+		switch (prv->pkalgo)
+		{
+			case TMCG_OPENPGP_PKALGO_RSA:
+			case TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY:
+			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+				{
+					mpz_t rsa_p, rsa_q, rsa_d, rsa_n, rsa_e;
+					mpz_init(rsa_p), mpz_init(rsa_q), mpz_init(rsa_d), mpz_init(rsa_n), mpz_init(rsa_e);
+					if (!tmcg_mpz_set_gcry_mpi(prv->rsa_p, rsa_p) ||
+						!tmcg_mpz_set_gcry_mpi(prv->rsa_q, rsa_q) ||
+						!tmcg_mpz_set_gcry_mpi(prv->rsa_d, rsa_d) ||
+						!tmcg_mpz_set_gcry_mpi(primary->rsa_n, rsa_n) ||
+						!tmcg_mpz_set_gcry_mpi(primary->rsa_e, rsa_e))
+					{
+						std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
+						mpz_clear(rsa_p), mpz_clear(rsa_q), mpz_clear(rsa_d), mpz_clear(rsa_n), mpz_clear(rsa_e);
+						delete prv;
+						delete ring;
+						return -1;
+					}
+					ret = rsa_check(rsa_p, rsa_q, rsa_d, rsa_n, rsa_e);
+					mpz_clear(rsa_p), mpz_clear(rsa_q), mpz_clear(rsa_d), mpz_clear(rsa_n), mpz_clear(rsa_e);
+				}
+				break;
+			case TMCG_OPENPGP_PKALGO_DSA:
+// TODO
+				break;
+			case TMCG_OPENPGP_PKALGO_ECDSA:
+// TODO
+				break;
+			default:
+				break;
+		}
 	}
 	// show information w.r.t. (valid) user IDs
 	for (size_t j = 0; j < primary->userids.size(); j++)

@@ -1341,10 +1341,7 @@ int main
 				}
 				break;
 			case TMCG_OPENPGP_PKALGO_DSA:
-// TODO
-				break;
 			case TMCG_OPENPGP_PKALGO_ECDSA:
-// TODO
 				break;
 			default:
 				break;
@@ -1643,6 +1640,48 @@ int main
 			}
 			mpz_clear(dsa_p), mpz_clear(dsa_q), mpz_clear(dsa_g);
 			mpz_clear(dsa_y), mpz_clear(dsa_r);
+		}
+	}
+	if (opt_p)
+	{
+		prv->RelinkPrivateSubkeys(); // undo the relinking
+		for (size_t j = 0; j < prv->private_subkeys.size(); j++)
+		{
+			TMCG_OpenPGP_PrivateSubkey *ssb = prv->private_subkeys[j];
+			if (ssb->weak(opt_verbose) && opt_verbose)
+				std::cerr << "WARNING: weak private subkey #" << j << " detected" << std::endl;
+			switch (ssb->pkalgo)
+			{
+				case TMCG_OPENPGP_PKALGO_RSA:
+				case TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY:
+				case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+					{
+						mpz_t rsa_p, rsa_q, rsa_d, rsa_n, rsa_e;
+						mpz_init(rsa_p), mpz_init(rsa_q), mpz_init(rsa_d), mpz_init(rsa_n), mpz_init(rsa_e);
+						if (!tmcg_mpz_set_gcry_mpi(ssb->rsa_p, rsa_p) ||
+							!tmcg_mpz_set_gcry_mpi(ssb->rsa_q, rsa_q) ||
+							!tmcg_mpz_set_gcry_mpi(ssb->rsa_d, rsa_d) ||
+							!tmcg_mpz_set_gcry_mpi(ssb->pub->rsa_n, rsa_n) ||
+							!tmcg_mpz_set_gcry_mpi(ssb->pub->rsa_e, rsa_e))
+						{
+							std::cerr << "ERROR: cannot convert RSA key material" << std::endl;
+							mpz_clear(rsa_p), mpz_clear(rsa_q), mpz_clear(rsa_d), mpz_clear(rsa_n), mpz_clear(rsa_e);
+							delete prv;
+							delete ring;
+							return -1;
+						}
+						ret = rsa_check(rsa_p, rsa_q, rsa_d, rsa_n, rsa_e);
+						mpz_clear(rsa_p), mpz_clear(rsa_q), mpz_clear(rsa_d), mpz_clear(rsa_n), mpz_clear(rsa_e);
+					}
+					break;
+				case TMCG_OPENPGP_PKALGO_ELGAMAL:
+				case TMCG_OPENPGP_PKALGO_DSA:
+				case TMCG_OPENPGP_PKALGO_ECDSA:
+				case TMCG_OPENPGP_PKALGO_ECDH:
+					break;
+				default:
+					break;
+			}
 		}
 	}
 

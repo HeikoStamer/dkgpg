@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-08-??] added program dkg-timestamp for creating timestamp signatures
 * [2018-08-22] dkg-sign,dkg-generate,dkg-keysign,dkg-revoke: Issuer Fingerprint
 * [2018-08-18] dkg-keycheck: added option "-y" (yet-another-openpgp-tool)
 * [2018-08-17] use the improved secure memory capability of LibTMCG

@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2018  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -72,12 +72,10 @@ char						*opt_hostname = NULL;
 char						*opt_URI = NULL;
 char						*opt_k = NULL;
 char						*opt_y = NULL;
-unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
-bool						opt_t = false, opt_E = false, opt_C = false;
+unsigned long int			opt_p = 55000, opt_W = 5;
 
 void run_instance
-	(size_t whoami, const time_t sigtime, const time_t sigexptime,
-	 const size_t num_xtests)
+	(size_t whoami, const time_t sigtime, const size_t num_xtests)
 {
 	// read the key file
 	std::string armored_seckey, pkfname;
@@ -132,7 +130,7 @@ void run_instance
 #ifdef DKGPG_TESTSUITE_Y
 		passphrase = "TestY";
 #else
-		if (!get_passphrase("Enter passphrase to unlock private key", opt_E,
+		if (!get_passphrase("Enter passphrase to unlock private key", false,
 			passphrase))
 		{
 			std::cerr << "ERROR: cannot read passphrase" << std::endl;
@@ -172,6 +170,66 @@ void run_instance
 		exit(-1);
 	}
 
+	// read the signature from stdin or from file
+	std::string armored_signature;
+	if (opt_ifilename != NULL)
+	{
+		if (!read_message(ifilename, armored_signature))
+		{
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
+	}
+	else
+	{
+		char c;
+		while (std::cin.get(c))
+			armored_signature += c;
+		std::cin.clear();
+	}
+
+	// parse the signature
+	TMCG_OpenPGP_Signature *signature = NULL;
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		SignatureParse(armored_signature, opt_verbose, signature);
+	if (parse_ok)
+	{
+		if ((signature->type != TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_STANDALONE) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_PRIMARY_KEY_BINDING) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_DIRECTLY_ON_A_KEY) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION) &&
+			(signature->type != TMCG_OPENPGP_SIGNATURE_THIRD_PARTY_CONFIRMATION))
+		{
+			std::cerr << "ERROR: wrong signature type " <<
+				(int)signature->type << " found" << std::endl;
+			delete signature;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
+// TODO: check for issuer in keyring or private key
+	}
+	else
+	{
+		std::cerr << "ERROR: cannot parse resp. use the provided signature" <<
+			std::endl;
+		delete ring;
+		delete prv;
+		exit(-1);
+	}
+	if (opt_verbose)
+		signature->PrintInfo();
+
 	// initialize signature scheme
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
 	aiounicast_select *aiou = NULL, *aiou2 = NULL;
@@ -185,6 +243,7 @@ void run_instance
 		if (!init_tDSS(prv, opt_verbose, dss))
 		{
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -195,6 +254,7 @@ void run_instance
 			std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" <<
 				std::endl;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -214,6 +274,7 @@ void run_instance
 						"cannot read" << " password for protecting channel" <<
 						" to S_" << i << std::endl;
 					delete dss;
+					delete signature;
 					delete ring;
 					delete prv;
 					exit(-1);
@@ -226,6 +287,7 @@ void run_instance
 						" skip to next password for protecting channel to S_" <<
 						(i + 1) << std::endl;
 					delete dss;
+					delete signature;
 					delete ring;
 					delete prv;
 					exit(-1);
@@ -234,7 +296,7 @@ void run_instance
 			else
 			{
 				// simple key -- we assume that GNUnet provides secure channels
-				key << "dkg-sign::S_" << (i + whoami);
+				key << "dkg-timestamp::S_" << (i + whoami);
 			}
 			uP_in.push_back(pipefd[i][whoami][0]);
 			uP_out.push_back(pipefd[whoami][i][1]);
@@ -250,7 +312,7 @@ void run_instance
 		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
 			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		// create an instance of a reliable broadcast protocol (RBC)
-		std::string myID = "dkg-sign|";
+		std::string myID = "dkg-timestamp|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		// assume maximum asynchronous t-resilience for RBC
@@ -298,7 +360,7 @@ void run_instance
 				else
 				{
 					std::cerr << "WARNING: S_" << whoami << ": no signature" <<
-						" creation time stamp received from S_" << i <<
+						" creation timestamp received from S_" << i <<
 						std::endl;
 				}
 			}
@@ -311,6 +373,7 @@ void run_instance
 				" received" << std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -334,6 +397,7 @@ void run_instance
 				std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -345,77 +409,28 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 	}
 
-	// compute the hash of the input file
+	// compute the trailer and the hash from the signature
+	tmcg_openpgp_octets_t target_hash;
 	if (opt_verbose)
-		std::cerr << "INFO: hashing the input file \"" << opt_ifilename <<
-			"\"" << std::endl;
+		std::cerr << "INFO: computing target hash from signature" << std::endl;
+// TODO: extract hash from signature value
 	tmcg_openpgp_octets_t trailer, hash, left, issuer;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintCompute(prv->pub->pub_hashing, issuer);	
-	if (opt_t || opt_C)
+	if (opt_y == NULL)
 	{
-		if (opt_y == NULL)
-		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		}
-		else
-		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-			TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
-		{
-			std::cerr << "ERROR: S_" << whoami << ": TextDocumentHash()" <<
-				" failed; cannot process input file \"" << opt_ifilename <<
-				"\"" << std::endl;
-			if (opt_y == NULL)
-			{
-				delete rbc, delete aiou, delete aiou2;
-				delete dss;
-			}
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareTimestampSignature(hashalgo, csigtime, URI, issuer,
+				signature->pkalgo, signature->hashalgo, target_hash, trailer);
 	}
 	else
 	{
-		if (opt_y == NULL)
-		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		}
-		else
-		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-			BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
-		{
-			std::cerr << "ERROR: S_" << whoami << ": BinaryDocumentHash()" <<
-				" failed; cannot process input file \"" << opt_ifilename <<
-				"\"" << std::endl;
-			if (opt_y == NULL)
-			{
-				delete rbc, delete aiou, delete aiou2;
-				delete dss;
-			}
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareTimestampSignature(prv->pkalgo, hashalgo, csigtime,
+				URI, issuer, signature->pkalgo, signature->hashalgo,
+				target_hash, trailer);
 	}
+// TODO: hash the trailer and the final bytes
 
 	// prepare the hash value
 	tmcg_openpgp_byte_t buffer[1024];
@@ -448,6 +463,7 @@ void run_instance
 				" for h" << std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -464,6 +480,7 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -483,6 +500,7 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -498,6 +516,7 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -510,6 +529,7 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -537,6 +557,7 @@ void run_instance
 				std::cerr << "ERROR: public-key algorithm " <<
 					(int)prv->pkalgo << " not supported" << std::endl;
 				gcry_mpi_release(r), gcry_mpi_release(s);
+				delete signature;
 				delete ring;
 				delete prv;
 				exit(-1);
@@ -547,6 +568,7 @@ void run_instance
 				"(rc = " << gcry_err_code(ret) << ", str = " <<
 				gcry_strerror(ret) << ")" << std::endl;
 			gcry_mpi_release(r), gcry_mpi_release(s);
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -570,6 +592,7 @@ void run_instance
 			std::cerr << "ERROR: public-key algorithm " << (int)prv->pkalgo <<
 				" not supported" << std::endl;
 			gcry_mpi_release(r), gcry_mpi_release(s);
+			delete signature;
 			delete ring;
 			delete prv;
 			exit(-1);
@@ -607,6 +630,7 @@ void run_instance
 		// release threshold signature scheme
 		delete dss;
 	}
+	delete signature;
 	delete ring;
 	delete prv;
 
@@ -614,25 +638,6 @@ void run_instance
 	std::string sigstr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
-	if (opt_C)
-	{
-		std::string ct_head = "-----BEGIN PGP SIGNED MESSAGE-----\r\n";
-		std::string ct_hash; // construct corresponding Hash Armor Header
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			AlgorithmHashTextName(hashalgo, ct_hash);
-		// additional blank line is not included into message digest
-		ct_hash = "Hash: " + ct_hash + "\r\n\r\n";
-		std::string ct_body;
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-			DashEscapeFile(opt_ifilename, ct_body))
-		{
-			std::cerr << "ERROR: S_" << whoami << ": DashEscapeFile()" <<
-				" failed; cannot process input file \"" << opt_ifilename <<
-				"\"" << std::endl;
-			exit(-1);
-		}
-		sigstr = ct_head + ct_hash + ct_body + "\r\n" + sigstr;
-	}
 	if (opt_ofilename != NULL)
 	{
 		if (!write_message(opt_ofilename, sigstr))
@@ -651,21 +656,17 @@ char *gnunet_opt_port = NULL;
 char *gnunet_opt_URI = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
-unsigned int gnunet_opt_sigexptime = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
-int gnunet_opt_t = 0;
-int gnunet_opt_E = 0;
-int gnunet_opt_C = 0;
 #endif
 
 void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("ERROR: dkg-sign (fork)");
+		perror("ERROR: dkg-timestamp (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
@@ -673,10 +674,9 @@ void fork_instance
 			/* BEGIN child code: participant S_i */
 			time_t sigtime = time(NULL);
 #ifdef GNUNET
-			run_instance(whoami, sigtime, gnunet_opt_sigexptime,
-				gnunet_opt_xtests);
+			run_instance(whoami, sigtime, gnunet_opt_xtests);
 #else
-			run_instance(whoami, sigtime, opt_e, 0);
+			run_instance(whoami, sigtime, 0);
 #endif
 			if (opt_verbose)
 				std::cerr << "INFO: S_" << whoami << ": exit(0)" << std::endl;
@@ -695,30 +695,14 @@ void fork_instance
 int main
 	(int argc, char *const *argv)
 {
-	static const char *usage = "dkg-sign [OPTIONS] -i INPUTFILE PEERS";
+	static const char *usage = "dkg-timestamp [OPTIONS] PEERS";
 #ifdef GNUNET
 	char *loglev = NULL;
 	char *logfile = NULL;
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
-		GNUNET_GETOPT_option_flag('C',
-			"clear",
-			"apply cleartext signature framework (cf. RFC 4880)",
-			&gnunet_opt_C
-		),
 		GNUNET_GETOPT_option_help(about),
-		GNUNET_GETOPT_option_uint('e',
-			"expiration",
-			"TIME",
-			"expiration time of generated signature in seconds",
-			&gnunet_opt_sigexptime
-		),
-		GNUNET_GETOPT_option_flag('E',
-			"echo",
-			"enable terminal echo when reading passphrase",
-			&gnunet_opt_E
-		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
 			"STRING",
@@ -728,7 +712,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"create signature from FILENAME",
+			"read signature from FILENAME",
 			&gnunet_opt_ifilename
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -756,11 +740,6 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
-		),
-		GNUNET_GETOPT_option_flag('t',
-			"text",
-			"create canonical text document signature",
-			&gnunet_opt_t
 		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
@@ -844,7 +823,7 @@ int main
 			(arg.find("-w") == 0) || (arg.find("-W") == 0) || 
 		    (arg.find("-L") == 0) || (arg.find("-l") == 0) ||
 			(arg.find("-i") == 0) || (arg.find("-o") == 0) || 
-		    (arg.find("-e") == 0) || (arg.find("-x") == 0) ||
+		    (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
 		    (arg.find("-U") == 0) || (arg.find("-k") == 0) ||
 			(arg.find("-y") == 0))
@@ -886,11 +865,6 @@ int main
 				URI = argv[i+1];
 				opt_URI = (char*)URI.c_str();
 			}
-			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_e == 0))
-			{
-				opt_e = strtoul(argv[i+1], NULL, 10);
-			}
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
 				(port.length() == 0))
 			{
@@ -910,9 +884,7 @@ int main
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
-			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-t") == 0) || (arg.find("-E") == 0) ||
-			(arg.find("-C") == 0))
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -921,16 +893,10 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
-				std::cout << "  -C, --clear    apply cleartext signature" <<
-					" framework (cf. RFC 4880)" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -e TIME        expiration time of generated" <<
-					" signature in seconds" << std::endl;
-				std::cout << "  -E, --echo     enable terminal echo when" <<
-					" reading passphrase" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME    create signature from" <<
+				std::cout << "  -i FILENAME    read signature from" <<
 					" FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
@@ -940,8 +906,6 @@ int main
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
-				std::cout << "  -t, --text     create canonical text" <<
-					" document signature" << std::endl;
 				std::cout << "  -U STRING      policy URI tied to generated" <<
 					" signatures" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
@@ -955,16 +919,10 @@ int main
 #endif
 				return 0; // not continue
 			}
-			if ((arg.find("-C") == 0) || (arg.find("--clear") == 0))
-				opt_C = true;
-			if ((arg.find("-E") == 0) || (arg.find("--echo") == 0))
-				opt_E = true;
-			if ((arg.find("-t") == 0) || (arg.find("--text") == 0))
-				opt_t = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
-				std::cout << "dkg-sign v" << version <<
+				std::cout << "dkg-timestamp v" << version <<
 					" without GNUNET support" << std::endl;
 #endif
 				return 0; // not continue
@@ -994,9 +952,9 @@ int main
 	peers.push_back("Test2");
 	peers.push_back("Test3");
 	peers.push_back("Test4");
-	ifilename = "Test1_output.bin";
+	ifilename = "Test1_output.sig";
 	opt_ifilename = (char*)ifilename.c_str();
-	ofilename = "Test1_output.sig";
+	ofilename = "Test1_output_timestamp.sig";
 	opt_ofilename = (char*)ofilename.c_str();
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
@@ -1004,23 +962,16 @@ int main
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
 	opt_y = (char*)yfilename.c_str();
-	ifilename = "TestY_output.asc";
+	ifilename = "TestY_output.sig";
 	opt_ifilename = (char*)ifilename.c_str();
-	ofilename = "TestY_output.sig";
+	ofilename = "TestY_output_timestamp.sig";
 	opt_ofilename = (char*)ofilename.c_str();
-	opt_e = 4242;
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
 #endif
 #endif
 
 	// check command line arguments
-	if (opt_ifilename == NULL)
-	{
-		std::cerr << "ERROR: option \"-i\" required to specify an input file" <<
-			std::endl;
-		return -1;
-	}
 	if ((opt_hostname != NULL) && (opt_passwords == NULL) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: option \"-P\" required due to insecure network" <<
@@ -1100,29 +1051,13 @@ int main
 	else if (opt_y != NULL)
 	{
 		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
-		run_instance(0, time(NULL), opt_e, 0);
+		run_instance(0, time(NULL), 0);
 		return ret;
 	}
 
 	// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
-		GNUNET_GETOPT_option_flag('C',
-			"clear",
-			"apply cleartext signature framework (cf. RFC 4880)",
-			&gnunet_opt_C
-		),
-		GNUNET_GETOPT_option_uint('e',
-			"expiration",
-			"TIME",
-			"expiration time of generated signature in seconds",
-			&gnunet_opt_sigexptime
-		),
-		GNUNET_GETOPT_option_flag('E',
-			"echo",
-			"enable terminal echo when reading passphrase",
-			&gnunet_opt_E
-		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
 			"STRING",
@@ -1132,7 +1067,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"create signature from FILENAME",
+			"read signature from FILENAME",
 			&gnunet_opt_ifilename
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -1164,11 +1099,6 @@ int main
 			"STRING",
 			"policy URI tied to signature",
 			&gnunet_opt_URI
-		),
-		GNUNET_GETOPT_option_flag('t',
-			"text",
-			"create canonical text document signature",
-			&gnunet_opt_t
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",
@@ -1221,9 +1151,9 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if (pipe(pipefd[i][j]) < 0)
-				perror("ERROR: dkg-sign (pipe)");
+				perror("ERROR: dkg-timestamp (pipe)");
 			if (pipe(broadcast_pipefd[i][j]) < 0)
-				perror("ERROR: dkg-sign (pipe)");
+				perror("ERROR: dkg-timestamp (pipe)");
 		}
 	}
 	
@@ -1241,7 +1171,7 @@ int main
 		if (opt_verbose)
 			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
 		if (waitpid(pid[i], &wstatus, 0) != pid[i])
-			perror("ERROR: dkg-sign (waitpid)");
+			perror("ERROR: dkg-timestamp (waitpid)");
 		if (!WIFEXITED(wstatus))
 		{
 			std::cerr << "ERROR: protocol instance ";
@@ -1264,11 +1194,11 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("ERROR: dkg-sign (close)");
+				perror("ERROR: dkg-timestamp (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) ||
 				(close(broadcast_pipefd[i][j][1]) < 0))
 			{
-				perror("ERROR: dkg-sign (close)");
+				perror("ERROR: dkg-timestamp (close)");
 			}
 		}
 	}

@@ -416,7 +416,8 @@ void run_instance
 // TODO: extract hash from signature value
 	tmcg_openpgp_octets_t trailer, hash, left, issuer;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(prv->pub->pub_hashing, issuer);	
+		FingerprintCompute(prv->pub->pub_hashing, issuer);
+// TODO: embed the signature with subpacket of type 32
 	if (opt_y == NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::

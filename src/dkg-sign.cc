@@ -349,7 +349,9 @@ void run_instance
 	if (opt_verbose)
 		std::cerr << "INFO: hashing the input file \"" << opt_ifilename <<
 			"\"" << std::endl;
-	tmcg_openpgp_octets_t trailer, hash, left;
+	tmcg_openpgp_octets_t trailer, hash, left, issuer;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintCompute(prv->pub->pub_hashing, issuer);	
 	if (opt_t || opt_C)
 	{
 		if (opt_y == NULL)
@@ -357,14 +359,14 @@ void run_instance
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareDetachedSignature(
 					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
-					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
 		}
 		else
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareDetachedSignature(
 					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
 		}
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 			TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
@@ -389,14 +391,14 @@ void run_instance
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareDetachedSignature(
 					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
-					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
 		}
 		else
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareDetachedSignature(
 					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, prv->pub->id, trailer);
+					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
 		}
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 			BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))

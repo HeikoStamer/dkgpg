@@ -328,15 +328,17 @@ void run_instance
 
 	// compute a hash of pub and sub, respectively
 	tmcg_openpgp_octets_t trailer_pub, pub_hashing, hash_pub, left_pub,
-		trailer_sub, sub_hashing, hash_sub, left_sub;
+		trailer_sub, sub_hashing, hash_sub, left_sub, issuer;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintCompute(prv->pub->pub_hashing, issuer);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION,
-			hashalgo, csigtime, revcode, "", prv->pub->id, trailer_pub);
+			hashalgo, csigtime, revcode, "", issuer, trailer_pub);
 	if (sub != NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION,
-				hashalgo, csigtime, revcode, "", prv->pub->id, trailer_sub);
+				hashalgo, csigtime, revcode, "", issuer, trailer_sub);
 	}
 	// RFC 4880 ERRATA:
 	// Primary key revocation signatures (type 0x20) hash only the key being

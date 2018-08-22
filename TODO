@@ -8,9 +8,8 @@ in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
 * dkg-decrypt: add a fake image header (png) for bluring decryption shares
-* dkg-generate: create additional direct-key signature (0x1f) with key flags
++ dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())
-+ dkg-tools: add issuer fingerprint subpacket by using LibTMCG extensions
 + dkg-tools: add program dkg-keyedit for adding user IDs and other stuff
 + dkg-tools: use getopt parser with long options (even if no GNUnet support)
 

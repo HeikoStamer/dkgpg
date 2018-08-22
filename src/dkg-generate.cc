@@ -58,23 +58,6 @@ std::vector<std::string>	peers;
 bool						instance_forked = false;
 
 std::string					passphrase, userid, passwords, hostname, port;
-tmcg_openpgp_octets_t		keyid, subkeyid, pub, sub;
-tmcg_openpgp_octets_t		uidsig, subsig, sec, ssb, uid;
-std::map<size_t, size_t>	idx2dkg, dkg2idx;
-mpz_t						dss_p, dss_q, dss_g, dss_h, dss_y;
-mpz_t						dss_x_i, dss_xprime_i;
-size_t						dss_n, dss_t, dss_i;
-std::vector<size_t>			dss_qual, dss_x_rvss_qual;
-std::vector< std::vector<mpz_ptr> >	dss_c_ik;
-mpz_t						dkg_p, dkg_q, dkg_g, dkg_h, dkg_y;
-mpz_t						dkg_x_i, dkg_xprime_i;
-size_t						dkg_n, dkg_t, dkg_i;
-std::vector<size_t>			dkg_qual;
-std::vector<mpz_ptr>		dkg_v_i;
-std::vector< std::vector<mpz_ptr> >	dkg_c_ik;
-gcry_mpi_t					dsa_p, dsa_q, dsa_g, dsa_y, dsa_x;
-gcry_mpi_t					elg_p, elg_q, elg_g, elg_y, elg_x;
-
 int 						opt_verbose = 0;
 bool						opt_y = false;
 char						*opt_crs = NULL;
@@ -134,7 +117,7 @@ void run_instance
 		// extract parameters for OpenPGP key structures
 		std::string out, crcout, armor;
 		tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
-		tmcg_openpgp_octets_t sub, ssb, subsig, keyid, dsaflags, elgflags;
+		tmcg_openpgp_octets_t sub, ssb, subsig, dsaflags, elgflags, issuer;
 		tmcg_openpgp_octets_t pub_hashing, sub_hashing;
 		tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
 		tmcg_openpgp_octets_t subsig_hashing, subsig_left;
@@ -223,13 +206,13 @@ void run_instance
 		for (size_t i = 6; i < pub.size(); i++)
 			pub_hashing.push_back(pub[i]);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			KeyidCompute(pub_hashing, keyid);
+			FingerprintCompute(pub_hashing, issuer);
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 		dsaflags.push_back(0x01 | 0x02);
 		sigtime = time(NULL); // current time
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-				hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
+				hashalgo, sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
 		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			CertificationHash(pub_hashing, userid, empty, uidsig_hashing,
@@ -304,7 +287,7 @@ void run_instance
 		// Subkey Binding Signature (0x18) of sub
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
-				hashalgo, sigtime, keyexptime, elgflags, keyid, subsig_hashing);
+				hashalgo, sigtime, keyexptime, elgflags, issuer, subsig_hashing);
 		for (size_t i = 6; i < sub.size(); i++)
 			sub_hashing.push_back(sub[i]);
 		hash.clear();
@@ -741,7 +724,7 @@ void run_instance
 	// extract further public parameters for OpenPGP key structures
 	std::string out, crcout, armor;
 	tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
-	tmcg_openpgp_octets_t sub, ssb, subsig, keyid, dsaflags, elgflags;
+	tmcg_openpgp_octets_t sub, ssb, subsig, dsaflags, elgflags, issuer;
 	tmcg_openpgp_octets_t pub_hashing, sub_hashing;
 	tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
 	tmcg_openpgp_octets_t subsig_hashing, subsig_left;
@@ -1013,7 +996,7 @@ void run_instance
 	}
 	for (size_t i = 6; i < pub.size(); i++)
 		pub_hashing.push_back(pub[i]);
-	CallasDonnerhackeFinneyShawThayerRFC4880::KeyidCompute(pub_hashing, keyid);
+	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, issuer);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 	// "In a V4 key, the primary key MUST be a key capable of certification."
 	if (S > 0)
@@ -1031,12 +1014,15 @@ void run_instance
 		// for a non-shared DSA primary key no common timestamp required 
 		sigtime = time(NULL); // current time
 	}
-	// create an additional direct-key signature (0x1f) with above key flags
-// TODO
+	// create an additional (!) direct-key signature (0x1f) with above key flags
+// TODO: "The split key (0x10) [...] flags are placed on a self-signature only; they
+//        are meaningless on a certification signature. They SHOULD be placed only
+//        on a direct-key signature (type 0x1f) or a subkey signature (type 0x18),
+//        one that refers to the key the flag applies to." [RFC 4880]
 	// create a positive certification (0x13) of the included user ID
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-			hashalgo, sigtime, keyexptime, dsaflags, keyid, uidsig_hashing); 
+			hashalgo, sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
 	hash.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		CertificationHash(pub_hashing, userid, empty, uidsig_hashing, hashalgo,
@@ -1386,7 +1372,7 @@ void run_instance
 		// Subkey Binding Signature (0x18) of sub
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
-				hashalgo, sigtime, keyexptime, elgflags, keyid, subsig_hashing);
+				hashalgo, sigtime, keyexptime, elgflags, issuer, subsig_hashing);
 		for (size_t i = 6; i < sub.size(); i++)
 			sub_hashing.push_back(sub[i]);
 		hash.clear();

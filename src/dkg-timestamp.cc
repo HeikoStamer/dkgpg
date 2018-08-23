@@ -190,6 +190,7 @@ void run_instance
 	}
 
 	// parse the signature
+	tmcg_openpgp_octets_t signature_body;
 	TMCG_OpenPGP_Signature *signature = NULL;
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		SignatureParse(armored_signature, opt_verbose, signature);
@@ -217,7 +218,15 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-// TODO: check for issuer in keyring or private key
+		if (CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketBodyExtract(signature->packet, opt_verbose, signature_body) != 0x02)
+		{
+			std::cerr << "ERROR: cannot extract signature body" << std::endl;
+			delete signature;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
 	}
 	else
 	{
@@ -410,28 +419,27 @@ void run_instance
 	}
 
 	// compute the trailer and the hash from the signature
-	tmcg_openpgp_octets_t target_hash;
 	if (opt_verbose)
-		std::cerr << "INFO: computing target hash from signature" << std::endl;
-// TODO: extract hash from signature value
+		std::cerr << "INFO: computing hash from signature" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left, issuer;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintCompute(prv->pub->pub_hashing, issuer);
-// TODO: embed the signature with subpacket of type 32
 	if (opt_y == NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareTimestampSignature(hashalgo, csigtime, URI, issuer,
-				signature->pkalgo, signature->hashalgo, target_hash, trailer);
+			PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
+				hashalgo, csigtime, URI, issuer, signature_body,
+				trailer);
 	}
 	else
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareTimestampSignature(prv->pkalgo, hashalgo, csigtime,
-				URI, issuer, signature->pkalgo, signature->hashalgo,
-				target_hash, trailer);
+			PacketSigPrepareTimestampSignature(prv->pkalgo,
+				hashalgo, csigtime, URI, issuer, signature_body,
+				trailer);
 	}
-// TODO: hash the trailer and the final bytes
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		StandaloneHash(trailer, hashalgo, hash, left);
 
 	// prepare the hash value
 	tmcg_openpgp_byte_t buffer[1024];

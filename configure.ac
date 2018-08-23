@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180822])
+AC_REVISION([20180823])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.8], [HeikoStamer@gmx.net], [dkgpg],
@@ -241,6 +241,7 @@ AC_CONFIG_LINKS([tests/t-dkg-decrypt.cc:src/dkg-decrypt.cc])
 AC_CONFIG_LINKS([tests/t-dkg-sign.cc:src/dkg-sign.cc])
 AC_CONFIG_LINKS([tests/t-dkg-verify.cc:src/dkg-verify.cc])
 AC_CONFIG_LINKS([tests/t-dkg-timestamp.cc:src/dkg-timestamp.cc])
+AC_CONFIG_LINKS([tests/t-dkg-timestamp-verify.cc:src/dkg-timestamp-verify.cc])
 AC_CONFIG_LINKS([tests/t-dkg-refresh.cc:src/dkg-refresh.cc])
 AC_CONFIG_LINKS([tests/t-dkg-revoke.cc:src/dkg-revoke.cc])
 

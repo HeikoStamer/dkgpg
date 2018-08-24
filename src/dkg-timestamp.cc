@@ -62,16 +62,17 @@ std::vector<std::string>	peers;
 bool						instance_forked = false;
 
 std::string					passphrase, ifilename, ofilename, kfilename;
-std::string					passwords, hostname, port, URI, yfilename;
+std::string					passwords, hostname, port, URI, yfilename, sn;
 
 int 						opt_verbose = 0;
-char						*opt_ifilename = NULL;
-char						*opt_ofilename = NULL;
+char						*opt_i = NULL;
+char						*opt_o = NULL;
 char						*opt_passwords = NULL;
 char						*opt_hostname = NULL;
 char						*opt_URI = NULL;
 char						*opt_k = NULL;
 char						*opt_y = NULL;
+char						*opt_s = NULL;
 unsigned long int			opt_p = 55000, opt_W = 5;
 
 void run_instance
@@ -172,9 +173,9 @@ void run_instance
 
 	// read the signature from stdin or from file
 	std::string armored_signature;
-	if (opt_ifilename != NULL)
+	if (opt_i != NULL)
 	{
-		if (!read_message(ifilename, armored_signature))
+		if (!read_message(opt_i, armored_signature))
 		{
 			delete ring;
 			delete prv;
@@ -420,22 +421,44 @@ void run_instance
 
 	// compute the trailer and the hash from the signature
 	if (opt_verbose)
-		std::cerr << "INFO: computing hash from signature" << std::endl;
+		std::cerr << "INFO: constructing timestamp signature" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left, issuer;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintCompute(prv->pub->pub_hashing, issuer);
+	tmcg_openpgp_notations_t notations;
+	tmcg_openpgp_notation_t serialnumber;
+	if (sn.length() != 0)
+	{
+		if (opt_verbose)
+			std::cerr << "INFO: include an OpenPGP notation" << std::endl;
+		size_t dpos = sn.find(":");
+		if ((dpos > 0) && (dpos != sn.npos) && ((sn.length() - dpos) > 1))
+		{
+			std::string serialnumber_name = sn.substr(0, dpos);
+			std::string serialnumber_value = sn.substr(dpos + 1,
+				sn.length() - dpos - 1);
+			for (size_t i = 0; i < serialnumber_name.length(); i++)
+				serialnumber.first.push_back(serialnumber_name[i]);
+			for (size_t i = 0; i < serialnumber_value.length(); i++)
+				serialnumber.second.push_back(serialnumber_value[i]);
+			notations.push_back(serialnumber);
+		}
+		else
+			std::cerr << "WARNING: wrong delimiter for OpenPGP notation" <<
+				std::endl;
+	} // FIXME: option -t => use other variant of TimestampSignature 
 	if (opt_y == NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
-				hashalgo, csigtime, URI, issuer, signature_body,
+				hashalgo, csigtime, URI, issuer, signature_body, notations,
 				trailer);
 	}
 	else
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareTimestampSignature(prv->pkalgo,
-				hashalgo, csigtime, URI, issuer, signature_body,
+				hashalgo, csigtime, URI, issuer, signature_body, notations,
 				trailer);
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -647,9 +670,9 @@ void run_instance
 	std::string sigstr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
-	if (opt_ofilename != NULL)
+	if (opt_o != NULL)
 	{
-		if (!write_message(opt_ofilename, sigstr))
+		if (!write_message(opt_o, sigstr))
 			exit(-1);
 	}
 	else
@@ -658,13 +681,14 @@ void run_instance
 
 #ifdef GNUNET
 char *gnunet_opt_hostname = NULL;
-char *gnunet_opt_ifilename = NULL;
-char *gnunet_opt_ofilename = NULL;
+char *gnunet_opt_i = NULL;
+char *gnunet_opt_o = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
 char *gnunet_opt_URI = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
+char *gnunet_opt_s = NULL;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
@@ -722,7 +746,7 @@ int main
 			"input",
 			"FILENAME",
 			"read signature from FILENAME",
-			&gnunet_opt_ifilename
+			&gnunet_opt_i
 		),
 		GNUNET_GETOPT_option_string('k',
 			"keyring",
@@ -736,7 +760,7 @@ int main
 			"output",
 			"FILENAME",
 			"write generated signature to FILENAME",
-			&gnunet_opt_ofilename
+			&gnunet_opt_o
 		),
 		GNUNET_GETOPT_option_string('p',
 			"port",
@@ -749,6 +773,12 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
+		),
+		GNUNET_GETOPT_option_string('s',
+			"sn",
+			"KEY:VALUE",
+			"embedded OpenPGP notation (e.g. serial number)",
+			&gnunet_opt_s
 		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
@@ -799,10 +829,10 @@ int main
 		std::cerr << "ERROR: GNUNET_GETOPT_run() failed" << std::endl;
 		return -1;
 	}
-	if (gnunet_opt_ifilename != NULL)
-		opt_ifilename = gnunet_opt_ifilename;
-	if (gnunet_opt_ofilename != NULL)
-		opt_ofilename = gnunet_opt_ofilename;
+	if (gnunet_opt_i != NULL)
+		opt_i = gnunet_opt_i;
+	if (gnunet_opt_o != NULL)
+		opt_o = gnunet_opt_o;
 	if (gnunet_opt_hostname != NULL)
 		opt_hostname = gnunet_opt_hostname;
 	if (gnunet_opt_passwords != NULL)
@@ -821,6 +851,8 @@ int main
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 	if (gnunet_opt_y != NULL)
 		opt_y = gnunet_opt_y; // get yaot filename from GNUnet options
+	if (gnunet_opt_s != NULL)
+		sn = gnunet_opt_s; // get OpenPGP notation from GNUnet options
 #endif
 
 	// create peer list from remaining arguments
@@ -835,20 +867,20 @@ int main
 		    (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
 		    (arg.find("-U") == 0) || (arg.find("-k") == 0) ||
-			(arg.find("-y") == 0))
+			(arg.find("-y") == 0) || (arg.find("-s") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ifilename == NULL))
+				(opt_i == NULL))
 			{
 				ifilename = argv[i+1];
-				opt_ifilename = (char*)ifilename.c_str();
+				opt_i = (char*)ifilename.c_str();
 			}
 			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ofilename == NULL))
+				(opt_o == NULL))
 			{
 				ofilename = argv[i+1];
-				opt_ofilename = (char*)ofilename.c_str();
+				opt_o = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_k == NULL))
@@ -890,6 +922,12 @@ int main
 				yfilename = argv[i+1];
 				opt_y = (char*)yfilename.c_str();
 			}
+			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_s == NULL))
+			{
+				sn = argv[i+1];
+				opt_s = (char*)sn.c_str();
+			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
@@ -915,6 +953,8 @@ int main
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
+				std::cout << "  -s KEY:VALUE   embedded OpenPGP notation" <<
+					" (e.g. serial number)" << std::endl;
 				std::cout << "  -U STRING      policy URI tied to generated" <<
 					" signatures" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
@@ -962,20 +1002,22 @@ int main
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	ifilename = "Test1_output.sig";
-	opt_ifilename = (char*)ifilename.c_str();
+	opt_i = (char*)ifilename.c_str();
 	ofilename = "Test1_output_timestamp.sig";
-	opt_ofilename = (char*)ofilename.c_str();
+	opt_o = (char*)ofilename.c_str();
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
+	sn = "serialnumber@dkg-timestamp.cc:00001";
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
 	opt_y = (char*)yfilename.c_str();
 	ifilename = "TestY_output.sig";
-	opt_ifilename = (char*)ifilename.c_str();
+	opt_i = (char*)ifilename.c_str();
 	ofilename = "TestY_output_timestamp.sig";
-	opt_ofilename = (char*)ofilename.c_str();
+	opt_o = (char*)ofilename.c_str();
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
+	sn = "serialnumber@dkg-timestamp.cc:00002";
 	opt_verbose = 2;
 #endif
 #endif
@@ -1077,7 +1119,7 @@ int main
 			"input",
 			"FILENAME",
 			"read signature from FILENAME",
-			&gnunet_opt_ifilename
+			&gnunet_opt_i
 		),
 		GNUNET_GETOPT_option_string('k',
 			"keyring",
@@ -1089,7 +1131,7 @@ int main
 			"output",
 			"FILENAME",
 			"write generated signature to FILENAME",
-			&gnunet_opt_ofilename
+			&gnunet_opt_o
 		),
 		GNUNET_GETOPT_option_string('p',
 			"port",
@@ -1102,6 +1144,12 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
+		),
+		GNUNET_GETOPT_option_string('s',
+			"sn",
+			"KEY:VALUE",
+			"embedded OpenPGP notation (e.g. serial number)",
+			&gnunet_opt_s
 		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",

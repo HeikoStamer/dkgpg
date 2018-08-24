@@ -801,7 +801,7 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	ifilename, kfilename, filename;
+	std::string	kfilename, filename;
 	int			opt_verbose = 0;
 	bool		opt_b = false, opt_r = false, opt_p = false, opt_y = false;
 	char		*opt_k = NULL;
@@ -948,7 +948,7 @@ int main
 	// read the keyring
 	tmcg_openpgp_armor_t kformat = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK;
 	std::string armored_pubring;
-	if (opt_k)
+	if (opt_k != NULL)
 	{
 		if (opt_b)
 		{
@@ -967,7 +967,7 @@ int main
 	TMCG_OpenPGP_Pubkey *primary = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k)
+	if (opt_k != NULL)
 	{
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PublicKeyringParse(armored_pubring, opt_verbose, ring);

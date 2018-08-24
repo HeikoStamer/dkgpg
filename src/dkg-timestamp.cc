@@ -447,7 +447,8 @@ void run_instance
 		else
 			std::cerr << "WARNING: wrong delimiter for OpenPGP notation" <<
 				std::endl;
-	} // TODO: option -t => use other variant of TimestampSignature 
+	} // TODO: option -t --target => use other variant of TimestampSignature
+	  //       with hash value supplied by caller, cf. [RFC 3161]
 	if (opt_y == NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::

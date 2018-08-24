@@ -272,6 +272,8 @@ int main
 			delete signature;
 			return -1;
 		}
+		// extract embedded target signature
+// TODO
 	}
 	else
 	{
@@ -501,6 +503,15 @@ int main
 			opt_verbose);
 	else
 		verify_ok = signature->Verify(primary->key, opt_verbose);
+
+	// check validity of embedded target signature, cf. [RFC 3628]
+// TODO
+
+	// output extracted target signature for further processing
+	if (verify_ok)
+	{
+// TODO
+	}
 
 	// release signature
 	delete signature;

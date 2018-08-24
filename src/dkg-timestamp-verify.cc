@@ -150,7 +150,7 @@ int main
 				opt_binary = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
-				std::cout << "dkg-verify v" << version << std::endl;
+				std::cout << "dkg-timestamp-verify v" << version << std::endl;
 				return 0; // not continue
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
@@ -192,7 +192,7 @@ int main
 		sigfrom = mktime(&sigfrom_tm);
 		if (sigfrom == ((time_t) -1))
 		{
-			perror("ERROR: dkg-verify (mktime)");
+			perror("ERROR: dkg-timestamp-verify (mktime)");
 			std::cerr << "ERROR: cannot convert TIMESPEC; required format:" <<
 				" YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
@@ -204,7 +204,7 @@ int main
 		sigto = mktime(&sigto_tm);
 		if (sigto == ((time_t) -1))
 		{
-			perror("ERROR: dkg-verify (mktime)");
+			perror("ERROR: dkg-timestamp-verify (mktime)");
 			std::cerr << "ERROR: cannot convert TIMESPEC; required format:" <<
 				" YYYY-MM-DD_HH:MM:SS" << std::endl;
 			return -1;
@@ -237,7 +237,8 @@ int main
 	if ((opt_k != NULL) && opt_binary && !read_binary_key_file(kfilename,
 			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
 		return -1;
-	if ((opt_k != NULL) && !opt_binary && !read_key_file(kfilename, armored_pubring))
+	if ((opt_k != NULL) && !opt_binary && !read_key_file(kfilename,
+			armored_pubring))
 		return -1;
 
 	// read the signature from stdin or from file
@@ -298,7 +299,7 @@ int main
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
 	if (filename.length() == 0)
 	{
-		// try to extract the public key from keyring based on issuer_fingerprint
+		// extract the public key from keyring based on issuer_fingerprint
 		std::string fpr;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			FingerprintConvertPlain(signature->issuerfpr, fpr);
@@ -496,7 +497,8 @@ int main
 	// verify signature cryptographically
 	bool verify_ok = false;
 	if (subkey_selected)
-		verify_ok = signature->Verify(primary->subkeys[subkey_idx]->key, opt_verbose);
+		verify_ok = signature->Verify(primary->subkeys[subkey_idx]->key,
+			opt_verbose);
 	else
 		verify_ok = signature->Verify(primary->key, opt_verbose);
 
@@ -520,3 +522,4 @@ int main
 	}
 	return 0;
 }
+

@@ -220,7 +220,8 @@ void run_instance
 			exit(-1);
 		}
 		if (CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketBodyExtract(signature->packet, opt_verbose, signature_body) != 0x02)
+			PacketBodyExtract(signature->packet, opt_verbose,
+			signature_body) != 0x02)
 		{
 			std::cerr << "ERROR: cannot extract signature body" << std::endl;
 			delete signature;
@@ -446,7 +447,7 @@ void run_instance
 		else
 			std::cerr << "WARNING: wrong delimiter for OpenPGP notation" <<
 				std::endl;
-	} // FIXME: option -t => use other variant of TimestampSignature 
+	} // TODO: option -t => use other variant of TimestampSignature 
 	if (opt_y == NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::

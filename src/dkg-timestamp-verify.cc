@@ -189,14 +189,18 @@ int main
 	filename = "Test1_dkg-pub.asc";
 	sfilename = "Test1_output_timestamp.sig";
 	opt_s = (char*)sfilename.c_str();
+	kfilename = "Test1_dkg-pub.asc";
+	opt_k = (char*)kfilename.c_str();	
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	filename = "TestY-pub.asc";
 	sfilename = "TestY_output_timestamp.sig";
 	opt_s = (char*)sfilename.c_str();
+	kfilename = "TestY-pub.asc";
+	opt_k = (char*)kfilename.c_str();	
 	ofilename = "TestY_output_target.sig";
-	opt_o = (char*)sfilename.c_str();	
+	opt_o = (char*)ofilename.c_str();	
 	opt_verbose = 2;
 #endif
 #endif
@@ -562,20 +566,85 @@ int main
 			target_signature->expirationtime))))
 	{
 		std::cerr << "ERROR: timestamp signature was applied before or" <<
-			"after the validity peroid of the target signature" << std::endl;
+			"after the validity period of the target signature" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
 		return -4;
 	}
-	// 1. the time-stamp (or time mark) was applied before the end
-	//    of the validity period of the signer's certificate
+
+	// extract the target key from keyring based on issuer_fingerprint
+	std::string target_fpr;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintConvertPlain(target_signature->issuerfpr, target_fpr);
+	if (opt_verbose > 1)
+		std::cerr << "INFO: lookup for public key with fingerprint " <<
+			target_fpr << std::endl;
+	const TMCG_OpenPGP_Pubkey *key = ring->find(target_fpr);
+	if (key == NULL)
+	{
+		// try to extract the target key from keyring based on issuer
+		std::string target_kid;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+				KeyidConvert(target_signature->issuer, target_kid);
+		if (opt_verbose > 1)
+			std::cerr << "INFO: lookup for public key with keyid " <<
+				target_kid << std::endl;
+		key = ring->find_by_keyid(target_kid);
+		if (key == NULL)
+		{
+			std::cerr << "ERROR: public key of target signature issuer" <<
+				" not found in keyring" << std::endl; 
+			delete target_signature;
+			delete signature;
+			delete primary;
+			delete ring;
+			return -1;
+		}
+	}
+	TMCG_OpenPGP_Pubkey *target_key = NULL;
+	std::string armored_targetkey;
+	tmcg_openpgp_octets_t target_pkts;
+	key->Export(target_pkts);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, target_pkts,
+			armored_targetkey);
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		PublicKeyBlockParse(armored_targetkey, opt_verbose, target_key);
+	if (parse_ok)
+	{
+		target_key->CheckSelfSignatures(ring, opt_verbose);
+		target_key->CheckSubkeys(ring, opt_verbose);
+		if (target_key->weak(opt_verbose) && !opt_weak)
+		{
+			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
+			delete target_key;
+			delete target_signature;
+			delete signature;
+			delete primary;
+			delete ring;
+			return -4;
+		}
+		// 1. the time-stamp (or time mark) was applied before the end
+		//    of the validity period of the signer's certificate
+		
 // TODO
-	// 2. the time-stamp (or time mark) was applied either while the
-	//    signer's certificate was not revoked or before the revocation
-	//    date of the certificate
+		// 2. the time-stamp (or time mark) was applied either while the
+		//    signer's certificate was not revoked or before the revocation
+		//    date of the certificate
 // TODO
+	}
+	else
+	{
+		std::cerr << "ERROR: cannot use the public key of target" <<
+			" signature issuer" << std::endl;
+		delete target_signature;
+		delete signature;
+		delete primary;
+		delete ring;
+		return -1;
+	}
 
 	// output extracted target signature for further processing
 	if (verify_ok)
@@ -588,6 +657,7 @@ int main
 		{
 			if (!write_message(ofilename, sigstr))
 			{
+				delete target_key;
 				delete target_signature;
 				delete signature;
 				delete primary;
@@ -598,6 +668,9 @@ int main
 		else
 			std::cout << sigstr << std::endl;
 	}
+
+	// release public key of target signature issuer
+	delete target_key;
 
 	// release target signature
 	delete target_signature;

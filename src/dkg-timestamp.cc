@@ -171,7 +171,7 @@ void run_instance
 		exit(-1);
 	}
 
-	// read the signature from stdin or from file
+	// read the target signature from stdin or from file
 	std::string armored_signature;
 	if (opt_i != NULL)
 	{
@@ -190,7 +190,7 @@ void run_instance
 		std::cin.clear();
 	}
 
-	// parse the signature
+	// parse the target signature
 	tmcg_openpgp_octets_t signature_body;
 	TMCG_OpenPGP_Signature *signature = NULL;
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -219,9 +219,8 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-		if (CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketBodyExtract(signature->packet, opt_verbose,
-			signature_body) != 0x02)
+		if (CallasDonnerhackeFinneyShawThayerRFC4880::PacketBodyExtract(
+				signature->packet, opt_verbose, signature_body) != 0x02)
 		{
 			std::cerr << "ERROR: cannot extract signature body" << std::endl;
 			delete signature;
@@ -352,7 +351,7 @@ void run_instance
 		// participants must agree on a common signature creation time (OpenPGP)
 		if (opt_verbose)
 			std::cerr << "INFO: agree on a signature creation time for" <<
-				" OpenPGP" << std::endl;
+				" OpenPGP (used as timestamp)" << std::endl;
 		std::vector<time_t> tvs;
 		mpz_t mtv;
 		mpz_init_set_ui(mtv, sigtime);
@@ -371,8 +370,7 @@ void run_instance
 				else
 				{
 					std::cerr << "WARNING: S_" << whoami << ": no signature" <<
-						" creation timestamp received from S_" << i <<
-						std::endl;
+						" creation timestamp received from S_" << i << std::endl;
 				}
 			}
 		}
@@ -393,7 +391,7 @@ void run_instance
 		csigtime = tvs[tvs.size()/2];
 		if (opt_verbose)
 			std::cerr << "INFO: S_" << whoami << ": canonicalized signature" <<
-				" creation time = " << csigtime << std::endl;
+				" creation time (timestamp) = " << csigtime << std::endl;
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
 		if (mpz_sizeinbase(dss->q, 2L) == 256)
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
@@ -433,7 +431,7 @@ void run_instance
 		if (opt_verbose)
 			std::cerr << "INFO: include an OpenPGP notation" << std::endl;
 		size_t dpos = sn.find(":");
-		if ((dpos > 0) && (dpos != sn.npos) && ((sn.length() - dpos) > 1))
+		if ((dpos != sn.npos) && (dpos > 0) && ((sn.length() - dpos) > 1))
 		{
 			std::string serialnumber_name = sn.substr(0, dpos);
 			std::string serialnumber_value = sn.substr(dpos + 1,
@@ -445,8 +443,8 @@ void run_instance
 			notations.push_back(serialnumber);
 		}
 		else
-			std::cerr << "WARNING: wrong delimiter for OpenPGP notation" <<
-				std::endl;
+			std::cerr << "WARNING: wrong delimiter position for given" <<
+				" OpenPGP notation" << std::endl;
 	} // TODO: option -t --target => use other variant of TimestampSignature
 	  //       with hash value supplied by caller, cf. [RFC 3161]
 	if (opt_y == NULL)
@@ -747,7 +745,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"read signature from FILENAME",
+			"read target signature from FILENAME",
 			&gnunet_opt_i
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -761,7 +759,7 @@ int main
 		GNUNET_GETOPT_option_string('o',
 			"output",
 			"FILENAME",
-			"write generated signature to FILENAME",
+			"write generated timestamp signature to FILENAME",
 			&gnunet_opt_o
 		),
 		GNUNET_GETOPT_option_string('p',
@@ -779,7 +777,7 @@ int main
 		GNUNET_GETOPT_option_string('s',
 			"sn",
 			"KEY:VALUE",
-			"embedded OpenPGP notation (e.g. serial number)",
+			"embed this OpenPGP notation (e.g. serial number)",
 			&gnunet_opt_s
 		),
 		GNUNET_GETOPT_option_string('U',
@@ -945,20 +943,20 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME    read signature from" <<
+				std::cout << "  -i FILENAME    read target signature from" <<
 					" FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME    write generated signature to" <<
-					" FILENAME" << std::endl;
+				std::cout << "  -o FILENAME    write generated timestamp" <<
+					" signature to FILENAME" << std::endl;
 				std::cout << "  -p INTEGER     start port for built-in" <<
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
-				std::cout << "  -s KEY:VALUE   embedded OpenPGP notation" <<
+				std::cout << "  -s KEY:VALUE   embed this OpenPGP notation" <<
 					" (e.g. serial number)" << std::endl;
 				std::cout << "  -U STRING      policy URI tied to generated" <<
-					" signatures" << std::endl;
+					" timestamp signature" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -1120,7 +1118,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"read signature from FILENAME",
+			"read target signature from FILENAME",
 			&gnunet_opt_i
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -1132,7 +1130,7 @@ int main
 		GNUNET_GETOPT_option_string('o',
 			"output",
 			"FILENAME",
-			"write generated signature to FILENAME",
+			"write generated timestamp signature to FILENAME",
 			&gnunet_opt_o
 		),
 		GNUNET_GETOPT_option_string('p',
@@ -1150,13 +1148,13 @@ int main
 		GNUNET_GETOPT_option_string('s',
 			"sn",
 			"KEY:VALUE",
-			"embedded OpenPGP notation (e.g. serial number)",
+			"embed this OpenPGP notation (e.g. serial number)",
 			&gnunet_opt_s
 		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
 			"STRING",
-			"policy URI tied to signature",
+			"policy URI tied to timestamp signature",
 			&gnunet_opt_URI
 		),
 		GNUNET_GETOPT_option_flag('V',

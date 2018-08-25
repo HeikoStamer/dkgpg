@@ -205,14 +205,14 @@ int main
 	// check command line arguments
 	if ((opt_k == NULL) && (filename.length() == 0))
 	{
-		std::cerr << "ERROR: argument KEYFILE missing; usage: " << usage <<
-			std::endl;
+		std::cerr << "ERROR: argument KEYFILE missing; usage: " <<
+			usage << std::endl;
 		return -1;
 	}
 	if (opt_i == NULL)
 	{
-		std::cerr << "ERROR: mandatory option \"-i\" missing; usage: " << usage <<
-			std::endl;
+		std::cerr << "ERROR: mandatory option \"-i\" missing; usage: " <<
+			usage << std::endl;
 		return -1;
 	}
 	if (opt_sigfrom)
@@ -254,20 +254,35 @@ int main
 	std::string armored_pubkey;
 	if (filename.length() > 0)
 	{
-		if (opt_binary && !read_binary_key_file(filename,
-			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
-			return -1;
-		if (!opt_binary && !read_key_file(filename, armored_pubkey))
-			return -1;
+		if (opt_binary)
+		{
+			tmcg_openpgp_armor_t format = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 
+			if (!read_binary_key_file(filename, format, armored_pubkey))
+				return -1;
+		}
+		else
+		{
+			if (!read_key_file(filename, armored_pubkey))
+				return -1;
+		}
 	}
 
 	// read the keyring
 	std::string armored_pubring;
-	if ((opt_k != NULL) && opt_binary && !read_binary_key_file(kfilename,
-			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
-		return -1;
-	if ((opt_k != NULL) && !opt_binary && !read_key_file(kfilename, armored_pubring))
-		return -1;
+	if (opt_k != NULL)
+	{
+		if (opt_binary)
+		{
+			tmcg_openpgp_armor_t format = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 
+			if (!read_binary_key_file(kfilename, format, armored_pubring))
+				return -1;
+		}
+		else
+		{
+			if (!read_key_file(kfilename, armored_pubring))
+				return -1;
+		}
+	}
 
 	// read the signature from stdin or from file
 	std::string armored_signature;
@@ -311,7 +326,6 @@ int main
 		signature->PrintInfo();
 
 	// parse the keyring, the public key block and corresponding signatures
-	TMCG_OpenPGP_Pubkey *primary = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	if (opt_k)
 	{
@@ -327,39 +341,14 @@ int main
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
 	if (filename.length() == 0)
 	{
-		// try to extract the public key from keyring based on issuer_fingerprint
-		std::string fpr;
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintConvertPlain(signature->issuerfpr, fpr);
-		if (opt_verbose > 1)
-			std::cerr << "INFO: lookup for issuer public key with" <<
-				" fingerprint " << fpr << std::endl;
-		const TMCG_OpenPGP_Pubkey *key = ring->find(fpr);
-		if (key == NULL)
+		if (!get_key_by_signature(ring, signature, opt_verbose, armored_pubkey))
 		{
-			// try to extract the public key from keyring based on issuer
-			std::string kid;
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				KeyidConvert(signature->issuer, kid);
-			if (opt_verbose > 1)
-				std::cerr << "INFO: lookup for issuer public key with" <<
-					" keyid " << kid << std::endl;
-			key = ring->find_by_keyid(kid);
-			if (key == NULL)
-			{
-				std::cerr << "ERROR: issuer public key not found in keyring" <<
-					std::endl; 
-				delete ring;
-				delete signature;
-				return -1;
-			}
+			delete ring;
+			delete signature;
+			return -1;
 		}
-		tmcg_openpgp_octets_t pkts;
-		key->Export(pkts);
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts,
-				armored_pubkey);
 	}
+	TMCG_OpenPGP_Pubkey *primary = NULL;
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 	if (parse_ok)

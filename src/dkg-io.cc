@@ -313,3 +313,38 @@ bool unlock_memory
 	return true;
 }
 
+bool get_key_by_signature
+	(const TMCG_OpenPGP_Keyring *ring, const TMCG_OpenPGP_Signature *signature,
+	 const int verbose, std::string &armored_key)
+{
+	// get the public key from keyring based on fingerprint
+	std::string fpr;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintConvertPlain(signature->issuerfpr, fpr);
+	if (verbose > 1)
+		std::cerr << "INFO: lookup for public key with fingerprint " <<
+			fpr << std::endl;
+	const TMCG_OpenPGP_Pubkey *keyref = ring->find(fpr);
+	if (keyref == NULL)
+	{
+		// get the public key from keyring based on key ID
+		std::string kid;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyidConvert(signature->issuer, kid);
+		if (verbose > 1)
+			std::cerr << "INFO: lookup for public key with keyid " <<
+				kid << std::endl;
+		keyref = ring->find_by_keyid(kid);
+		if (keyref == NULL)
+		{
+			std::cerr << "ERROR: public key not found in keyring" << std::endl; 
+			return false;
+		}
+	}
+	// extract ASCII-armored public key
+	tmcg_openpgp_octets_t pkts;
+	keyref->Export(pkts);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts, armored_key);
+	return true;
+}

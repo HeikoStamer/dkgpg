@@ -48,7 +48,7 @@
 		(const std::string &filename, std::string &result);
 	bool read_binary_key_file
 		(const std::string &filename, const tmcg_openpgp_armor_t type,
-		std::string &result);
+		 std::string &result);
 	bool check_strict_permissions
 		(const std::string &filename);
 	bool set_strict_permissions
@@ -69,6 +69,11 @@
 		();
 	bool unlock_memory
 		();
+	bool get_key_by_signature
+		(const TMCG_OpenPGP_Keyring *ring,
+		 const TMCG_OpenPGP_Signature *signature,
+		 const int verbose,
+		 std::string &armored_key);
 
 #endif
 

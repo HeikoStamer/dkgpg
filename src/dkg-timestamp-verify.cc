@@ -146,16 +146,16 @@ int main
 					" mandatory for short options." << std::endl;
 				std::cout << "  -b, --binary   consider KEYFILE and FILENAME" <<
 					" as binary input" << std::endl;
-				std::cout << "  -f TIMESPEC    signature made before given" <<
+				std::cout << "  -f TIMESPEC    timestamp made before given" <<
 					" TIMESPEC is not valid" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
-					" containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME    output the embedded target" <<
+					" containing external (revocation) keys" << std::endl;
+				std::cout << "  -o FILENAME    write the embedded target" <<
 					" signature to FILENAME instead of STDOUT" << std::endl;
-				std::cout << "  -s FILENAME    read signature from FILENAME" <<
-					" instead of STDIN" << std::endl; 
-				std::cout << "  -t TIMESPEC    signature made after given" <<
+				std::cout << "  -s FILENAME    read timestamp signature from" <<
+					" FILENAME instead of STDIN" << std::endl; 
+				std::cout << "  -t TIMESPEC    timestamp made after given" <<
 					" TIMESPEC is not valid" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
@@ -472,8 +472,8 @@ int main
 	//    after key expiry are not valid)
 	if (signature->creationtime < ckeytime)
 	{
-		std::cerr << "ERROR: signature was made before key creation" <<
-			std::endl;
+		std::cerr << "ERROR: timestamp signature was made before key" <<
+			" creation of timestamp authority" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -482,7 +482,8 @@ int main
 	}
 	if (ekeytime && (signature->creationtime > (ckeytime + ekeytime)))
 	{
-		std::cerr << "ERROR: signature was made after key expiry" << std::endl;
+		std::cerr << "ERROR: timestamp signature was made after key" <<
+			" expiry of timestamp authority" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -493,7 +494,7 @@ int main
 	if (signature->expirationtime &&
 		(current_time > (signature->creationtime + signature->expirationtime)))
 	{
-		std::cerr << "ERROR: signature is expired" << std::endl;
+		std::cerr << "ERROR: timestamp signature is expired" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -504,8 +505,8 @@ int main
 	//    capability are not valid)
 	if (!opt_weak && ((keyusage & 0x02) != 0x02))
 	{
-		std::cerr << "ERROR: corresponding key was not intented for signing" <<
-			std::endl;
+		std::cerr << "ERROR: corresponding key of timestamp authority" <<
+			" was not intented for signing" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -515,7 +516,8 @@ int main
 	// 4. key validity time (expired keys are not valid)
 	if (!opt_weak && ekeytime && (current_time > (ckeytime + ekeytime)))
 	{
-		std::cerr << "ERROR: corresponding key is expired" << std::endl;
+		std::cerr << "ERROR: corresponding key of timestamp authority" <<
+			" is expired" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -526,8 +528,8 @@ int main
 	//    timespec are not valid)
 	if (signature->creationtime < sigfrom)
 	{
-		std::cerr << "ERROR: signature was made before given TIMESPEC" <<
-			std::endl;
+		std::cerr << "ERROR: timestamp signature was made before given" <<
+			" TIMESPEC" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -536,8 +538,8 @@ int main
 	}
 	if (signature->creationtime > sigto)
 	{
-		std::cerr << "ERROR: signature was made after given TIMESPEC" <<
-			std::endl;
+		std::cerr << "ERROR: timestamp signature was made after given" <<
+			" TIMESPEC" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -553,7 +555,26 @@ int main
 	else
 		verify_ok = signature->Verify(primary->key, opt_verbose);
 
-	// check validity of embedded target signature, cf. [RFC 3628]
+	// check validity of the embedded target signature, cf. [RFC 3628]
+	if ((signature->creationtime < target_signature->creationtime) ||
+		(target_signature->expirationtime &&
+			(signature->creationtime > (target_signature->creationtime +
+			target_signature->expirationtime))))
+	{
+		std::cerr << "ERROR: timestamp signature was applied before or" <<
+			"after the validity peroid of the target signature" << std::endl;
+		delete target_signature;
+		delete signature;
+		delete primary;
+		delete ring;
+		return -4;
+	}
+	// 1. the time-stamp (or time mark) was applied before the end
+	//    of the validity period of the signer's certificate
+// TODO
+	// 2. the time-stamp (or time mark) was applied either while the
+	//    signer's certificate was not revoked or before the revocation
+	//    date of the certificate
 // TODO
 
 	// output extracted target signature for further processing

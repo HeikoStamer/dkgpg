@@ -39,12 +39,13 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	filename, kfilename, sfilename;
+	std::string	filename, kfilename, sfilename, ofilename;
 	int 		opt_verbose = 0;
 	bool		opt_binary = false, opt_weak = false;
 	char		*opt_sigfrom = NULL, *opt_sigto = NULL;
 	char		*opt_k = NULL;
 	char		*opt_s = NULL;
+	char		*opt_o = NULL;
 	std::string	sigfrom_str, sigto_str;
 	struct tm	sigfrom_tm = { 0 }, sigto_tm = { 0 };
 	time_t		sigfrom = 1535000000, sigto = time(NULL);
@@ -117,6 +118,22 @@ int main
 			}
 			continue;
 		}
+		else if (arg.find("-o") == 0)
+		{
+			size_t idx = ++i;
+			if ((idx < (size_t)(argc - 1)) && (opt_o == NULL))
+			{
+				ofilename = argv[i+1];
+				opt_o = (char*)ofilename.c_str();
+			}
+			else
+			{
+				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
+					std::endl;
+				return -1;
+			}
+			continue;
+		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
 				 (arg.find("-v") == 0) || (arg.find("-h") == 0) ||
 				 (arg.find("-V") == 0) || (arg.find("-w") == 0))
@@ -134,6 +151,8 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
+				std::cout << "  -o FILENAME    output the embedded target" <<
+					" signature to FILENAME instead of STDOUT" << std::endl;
 				std::cout << "  -s FILENAME    read signature from FILENAME" <<
 					" instead of STDIN" << std::endl; 
 				std::cout << "  -t TIMESPEC    signature made after given" <<
@@ -176,6 +195,8 @@ int main
 	filename = "TestY-pub.asc";
 	sfilename = "TestY_output_timestamp.sig";
 	opt_s = (char*)sfilename.c_str();
+	ofilename = "TestY_output_target.sig";
+	opt_o = (char*)sfilename.c_str();	
 	opt_verbose = 2;
 #endif
 #endif
@@ -260,6 +281,7 @@ int main
 
 	// parse the signature
 	TMCG_OpenPGP_Signature *signature = NULL;
+	TMCG_OpenPGP_Signature *target_signature = NULL;
 	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		SignatureParse(armored_signature, opt_verbose, signature);
 	if (parse_ok)
@@ -272,8 +294,22 @@ int main
 			delete signature;
 			return -1;
 		}
-		// extract embedded target signature
-// TODO
+		// extract and parse the embedded target signature
+		tmcg_openpgp_octets_t embsig;
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTagEncode(2, embsig);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketLengthEncode(signature->embeddedsig.size(), embsig);
+		embsig.insert(embsig.end(),
+			signature->embeddedsig.begin(), signature->embeddedsig.end());
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			SignatureParse(embsig, opt_verbose, target_signature);
+		if (!parse_ok)
+		{
+			std::cerr << "ERROR: cannot parse the embedded target signature" <<
+				std::endl;
+			delete signature;
+			return -1;
+		}
 	}
 	else
 	{
@@ -324,6 +360,7 @@ int main
 				std::cerr << "ERROR: issuer public key not found in keyring" <<
 					std::endl; 
 				delete ring;
+				delete target_signature;
 				delete signature;
 				return -1;
 			}
@@ -344,6 +381,7 @@ int main
 			std::cerr << "ERROR: primary key is not valid" << std::endl;
 			delete primary;
 			delete ring;
+			delete target_signature;
 			delete signature;
 			return -1;
 		}
@@ -355,6 +393,7 @@ int main
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
 			delete primary;
 			delete ring;
+			delete target_signature;
 			delete signature;
 			return -1;
 		}
@@ -363,6 +402,7 @@ int main
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		delete ring;
+		delete target_signature;
 		delete signature;
 		return -1;
 	}
@@ -405,6 +445,7 @@ int main
 			(primary->pkalgo != TMCG_OPENPGP_PKALGO_ECDSA)))
 		{
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
+			delete target_signature;
 			delete signature;
 			delete primary;
 			delete ring;
@@ -414,6 +455,7 @@ int main
 			OctetsCompare(signature->issuer, primary->id))
 		{
 			std::cerr << "ERROR: no admissible public key found" << std::endl;
+			delete target_signature;
 			delete signature;
 			delete primary;
 			delete ring;
@@ -432,6 +474,7 @@ int main
 	{
 		std::cerr << "ERROR: signature was made before key creation" <<
 			std::endl;
+		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -440,6 +483,7 @@ int main
 	if (ekeytime && (signature->creationtime > (ckeytime + ekeytime)))
 	{
 		std::cerr << "ERROR: signature was made after key expiry" << std::endl;
+		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -450,6 +494,7 @@ int main
 		(current_time > (signature->creationtime + signature->expirationtime)))
 	{
 		std::cerr << "ERROR: signature is expired" << std::endl;
+		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -461,6 +506,7 @@ int main
 	{
 		std::cerr << "ERROR: corresponding key was not intented for signing" <<
 			std::endl;
+		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -470,6 +516,7 @@ int main
 	if (!opt_weak && ekeytime && (current_time > (ckeytime + ekeytime)))
 	{
 		std::cerr << "ERROR: corresponding key is expired" << std::endl;
+		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -481,6 +528,7 @@ int main
 	{
 		std::cerr << "ERROR: signature was made before given TIMESPEC" <<
 			std::endl;
+		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -490,6 +538,7 @@ int main
 	{
 		std::cerr << "ERROR: signature was made after given TIMESPEC" <<
 			std::endl;
+		delete target_signature;
 		delete signature;
 		delete primary;
 		delete ring;
@@ -510,8 +559,27 @@ int main
 	// output extracted target signature for further processing
 	if (verify_ok)
 	{
-// TODO
+		std::string sigstr;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, target_signature->packet,
+			sigstr);
+		if (opt_o != NULL)
+		{
+			if (!write_message(ofilename, sigstr))
+			{
+				delete target_signature;
+				delete signature;
+				delete primary;
+				delete ring;
+				return -1;
+			}
+		}
+		else
+			std::cout << sigstr << std::endl;
 	}
+
+	// release target signature
+	delete target_signature;
 
 	// release signature
 	delete signature;

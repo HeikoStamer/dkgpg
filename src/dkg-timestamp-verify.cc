@@ -594,7 +594,8 @@ int main
 		// 1. the time-stamp (or time mark) was applied before the end
 		//    of the validity period of the signer's certificate
 		
-// TODO
+// TODO: use CheckValidityPeriod(signature->creationtime, opt_verbose) from
+//       LibTMCG on the selected target_key
 		// 2. the time-stamp (or time mark) was applied either while the
 		//    signer's certificate was not revoked or before the revocation
 		//    date of the certificate

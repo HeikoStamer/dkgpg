@@ -430,7 +430,6 @@ int main
 	// check the primary key, if no admissible subkey has been selected
 	if (!subkey_selected)
 	{
-
 		if (((primary->AccumulateFlags() & 0x02) != 0x02) &&
 		    (!primary->AccumulateFlags() &&
 			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
@@ -556,7 +555,7 @@ int main
 			target_signature->expirationtime))))
 	{
 		std::cerr << "ERROR: timestamp signature was applied before or" <<
-			"after the validity period of the target signature" << std::endl;
+			"after the validity period of the signature target" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;
@@ -579,7 +578,16 @@ int main
 	if (parse_ok)
 	{
 		target_key->CheckSelfSignatures(ring, opt_verbose);
-		target_key->CheckSubkeys(ring, opt_verbose);
+		if (!target_key->valid && !opt_weak)
+		{
+			std::cerr << "ERROR: primary key is not valid" << std::endl;
+			delete target_key;
+			delete target_signature;
+			delete signature;
+			delete primary;
+			delete ring;
+			return -4;
+		}
 		if (target_key->weak(opt_verbose) && !opt_weak)
 		{
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
@@ -590,21 +598,184 @@ int main
 			delete ring;
 			return -4;
 		}
-// TODO: compare target_signature->issuer[fpr] with target_key->id[fingerprint]
+		target_key->CheckSubkeys(ring, opt_verbose);
+		subkey_selected = false;
+		for (size_t j = 0; j < target_key->subkeys.size(); j++)
+		{
+			if (((target_key->subkeys[j]->AccumulateFlags() & 0x02) == 0x02) ||
+			    (!target_key->subkeys[j]->AccumulateFlags() &&
+				((target_key->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+				(target_key->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) ||
+				(target_key->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_DSA) ||
+				(target_key->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA))))
+			{
+				if (CallasDonnerhackeFinneyShawThayerRFC4880::
+					OctetsCompare(target_signature->issuer,
+						target_key->subkeys[j]->id))
+				{
+					subkey_selected = true;
+					subkey_idx = j;
+					break;
+				}
+			}
+		}
+		if (!subkey_selected)
+		{
+			if (((target_key->AccumulateFlags() & 0x02) != 0x02) &&
+			    (!target_key->AccumulateFlags() &&
+				(target_key->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+				(target_key->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) &&
+				(target_key->pkalgo != TMCG_OPENPGP_PKALGO_DSA) &&
+				(target_key->pkalgo != TMCG_OPENPGP_PKALGO_ECDSA)))
+			{
+				std::cerr << "ERROR: no admissible public key found" <<
+					std::endl;
+				delete target_key;
+				delete target_signature;
+				delete signature;
+				delete primary;
+				delete ring;
+				return -4;
+			}
+			if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+				OctetsCompare(target_signature->issuer, target_key->id))
+			{
+				std::cerr << "ERROR: no admissible public key found" <<
+					std::endl;
+				delete target_key;
+				delete target_signature;
+				delete signature;
+				delete primary;
+				delete ring;
+				return -4;
+			}
+		}
 		// 1. the time-stamp (or time mark) was applied before the end
 		//    of the validity period of the signer's certificate
-		
-// TODO: use CheckValidityPeriod(signature->creationtime, opt_verbose) from
-//       LibTMCG on the selected target_key
+		if (!subkey_selected)
+		{
+			if (!target_key->CheckValidityPeriod(signature->creationtime,
+				opt_verbose))
+			{
+				std::cerr << "ERROR: timestamp not in validity period of" <<
+					" signer's public key" << std::endl;
+				delete target_key;
+				delete target_signature;
+				delete signature;
+				delete primary;
+				delete ring;
+				return -5;
+			}
+		}
+		else
+		{
+			if (!target_key->subkeys[subkey_idx]->CheckValidityPeriod(
+				signature->creationtime, opt_verbose))
+			{
+				std::cerr << "ERROR: timestamp not in validity period of" <<
+					" signer's public key" << std::endl;
+				delete target_key;
+				delete target_signature;
+				delete signature;
+				delete primary;
+				delete ring;
+				return -5;
+			}			
+		}
 		// 2. the time-stamp (or time mark) was applied either while the
 		//    signer's certificate was not revoked or before the revocation
 		//    date of the certificate
-// TODO
+		if (!subkey_selected)
+		{
+			if (target_key->revoked)
+			{
+				if (target_key->AccumulateRevocationCodes() ==
+					TMCG_OPENPGP_REVCODE_KEY_COMPROMISED)
+				{
+					std::cerr << "ERROR: signer's public key was compromised" <<
+						std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}
+				if (signature->creationtime >
+					target_key->keyrevsigs[0]->creationtime)
+				{
+					std::cerr << "ERROR: signer's public key was revoked" <<
+						" before timestamp" << std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}				
+			}
+		}
+		else
+		{
+			if (target_key->revoked)
+			{
+				if (target_key->AccumulateRevocationCodes() ==
+					TMCG_OPENPGP_REVCODE_KEY_COMPROMISED)
+				{
+					std::cerr << "ERROR: signer's public key was compromised" <<
+						std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}
+				if (signature->creationtime >
+					target_key->keyrevsigs[0]->creationtime)
+				{
+					std::cerr << "ERROR: signer's public key was revoked" <<
+						" before timestamp" << std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}				
+			}
+			if (target_key->subkeys[subkey_idx]->revoked)
+			{
+				if (target_key->subkeys[subkey_idx]->AccumulateRevocationCodes()
+					== TMCG_OPENPGP_REVCODE_KEY_COMPROMISED)
+				{
+					std::cerr << "ERROR: signer's public key was compromised" <<
+						std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}
+				if (signature->creationtime >
+					target_key->subkeys[subkey_idx]->keyrevsigs[0]->creationtime)
+				{
+					std::cerr << "ERROR: signer's public key was revoked" <<
+						" before timestamp" << std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}
+			}
+		}
 	}
 	else
 	{
-		std::cerr << "ERROR: cannot use the public key of target" <<
-			" signature issuer" << std::endl;
+		std::cerr << "ERROR: cannot use signer's public key" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;

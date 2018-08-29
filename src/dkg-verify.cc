@@ -411,7 +411,6 @@ int main
 	// check the primary key, if no admissible subkey has been selected
 	if (!subkey_selected)
 	{
-
 		if (((primary->AccumulateFlags() & 0x02) != 0x02) &&
 		    (!primary->AccumulateFlags() &&
 			(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&

@@ -63,6 +63,7 @@ bool						instance_forked = false;
 
 std::string					passphrase, ifilename, ofilename, kfilename;
 std::string					passwords, hostname, port, URI, yfilename, sn;
+time_t						acc = 0;
 
 int 						opt_verbose = 0;
 char						*opt_i = NULL;
@@ -74,6 +75,7 @@ char						*opt_k = NULL;
 char						*opt_y = NULL;
 char						*opt_s = NULL;
 unsigned long int			opt_p = 55000, opt_W = 5;
+bool						opt_a = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const size_t num_xtests)
@@ -392,6 +394,17 @@ void run_instance
 		if (opt_verbose)
 			std::cerr << "INFO: S_" << whoami << ": canonicalized signature" <<
 				" creation time (timestamp) = " << csigtime << std::endl;
+		if (opt_a)
+		{
+			time_t lst = tvs[0], hst = tvs[tvs.size()-1];
+			if ((csigtime - lst) > (hst - csigtime))
+				acc = (csigtime - lst); // set timestamp accuracy
+			else
+				acc = (hst - csigtime); // set timestamp accuracy
+			if (opt_verbose)
+				std::cerr << "INFO: S_" << whoami << ": set accuracy = " <<
+					(long)acc << std::endl;
+		}
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
 		if (mpz_sizeinbase(dss->q, 2L) == 256)
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
@@ -425,7 +438,21 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintCompute(prv->pub->pub_hashing, issuer);
 	tmcg_openpgp_notations_t notations;
-	tmcg_openpgp_notation_t serialnumber;
+	tmcg_openpgp_notation_t accuracy, serialnumber;
+	if (opt_a)
+	{
+		if (opt_verbose)
+			std::cerr << "INFO: include an OpenPGP notation" << std::endl;
+		std::string accuracy_name = "accuracy@dkg-timestamp";
+		std::stringstream avs;
+		avs << (long)acc;
+		std::string accuracy_value = avs.str();
+		for (size_t i = 0; i < accuracy_name.length(); i++)
+			accuracy.first.push_back(accuracy_name[i]);
+		for (size_t i = 0; i < accuracy_value.length(); i++)
+			accuracy.second.push_back(accuracy_value[i]);
+		notations.push_back(accuracy);
+	}
 	if (sn.length() != 0)
 	{
 		if (opt_verbose)
@@ -693,6 +720,7 @@ unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
+int gnunet_opt_a = 0;
 #endif
 
 void fork_instance
@@ -734,6 +762,11 @@ int main
 	char *logfile = NULL;
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
+		GNUNET_GETOPT_option_flag('a',
+			"accuracy",
+			"include OpenPGP notation that represents time deviation",
+			&gnunet_opt_a
+		),
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_help(about),
 		GNUNET_GETOPT_option_string('H',
@@ -931,7 +964,8 @@ int main
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
-			(arg.find("-h") == 0) || (arg.find("-V") == 0))
+			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
+			(arg.find("-a") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -940,6 +974,8 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
+				std::cout << "  -a, --accuracy include OpenPGP notation that" <<
+					" represents time deviation" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
@@ -978,6 +1014,8 @@ int main
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
+			if ((arg.find("-a") == 0) || (arg.find("--accuracy") == 0))
+				opt_a = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -1008,6 +1046,7 @@ int main
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	sn = "serialnumber@dkg-timestamp.cc:00001";
 	opt_verbose = 2;
+	opt_a = true;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
@@ -1109,6 +1148,11 @@ int main
 	// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+		GNUNET_GETOPT_option_flag('a',
+			"accuracy",
+			"include OpenPGP notation that represents time deviation",
+			&gnunet_opt_a
+		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
 			"STRING",

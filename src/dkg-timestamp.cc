@@ -403,7 +403,7 @@ void run_instance
 				acc = (hst - csigtime); // set timestamp accuracy
 			if (opt_verbose)
 				std::cerr << "INFO: S_" << whoami << ": set accuracy = " <<
-					(long)acc << std::endl;
+					(unsigned long int)acc << std::endl;
 		}
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
 		if (mpz_sizeinbase(dss->q, 2L) == 256)
@@ -445,7 +445,7 @@ void run_instance
 			std::cerr << "INFO: include an OpenPGP notation" << std::endl;
 		std::string accuracy_name = "accuracy@dkg-timestamp";
 		std::stringstream avs;
-		avs << (long)acc;
+		avs << (unsigned long int)acc;
 		std::string accuracy_value = avs.str();
 		for (size_t i = 0; i < accuracy_name.length(); i++)
 			accuracy.first.push_back(accuracy_name[i]);

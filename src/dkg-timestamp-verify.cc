@@ -460,10 +460,10 @@ int main
 	}
 
 	// additional validity checks on key and signature
-	time_t current_time = time(NULL);
+	time_t current_time = time(NULL), sc = signature->creationtime;
 	// 1. key validity time (signatures made before key creation or
 	//    after key expiry are not valid)
-	if (signature->creationtime < ckeytime)
+	if (sc < ckeytime)
 	{
 		std::cerr << "ERROR: timestamp signature was made before key" <<
 			" creation of timestamp authority" << std::endl;
@@ -473,7 +473,7 @@ int main
 		delete ring;
 		return -2;
 	}
-	if (ekeytime && (signature->creationtime > (ckeytime + ekeytime)))
+	if (ekeytime && (sc > (ckeytime + ekeytime)))
 	{
 		std::cerr << "ERROR: timestamp signature was made after key" <<
 			" expiry of timestamp authority" << std::endl;
@@ -485,7 +485,7 @@ int main
 	}
 	// 2. signature validity time (expired signatures are not valid)
 	if (signature->expirationtime &&
-		(current_time > (signature->creationtime + signature->expirationtime)))
+		(current_time > (sc + signature->expirationtime)))
 	{
 		std::cerr << "ERROR: timestamp signature is expired" << std::endl;
 		delete target_signature;
@@ -519,7 +519,7 @@ int main
 	}
 	// 5. signature time (signatures made before the sigfrom or after the sigto
 	//    timespec are not valid)
-	if (signature->creationtime < sigfrom)
+	if (sc < sigfrom)
 	{
 		std::cerr << "ERROR: timestamp signature was made before given" <<
 			" TIMESPEC" << std::endl;
@@ -529,7 +529,7 @@ int main
 		delete ring;
 		return -2;
 	}
-	if (signature->creationtime > sigto)
+	if (sc > sigto)
 	{
 		std::cerr << "ERROR: timestamp signature was made after given" <<
 			" TIMESPEC" << std::endl;
@@ -549,10 +549,9 @@ int main
 		verify_ok = signature->Verify(primary->key, opt_verbose);
 
 	// check validity of the embedded target signature, cf. [RFC 3628]
-	if ((signature->creationtime < target_signature->creationtime) ||
-		(target_signature->expirationtime &&
-			(signature->creationtime > (target_signature->creationtime +
-			target_signature->expirationtime))))
+	time_t tsc = target_signature->creationtime;
+	time_t tse = target_signature->expirationtime;
+	if ((sc < tsc) || (tse && (sc > (tsc + tse))))
 	{
 		std::cerr << "ERROR: timestamp signature was applied before or" <<
 			"after the validity period of the signature target" << std::endl;
@@ -654,8 +653,7 @@ int main
 		//    of the validity period of the signer's certificate
 		if (!subkey_selected)
 		{
-			if (!target_key->CheckValidityPeriod(signature->creationtime,
-				opt_verbose))
+			if (!target_key->CheckValidityPeriod(sc, opt_verbose))
 			{
 				std::cerr << "ERROR: timestamp not in validity period of" <<
 					" signer's public key" << std::endl;
@@ -669,8 +667,8 @@ int main
 		}
 		else
 		{
-			if (!target_key->subkeys[subkey_idx]->CheckValidityPeriod(
-				signature->creationtime, opt_verbose))
+			if (!target_key->subkeys[subkey_idx]->CheckValidityPeriod(sc,
+				opt_verbose))
 			{
 				std::cerr << "ERROR: timestamp not in validity period of" <<
 					" signer's public key" << std::endl;
@@ -701,8 +699,7 @@ int main
 					delete ring;
 					return -5;
 				}
-				if (signature->creationtime >
-					target_key->keyrevsigs[0]->creationtime)
+				if (sc > target_key->keyrevsigs[0]->creationtime)
 				{
 					std::cerr << "ERROR: signer's public key was revoked" <<
 						" before timestamp" << std::endl;
@@ -731,8 +728,7 @@ int main
 					delete ring;
 					return -5;
 				}
-				if (signature->creationtime >
-					target_key->keyrevsigs[0]->creationtime)
+				if (sc > target_key->keyrevsigs[0]->creationtime)
 				{
 					std::cerr << "ERROR: signer's public key was revoked" <<
 						" before timestamp" << std::endl;
@@ -758,8 +754,7 @@ int main
 					delete ring;
 					return -5;
 				}
-				if (signature->creationtime >
-					target_key->subkeys[subkey_idx]->keyrevsigs[0]->creationtime)
+				if (sc > target_key->subkeys[subkey_idx]->keyrevsigs[0]->creationtime)
 				{
 					std::cerr << "ERROR: signer's public key was revoked" <<
 						" before timestamp" << std::endl;
@@ -788,8 +783,8 @@ int main
 	{
 		std::string sigstr;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, target_signature->packet,
-			sigstr);
+			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE,
+				target_signature->packet, sigstr);
 		if (opt_o != NULL)
 		{
 			if (!write_message(ofilename, sigstr))
@@ -822,13 +817,13 @@ int main
 	if (!verify_ok)
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: Bad signature" << std::endl;
+			std::cerr << "INFO: Bad timestamp signature" << std::endl;
 		return -3;
 	}
 	else
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: Good signature" << std::endl;
+			std::cerr << "INFO: Good timestamp signature" << std::endl;
 	}
 	return 0;
 }

@@ -598,6 +598,10 @@ void run_instance
 					ret = CallasDonnerhackeFinneyShawThayerRFC4880::
 						AsymmetricSignECDSA(hash, prv->private_key, r, s);
 					break;
+				case TMCG_OPENPGP_PKALGO_EDDSA:
+					ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+						AsymmetricSignEdDSA(hash, prv->private_key, r, s);
+					break;
 			default:
 					std::cerr << "ERROR: public-key algorithm " <<
 						(int)prv->pkalgo << " not supported" << std::endl;
@@ -629,6 +633,7 @@ void run_instance
 				break;
 			case TMCG_OPENPGP_PKALGO_DSA:
 			case TMCG_OPENPGP_PKALGO_ECDSA:
+			case TMCG_OPENPGP_PKALGO_EDDSA:
 			case TMCG_OPENPGP_PKALGO_EXPERIMENTAL7:
 				CallasDonnerhackeFinneyShawThayerRFC4880::
 					PacketSigEncode(trailer, left, r, s, sig);

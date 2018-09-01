@@ -434,10 +434,18 @@ int main
 			primary->CheckSelfSignatures(ring, opt_verbose);
 			if (!primary->valid)
 			{
-				std::cerr << "ERROR: primary key is not valid" << std::endl;
-				delete primary;
-				delete ring;
-				return -1;
+				if (opt_weak)
+				{
+					std::cerr << "WARNING: primary key is not valid" <<
+						std::endl;
+				}
+				else
+				{
+					std::cerr << "ERROR: primary key is not valid" << std::endl;
+					delete primary;
+					delete ring;
+					return -1;
+				}
 			}
 			primary->CheckSubkeys(ring, opt_verbose);
 			primary->Reduce(); // keep only valid subkeys

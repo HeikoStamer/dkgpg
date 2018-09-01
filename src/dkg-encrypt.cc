@@ -536,7 +536,7 @@ int main
 		}
 
 		// check primary key, if no encryption-capable subkeys have been selected
-		if (selected.size() == 0)
+		if ((selected.size() == 0) && primary->valid) 
 		{	
 			if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
 			    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
@@ -564,6 +564,14 @@ int main
 						" for modification detection (MDC);" <<
 						"use MDC protection anyway" << std::endl;
 			}
+		}
+		else if ((selected.size() == 0) && !primary->valid)
+		{
+			std::cerr << "ERROR: no valid public key for encryption found" <<
+				std::endl;
+			delete primary;
+			delete ring;
+			return -1;
 		}
 
 		// encrypt the session key (create PKESK packet)

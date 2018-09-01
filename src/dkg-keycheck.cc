@@ -801,10 +801,11 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::string	kfilename, filename;
+	std::string	kfilename, filename, ofilename;
 	int			opt_verbose = 0;
 	bool		opt_b = false, opt_r = false, opt_p = false, opt_y = false;
 	char		*opt_k = NULL;
+	char		*opt_o = NULL;
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -818,6 +819,16 @@ int main
 			{
 				kfilename = argv[i+1];
 				opt_k = (char*)kfilename.c_str();
+			}
+			continue;
+		}
+		else if ((arg.find("-o") == 0))
+		{
+			size_t idx = ++i;
+			if ((idx < (size_t)(argc - 1)) && (opt_o == NULL))
+			{
+				ofilename = argv[i+1];
+				opt_o = (char*)ofilename.c_str();
 			}
 			continue;
 		}
@@ -837,6 +848,8 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
+				std::cout << "  -o FILENAME    export (reduced) public key" << 
+					" to FILENAME" << std::endl;
 				std::cout << "  -p, --private  read from private key block" <<
 					std::endl;
 				std::cout << "  -r, --reduce   check only valid subkeys" <<
@@ -1026,6 +1039,20 @@ int main
 			primary->Reduce();
 		if (primary->weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak primary key detected" << std::endl;
+		if (opt_o != NULL)
+		{
+			tmcg_openpgp_octets_t pub;
+			std::string armor;
+			primary->Export(pub);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pub, armor);
+			if (!write_message(ofilename, armor))
+			{
+				delete primary;
+				delete ring;
+				return -1;
+			} 
+		}
 	}
 	else
 	{

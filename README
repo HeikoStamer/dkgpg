@@ -77,7 +77,10 @@ Overview
   available for the programs dkg-sign and dkg-keysign. 
 
   The programs dkg-keycheck and dkg-keyinfo provide basic information on given
-  OpenPGP public and private keys, respectively.
+  OpenPGP public and private keys, respectively. By option "-m" of dkg-keyinfo
+  the migration of a peer identity is achieved. Please note that only the name
+  of the peer is migrated, the private key material keeps unchanged. Thus
+  afterwards all parties should refresh their shares by dkg-refresh.
 
   The program dkg-sign creates a detached signature on a binary or a text file,
   if a sufficient threshold of the parties work together in the interactive
@@ -162,6 +165,21 @@ Bugs, Contribution, GIT
   * GNU Autoconf, version >= 2.61, https://www.gnu.org/software/autoconf/
   * GNU Automake, version >= 1.12, https://www.gnu.org/software/automake/
   * GNU Libtool, version >= 2.4.2, https://www.gnu.org/software/libtool/
+
+Example: configuration in .muttrc (replacement of classic pgp)
+--------------------------------------------------------------
+[...]
+  set pgp_list_pubring_command="~/bin/dkg-keycheck -y -k ~/keyring.asc %r"
+  set pgp_self_encrypt=yes
+  set pgp_default_key="0x76F73011329D27DB8D7C3F974F584EB8FB2BE14F"
+  set pgp_encrypt_only_command="~/bin/dkg-encrypt -k ~/keyring.asc -i %f -r %r"
+  set pgp_check_gpg_decrypt_status_fd=no
+  set pgp_decryption_okay="^INFO: decrypted message"
+  set pgp_decrypt_command="~/bin/dkg-decrypt -E -V -y ~/secretkey.asc -i %f"
+  set pgp_verify_command="~/bin/dkg-verify -V -k ~/keyring.asc -i %f -s %s"
+  set pgp_good_sign="^INFO: Good signature"
+  set pgp_sign_command="~/bin/dkg-sign -E -t -V -y ~/secretkey.asc -i %f"
+[...]
 
 Copyright and License of this software
 --------------------------------------

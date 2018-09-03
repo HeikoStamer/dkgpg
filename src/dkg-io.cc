@@ -25,7 +25,8 @@
 #include "dkg-io.hh"
 
 bool get_passphrase
-	(const std::string &prompt, const bool echo, std::string &passphrase)
+	(const std::string &prompt, const bool echo,
+	 tmcg_openpgp_secure_string_t &passphrase)
 {
 	struct termios old_term, new_term;
 	

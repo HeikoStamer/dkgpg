@@ -57,21 +57,22 @@ pid_t						pid[DKGPG_MAX_N];
 std::vector<std::string>	peers;
 bool						instance_forked = false;
 
-std::string					passphrase, userid, passwords, hostname, port;
-int 						opt_verbose = 0;
-bool						opt_y = false;
-char						*opt_crs = NULL;
-char						*opt_passwords = NULL;
-char						*opt_hostname = NULL;
-unsigned long int			opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N;
-unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
+tmcg_openpgp_secure_string_t	passphrase;
+std::string						userid, passwords, hostname, port;
+int 							opt_verbose = 0;
+bool							opt_y = false;
+char							*opt_crs = NULL;
+char							*opt_passwords = NULL;
+char							*opt_hostname = NULL;
+unsigned long int				opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N;
+unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
 
-bool						fips = false;
-std::stringstream			crss;
-mpz_t 						cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
-size_t						cache_avail = 0;
+bool							fips = false;
+std::stringstream				crss;
+mpz_t 							cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
+size_t							cache_avail = 0;
 
-size_t						T, S;
+size_t							T, S;
 
 void run_instance
 	(const size_t whoami, const time_t keytime, const time_t keyexptime,
@@ -2341,7 +2342,7 @@ int main
 	std::cerr << "1. Please enter an OpenPGP-style user ID (name <email>): ";
 	std::getline(std::cin, userid);
 	std::cin.clear();
-	std::string passphrase_check;
+	tmcg_openpgp_secure_string_t passphrase_check;
 	std::string ps1 = "2. Passphrase to protect your part of the private key";
 	std::string ps2 = "Please repeat the given passphrase to continue";
 	do

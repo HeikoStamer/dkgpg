@@ -43,7 +43,8 @@
 	#include <libTMCG.hh>
 
 	bool get_passphrase
-		(const std::string &prompt, const bool echo, std::string &passphrase);
+		(const std::string &prompt, const bool echo,
+		 tmcg_openpgp_secure_string_t &passphrase);
 	bool read_key_file
 		(const std::string &filename, std::string &result);
 	bool read_binary_key_file

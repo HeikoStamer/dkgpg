@@ -66,7 +66,8 @@ pid_t 							pid[DKGPG_MAX_N];
 std::vector<std::string>		peers;
 bool							instance_forked = false;
 
-std::string						passphrase, ifilename, ofilename, kfilename;
+tmcg_openpgp_secure_string_t	passphrase;
+std::string						ifilename, ofilename, kfilename;
 std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
@@ -1498,7 +1499,7 @@ void run_instance
 			if (opt_verbose > 1)
 				std::cerr << "INFO: every PKESK decryption failed;" <<
 					" now try each SKESK" << std::endl;
-			std::string esk_passphrase;
+			tmcg_openpgp_secure_string_t esk_passphrase;
 			if (!get_passphrase("Enter passphrase for this message", opt_E,
 				esk_passphrase))
 			{

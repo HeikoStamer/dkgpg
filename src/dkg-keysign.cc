@@ -61,7 +61,8 @@ pid_t							pid[DKGPG_MAX_N];
 std::vector<std::string>		peers;
 bool							instance_forked = false;
 
-std::string						passphrase, ifilename, ofilename, kfilename;
+tmcg_openpgp_secure_string_t	passphrase;
+std::string						ifilename, ofilename, kfilename;
 std::string						passwords, hostname, port, URI, u, yfilename;
 
 int 							opt_verbose = 0;

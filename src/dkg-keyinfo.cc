@@ -43,11 +43,12 @@ int main
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
-	std::vector<std::string>	peers;
-	std::string					passphrase, kfilename;
-	std::string					migrate_peer_from, migrate_peer_to;
-	int 						opt_verbose = 0;
-	char						*opt_k = NULL;
+	std::vector<std::string>		peers;
+	tmcg_openpgp_secure_string_t	passphrase;
+	std::string						kfilename;
+	std::string						migrate_peer_from, migrate_peer_to;
+	int 							opt_verbose = 0;
+	char							*opt_k = NULL;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)

@@ -61,19 +61,20 @@ pid_t 						pid[DKGPG_MAX_N];
 std::vector<std::string>	peers;
 bool						instance_forked = false;
 
-std::string					passphrase, ifilename, ofilename, kfilename;
-std::string					passwords, hostname, port, URI, yfilename;
+tmcg_openpgp_secure_string_t	passphrase;
+std::string						ifilename, ofilename, kfilename;
+std::string						passwords, hostname, port, URI, yfilename;
 
-int 						opt_verbose = 0;
-char						*opt_ifilename = NULL;
-char						*opt_ofilename = NULL;
-char						*opt_passwords = NULL;
-char						*opt_hostname = NULL;
-char						*opt_URI = NULL;
-char						*opt_k = NULL;
-char						*opt_y = NULL;
-unsigned long int			opt_e = 0, opt_p = 55000, opt_W = 5;
-bool						opt_t = false, opt_E = false, opt_C = false;
+int 							opt_verbose = 0;
+char							*opt_ifilename = NULL;
+char							*opt_ofilename = NULL;
+char							*opt_passwords = NULL;
+char							*opt_hostname = NULL;
+char							*opt_URI = NULL;
+char							*opt_k = NULL;
+char							*opt_y = NULL;
+unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
+bool							opt_t = false, opt_E = false, opt_C = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime,

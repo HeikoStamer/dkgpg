@@ -1002,7 +1002,7 @@ int main
 	}
 	else if (opt_p)
 	{
-		std::string passphrase = ""; // first try an empty passphrase
+		tmcg_openpgp_secure_string_t passphrase = ""; // try an empty passphrase
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PrivateKeyBlockParse(armored_pubkey, opt_verbose, passphrase, prv);
 		if (!parse_ok)

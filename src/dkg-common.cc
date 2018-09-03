@@ -28,7 +28,8 @@ bool init_tDSS
 	(const TMCG_OpenPGP_Prvkey *prv, const int opt_verbose,
 	 CanettiGennaroJareckiKrawczykRabinDSS* &dss)
 {
-	tmcg_openpgp_secure_stringstream_t dss_in;
+	tmcg_openpgp_secure_stringstream_t dss_in; // TODO
+//	std::stringstream dss_in;
 	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
 		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
 	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
@@ -81,7 +82,8 @@ bool init_tElG
 	(const TMCG_OpenPGP_PrivateSubkey *sub, const int opt_verbose,
 	 GennaroJareckiKrawczykRabinDKG* &dkg)
 {
-	tmcg_openpgp_secure_stringstream_t dkg_in;
+	tmcg_openpgp_secure_stringstream_t dkg_in; // TODO
+//	std::stringstream dkg_in;
 	dkg_in << sub->pub->elg_p << std::endl << sub->telg_q << std::endl <<
 		sub->pub->elg_g << std::endl << sub->telg_h << std::endl;
 	dkg_in << sub->telg_n << std::endl << sub->telg_t << std::endl <<

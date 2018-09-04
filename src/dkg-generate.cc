@@ -204,8 +204,8 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSecEncode(keytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, x,
 				passphrase, sec);
-		for (size_t i = 6; i < pub.size(); i++)
-			pub_hashing.push_back(pub[i]);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketBodyExtract(pub, 0, pub_hashing);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			FingerprintCompute(pub_hashing, issuer);
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
@@ -289,8 +289,8 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
 				hashalgo, sigtime, keyexptime, elgflags, issuer, subsig_hashing);
-		for (size_t i = 6; i < sub.size(); i++)
-			sub_hashing.push_back(sub[i]);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketBodyExtract(sub, 0, sub_hashing);
 		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash,
@@ -995,8 +995,8 @@ void run_instance
 			PacketSecEncode(ckeytime, TMCG_OPENPGP_PKALGO_DSA, p, q, g, y, x,
 				passphrase, sec);
 	}
-	for (size_t i = 6; i < pub.size(); i++)
-		pub_hashing.push_back(pub[i]);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketBodyExtract(pub, 0, pub_hashing);
 	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, issuer);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 	// "In a V4 key, the primary key MUST be a key capable of certification."
@@ -1374,8 +1374,8 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
 				hashalgo, sigtime, keyexptime, elgflags, issuer, subsig_hashing);
-		for (size_t i = 6; i < sub.size(); i++)
-			sub_hashing.push_back(sub[i]);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketBodyExtract(sub, 0, sub_hashing);
 		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyHash(pub_hashing, sub_hashing, subsig_hashing, hashalgo, hash,

@@ -251,7 +251,7 @@ void run_instance
 		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
 			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		// create an instance of a reliable broadcast protocol (RBC)
-		std::string myID = "dkg-sign|";
+		std::string myID = "dkg-sign|" PACKAGE_VERSION "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		// assume maximum asynchronous t-resilience for RBC

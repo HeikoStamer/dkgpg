@@ -467,7 +467,7 @@ void run_instance
 		(opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
-	std::string myID = "dkg-generate|";
+	std::string myID = "dkg-generate|" PACKAGE_VERSION "|";
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
 	// include parameters in the ID of broadcast protocol to enforce equal set

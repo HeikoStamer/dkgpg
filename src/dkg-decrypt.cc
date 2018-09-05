@@ -1131,7 +1131,7 @@ void run_instance
 			bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin,
 			(opt_W * 60));
 		// create an instance of a reliable broadcast protocol (RBC)
-		std::string myID = "dkg-decrypt|";
+		std::string myID = "dkg-decrypt|" PACKAGE_VERSION "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		// include parameterized t-resiliance of DKG in the ID of RBC protocol

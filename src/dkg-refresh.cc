@@ -229,7 +229,7 @@ void run_instance
 		(opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
-	std::string myID = "dkg-refresh|";
+	std::string myID = "dkg-refresh|" PACKAGE_VERSION "|";
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
 	// assume maximum asynchronous t-resilience for RBC

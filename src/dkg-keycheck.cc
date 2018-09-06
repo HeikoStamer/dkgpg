@@ -995,7 +995,7 @@ int main
 	if (opt_y)
 	{
 		int ret = 0;
-		if (ring->list(filename) == 0)
+		if (ring->List(filename) == 0)
 			ret = -1;
 		delete ring;
 		return ret;

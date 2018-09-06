@@ -117,8 +117,7 @@ bool encrypt_session_key
 	 const tmcg_openpgp_octets_t &keyid, tmcg_openpgp_octets_t &pkesk)
 {
 	bool ret;
-	if ((pub->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
-		(pub->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY))
+	if (pub->pkalgo != TMCG_OPENPGP_PKALGO_RSA)
 	{
 		return false; // only RSA is an encryption-capable primary key 
 	}
@@ -410,7 +409,7 @@ int main
 			if (opt_verbose > 1)
 				std::cerr << "INFO: lookup for encryption key with" <<
 					" fingerprint " << keyspec[k] << std::endl;
-			const TMCG_OpenPGP_Pubkey *key = ring->find_by_keyid(keyspec[k]);
+			const TMCG_OpenPGP_Pubkey *key = ring->FindByKeyid(keyspec[k]);
 			if (key == NULL)
 			{
 				std::cerr << "ERROR: encryption key not found in keyring" <<

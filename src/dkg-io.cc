@@ -325,7 +325,7 @@ bool get_key_by_signature
 	if (verbose > 1)
 		std::cerr << "INFO: lookup for public key with fingerprint " <<
 			fpr << std::endl;
-	const TMCG_OpenPGP_Pubkey *keyref = ring->find(fpr);
+	const TMCG_OpenPGP_Pubkey *keyref = ring->Find(fpr);
 	if (keyref == NULL)
 	{
 		// get the public key from keyring based on key ID
@@ -335,7 +335,7 @@ bool get_key_by_signature
 		if (verbose > 1)
 			std::cerr << "INFO: lookup for public key with keyid " <<
 				kid << std::endl;
-		keyref = ring->find_by_keyid(kid);
+		keyref = ring->FindByKeyid(kid);
 		if (keyref == NULL)
 		{
 			std::cerr << "ERROR: public key not found in keyring" << std::endl; 

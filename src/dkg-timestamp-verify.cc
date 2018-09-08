@@ -599,7 +599,7 @@ int main
 			delete ring;
 			return -4;
 		}
-		if (target_key->weak(opt_verbose) && !opt_weak)
+		if (target_key->Weak(opt_verbose) && !opt_weak)
 		{
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
 			delete target_key;

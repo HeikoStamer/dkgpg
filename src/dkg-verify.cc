@@ -365,7 +365,7 @@ int main
 		primary->CheckSubkeys(ring, opt_verbose);
 		if (!opt_weak)
 			primary->Reduce(); // keep only valid subkeys
-		if (primary->weak(opt_verbose) && !opt_weak)
+		if (primary->Weak(opt_verbose) && !opt_weak)
 		{
 			std::cerr << "ERROR: weak primary key is not allowed" << std::endl;
 			delete primary;
@@ -436,6 +436,17 @@ int main
 		keyusage = primary->AccumulateFlags();
 		ckeytime = primary->creationtime;
 		ekeytime = primary->expirationtime;
+	}
+	else
+	{
+		if (primary->subkeys[subkey_idx]->Weak(opt_verbose) && !opt_weak)
+		{
+			std::cerr << "ERROR: weak subkey is not allowed" << std::endl;
+			delete signature;
+			delete primary;
+			delete ring;
+			return -1;
+		}
 	}
 
 	// additional validity checks on key and signature

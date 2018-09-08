@@ -158,7 +158,7 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
-	if (!prv->pub->valid || ((opt_y == NULL) && prv->weak(opt_verbose)))
+	if (!prv->pub->valid || ((opt_y == NULL) && prv->Weak(opt_verbose)))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete ring;

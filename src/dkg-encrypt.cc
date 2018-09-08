@@ -448,7 +448,7 @@ int main
 			}
 			primary->CheckSubkeys(ring, opt_verbose);
 			primary->Reduce(); // keep only valid subkeys
-			if (primary->weak(opt_verbose) && !opt_weak)
+			if (primary->Weak(opt_verbose) && !opt_weak)
 			{
 				std::cerr << "ERROR: weak primary key is not allowed" <<
 					std::endl;
@@ -487,7 +487,7 @@ int main
 					(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL) ||
 					(primary->subkeys[j]->pkalgo == TMCG_OPENPGP_PKALGO_ECDH))))
 			{
-				if (primary->subkeys[j]->weak(opt_verbose) && !opt_weak)
+				if (primary->subkeys[j]->Weak(opt_verbose) && !opt_weak)
 				{
 					if (opt_verbose)
 						std::cerr << "WARNING: weak subkey for encryption" <<

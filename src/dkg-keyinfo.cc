@@ -247,7 +247,7 @@ int main
 		delete ring;
 		return -1;
 	}
-	if (!prv->pub->valid || prv->weak(opt_verbose))
+	if (!prv->pub->valid || prv->Weak(opt_verbose))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete ring;
@@ -281,7 +281,7 @@ int main
 		(prv->private_subkeys[0]->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9))
 	{
 		TMCG_OpenPGP_PrivateSubkey *sub = prv->private_subkeys[0];
-		if (!sub->pub->valid || sub->weak(opt_verbose))
+		if (!sub->pub->valid || sub->Weak(opt_verbose))
 		{
 			std::cerr << "ERROR: subkey is invalid or weak" << std::endl;
 			delete dss;

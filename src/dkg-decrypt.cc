@@ -857,7 +857,7 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
-	if (!prv->pub->valid || ((opt_y == NULL) && prv->weak(opt_verbose)))
+	if (!prv->pub->valid || ((opt_y == NULL) && prv->Weak(opt_verbose)))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete ring;
@@ -876,7 +876,7 @@ void run_instance
 			TMCG_OpenPGP_PrivateSubkey *ssb2 = prv->private_subkeys[i];
 			if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
 			{
-				if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
+				if (ssb2->pub->valid && !ssb2->Weak(opt_verbose))
 				{
 					if ((ssb != NULL) && (opt_verbose > 1))
 						std::cerr << "WARNING: more than one valid subkey" <<
@@ -961,7 +961,7 @@ void run_instance
 					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL) ||
 					(ssb2->pkalgo == TMCG_OPENPGP_PKALGO_ECDH))
 				{
-					if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
+					if (ssb2->pub->valid && !ssb2->Weak(opt_verbose))
 					{
 						if ((ssb != NULL) && (opt_verbose > 1))
 							std::cerr << "WARNING: more than one valid" <<
@@ -2206,7 +2206,7 @@ int main
 			delete ring;
 			return -1;
 		}
-		if (!prv->pub->valid || prv->weak(opt_verbose))
+		if (!prv->pub->valid || prv->Weak(opt_verbose))
 		{
 			std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 			delete ring;
@@ -2220,7 +2220,7 @@ int main
 			TMCG_OpenPGP_PrivateSubkey *ssb2 = prv->private_subkeys[i];
 			if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
 			{
-				if (ssb2->pub->valid && !ssb2->weak(opt_verbose))
+				if (ssb2->pub->valid && !ssb2->Weak(opt_verbose))
 				{
 					if ((ssb != NULL) && (opt_verbose > 1))
 						std::cerr << "WARNING: more than one valid subkey" <<

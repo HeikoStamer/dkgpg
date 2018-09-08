@@ -1037,7 +1037,7 @@ int main
 		primary->CheckSubkeys(ring, opt_verbose);
 		if (opt_r)
 			primary->Reduce();
-		if (primary->weak(opt_verbose) && opt_verbose)
+		if (primary->Weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak primary key detected" << std::endl;
 		if (opt_o != NULL)
 		{
@@ -1351,7 +1351,7 @@ int main
 	}
 	if (opt_p)
 	{
-		if (prv->weak(opt_verbose) && opt_verbose)
+		if (prv->Weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak private primary key detected" << std::endl;
 		switch (prv->pkalgo)
 		{
@@ -1399,7 +1399,7 @@ int main
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
 		TMCG_OpenPGP_Subkey *sub = primary->subkeys[j];
-		if (sub->weak(opt_verbose) && opt_verbose)
+		if (sub->Weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak subkey detected" << std::endl;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyidCompute(sub->sub_hashing, kid);
@@ -1700,7 +1700,7 @@ int main
 		for (size_t j = 0; j < prv->private_subkeys.size(); j++)
 		{
 			TMCG_OpenPGP_PrivateSubkey *ssb = prv->private_subkeys[j];
-			if (ssb->weak(opt_verbose) && opt_verbose)
+			if (ssb->Weak(opt_verbose) && opt_verbose)
 				std::cerr << "WARNING: weak private subkey #" << j <<
 					" detected" << std::endl;
 			switch (ssb->pkalgo)

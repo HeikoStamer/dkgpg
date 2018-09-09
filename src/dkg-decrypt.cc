@@ -1131,11 +1131,13 @@ void run_instance
 			bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin,
 			(opt_W * 60));
 		// create an instance of a reliable broadcast protocol (RBC)
-		std::string myID = "dkg-decrypt|" PACKAGE_VERSION "|";
+		std::string myID = "dkg-decrypt|" + std::string(version) + "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		// include parameterized t-resiliance of DKG in the ID of RBC protocol
 		myID += dkg->t;
+		if (opt_verbose)
+			std::cerr << "RBC: myID = " << myID << std::endl;
 		// assume maximum asynchronous t-resilience for RBC
 		size_t T_RBC = (peers.size() - 1) / 3;
 		CachinKursawePetzoldShoupRBC *rbc =

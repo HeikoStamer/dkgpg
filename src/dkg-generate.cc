@@ -467,7 +467,7 @@ void run_instance
 		(opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
-	std::string myID = "dkg-generate|" PACKAGE_VERSION "|";
+	std::string myID = "dkg-generate|" + std::string(version) + "|";
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
 	// include parameters in the ID of broadcast protocol to enforce equal set
@@ -475,6 +475,8 @@ void run_instance
 	myID += "|";
 	myID += S;
 	myID += "|";
+	if (opt_verbose)
+		std::cerr << "RBC: myID = " << myID << std::endl;
 	// assume maximum asynchronous t-resilience for RBC
 	size_t T_RBC = (peers.size() - 1) / 3;
 	CachinKursawePetzoldShoupRBC *rbc =

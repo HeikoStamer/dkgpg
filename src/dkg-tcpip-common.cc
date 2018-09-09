@@ -149,6 +149,8 @@ void tcpip_bindports
 		exit(-1);
 	}
 	uint16_t peer_offset = tcpip_peer2pipe[tcpip_thispeer] * peers_size;
+	if (opt_verbose > 2)
+		std::cerr << "INFO: peer_offset = " << peer_offset << std::endl;
 	uint16_t local_start = start + peer_offset;
 	uint16_t local_end = local_start + peers_size;
 	size_t i = 0;

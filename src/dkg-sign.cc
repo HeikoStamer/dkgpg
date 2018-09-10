@@ -345,7 +345,7 @@ void run_instance
 	else
 	{
 		csigtime = sigtime;
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // fixed hash algo SHA2-512
 	}
 
 	// compute the hash of the input file

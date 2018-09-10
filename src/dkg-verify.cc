@@ -152,7 +152,7 @@ int main
 				std::cout << "  -i FILENAME    verify detached signature on" <<
 					" FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
-					" containing external revocation keys" << std::endl;
+					" containing (external revocation) keys" << std::endl;
 				std::cout << "  -s FILENAME    read signature from FILENAME" <<
 					" instead of STDIN" << std::endl; 
 				std::cout << "  -t TIMESPEC    signature made after given" <<

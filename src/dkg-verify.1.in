@@ -1,4 +1,4 @@
-.TH DKG\-VERIFY "1" "August 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-VERIFY "1" "September 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-verify \-\- verifies a detached signature of a file according to OpenPGP
@@ -11,13 +11,14 @@ dkg\-verify \-\- verifies a detached signature of a file according to OpenPGP
 .SH DESCRIPTION
 This program verifies a detached signature read from STDIN according to the
 OpenPGP standard. KEYFILE represents the ASCII\-armored public key, for which
-the verification is performed. That means, KEYFILE must contain the
-corresponding public key of the signature issuer, and optionally by "\-k" some
-external revocation keys can be provided. Currently, only DSA/DSS, RSA and ECDSA
-are permitted as public\-key algorithms. The input file for which the signature is
-checked must be specified by the mandatory option "\-i". Instead of reading the
-detached signature from STDIN, by option "\-s" a file containing this signature
-can be supplied.
+the verification is performed. If KEYFILE is omitted and by option "\-k" a file
+containing a set of keys (keyring) is given, the corresponding public key is
+determined by the issuer fingerprint or issuer subpacket from the signature.
+Optionally with "\-k" some external revocation keys can be provided by the user.
+Currently, DSA/DSS, RSA, ECDSA, and EdDSA are permitted as public\-key
+algorithms. The input file for which the signature is checked must be specified
+by the mandatory option "\-i". Instead of reading the detached signature from
+STDIN, by option "\-s" a file containing this signature can be supplied.
 .PP
 By "\-f" and "\-t" the user can provide a validity period, i.e., signatures
 made before the TIMESPEC of option "\-f" or after the TIMESPEC of option "\-t"
@@ -45,7 +46,7 @@ print this list of options
 verify detached signature on FILENAME
 .TP
 \fB\-k\fR \fI\,FILENAME\/\fR
-use keyring FILENAME containing external revocation keys
+use keyring FILENAME containing (external revocation) keys
 .TP
 \fB\-s\fR \fI\,FILENAME\/\fR
 read detached signature from FILENAME instead of STDIN

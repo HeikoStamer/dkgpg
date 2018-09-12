@@ -74,7 +74,7 @@ Overview
   everything is sane, it outputs the decrypted message. Since DKGPG 1.0.8
   dkg-decrypt supports the option "-y" that turns it into a regular OpenPGP
   implementation operating with any given private key. This option is also
-  available for the programs dkg-sign and dkg-keysign. 
+  available for the programs dkg-sign, dkg-keysign, and dkg-timestamp. 
 
   The programs dkg-keycheck and dkg-keyinfo provide basic information on given
   OpenPGP public and private keys, respectively. By option "-m" of dkg-keyinfo
@@ -102,12 +102,12 @@ Overview
   v0.11.x, which is when writing these lines still not yet released) must be
   present. However, as workaround for systems without GNUnet a simple TCP/IP
   based service for the message exchange is included (option "-H <hostname>").
-  To keep confidentiality and integrity of point-to-point channels in this
+  To keep confidentiality and integrity of the point-to-point channels in this
   workaround, some mutually chosen passwords (option "-P <password list>") are
   required. Moreover, with torsocks and some port forwarding rules for a hidden
   service (see manual page for details) the TCP/IP based service allows running
-  the interactive DKGPG programs over Tor. Of course a local network can be
-  used for message transmission, too. 
+  the interactive DKGPG programs over Tor. (Of course, a local network will
+  also work.)  
 
 Requirements
 ------------
@@ -166,8 +166,8 @@ Bugs, Contribution, GIT
   * GNU Automake, version >= 1.12, https://www.gnu.org/software/automake/
   * GNU Libtool, version >= 2.4.2, https://www.gnu.org/software/libtool/
 
-Example: configuration in .muttrc (replacement of classic pgp)
---------------------------------------------------------------
+Example: working configuration in .muttrc (replacement of classic pgp)
+----------------------------------------------------------------------
 [...]
   set pgp_list_pubring_command="~/bin/dkg-keycheck -y -k ~/keyring.asc %r"
   set pgp_self_encrypt=yes

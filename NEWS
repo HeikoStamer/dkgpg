@@ -7,7 +7,32 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
-1.0.8
+1.0.8   With this release a lot of improvements and new features are introduced.
+        First of all, passive support for ECDSA, ECDH, and EdDSA (cf. RFC 6637
+        and Werner Koch's draft RFC 4880bis) has been added by relying on the
+        most recent version of LibTMCG. The threshold signature scheme and the
+        threshold encryption are still limited to finite field cryptography
+        (i.e. DSA and ElGamal). Moreover, the programs generate and recognize
+        a few other new OpenPGP features (e.g. issuer fingerprint subpackets)
+        from RFC 4880bis. Compressed messages are now decompressed by the
+        program dkg-decrypt using zlib Compression Library (and optionally by
+        library routines from libbzip2). This completes DKGPG's compatibility
+        with other OpenPGP software, however, the prefered compression algorithm
+        (i.e. "no compression") in self-signatures of generated keys is kept
+        for now. Support for symmetric-key decryption by dkg-decrypt has been
+        added too. The program dkg-verify now reads the signature from a file,
+        if option "-s" is used. To keep track of later protocol changes, all
+        interactive programs include a version identifier in their common ID of
+        the reliable broadcast channel. Thus programs from previous releases
+        will not communicate with those of this release. With the new programs
+        dkg-timestamp and dkg-timestamp-verify a OpenPGP timestamp signature
+        can be generated and verified, respectively. Last but not least, by the
+        new option "-y" some programs (dkg-generate, dkg-decrypt, dkg-sign,
+        dkg-keysign, and dkg-timestamp) will work with regular OpenPGP keys too.
+        The README file contains a configuration sample showing how to replace
+        classic PGP by DKGPG in the famous mail user agent mutt based on this
+        option. Please note that this feature is experimental and semantics
+        may be changed later.
 1.0.7   This release contains a lot of small improvements, in particular due to
         the new OpenPGP structures from LibTMCG. The option "-k" (keyring) has
         been added to further programs. OpenPGP cleartext signatures can now be

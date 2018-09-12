@@ -7,7 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* [2018-09-09] added version string to all interactive programs by RBC->setID()
+* [2018-09-09] added protocol version to interactive programs by RBC->setID()
 * [2018-09-01] dkg-keycheck: added option "-o" (export reduced public key)
 * [2018-08-31] dkg-keycheck,dkg-keysign,dkg-sign: added support for EdDSA
 * [2018-08-30] dkg-timestamp: added option "-a" (include accuracy of timestamp)

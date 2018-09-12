@@ -32,6 +32,7 @@
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 static const char *about = PACKAGE_STRING " " PACKAGE_URL;
+static const char *protocol = "DKGPG-generate-1.0";
 
 #include <sstream>
 #include <fstream>
@@ -467,7 +468,7 @@ void run_instance
 		(opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
-	std::string myID = "dkg-generate|" + std::string(version) + "|";
+	std::string myID = "dkg-generate|" + std::string(protocol) + "|";
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
 	// include parameters in the ID of broadcast protocol to enforce equal set

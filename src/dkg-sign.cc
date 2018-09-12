@@ -33,6 +33,7 @@
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 static const char *about = PACKAGE_STRING " " PACKAGE_URL;
+static const char *protocol = "DKGPG-sign-1.0";
 
 #include <sstream>
 #include <fstream>
@@ -251,7 +252,7 @@ void run_instance
 		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
 			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		// create an instance of a reliable broadcast protocol (RBC)
-		std::string myID = "dkg-sign|" + std::string(version) + "|";
+		std::string myID = "dkg-sign|" + std::string(protocol) + "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		if (opt_verbose)

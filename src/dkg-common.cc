@@ -39,6 +39,7 @@ bool init_tDSS
 	dss_in << prv->tdss_qual.size() << std::endl;
 	for (size_t i = 0; i < prv->tdss_qual.size(); i++)
 		dss_in << prv->tdss_qual[i] << std::endl;
+	// tdss->dkg
 	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
 		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
 	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<
@@ -48,6 +49,7 @@ bool init_tDSS
 	dss_in << prv->tdss_qual.size() << std::endl;
 	for (size_t i = 0; i < prv->tdss_qual.size(); i++)
 		dss_in << prv->tdss_qual[i] << std::endl;
+	// tdss->dkg->x_rvss
 	dss_in << prv->pub->dsa_p << std::endl << prv->pub->dsa_q << std::endl <<
 		prv->pub->dsa_g << std::endl << prv->tdss_h << std::endl;
 	dss_in << prv->tdss_n << std::endl << prv->tdss_t << std::endl <<

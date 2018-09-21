@@ -989,7 +989,26 @@ void run_instance
 		}
 		// create a dummy instance of DKG
 		std::stringstream dkg_in;
-		dkg_in << "dummy" << std::endl;
+		dkg_in << "23" << std::endl << "7" << std::endl <<
+			"2" << std::endl << "3" << std::endl;
+		dkg_in << "2" << std::endl << "1" << std::endl << "0" << std::endl;
+		dkg_in << "42" << std::endl << "42" << std::endl << "107" << std::endl;
+		dkg_in << "2" << std::endl;
+		for (size_t i = 0; i < 2; i++)
+			dkg_in << "0" << std::endl;
+		for (size_t i = 0; i < 2; i++)
+			dkg_in << "1" << std::endl;
+		for (size_t i = 0; i < 2; i++)
+			dkg_in << "0" << std::endl;
+		for (size_t i = 0; i < 2; i++)
+			dkg_in << "1" << std::endl;
+		for (size_t i = 0; i < 2; i++)
+		{
+			for (size_t j = 0; j < 2; j++)
+				dkg_in << "0" << std::endl << "0" << std::endl;
+			for (size_t k = 0; k < 1; k++)
+				dkg_in << "0" << std::endl;
+		}
 		dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
 	}
 

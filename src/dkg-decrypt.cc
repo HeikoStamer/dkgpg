@@ -982,33 +982,19 @@ void run_instance
 		}
 		if (ssb == NULL)
 		{
-			std::cerr << "ERROR: no admissible primary key resp. subkey found" << std::endl;
+			std::cerr << "ERROR: no admissible primary key resp." <<
+				" subkey found" << std::endl;
 			delete ring;
 			delete prv;
 			exit(-1);
 		}
 		// create a dummy instance of DKG
 		std::stringstream dkg_in;
-		dkg_in << "23" << std::endl << "7" << std::endl <<
-			"2" << std::endl << "3" << std::endl;
-		dkg_in << "2" << std::endl << "1" << std::endl << "0" << std::endl;
-		dkg_in << "42" << std::endl << "42" << std::endl << "107" << std::endl;
-		dkg_in << "2" << std::endl;
-		for (size_t i = 0; i < 2; i++)
-			dkg_in << "0" << std::endl;
-		for (size_t i = 0; i < 2; i++)
-			dkg_in << "1" << std::endl;
-		for (size_t i = 0; i < 2; i++)
-			dkg_in << "0" << std::endl;
-		for (size_t i = 0; i < 2; i++)
-			dkg_in << "1" << std::endl;
-		for (size_t i = 0; i < 2; i++)
-		{
-			for (size_t j = 0; j < 2; j++)
-				dkg_in << "0" << std::endl << "0" << std::endl;
-			for (size_t k = 0; k < 1; k++)
-				dkg_in << "0" << std::endl;
-		}
+		dkg_in << "0" << std::endl << "0" << std::endl << "0" << std::endl
+			<< "0" << std::endl;
+		dkg_in << "0" << std::endl << "0" << std::endl << "0" << std::endl;
+		dkg_in << "0" << std::endl << "0" << std::endl << "0" << std::endl;
+		dkg_in << "0" << std::endl;
 		dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
 	}
 
@@ -1083,7 +1069,8 @@ void run_instance
 	}
 	if ((esks.size() == 0) && (msg->SKESKs.size() == 0))
 	{
-		std::cerr << "ERROR: no admissible encrypted session key found" << std::endl;
+		std::cerr << "ERROR: no admissible encrypted session key found" <<
+			std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;
@@ -2458,13 +2445,14 @@ int main
 			}
 			else
 			{
-				if ((msg->compressed_data).size() != 0)
+				size_t cd_size = (msg->compressed_data).size(); 
+				if (cd_size != 0)
 				{
 					bool decompress_ok = false;
 					switch (msg->compalgo)
 					{
 						case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
-							for (size_t i = 0; i < (msg->compressed_data).size(); i++)
+							for (size_t i = 0; i < cd_size; i++)
 								infmsg.push_back(msg->compressed_data[i]);
 							decompress_ok = true; // no compression
 							break;
@@ -2479,9 +2467,9 @@ int main
 #endif
 						default:
 							if (opt_verbose > 1)
-								std::cerr << "WARNING: compression algorithm " <<
-									(int)msg->compalgo << " is not supported" <<
-									std::endl;
+								std::cerr << "WARNING: compression" <<
+									" algorithm " << (int)msg->compalgo <<
+									" is not supported" << std::endl;
 					}
 					if (!decompress_ok)
 					{
@@ -2668,8 +2656,8 @@ int main
 	else
 		return -1;
 #else
-	std::cerr << "WARNING: GNUnet CADET is required for the message exchange" <<
-		" of this program" << std::endl;
+	std::cerr << "WARNING: GNUnet CADET is required for the message" <<
+		" exchange of this program" << std::endl;
 #endif
 
 	std::cerr << "INFO: running local test with " << peers.size() <<

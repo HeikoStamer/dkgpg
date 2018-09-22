@@ -991,10 +991,12 @@ void run_instance
 		// create a dummy instance of DKG
 		std::stringstream dkg_in;
 		dkg_in << "0" << std::endl << "0" << std::endl << "0" << std::endl
-			<< "0" << std::endl;
+			<< "0" << std::endl; // p, q, g, h
+		dkg_in << "1" << std::endl << "0" << std::endl << "0" << std::endl;
 		dkg_in << "0" << std::endl << "0" << std::endl << "0" << std::endl;
-		dkg_in << "0" << std::endl << "0" << std::endl << "0" << std::endl;
-		dkg_in << "0" << std::endl;
+		dkg_in << "1" << std::endl << "0" << std::endl; // |QUAL|, P_0
+		dkg_in << "a" << std::endl << "b" << std::endl << "c" << std::endl;
+		dkg_in << "d" << std::endl << "e" << std::endl << "f" << std::endl;
 		dkg = new GennaroJareckiKrawczykRabinDKG(dkg_in);
 	}
 

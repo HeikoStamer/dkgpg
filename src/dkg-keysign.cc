@@ -280,7 +280,7 @@ void run_instance
 			}
 			else
 			{
-				// simple key -- we assume that GNUnet will provide secure channels
+				// simple key -- we assume that GNUnet provides secure channels
 				key << "dkg-keysign::S_" << (i + whoami);
 			}
 			uP_in.push_back(pipefd[i][whoami][0]);
@@ -538,6 +538,8 @@ void run_instance
 			std::stringstream err_log_sign;
 			if (opt_verbose)
 				std::cerr << "INFO: S_" << whoami << ": dss.Sign()" << std::endl;
+			if (dss == NULL)
+				exit(-2); // should never happen: only here to make scan-build happy
 			if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s,
 				prv->tdss_idx2dkg, prv->tdss_dkg2idx, aiou, rbc, err_log_sign))
 			{
@@ -677,6 +679,8 @@ void run_instance
 			std::cerr << "INFO: S_" << whoami << ": waiting approximately " <<
 				(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 				std::endl;
+		if (rbc == NULL)
+			exit(-2); // should never happen: only here to make scan-build happy
 		rbc->Sync(synctime);
 		// release RBC
 		delete rbc;

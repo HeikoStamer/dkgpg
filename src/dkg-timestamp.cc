@@ -552,6 +552,8 @@ void run_instance
 		std::stringstream err_log_sign;
 		if (opt_verbose)
 			std::cerr << "INFO: S_" << whoami << ": dss.Sign()" << std::endl;
+		if (dss == NULL)
+			exit(-2); // should never happen: only here to make scan-build happy
 		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s,
 			prv->tdss_idx2dkg, prv->tdss_dkg2idx, aiou, rbc, err_log_sign))
 		{

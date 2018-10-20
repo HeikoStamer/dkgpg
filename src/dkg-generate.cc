@@ -472,10 +472,9 @@ void run_instance
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
 	// include parameters in the ID of broadcast protocol to enforce equal set
-	myID += T;
-	myID += "|";
-	myID += S;
-	myID += "|";
+	std::stringstream myss;
+	myss << T << "|" << S << "|";
+	myID += myss.str();
 	if (opt_verbose)
 		std::cerr << "RBC: myID = " << myID << std::endl;
 	// assume maximum asynchronous t-resilience for RBC

@@ -1144,7 +1144,9 @@ void run_instance
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		// include parameterized t-resiliance of DKG in the ID of RBC protocol
-		myID += dkg->t;
+		std::stringstream myss;
+		myss << dkg->t << "|";
+		myID += myss.str();
 		if (opt_verbose)
 			std::cerr << "RBC: myID = " << myID << std::endl;
 		// assume maximum asynchronous t-resilience for RBC

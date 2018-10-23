@@ -979,7 +979,7 @@ void tcpip_done
 		int thispid = pid[tcpip_peer2pipe[tcpip_thispeer]];
 		if (opt_verbose)
 			std::cerr << "INFO: kill(" << thispid << ", SIGTERM)" << std::endl;
-		if(kill(thispid, SIGTERM))
+		if (kill(thispid, SIGTERM))
 			perror("ERROR: dkg-tcpip-common (kill)");
 		if (opt_verbose)
 			std::cerr << "INFO: waitpid(" << thispid << ", NULL, 0)" <<

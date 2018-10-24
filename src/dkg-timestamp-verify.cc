@@ -356,6 +356,7 @@ int main
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
 	if (filename.length() == 0)
 	{
+		// extract public key from keyring
 		if (!get_key_by_signature(ring, signature, opt_verbose, armored_pubkey))
 		{
 			delete ring;
@@ -679,8 +680,8 @@ int main
 		}
 		else
 		{
-			if (!target_key->subkeys[subkey_idx]->CheckValidityPeriod(sc,
-				opt_verbose))
+			TMCG_OpenPGP_Subkey *subkey = target_key->subkeys[subkey_idx];
+			if (!subkey->CheckValidityPeriod(sc, opt_verbose))
 			{
 				std::cerr << "ERROR: timestamp not in validity period of" <<
 					" signer's public key" << std::endl;
@@ -711,6 +712,17 @@ int main
 					delete ring;
 					return -5;
 				}
+				if (target_key->keyrevsigs.size() == 0)
+				{
+					std::cerr << "ERROR: no revocation signatures found" <<
+						"on signer's public key" << std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}
 				if (sc > target_key->keyrevsigs[0]->creationtime)
 				{
 					std::cerr << "ERROR: signer's public key was revoked" <<
@@ -726,6 +738,7 @@ int main
 		}
 		else
 		{
+			TMCG_OpenPGP_Subkey *subkey = target_key->subkeys[subkey_idx];
 			if (target_key->revoked)
 			{
 				if (target_key->AccumulateRevocationCodes() ==
@@ -733,6 +746,17 @@ int main
 				{
 					std::cerr << "ERROR: signer's public key was compromised" <<
 						std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}
+				if (target_key->keyrevsigs.size() == 0)
+				{
+					std::cerr << "ERROR: no revocation signatures found" <<
+						"on signer's public key" << std::endl;
 					delete target_key;
 					delete target_signature;
 					delete signature;
@@ -752,10 +776,10 @@ int main
 					return -5;
 				}				
 			}
-			if (target_key->subkeys[subkey_idx]->revoked)
+			if (subkey->revoked)
 			{
-				if (target_key->subkeys[subkey_idx]->AccumulateRevocationCodes()
-					== TMCG_OPENPGP_REVCODE_KEY_COMPROMISED)
+				if (subkey->AccumulateRevocationCodes()	==
+					TMCG_OPENPGP_REVCODE_KEY_COMPROMISED)
 				{
 					std::cerr << "ERROR: signer's public key was compromised" <<
 						std::endl;
@@ -766,7 +790,18 @@ int main
 					delete ring;
 					return -5;
 				}
-				if (sc > target_key->subkeys[subkey_idx]->keyrevsigs[0]->creationtime)
+				if (subkey->keyrevsigs.size() == 0)
+				{
+					std::cerr << "ERROR: no revocation signatures found" <<
+						"on signer's public key" << std::endl;
+					delete target_key;
+					delete target_signature;
+					delete signature;
+					delete primary;
+					delete ring;
+					return -5;
+				}
+				if (sc > subkey->keyrevsigs[0]->creationtime)
 				{
 					std::cerr << "ERROR: signer's public key was revoked" <<
 						" before timestamp" << std::endl;
@@ -794,9 +829,8 @@ int main
 	if (verify_ok)
 	{
 		std::string sigstr;
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE,
-				target_signature->packet, sigstr);
+		CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(
+			TMCG_OPENPGP_ARMOR_SIGNATURE, target_signature->packet, sigstr);
 		if (opt_o != NULL)
 		{
 			if (!write_message(ofilename, sigstr))

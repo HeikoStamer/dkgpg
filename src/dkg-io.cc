@@ -349,3 +349,4 @@ bool get_key_by_signature
 		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts, armored_key);
 	return true;
 }
+

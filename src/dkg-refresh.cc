@@ -600,13 +600,13 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of refresh protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),
@@ -693,7 +693,7 @@ int main
 				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
 				std::cout << "  -v, --version  print the version number" << std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -W TIME        timeout for point-to-point messages in minutes" << std::endl;
+				std::cout << "  -W INTEGER     timeout for point-to-point messages in minutes" << std::endl;
 #endif
 				return 0; // not continue
 			}
@@ -899,13 +899,13 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of refresh protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),

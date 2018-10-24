@@ -833,19 +833,19 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of signing protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),
 		GNUNET_GETOPT_option_string('y',
 			"yaot",
-			"FILNAME",
+			"FILENAME",
 			"yet another OpenPGP tool with private key in FILENAME",
 			&gnunet_opt_y
 		),
@@ -1003,7 +1003,7 @@ int main
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
 					std::endl;
-				std::cout << "  -W TIME        timeout for point-to-point" <<
+				std::cout << "  -W INTEGER     timeout for point-to-point" <<
 					" messages in minutes" << std::endl;
 				std::cout << "  -y FILENAME    yet another OpenPGP tool with" <<
 					" private key in FILENAME" << std::endl;
@@ -1214,19 +1214,19 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of signing protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),
 		GNUNET_GETOPT_option_string('y',
 			"yaot",
-			"FILNAME",
+			"FILENAME",
 			"yet another OpenPGP tool with private key in FILENAME",
 			&gnunet_opt_y
 		),

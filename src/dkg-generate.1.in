@@ -139,7 +139,7 @@ function of GNUnet. Thus this program has to be compiled accordingly.
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME
 .TP
-\fB\-e\fR, \fB\-\-expiration\fR=\fI\,TIME\/\fR
+\fB\-e\fR, \fB\-\-expiration\fR=\fI\,INTEGER\/\fR
 expiration time of generated keys in seconds
 .TP
 \fB\-g\fR, \fB\-\-group\fR=\fI\,STRING\/\fR
@@ -175,10 +175,10 @@ print the version number of the program
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
 .TP
-\fB\-w\fR, \fB\-\-wait\fR=\fI\,TIME\/\fR
+\fB\-w\fR, \fB\-\-wait\fR=\fI\,INTEGER\/\fR
 minutes to wait until start of key generation protocol
 .TP
-\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
+\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,INTEGER\/\fR
 timeout for point\-to\-point messages in minutes
 .TP
 \fB\-y\fR, \fB\-\-yaot\fR

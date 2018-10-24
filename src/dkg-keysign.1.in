@@ -97,7 +97,7 @@ issuer has done substantial verification of the claim of identity
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME
 .TP
-\fB\-e\fR, \fB\-\-expiration\fR=\fI\,TIME\/\fR
+\fB\-e\fR, \fB\-\-expiration\fR=\fI\,INTEGER\/\fR
 expiration time of generated signatures in seconds
 .TP
 \fB\-h\fR, \fB\-\-help\fR
@@ -142,10 +142,10 @@ print the version number of the program
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
 .TP
-\fB\-w\fR, \fB\-\-wait\fR=\fI\,TIME\/\fR
+\fB\-w\fR, \fB\-\-wait\fR=\fI\,INTEGER\/\fR
 minutes to wait until start of signing protocol
 .TP
-\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
+\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,INTEGER\/\fR
 timeout for point\-to\-point messages in minutes
 .TP
 \fB\-y\fR, \fB\-\-yaot\fR=\fI\,FILENAME\/\fR

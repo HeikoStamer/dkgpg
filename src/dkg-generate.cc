@@ -1983,7 +1983,7 @@ int main
 		GNUNET_GETOPT_option_help(about),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
-			"TIME",
+			"INTEGER",
 			"expiration time of generated keys in seconds",
 			&gnunet_opt_keyexptime
 		),
@@ -2033,13 +2033,13 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of key generation protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),
@@ -2154,7 +2154,7 @@ int main
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -e TIME        expiration time of generated" <<
+				std::cout << "  -e INTEGER     expiration time of generated" <<
 					" keys in seconds" << std::endl;
 				std::cout << "  -g STRING      common reference string that" <<
 					" defines underlying DDH-hard group" << std::endl;
@@ -2172,7 +2172,7 @@ int main
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
 					std::endl;
-				std::cout << "  -W TIME        timeout for point-to-point" <<
+				std::cout << "  -W INTEGER     timeout for point-to-point" <<
 					" messages in minutes" << std::endl;
 				std::cout << "  -y, --yaot     yet another OpenPGP tool" <<
 					std::endl;
@@ -2609,7 +2609,7 @@ int main
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
-			"TIME",
+			"INTEGER",
 			"expiration time of generated keys in seconds",
 			&gnunet_opt_keyexptime
 		),
@@ -2656,13 +2656,13 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of key generation protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),

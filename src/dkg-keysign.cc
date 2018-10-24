@@ -798,7 +798,7 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
-			"TIME",
+			"INTEGER",
 			"expiration time of generated signature in seconds",
 			&gnunet_opt_sigexptime
 		),
@@ -865,13 +865,13 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of signing protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),
@@ -1029,7 +1029,7 @@ int main
 					" verification of claim of identity" << std::endl;
 				std::cout << "  -3, --three      issuer has done substantial" <<
 					" verification of claim of identity" << std::endl;
-				std::cout << "  -e TIME          expiration time of" <<
+				std::cout << "  -e INTEGER       expiration time of" <<
 					" generated signatures in seconds" << std::endl;
 				std::cout << "  -H STRING        hostname (e.g. onion" <<
 					" address) of this peer within PEERS" << std::endl;
@@ -1054,7 +1054,7 @@ int main
 					std::endl;
 				std::cout << "  -V, --verbose    turn on verbose output" <<
 					std::endl;
-				std::cout << "  -W TIME          timeout for point-to-point" <<
+				std::cout << "  -W INTEGER       timeout for point-to-point" <<
 					" messages in minutes" << std::endl;
 				std::cout << "  -y FILENAME    yet another OpenPGP tool with" <<
 					" private key in FILENAME" << std::endl;
@@ -1233,7 +1233,7 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
-			"TIME",
+			"INTEGER",
 			"expiration time of generated signature in seconds",
 			&gnunet_opt_sigexptime
 		),
@@ -1297,13 +1297,13 @@ int main
 		),
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
-			"TIME",
+			"INTEGER",
 			"minutes to wait until start of signing protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
-			"TIME",
+			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),

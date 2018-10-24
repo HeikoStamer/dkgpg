@@ -105,10 +105,10 @@ print the version number of the program
 \fB\-V\fR, \fB\-\-verbose\fR
 turn on verbose output
 .TP
-\fB\-w\fR, \fB\-\-wait\fR=\fI\,TIME\/\fR
+\fB\-w\fR, \fB\-\-wait\fR=\fI\,INTEGER\/\fR
 minutes to wait until start of share exchange (only interactive mode)
 .TP
-\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,TIME\/\fR
+\fB\-W\fR, \fB\-\-aiou\-timeout\fR=\fI\,INTEGER\/\fR
 timeout for point\-to\-point messages in minutes
 .TP
 \fB\-y\fR, \fB\-\-yaot\fR=\fI\,FILENAME\/\fR

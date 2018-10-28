@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20180912])
+AC_REVISION([20181028])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.0.9], [HeikoStamer@gmx.net], [dkgpg],
@@ -95,9 +95,9 @@ if test "x$GPG_ERROR_LIBS" = "x"; then
 	AC_MSG_ERROR([libgpg-error >= 1.12 is needed])
 fi
 
-AM_PATH_LIBTMCG("1.3.14")
+AM_PATH_LIBTMCG("1.3.15")
 if test "x$LIBTMCG_LIBS" = "x"; then
-        AC_MSG_ERROR([libTMCG >= 1.3.14 is needed])
+        AC_MSG_ERROR([libTMCG >= 1.3.15 is needed])
 fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)

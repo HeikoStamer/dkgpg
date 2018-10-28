@@ -1617,20 +1617,20 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
-		opt_verbose, msg))
+	if (!msg->CheckMDC(opt_verbose))
 	{
-		std::cerr << "ERROR: message parsing failed" << std::endl;
+		std::cerr << "ERROR: message was modified (security issue) or" <<
+			" not integrity protected" << std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;
 		delete prv;
 		exit(-1);
 	}
-	if (!msg->CheckMDC(opt_verbose))
+	if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
+		opt_verbose, msg))
 	{
-		std::cerr << "ERROR: message was modified (security issue) or" <<
-			" not integrity protected" << std::endl;
+		std::cerr << "ERROR: message parsing failed" << std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;
@@ -2427,20 +2427,20 @@ int main
 				delete prv;
 				return -1;
 			}
-			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
-				opt_verbose, msg))
+			if (!msg->CheckMDC(opt_verbose))
 			{
-				std::cerr << "ERROR: message parsing failed" << std::endl;
+				std::cerr << "ERROR: message was modified (security issue)" <<
+					std::endl;
 				delete msg;
 				delete dkg;
 				delete ring;
 				delete prv;
 				return -1;
 			}
-			if (!msg->CheckMDC(opt_verbose))
+			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
+				opt_verbose, msg))
 			{
-				std::cerr << "ERROR: message was modified (security issue)" <<
-					std::endl;
+				std::cerr << "ERROR: message parsing failed" << std::endl;
 				delete msg;
 				delete dkg;
 				delete ring;

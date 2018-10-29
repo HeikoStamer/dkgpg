@@ -777,6 +777,110 @@ bool decompress_libbz
 }
 #endif
 
+bool decrypt_message
+	(const tmcg_openpgp_secure_octets_t seskey, const TMCG_OpenPGP_Keyring *ring,
+	 TMCG_OpenPGP_Message *msg, tmcg_openpgp_octets_t &content)
+{
+	tmcg_openpgp_octets_t decmsg, infmsg;
+	if (!msg->Decrypt(seskey, opt_verbose, decmsg))
+	{
+		std::cerr << "ERROR: message decryption failed" << std::endl;
+		return false;
+	}
+	if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
+		opt_verbose, msg))
+	{
+		std::cerr << "ERROR: message parsing failed" << std::endl;
+		return false;
+	}
+	else
+	{
+		// handle compressed message
+		if ((msg->compressed_data).size() != 0)
+		{
+			bool decompress_ok = false;
+			switch (msg->compalgo)
+			{
+				case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
+					for (size_t i = 0; i < (msg->compressed_data).size(); i++)
+						infmsg.push_back(msg->compressed_data[i]);
+					decompress_ok = true; // no compression
+					break;
+				case TMCG_OPENPGP_COMPALGO_ZIP:
+				case TMCG_OPENPGP_COMPALGO_ZLIB:
+					decompress_ok = decompress_libz(msg, infmsg);
+					break;
+#ifdef LIBBZ
+				case TMCG_OPENPGP_COMPALGO_BZIP2:
+					decompress_ok = decompress_libbz(msg, infmsg);
+					break;
+#endif
+				default:
+					if (opt_verbose > 1)
+					{
+						std::cerr << "WARNING: compression algorithm " <<
+							(int)msg->compalgo << " is not supported" <<
+							std::endl;
+					}
+			}
+			if (!decompress_ok)
+			{
+				std::cerr << "ERROR: decompression failed" << std::endl;
+				return false;
+			}
+			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(infmsg,
+				opt_verbose, msg))
+			{
+				std::cerr << "ERROR: message parsing failed" << std::endl;
+				return false;
+			}
+		}
+		// handle decompressed message
+		if ((msg->literal_data).size() == 0)
+		{
+			std::cerr << "ERROR: no literal data in decrypted message" <<
+				std::endl;
+			return false;
+		}
+		else
+		{
+			// verify included signatures based on keys from keyring
+			if ((opt_k != NULL) && ((msg->signatures).size() > 0))
+			{
+				bool vf = true;
+				for (size_t i = 0; i < (msg->signatures).size(); i++)
+				{
+					std::string ak;
+					if (get_key_by_signature(ring, msg->signatures[i],
+						opt_verbose, ak))
+					{
+// TODO
+					}
+					else
+					{
+						std::cerr << "WARNING: cannot verify" <<
+							" signature #" << i << " due to missing" <<
+							" public key" << std::endl;
+					}
+				}
+				if (!vf)
+				{
+					std::cerr << "ERROR: verification of included" <<
+						" signature(s) failed" << std::endl;
+					return false;
+				}
+			}
+			// copy the content of literal data packet
+			content.insert(content.end(), (msg->literal_data).begin(),
+				(msg->literal_data).end());
+		}
+		if (msg->filename == "_CONSOLE")
+			std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
+				std::endl;
+	}
+	return true;
+}
+
 void run_instance
 	(size_t whoami, const size_t num_xtests)
 {
@@ -803,7 +907,7 @@ void run_instance
 	std::string armored_pubring;
 	if (opt_k)
 	{
-		if (!read_key_file(kfilename, armored_pubring))
+		if (!read_key_file(opt_k, armored_pubring))
 			exit(-1);
 	}
 
@@ -1607,92 +1711,14 @@ void run_instance
 			exit(-1);
 		}
 	}
-	tmcg_openpgp_octets_t content, decmsg, infmsg;
-	if (!msg->Decrypt(seskey, opt_verbose, decmsg))
+	tmcg_openpgp_octets_t content;
+	if (!decrypt_message(seskey, ring, msg, content))
 	{
-		std::cerr << "ERROR: message decryption failed" << std::endl;
 		delete msg;
 		delete dkg;
 		delete ring;
 		delete prv;
 		exit(-1);
-	}
-	if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
-		opt_verbose, msg))
-	{
-		std::cerr << "ERROR: message parsing failed" << std::endl;
-		delete msg;
-		delete dkg;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
-	else
-	{
-		if ((msg->compressed_data).size() != 0)
-		{
-			bool decompress_ok = false;
-			switch (msg->compalgo)
-			{
-				case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
-					for (size_t i = 0; i < (msg->compressed_data).size(); i++)
-						infmsg.push_back(msg->compressed_data[i]);
-					decompress_ok = true; // no compression
-					break;
-				case TMCG_OPENPGP_COMPALGO_ZIP:
-				case TMCG_OPENPGP_COMPALGO_ZLIB:
-					decompress_ok = decompress_libz(msg, infmsg);
-					break;
-#ifdef LIBBZ
-				case TMCG_OPENPGP_COMPALGO_BZIP2:
-					decompress_ok = decompress_libbz(msg, infmsg);
-					break;
-#endif
-				default:
-					if (opt_verbose > 1)
-						std::cerr << "WARNING: compression algorithm " <<
-							(int)msg->compalgo << " is not supported" <<
-							std::endl;
-			}
-			if (!decompress_ok)
-			{
-				std::cerr << "ERROR: decompression failed" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				exit(-1);
-			}
-			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(infmsg,
-				opt_verbose, msg))
-			{
-				std::cerr << "ERROR: message parsing failed" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				exit(-1);
-			}
-		}
-		if ((msg->literal_data).size() == 0)
-		{
-			std::cerr << "ERROR: empty literal data in decrypted message" <<
-				std::endl;
-			delete msg;
-			delete dkg;
-			delete ring;
-			delete prv;
-			exit(-1);
-		}
-		else
-		{
-			// copy the content of literal data packet
-			content.insert(content.end(), (msg->literal_data).begin(),
-				(msg->literal_data).end());
-		}
-		if (msg->filename == "_CONSOLE")
-			std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
-				std::endl;
 	}
 
 	// release
@@ -1811,7 +1837,7 @@ int main
 		GNUNET_GETOPT_option_string('k',
 			"keyring",
 			"FILENAME",
-			"use keyring FILENAME containing external revocation keys",
+			"verify included signatures using keyring FILENAME",
 			&gnunet_opt_k
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
@@ -1899,7 +1925,7 @@ int main
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 	if (gnunet_opt_y != NULL)
-		opt_y = gnunet_opt_y; // get yaot filename from GNUnet options
+		opt_y = gnunet_opt_y;
 #endif
 
 	bool nonint = false;
@@ -1987,8 +2013,8 @@ int main
 					" address) of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME            read encrypted" <<
 					" message rather from FILENAME than STDIN" << std::endl;
-				std::cout << "  -k FILENAME            use keyring FILENAME" <<
-					" containing external revocation keys" << std::endl;
+				std::cout << "  -k FILENAME            verify included" <<
+					" signatures using keyring FILENAME" << std::endl;
 				std::cout << "  -n, --non-interactive  run in" <<
 					" non-interactive mode" << std::endl;
 				std::cout << "  -o FILENAME            write decrypted" <<
@@ -2160,7 +2186,7 @@ int main
 		std::string armored_pubring;
 		if (opt_k)
 		{
-			if (!read_key_file(kfilename, armored_pubring))
+			if (!read_key_file(opt_k, armored_pubring))
 				return -1;
 		}
 		// parse the keyring, the private key and corresponding signatures
@@ -2395,105 +2421,16 @@ int main
 			delete [] interpol_shares[i];
 		}
 		interpol_shares.clear(), interpol_parties.clear();
-		tmcg_openpgp_octets_t content, decmsg, infmsg;
+		tmcg_openpgp_octets_t content;
 		tmcg_openpgp_secure_octets_t seskey;
 		if (res)
 		{
-			if (!decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
-				ssb->pub->elg_y, esk->gk, esk->myk, seskey))
-			{
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
-			}
-			if (!msg->Decrypt(seskey, opt_verbose, decmsg))
-			{
-				std::cerr << "ERROR: message decryption failed" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
-			}
-			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
-				opt_verbose, msg))
-			{
-				std::cerr << "ERROR: message parsing failed" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
-			}
-			else
-			{
-				size_t cd_size = (msg->compressed_data).size(); 
-				if (cd_size != 0)
-				{
-					bool decompress_ok = false;
-					switch (msg->compalgo)
-					{
-						case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
-							for (size_t i = 0; i < cd_size; i++)
-								infmsg.push_back(msg->compressed_data[i]);
-							decompress_ok = true; // no compression
-							break;
-						case TMCG_OPENPGP_COMPALGO_ZIP:
-						case TMCG_OPENPGP_COMPALGO_ZLIB:
-							decompress_ok = decompress_libz(msg, infmsg);
-							break;
-#ifdef LIBBZ
-						case TMCG_OPENPGP_COMPALGO_BZIP2:
-							decompress_ok = decompress_libbz(msg, infmsg);
-							break;
-#endif
-						default:
-							if (opt_verbose > 1)
-								std::cerr << "WARNING: compression" <<
-									" algorithm " << (int)msg->compalgo <<
-									" is not supported" << std::endl;
-					}
-					if (!decompress_ok)
-					{
-						std::cerr << "ERROR: decompression failed" << std::endl;
-						delete msg;
-						delete dkg;
-						delete ring;
-						delete prv;
-						return -1;
-					}
-					if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(
-						infmsg, opt_verbose, msg))
-					{
-						std::cerr << "ERROR: message parsing failed" <<
-							std::endl;
-						delete msg;
-						delete dkg;
-						delete ring;
-						delete prv;
-						return -1;
-					}
-				}
-				if ((msg->literal_data).size() == 0)
-				{
-					std::cerr << "ERROR: empty literal data in decrypted" <<
-						" message" << std::endl;
-					delete msg;
-					delete dkg;
-					delete ring;
-					delete prv;
-					return -1;
-				}
-				else
-				{
-					content.insert(content.end(),
-						(msg->literal_data).begin(),
-						(msg->literal_data).end());
-				}
-			}
+			res = decrypt_session_key(ssb->pub->elg_p, ssb->pub->elg_g,
+				ssb->pub->elg_y, esk->gk, esk->myk, seskey);
 		}
+		if (res)
+			res = decrypt_message(seskey, ring, msg, content);
+
 		// release
 		delete msg;
 		delete dkg;
@@ -2511,7 +2448,7 @@ int main
 				print_message(content);
 		}
 		else
-			return -1;
+			return -1; // error
 		return 0; // no error
 	}
 	// initialize return code
@@ -2575,7 +2512,7 @@ int main
 		GNUNET_GETOPT_option_string('k',
 			"keyring",
 			"FILENAME",
-			"use keyring FILENAME containing external revocation keys",
+			"verify included signatures using keyring FILENAME",
 			&gnunet_opt_k
 		),
 		GNUNET_GETOPT_option_flag('n',

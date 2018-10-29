@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "August 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "October 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \-\- simple message encryption with AES\-256 according to OpenPGP
@@ -6,30 +6,33 @@ dkg\-encrypt \-\- simple message encryption with AES\-256 according to OpenPGP
 .SH SYNOPSIS
 .B dkg\-encrypt
 .RI [ options ]
-.IR KEYFILE
+.IR KEYSPEC
 
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN or a file according to
-the OpenPGP standard (RFC 4880). KEYFILE must contain the ASCII\-armored
-public key block with either any encryption\-capable subkey (recommended) or
-an encryption\-capable primary key (used to last resort), for which the actual
-encryption is performed. If more than one valid admissible encryption subkey
-is found in the key block, than the generated symmetric session key is
-encrypted for each of these keys. This behaviour can be tweaked by the option
-"\-s", which limits the selected subkey based on its key ID or fingerprint.
+the OpenPGP standard (RFC 4880). KEYSPEC is either a list of fingerprints for
+keys in a keyring (if options "\-r" and "\-k" are given) or a single argument
+representing a name of a file that contains a ASCII\-armored public key block
+with any encryption\-capable subkey (recommended) or an encryption\-capable
+primary key (used to last resort).
+If more than one valid admissible encryption subkey is found in a key block
+specified in this way, than the generated symmetric session key is encrypted for
+each of these subkeys. This behaviour can be tweaked by the option "\-s", which
+limits the selected subkey based on its key ID or fingerprint.
 .PP
-First, AES\-256 is applied as symmetric cipher with a randomly chosen 256\-bit
-session key. Finally, the session key is transformed by PKCS#1 v1.5 block
-encoding and encrypted with the corresponding public\-key algorithm. For
-ECDH the encoding and encryption rules from RFC 6637 are applied. Note that
-an integrity protection packet (MDC) is always appended.
+Note that RSA, ElGamal, and ECDH are the supported public\-key encryption
+algorithms, and that AES\-256 is fixed as the symmetric cipher. 
 .PP
-With the option "\-t" the included key ID is thrown away, i.e., instead a
-"wild card" or speculative key ID is used. This format helps to reduce traffic
-analysis of messages. 
+First, the symmetric cipher with a randomly chosen 256\-bit session key is
+applied to the (text) message. An integrity protection packet (MDC) is always
+appended. Then the session key is transformed by PKCS#1 v1.5 block encoding and
+encrypted with the corresponding public\-key algorithm for each selected subkey.
+For ECDH the encoding scheme and the encryption rules from RFC 6637 are
+employed.
 .PP
-Currently, as public\-key encryption algorithms only RSA, ElGamal, and ECDH
-are supported due to the limitation of OpenPGP compliance from LibTMCG.
+With the option "\-t" the included key ID of each subkey is thrown away, i.e.,
+instead a "wild card" or speculative key ID is used. This format helps to reduce
+traffic analysis of messages. 
 .PP
 The encrypted message in ASCII\-armored is written to STDOUT or to an output
 file and can later be processed e.g. with
@@ -51,13 +54,16 @@ print this list of options
 read message rather from FILENAME than STDIN
 .TP
 \fB\-k\fR \fI\,FILENAME\/\fR
-use keyring FILENAME containing external revocation keys
+use keyring FILENAME containing the required keys
 .TP
 \fB\-o\fR \fI\,FILENAME\/\fR
 write encrypted message rather to FILENAME than STDOUT
 .TP
+\fB\-r\fR, \fB\-\-recipients\fR
+select key(s) from given keyring by KEYSPEC
+.TP
 \fB\-s\fR \fI\,STRING\/\fR
-select only encryption\-capable subkeys with key ID or fingerprint equals STRING
+select only encryption\-capable subkeys with fingerprint equals STRING
 .TP
 \fB\-t\fR, \fB\-\-throw\-keyids\fR
 throw included key IDs for somewhat improved privacy

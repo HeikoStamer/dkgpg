@@ -198,7 +198,7 @@ int main
 				std::cout << "  -i FILENAME         read message rather" <<
 					" from FILENAME than STDIN" << std::endl;
 				std::cout << "  -k FILENAME         use keyring FILENAME" <<
-					" containing external revocation keys" << std::endl;
+					" containing the required keys" << std::endl;
 				std::cout << "  -o FILENAME         write encrypted message" <<
 					" rather to FILENAME than STDOUT" << std::endl;
 				std::cout << "  -r, --recipients    select key(s) from given" <<

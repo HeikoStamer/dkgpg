@@ -104,7 +104,7 @@ void run_instance
 	std::string armored_pubring;
 	if (opt_k)
 	{
-		if (!read_key_file(kfilename, armored_pubring))
+		if (!read_key_file(opt_k, armored_pubring))
 			exit(-1);
 	}
 
@@ -843,7 +843,7 @@ int main
 	if (gnunet_opt_URI != NULL)
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 	if (gnunet_opt_y != NULL)
-		opt_y = gnunet_opt_y; // get yaot filename from GNUnet options
+		opt_y = gnunet_opt_y;
 #endif
 
 	// create peer list from remaining arguments

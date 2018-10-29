@@ -1617,16 +1617,6 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (!msg->CheckMDC(opt_verbose))
-	{
-		std::cerr << "ERROR: message was modified (security issue) or" <<
-			" not integrity protected" << std::endl;
-		delete msg;
-		delete dkg;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
 	if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
 		opt_verbose, msg))
 	{
@@ -2421,16 +2411,6 @@ int main
 			if (!msg->Decrypt(seskey, opt_verbose, decmsg))
 			{
 				std::cerr << "ERROR: message decryption failed" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				return -1;
-			}
-			if (!msg->CheckMDC(opt_verbose))
-			{
-				std::cerr << "ERROR: message was modified (security issue)" <<
-					std::endl;
 				delete msg;
 				delete dkg;
 				delete ring;

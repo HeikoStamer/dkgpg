@@ -73,6 +73,7 @@ std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
 bool							opt_binary = false, opt_E = false;
+bool							opt_weak = false;
 char							*opt_ifilename = NULL;
 char							*opt_ofilename = NULL;
 char							*opt_passwords = NULL;
@@ -277,7 +278,8 @@ bool verify_decryption_share
 		mpz_powm(c2, dkg->v_i[idx_dkg], c_out, dkg->p);
 		mpz_mul(b, b, c2);
 		mpz_mod(b, b, dkg->p);
-		tmcg_mpz_shash(c2, 6, a, b, r_i_out, dkg->v_i[idx_dkg], nizk_gk, dkg->g);
+		tmcg_mpz_shash(c2, 6, a, b, r_i_out, dkg->v_i[idx_dkg], nizk_gk,
+			dkg->g);
 		if (mpz_cmp(c2, c_out))
 			throw false;		
 
@@ -855,7 +857,7 @@ bool decrypt_message
 					if (get_key_by_signature(ring, sig, opt_verbose, ak))
 					{
 						if (!verify_signature(msg->literal_data, ak, sig,
-							ring, opt_verbose))
+							ring, opt_verbose, opt_weak))
 						{
 							vf = false;
 							std::cerr << "WARNING: verification of" <<
@@ -1774,6 +1776,7 @@ unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_nonint = 0;
 int gnunet_opt_verbose = 0;
+int gnunet_opt_weak = 0;
 int gnunet_opt_binary = 0;
 int gnunet_opt_E = 0;
 #endif
@@ -1845,6 +1848,11 @@ int main
 			"FILENAME",
 			"verify included signatures using keyring FILENAME",
 			&gnunet_opt_k
+		),
+		GNUNET_GETOPT_option_flag('K',
+			"weak",
+			"allow weak keys to verify included signatures",
+			&gnunet_opt_weak
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
 		GNUNET_GETOPT_option_loglevel(&loglev),
@@ -2000,7 +2008,7 @@ int main
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
 			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
 			(arg.find("-n") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-E") == 0))
+			(arg.find("-E") == 0) || (arg.find("-K") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -2021,6 +2029,8 @@ int main
 					" message rather from FILENAME than STDIN" << std::endl;
 				std::cout << "  -k FILENAME            verify included" <<
 					" signatures using keyring FILENAME" << std::endl;
+				std::cout << "  -K, --weak             allow weak keys to" <<
+					" verify included signatures" << std::endl;
 				std::cout << "  -n, --non-interactive  run in" <<
 					" non-interactive mode" << std::endl;
 				std::cout << "  -o FILENAME            write decrypted" <<
@@ -2044,6 +2054,8 @@ int main
 				opt_binary = true;
 			if ((arg.find("-E") == 0) || (arg.find("--echo") == 0))
 				opt_E = true;
+			if ((arg.find("-K") == 0) || (arg.find("--weak") == 0))
+				opt_weak = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
@@ -2520,6 +2532,11 @@ int main
 			"FILENAME",
 			"verify included signatures using keyring FILENAME",
 			&gnunet_opt_k
+		),
+		GNUNET_GETOPT_option_flag('K',
+			"weak",
+			"allow weak keys to verify included signatures",
+			&gnunet_opt_weak
 		),
 		GNUNET_GETOPT_option_flag('n',
 			"non-interactive",

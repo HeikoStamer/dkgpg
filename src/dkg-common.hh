@@ -37,11 +37,20 @@
 	#include <libTMCG.hh>
 
 	bool init_tDSS
-		(const TMCG_OpenPGP_Prvkey *prv, const int opt_verbose,
+		(const TMCG_OpenPGP_Prvkey *prv,
+		 const int opt_verbose,
 		 CanettiGennaroJareckiKrawczykRabinDSS* &dss);
 	bool init_tElG
-		(const TMCG_OpenPGP_PrivateSubkey *sub, const int opt_verbose,
+		(const TMCG_OpenPGP_PrivateSubkey *sub,
+		 const int opt_verbose,
 		 GennaroJareckiKrawczykRabinDKG* &dkg);
+	bool verify_signature
+		(const tmcg_openpgp_octets_t &data,
+		 const std::string &armored_pubkey,
+		 const TMCG_OpenPGP_Signature *signature,
+		 const TMCG_OpenPGP_Keyring *ring,
+		 const int opt_verbose,
+		 const bool opt_weak = false);
 
 #endif
 

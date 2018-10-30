@@ -850,11 +850,17 @@ bool decrypt_message
 				bool vf = true;
 				for (size_t i = 0; i < (msg->signatures).size(); i++)
 				{
+					const TMCG_OpenPGP_Signature *sig = msg->signatures[i];
 					std::string ak;
-					if (get_key_by_signature(ring, msg->signatures[i],
-						opt_verbose, ak))
+					if (get_key_by_signature(ring, sig, opt_verbose, ak))
 					{
-// TODO
+						if (!verify_signature(msg->literal_data, ak, sig,
+							ring, opt_verbose))
+						{
+							vf = false;
+							std::cerr << "WARNING: verification of" <<
+							" signature #" << i << " failed" << std::endl;
+						}	
 					}
 					else
 					{

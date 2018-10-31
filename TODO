@@ -7,9 +7,9 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* dkg-decrypt: add option "-k" and verify included signatures packets
+* dkg-adduid: export updated private key containing the created user ID
+* dkg-tools: add program dkg-revuid to revoke a user ID
 + dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())
-+ dkg-tools: create a program dkg-keyedit for adding user IDs and other stuff
 + dkg-tools: use getopt parser with long options (even if no GNUnet support)
 - dkg-decrypt: add a fake image header (png) for bluring decryption shares

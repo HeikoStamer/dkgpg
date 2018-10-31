@@ -24,22 +24,24 @@ LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@\
 
 bin_PROGRAMS = dkg-gencrs dkg-generate dkg-encrypt dkg-decrypt dkg-sign\
  dkg-revoke dkg-keyinfo dkg-refresh dkg-verify dkg-keycheck dkg-keysign\
- dkg-timestamp dkg-timestamp-verify
+ dkg-timestamp dkg-timestamp-verify dkg-adduid
 
 dist_man_MANS = dkg-generate.1 dkg-encrypt.1 dkg-decrypt.1 dkg-sign.1\
  dkg-revoke.1 dkg-verify.1 dkg-keysign.1
 
 dkg_gencrs_SOURCES = dkg-gencrs.cc
-dkg_gencrs_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
+dkg_gencrs_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@
 dkg_generate_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-io.hh dkg-io.cc dkg-generate.cc
 dkg_encrypt_SOURCES = dkg-io.hh dkg-io.cc dkg-encrypt.cc
-dkg_encrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
+dkg_encrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@
 dkg_decrypt_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-decrypt.cc
-dkg_decrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@\
- @GNUNET_LIBS@ @COMP_LIBS@
+dkg_decrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@ @GNUNET_LIBS@ @COMP_LIBS@
 dkg_sign_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-sign.cc
@@ -48,14 +50,17 @@ dkg_revoke_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-io.hh dkg-io.cc dkg-revoke.cc
 dkg_keyinfo_SOURCES = dkg-io.hh dkg-io.cc dkg-common.hh dkg-common.cc\
  dkg-keyinfo.cc
-dkg_keyinfo_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
+dkg_keyinfo_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@
 dkg_refresh_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-refresh.cc
 dkg_verify_SOURCES = dkg-io.hh dkg-io.cc dkg-verify.cc
-dkg_verify_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
+dkg_verify_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@
 dkg_keycheck_SOURCES = dkg-io.hh dkg-io.cc dkg-keycheck.cc
-dkg_keycheck_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
+dkg_keycheck_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@
 dkg_keysign_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-keysign.cc
@@ -63,5 +68,9 @@ dkg_timestamp_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-timestamp.cc
 dkg_timestamp_verify_SOURCES = dkg-io.hh dkg-io.cc dkg-timestamp-verify.cc
-dkg_timestamp_verify_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
+dkg_timestamp_verify_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+ @LIBGMP_LIBS@
+dkg_adduid_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
+ dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
+ dkg-io.hh dkg-io.cc dkg-adduid.cc
 

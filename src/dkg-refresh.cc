@@ -279,7 +279,8 @@ void run_instance
 		exit(-1);
 	}
 	if (opt_verbose > 1)
-		std::cerr << "INFO: R_" << whoami << ": log follows " << std::endl << err_log.str();
+		std::cerr << "INFO: R_" << whoami << ": log follows " <<
+			std::endl << err_log.str();
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
@@ -466,7 +467,8 @@ void run_instance
 		std::ofstream::out | std::ofstream::trunc);
 	if (!secofs.good())
 	{
-		std::cerr << "ERROR: R_" << whoami << ": opening private key file failed" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": opening private key file" <<
+			" failed" << std::endl;
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
 		delete ring;
@@ -476,7 +478,8 @@ void run_instance
 	secofs << armor;
 	if (!secofs.good())
 	{
-		std::cerr << "ERROR: R_" << whoami << ": writing private key file failed" << std::endl;
+		std::cerr << "ERROR: R_" << whoami << ": writing private key file" <<
+			" failed" << std::endl;
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
 		delete ring;
@@ -655,7 +658,8 @@ int main
 			(arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
-			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) && (opt_hostname == NULL))
+			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_hostname == NULL))
 			{
 				hostname = argv[i+1];
 				opt_hostname = (char*)hostname.c_str();
@@ -666,41 +670,57 @@ int main
 				kfilename = argv[i+1];
 				opt_k = (char*)kfilename.c_str();
 			}
-			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) && (opt_passwords == NULL))
+			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_passwords == NULL))
 			{
 				passwords = argv[i+1];
 				opt_passwords = (char*)passwords.c_str();
 			}
-			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) && (port.length() == 0))
+			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
+				(port.length() == 0))
+			{
 				port = argv[i+1];
-			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) && (opt_W == 5))
+			}
+			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_W == 5))
+			{
 				opt_W = strtoul(argv[i+1], NULL, 10);
+			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) || (arg.find("-h") == 0) || (arg.find("-V") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
 #ifndef GNUNET
 				std::cout << usage << std::endl;
 				std::cout << about << std::endl;
-				std::cout << "Arguments mandatory for long options are also mandatory for short options." << std::endl;
+				std::cout << "Arguments mandatory for long options are also" <<
+					" mandatory for short options." << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
-				std::cout << "  -H STRING      hostname (e.g. onion address) of this peer within PEERS" << std::endl;
+				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
+					" of this peer within PEERS" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -p INTEGER     start port for built-in TCP/IP message exchange service" << std::endl;
-				std::cout << "  -P STRING      exchanged passwords to protect private and broadcast channels" << std::endl;
-				std::cout << "  -v, --version  print the version number" << std::endl;
-				std::cout << "  -V, --verbose  turn on verbose output" << std::endl;
-				std::cout << "  -W INTEGER     timeout for point-to-point messages in minutes" << std::endl;
+				std::cout << "  -p INTEGER     start port for built-in" <<
+					" TCP/IP message exchange service" << std::endl;
+				std::cout << "  -P STRING      exchanged passwords to" <<
+					" protect private and broadcast channels" << std::endl;
+				std::cout << "  -v, --version  print the version number" <<
+					std::endl;
+				std::cout << "  -V, --verbose  turn on verbose output" <<
+					std::endl;
+				std::cout << "  -W INTEGER     timeout for point-to-point" <<
+					" messages in minutes" << std::endl;
 #endif
 				return 0; // not continue
 			}
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
-				std::cout << "dkg-refresh v" << version << " without GNUNET support" << std::endl;
+				std::cout << "dkg-refresh v" << version <<
+					" without GNUNET support" << std::endl;
 #endif
 				return 0; // not continue
 			}
@@ -720,7 +740,8 @@ int main
 		}
 		else
 		{
-			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" << std::endl;
+			std::cerr << "ERROR: peer identity \"" << arg << "\" too long" <<
+				std::endl;
 			return -1;
 		}
 	}
@@ -734,12 +755,14 @@ int main
 	// check command line arguments
 	if ((opt_hostname != NULL) && (opt_passwords == NULL))
 	{
-		std::cerr << "ERROR: option \"-P\" is necessary due to insecure network" << std::endl;
+		std::cerr << "ERROR: option \"-P\" is necessary due to insecure" <<
+			" network" << std::endl;
 		return -1;
 	}
 	if (peers.size() < 1)
 	{
-		std::cerr << "ERROR: no peers given as argument; usage: " << usage << std::endl;
+		std::cerr << "ERROR: no peers given as argument; usage: " <<
+			usage << std::endl;
 		return -1;
 	}
 
@@ -776,7 +799,10 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() << std::endl;
+	{
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
+	}
 
 	// read the public key
 	std::string armored_pubkey = "undefined";
@@ -795,7 +821,8 @@ int main
 	}
 	if (armored_pubkey == "undefined")
 	{
-		std::cerr << "ERROR: no corresponding public key file found" << std::endl;
+		std::cerr << "ERROR: no corresponding public key file found" <<
+			std::endl;
 		return -1;
 	}
 
@@ -830,19 +857,22 @@ int main
 		return -1;
 	}
 	delete primary;
-	std::cerr << "We need some entropy to cache very strong randomness for share refresh." << std::endl;
-	std::cerr << "Please use other programs, move the mouse, and type on your keyboard: " << std::endl; 
-	tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, (2 * peers.size()), dss_q);
+	std::cerr << "We need some entropy to cache very strong randomness for" <<
+		" share refresh." << std::endl;
+	std::cerr << "Please use other programs, move the mouse, and type on" <<
+		" your keyboard: " << std::endl; 
+	tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail,
+		(2 * peers.size()), dss_q);
 	std::cerr << "Thank you!" << std::endl;
 	mpz_clear(dss_q);
 
 	// initialize return code
 	int ret = 0;
-	// create underlying point-to-point channels, if built-in TCP/IP service requested
+	// create underlying point-to-point channels, if built-in TCP/IP requested
 	if (opt_hostname != NULL)
 	{
 		if (port.length())
-			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from options
+			opt_p = strtoul(port.c_str(), NULL, 10); // get port from options
 		if ((opt_p < 1) || (opt_p > 65535))
 		{
 			std::cerr << "ERROR: no valid TCP start port given" << std::endl;
@@ -917,7 +947,8 @@ int main
 		),
 		GNUNET_GETOPT_OPTION_END
 	};
-	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
+	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run,
+		argv[0]);
 //	GNUNET_free((void *) argv);
 	// release cache
 	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
@@ -926,11 +957,14 @@ int main
 	else
 		return -1;
 #else
-	std::cerr << "WARNING: GNUnet CADET is required for the message exchange of this program" << std::endl;
+	std::cerr << "WARNING: GNUnet CADET is required for the message exchange" <<
+		" of this program" << std::endl;
 #endif
 
-	std::cerr << "INFO: running local test with " << peers.size() << " participants" << std::endl;
-	std::cerr << "WARNING: due to cache issues the generated shares are identical, don't use them!" << std::endl;
+	std::cerr << "INFO: running local test with " << peers.size() <<
+		" participants" << std::endl;
+	std::cerr << "WARNING: due to cache issues the generated shares are" <<
+		" identical, don't use them!" << std::endl;
 	// open pipes
 	for (size_t i = 0; i < peers.size(); i++)
 	{
@@ -962,7 +996,10 @@ int main
 		{
 			std::cerr << "ERROR: protocol instance ";
 			if (WIFSIGNALED(wstatus))
-				std::cerr << pid[i] << " terminated by signal " << WTERMSIG(wstatus) << std::endl;
+			{
+				std::cerr << pid[i] << " terminated by signal " <<
+					WTERMSIG(wstatus) << std::endl;
+			}
 			if (WCOREDUMP(wstatus))
 				std::cerr << pid[i] << " dumped core" << std::endl;
 			ret = -1; // fatal error
@@ -970,7 +1007,11 @@ int main
 		else if (WIFEXITED(wstatus))
 		{
 			if (opt_verbose)
-				std::cerr << "INFO: protocol instance " << pid[i] << " terminated with exit status " << WEXITSTATUS(wstatus) << std::endl;
+			{
+				std::cerr << "INFO: protocol instance " << pid[i] <<
+					" terminated with exit status " << WEXITSTATUS(wstatus) <<
+					std::endl;
+			}
 			if (WEXITSTATUS(wstatus))
 				ret = -2; // error
 		}
@@ -978,8 +1019,11 @@ int main
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
 				perror("ERROR: dkg-refresh (close)");
-			if ((close(broadcast_pipefd[i][j][0]) < 0) || (close(broadcast_pipefd[i][j][1]) < 0))
+			if ((close(broadcast_pipefd[i][j][0]) < 0) ||
+				(close(broadcast_pipefd[i][j][1]) < 0))
+			{
 				perror("ERROR: dkg-refresh (close)");
+			}
 		}
 	}
 	

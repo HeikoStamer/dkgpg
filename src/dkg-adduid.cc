@@ -463,8 +463,8 @@ void run_instance
 	delete dss;
 	delete ring;
 
-	// convert and append user ID packet (uid) and signature packet (uidsig)
-	// to existing OpenPGP structures of the key
+	// convert and append the created user ID packet (uid) and the corresponding
+	// signature packet (uidsig) to existing OpenPGP structures of this key
 	TMCG_OpenPGP_Signature *si = NULL;
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 		SignatureParse(uidsig, opt_verbose, si);
@@ -485,7 +485,7 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	prv->pub->userids.push_back(ui); // append to public key
+	prv->pub->userids.push_back(ui); // append to private/public key
 
 	// export updated private key in OpenPGP armor format
 	std::stringstream secfilename;

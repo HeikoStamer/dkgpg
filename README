@@ -71,15 +71,17 @@ Overview
   has been implemented by the program dkg-decrypt. It provides an interactive
   version and a non-interactive version for computing, verifying, and combining
   the required decryption shares from participating players. Finally, if
-  everything is sane, it outputs the decrypted message. Since DKGPG 1.0.8
-  dkg-decrypt supports the option "-y" that turns it into a regular OpenPGP
-  implementation operating with any given private key. This option is also
-  available for the programs dkg-sign, dkg-keysign, and dkg-timestamp. 
+  everything is sane, it outputs the decrypted message. Included signatures can
+  be verified by using the option "-k" and a keyring that contains the required
+  public keys. Since DKGPG 1.0.8 dkg-decrypt supports the option "-y" that turns
+  it into a regular OpenPGP implementation operating with any given private key.
+  This option is also available for the programs dkg-generate, dkg-sign,
+  dkg-keysign, and dkg-timestamp. 
 
   The programs dkg-keycheck and dkg-keyinfo provide basic information on given
   OpenPGP public and private keys, respectively. By option "-m" of dkg-keyinfo
-  the migration of a peer identity is achieved. Please note that only the name
-  of the peer is migrated, the private key material keeps unchanged. Thus
+  the migration of a peer identity is achieved. Please note that only the stored
+  name of the peer is migrated, the private key material keeps unchanged. Thus
   afterwards all parties should refresh their shares by dkg-refresh.
 
   The program dkg-sign creates a detached signature on a binary or a text file,
@@ -90,14 +92,15 @@ Overview
   (e.g. libgfshare) and laborious reconstruction ceremonies (e.g. as used for
   DNSSEC root signing key). The program dkg-keysign generates certification
   signatures in a similar manner for each selected and valid user ID of a
-  given public key. User attributes are not supported yet. Last but not least,
-  the program dkg-revoke generates corresponding revocation signatures (also
+  given public key. User attributes are not supported yet. With the program
+  dkg-adduid an additional user ID can be created. Last but not least,the
+  program dkg-revoke generates corresponding revocation signatures (also
   known as revocation certificates).
 
   Please consult the manual pages for detailed information on usage and options.
 
-  Note that for building dkg-generate, dkg-sign, dkg-keysign, dkg-revoke,
-  dkg-refresh and the interactive version of dkg-decrypt with GNUnet support
+  Note that for building GNUnet support of dkg-generate, dkg-sign, dkg-keysign,
+  dkg-revoke, dkg-refresh, dkg-adduid and the interactive version of dkg-decrypt
   the development files and environment of a very recent version (at least
   v0.11.x, which is when writing these lines still not yet released) must be
   present. However, as workaround for systems without GNUnet a simple TCP/IP
@@ -136,6 +139,7 @@ Requirements
   ++ GNU/Linux (Arch Linux)      x86_64    gcc 7.2.0 (details omitted)
   ++ GNU/Linux (Trisquel Linux)  x86_64    gcc 4.8.4 (details omitted)
   ++ OpenBSD 6.1                 amd64     gcc 4.2.1 (details omitted)
+  ++ OpenBSD 6.4                 amd64     gcc 4.2.1 (details omitted)
   ++ FreeBSD 11.1                amd64     gcc 6.4.0 (details omitted)
 
 Build & Install

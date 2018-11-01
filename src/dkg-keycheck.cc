@@ -1352,7 +1352,10 @@ int main
 	if (opt_p)
 	{
 		if (prv->Weak(opt_verbose) && opt_verbose)
-			std::cerr << "WARNING: weak private primary key detected" << std::endl;
+		{
+			std::cerr << "WARNING: weak private primary key detected" <<
+				std::endl;
+		}
 		switch (prv->pkalgo)
 		{
 			case TMCG_OPENPGP_PKALGO_RSA:

@@ -183,8 +183,8 @@ void run_instance
 			std::string pwd;
 			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 			{
-				std::cerr << "ERROR: R_" << whoami << ": " << "cannot read" <<
-					" password for protecting channel to R_" << i << std::endl;
+				std::cerr << "ERROR: P_" << whoami << ": " << "cannot read" <<
+					" password for protecting channel to P_" << i << std::endl;
 				delete dss;
 				delete ring;
 				delete prv;
@@ -194,8 +194,8 @@ void run_instance
 			if (((i + 1) < peers.size()) &&
 				!TMCG_ParseHelper::nx(passwords, '/'))
 			{
-				std::cerr << "ERROR: R_" << whoami << ": " << "cannot skip" <<
-					" to next password for protecting channel to R_" <<
+				std::cerr << "ERROR: P_" << whoami << ": " << "cannot skip" <<
+					" to next password for protecting channel to P_" <<
 					(i + 1) << std::endl;
 				delete dss;
 				delete ring;
@@ -206,7 +206,7 @@ void run_instance
 		else
 		{
 			// use simple key -- we assume that GNUnet provides secure channels
-			key << "dkg-adduid::R_" << (i + whoami);
+			key << "dkg-adduid::P_" << (i + whoami);
 		}
 		uP_in.push_back(pipefd[i][whoami][0]);
 		uP_out.push_back(pipefd[whoami][i][1]);
@@ -244,7 +244,7 @@ void run_instance
 	{
 		mpz_t xtest;
 		mpz_init_set_ui(xtest, i);
-		std::cerr << "INFO: R_" << whoami << ": xtest = " << xtest << " <-> ";
+		std::cerr << "INFO: P_" << whoami << ": xtest = " << xtest << " <-> ";
 		rbc->Broadcast(xtest);
 		for (size_t ii = 0; ii < peers.size(); ii++)
 		{
@@ -279,7 +279,7 @@ void run_instance
 			}
 			else
 			{
-				std::cerr << "WARNING: R_" << whoami << ": no signature" <<
+				std::cerr << "WARNING: P_" << whoami << ": no signature" <<
 					" creation time stamp received from " << i << std::endl;
 			}
 		}
@@ -288,7 +288,7 @@ void run_instance
 	std::sort(tvs.begin(), tvs.end());
 	if (tvs.size() < (peers.size() - T_RBC))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": not enough timestamps" <<
+		std::cerr << "ERROR: P_" << whoami << ": not enough timestamps" <<
 			" received" << std::endl;
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
@@ -299,7 +299,7 @@ void run_instance
 	// use a median value as some kind of gentle agreement
 	csigtime = tvs[tvs.size()/2];
 	if (opt_verbose)
-		std::cerr << "INFO: R_" << whoami << ": canonicalized signature" <<
+		std::cerr << "INFO: P_" << whoami << ": canonicalized signature" <<
 			" creation time = " << csigtime << std::endl;
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
@@ -312,7 +312,7 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 	else
 	{
-		std::cerr << "ERROR: R_" << whoami << ": selecting hash algorithm" <<
+		std::cerr << "ERROR: P_" << whoami << ": selecting hash algorithm" <<
 			" failed for |q| = " << mpz_sizeinbase(dss->q, 2L) << std::endl;
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
@@ -353,7 +353,7 @@ void run_instance
 	ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 	if (ret)
 	{
-		std::cerr << "ERROR: R_" << whoami << ": gcry_mpi_scan() failed" <<
+		std::cerr << "ERROR: P_" << whoami << ": gcry_mpi_scan() failed" <<
 			" for h" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -365,7 +365,7 @@ void run_instance
 	}
 	if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
+		std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
 			" failed for dsa_m" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -378,14 +378,14 @@ void run_instance
 	gcry_mpi_release(h);
 	std::stringstream err_log_sign;
 	if (opt_verbose)
-		std::cerr << "INFO: R_" << whoami << ": dss.Sign() on" <<
+		std::cerr << "INFO: P_" << whoami << ": dss.Sign() on" <<
 			" user ID" << std::endl;
 	if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, prv->tdss_idx2dkg,
 		prv->tdss_dkg2idx, aiou, rbc, err_log_sign))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": " << "tDSS Sign() on" <<
+		std::cerr << "ERROR: P_" << whoami << ": " << "tDSS Sign() on" <<
 			" user ID failed" << std::endl;
-		std::cerr << "ERROR: R_" << whoami << ": log follows " << std::endl <<
+		std::cerr << "ERROR: P_" << whoami << ": log follows " << std::endl <<
 			err_log_sign.str();
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -396,11 +396,11 @@ void run_instance
 		exit(-1);
 	}
 	if (opt_verbose > 1)
-		std::cerr << "INFO: R_" << whoami << ": log follows " << std::endl <<
+		std::cerr << "INFO: P_" << whoami << ": log follows " << std::endl <<
 			err_log_sign.str();
 	if (!tmcg_mpz_get_gcry_mpi(r, dsa_r))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+		std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
 			" failed for dsa_r" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -412,7 +412,7 @@ void run_instance
 	}
 	if (!tmcg_mpz_get_gcry_mpi(s, dsa_s))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+		std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
 			" failed for dsa_s" << std::endl;
 		gcry_mpi_release(r), gcry_mpi_release(s);
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
@@ -430,7 +430,7 @@ void run_instance
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
-		std::cerr << "INFO: R_" << whoami << ": waiting approximately " <<
+		std::cerr << "INFO: P_" << whoami << ": waiting approximately " <<
 			(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 			std::endl;
 	rbc->Sync(synctime);
@@ -442,7 +442,7 @@ void run_instance
 	uP_in.clear(), uP_out.clear(), uP_key.clear();
 	if (opt_verbose)
 	{
-		std::cerr << "INFO: R_" << whoami << ": unicast channels";
+		std::cerr << "INFO: P_" << whoami << ": unicast channels";
 		aiou->PrintStatistics(std::cerr);
 		std::cerr << std::endl;
 	}
@@ -451,7 +451,7 @@ void run_instance
 	bP_in.clear(), bP_out.clear(), bP_key.clear();
 	if (opt_verbose)
 	{
-		std::cerr << "INFO: R_" << whoami << ": broadcast channel";
+		std::cerr << "INFO: P_" << whoami << ": broadcast channel";
 		aiou2->PrintStatistics(std::cerr);
 		std::cerr << std::endl;
 	}
@@ -487,12 +487,37 @@ void run_instance
 	}
 	prv->pub->userids.push_back(ui); // append to public key
 
-// TODO: export private key in OpenPGP armor format
+	// export updated private key in OpenPGP armor format
+	std::stringstream secfilename;
+	secfilename << peers[whoami] << "_dkg-sec.asc";
+	std::string armor = "";
+	tmcg_openpgp_octets_t sec;
+	prv->Export(sec);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec, armor);
+	std::ofstream secofs((secfilename.str()).c_str(),
+		std::ofstream::out | std::ofstream::trunc);
+	if (!secofs.good())
+	{
+		std::cerr << "ERROR: P_" << whoami << ": opening private key file" <<
+			" failed" << std::endl;
+		delete prv;
+		exit(-1);
+	}
+	secofs << armor;
+	if (!secofs.good())
+	{
+		std::cerr << "ERROR: P_" << whoami << ": writing private key file" <<
+			" failed" << std::endl;
+		delete prv;
+		exit(-1);
+	}
+	secofs.close();
 
 	// export public key in OpenPGP armor format
 	std::stringstream pubfilename;
 	pubfilename << peers[whoami] << "_dkg-pub.asc";
-	std::string armor = "";
+	armor = "";
 	tmcg_openpgp_octets_t pub;
 	prv->RelinkPublicSubkeys(); // relink the contained subkeys
 	prv->pub->Export(pub);
@@ -504,7 +529,7 @@ void run_instance
 	std::ofstream pubofs((pubfilename.str()).c_str(), std::ofstream::out);
 	if (!pubofs.good())
 	{
-		std::cerr << "ERROR: R_" << whoami << ": opening public key file" <<
+		std::cerr << "ERROR: P_" << whoami << ": opening public key file" <<
 			" failed" << std::endl;
 		delete prv;
 		exit(-1);
@@ -512,7 +537,7 @@ void run_instance
 	pubofs << armor;
 	if (!pubofs.good())
 	{
-		std::cerr << "ERROR: R_" << whoami << ": writing public key file" <<
+		std::cerr << "ERROR: P_" << whoami << ": writing public key file" <<
 			" failed" << std::endl;
 		delete prv;
 		exit(-1);
@@ -544,7 +569,7 @@ void fork_instance
 	{
 		if (pid[whoami] == 0)
 		{
-			/* BEGIN child code: participant R_i */
+			/* BEGIN child code: participant P_i */
 			time_t sigtime = time(NULL);
 #ifdef GNUNET
 			run_instance(whoami, sigtime, gnunet_opt_xtests);
@@ -552,9 +577,9 @@ void fork_instance
 			run_instance(whoami, sigtime, 0);
 #endif
 			if (opt_verbose)
-				std::cerr << "INFO: R_" << whoami << ": exit(0)" << std::endl;
+				std::cerr << "INFO: P_" << whoami << ": exit(0)" << std::endl;
 			exit(0);
-			/* END child code: participant R_i */
+			/* END child code: participant P_i */
 		}
 		else
 		{

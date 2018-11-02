@@ -861,7 +861,7 @@ int main
 		" share refresh." << std::endl;
 	std::cerr << "Please use other programs, move the mouse, and type on" <<
 		" your keyboard: " << std::endl; 
-	tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail,
+	tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, cache_avail,
 		(2 * peers.size()), dss_q);
 	std::cerr << "Thank you!" << std::endl;
 	mpz_clear(dss_q);
@@ -891,7 +891,7 @@ int main
 		tcpip_close();
 		tcpip_done();
 		// release cache
-		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 		return ret;
 	}
 
@@ -951,7 +951,7 @@ int main
 		argv[0]);
 //	GNUNET_free((void *) argv);
 	// release cache
-	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 	if (ret == GNUNET_OK)
 		return 0;
 	else
@@ -1028,7 +1028,7 @@ int main
 	}
 	
 	// release cache
-	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 	// finish	
 	return ret;
 }

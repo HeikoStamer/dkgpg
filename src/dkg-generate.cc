@@ -114,7 +114,7 @@ void run_instance
 		// generate a non-shared DSA primary key
 		mpz_t dsa_y, dsa_x;
 		mpz_init(dsa_y), mpz_init(dsa_x);
-		tmcg_mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, dsa_x, vtmf->q);
+		tmcg_mpz_ssrandomm_cache(cache, cache_mod, cache_avail, dsa_x, vtmf->q);
 		tmcg_mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p);
 		// extract parameters for OpenPGP key structures
 		std::string out, crcout, armor;
@@ -246,7 +246,7 @@ void run_instance
 		// generate a non-shared ElGamal subkey with same domain parameter set
 		mpz_t elg_y, elg_x;
 		mpz_init(elg_y), mpz_init(elg_x);
-		tmcg_mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, elg_x, vtmf->q);
+		tmcg_mpz_ssrandomm_cache(cache, cache_mod, cache_avail, elg_x, vtmf->q);
 		tmcg_mpz_spowm(elg_y, vtmf->g, elg_x, vtmf->p);
 		// extract further parameters for OpenPGP key structures
 		y = gcry_mpi_new(2048);
@@ -721,7 +721,7 @@ void run_instance
 	else
 	{
 		// generate a non-shared DSA primary key, if s-resilience is zero
-		tmcg_mpz_ssrandomm_cache(cache, cache_mod, &cache_avail, dsa_x, vtmf->q);
+		tmcg_mpz_ssrandomm_cache(cache, cache_mod, cache_avail, dsa_x, vtmf->q);
 		tmcg_mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p);
 	}
 	// extract further public parameters for OpenPGP key structures
@@ -2560,10 +2560,9 @@ int main
 	std::cerr << "   Please use other programs, move the mouse, and type on" <<
 		" your keyboard: " << std::endl;
 	if (opt_y)
-		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail, 2,
-			fips_q);
+		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, cache_avail, 2, fips_q);
 	else
-		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, &cache_avail,
+		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, cache_avail,
 			((2 * (S + 1)) + (2 * (T + 1))), fips_q);
 	std::cerr << "Thank you!" << std::endl;
 	mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
@@ -2592,7 +2591,7 @@ int main
 		tcpip_close();
 		tcpip_done();
 		// release cache
-		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 		// finish
 		return ret;
 	}
@@ -2601,7 +2600,7 @@ int main
 		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
 		run_instance(0, time(NULL), opt_e, 0);
 		// release cache
-		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 		return ret;
 	}
 
@@ -2683,7 +2682,7 @@ int main
 		argv[0]);
 //	GNUNET_free((void *) argv);
 	// release cache
-	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 	// finish
 	if (ret == GNUNET_OK)
 		return 0;
@@ -2757,7 +2756,7 @@ int main
 	}
 	
 	// release cache
-	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, &cache_avail);
+	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 	// finish
 	return ret;
 }

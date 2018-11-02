@@ -2560,7 +2560,7 @@ int main
 	std::cerr << "   Please use other programs, move the mouse, and type on" <<
 		" your keyboard: " << std::endl;
 	if (opt_y)
-		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, cache_avail, 8, fips_q);
+		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, cache_avail, 2, fips_q);
 	else
 		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, cache_avail,
 			((2 * (S + 1)) + (2 * (T + 1))), fips_q);

@@ -66,6 +66,7 @@ int 							opt_verbose = 0;
 char							*opt_passwords = NULL;
 char							*opt_hostname = NULL;
 char							*opt_k = NULL;
+char							*opt_R = NULL;
 unsigned long int				opt_r = 0, opt_p = 55000, opt_W = 5;
 
 void run_instance
@@ -673,7 +674,8 @@ char *gnunet_opt_hostname = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
 char *gnunet_opt_k = NULL;
-unsigned int gnunet_opt_reason = 0;
+char *gnunet_opt_R = NULL;
+unsigned int gnunet_opt_r = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
@@ -692,7 +694,7 @@ void fork_instance
 			/* BEGIN child code: participant R_i */
 			time_t sigtime = time(NULL);
 #ifdef GNUNET
-			run_instance(whoami, sigtime, gnunet_opt_reason, gnunet_opt_xtests);
+			run_instance(whoami, sigtime, gnunet_opt_r, gnunet_opt_xtests);
 #else
 			run_instance(whoami, sigtime, opt_r, 0);
 #endif
@@ -751,7 +753,13 @@ int main
 			"reason",
 			"INTEGER",
 			"reason for revocation (OpenPGP machine-readable code)",
-			&gnunet_opt_reason
+			&gnunet_opt_r
+		),
+		GNUNET_GETOPT_option_string('R',
+			"Reason",
+			"STRING",
+			"reason for revocation (human-readable form)",
+			&gnunet_opt_R
 		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
@@ -799,6 +807,11 @@ int main
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 	if (gnunet_opt_k != NULL)
 		opt_k = gnunet_opt_k;
+	if (gnunet_opt_R != NULL)
+	{
+		reason = gnunet_opt_R; // get reason string from GNUnet options
+		opt_R = gnunet_opt_R;
+	}
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
@@ -813,7 +826,7 @@ int main
 			(arg.find("-W") == 0) || (arg.find("-L") == 0) ||
 			(arg.find("-l") == 0) || (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
-			(arg.find("-k") == 0))
+			(arg.find("-k") == 0) || (arg.find("-R") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -834,15 +847,21 @@ int main
 				passwords = argv[i+1];
 				opt_passwords = (char*)passwords.c_str();
 			}
-			if ((arg.find("-r") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_r == 0))
-			{
-				opt_r = strtoul(argv[i+1], NULL, 10);
-			}
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
 				(port.length() == 0))
 			{
 				port = argv[i+1];
+			}
+			if ((arg.find("-R") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_R == NULL))
+			{
+				reason = argv[i+1];
+				opt_R = (char*)reason.c_str();
+			}
+			if ((arg.find("-r") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_r == 0))
+			{
+				opt_r = strtoul(argv[i+1], NULL, 10);
 			}
 			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_W == 5))
@@ -872,6 +891,8 @@ int main
 					" protect private and broadcast channels" << std::endl;
 				std::cout << "  -r INTEGER     reason for revocation" <<
 					" (OpenPGP machine-readable code)" << std::endl;
+				std::cout << "  -R STRING      reason for revocation" <<
+					" (human-readable form)" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -915,6 +936,8 @@ int main
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	opt_r = 3;
+	reason = "PGP is dead";
+	opt_R = (char*)reason.c_str();
 	opt_verbose = 2;
 #endif
 
@@ -1027,7 +1050,13 @@ int main
 			"reason",
 			"INTEGER",
 			"reason for revocation (OpenPGP machine-readable code)",
-			&gnunet_opt_reason
+			&gnunet_opt_r
+		),
+		GNUNET_GETOPT_option_string('R',
+			"Reason",
+			"STRING",
+			"reason for revocation (human-readable form)",
+			&gnunet_opt_R
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",
@@ -1054,7 +1083,8 @@ int main
 		),
 		GNUNET_GETOPT_OPTION_END
 	};
-	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
+	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run,
+		argv[0]);
 //	GNUNET_free((void *) argv);
 	if (ret == GNUNET_OK)
 		return 0;

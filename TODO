@@ -7,8 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* dkg-revoke: add option "-R" (individual reason as a string)
-* dkg-refresh: use Export() interface from LibTMCG
+* dkg-refresh: use Export() interface from LibTMCG and write_key_file()
 * dkg-tools: add program dkg-revuid to revoke a user ID
 + dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())

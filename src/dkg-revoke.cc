@@ -357,6 +357,7 @@ void run_instance
 			std::cerr << "WARNING: machine-readable revocation code is" <<
 				" not admissible for keys and ignored" << std::endl;
 			revcode = 0;
+			break;
 		default:
 			std::cerr << "WARNING: machine-readable revocation code is" <<
 				" unknown" << std::endl;

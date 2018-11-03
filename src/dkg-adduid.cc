@@ -152,6 +152,17 @@ void run_instance
 		exit(-1);
 	}
 
+	// check whether user ID is already present
+	for (size_t i = 0; i < prv->pub->userids.size(); i++)
+	{
+		if (userid == prv->pub->userids[i]->userid)
+		{
+			std::cerr << "ERROR: user ID already present" << std::endl;
+			delete prv;
+			exit(-2);
+		}
+	}
+
 	// create an instance of tDSS by stored parameters from private key
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
 	if (!init_tDSS(prv, opt_verbose, dss))

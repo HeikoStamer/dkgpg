@@ -1518,101 +1518,6 @@ void run_instance
 			std::endl;
 	rbc->Sync(synctime);
 
-	// export generated public keys in OpenPGP armor format
-	std::stringstream pubfilename;
-	pubfilename << peers[whoami] << "_dkg-pub.asc";
-	armor = "", all.clear();
-	all.insert(all.end(), pub.begin(), pub.end());
-	all.insert(all.end(), uid.begin(), uid.end());
-	all.insert(all.end(), uidsig.begin(), uidsig.end());
-	all.insert(all.end(), sub.begin(), sub.end());
-	all.insert(all.end(), subsig.begin(), subsig.end());
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, armor);
-	if (opt_verbose > 1)
-		std::cout << armor << std::endl;
-	std::ofstream pubofs((pubfilename.str()).c_str(), std::ofstream::out);
-	if (!pubofs.good())
-	{
-		std::cerr << "ERROR: P_" << whoami <<
-			": opening public key file failed" << std::endl;
-		delete dkg, delete dss;
-		delete rbc, delete vtmf, delete aiou, delete aiou2;
-		exit(-1);
-	}
-	pubofs << armor;
-	if (!pubofs.good())
-	{
-		std::cerr << "ERROR: P_" << whoami << 
-			": writing public key file failed" << std::endl;
-		delete dkg, delete dss;
-		delete rbc, delete vtmf, delete aiou, delete aiou2;
-		exit(-1);
-	}
-	pubofs.close();
-
-	// export generated private keys in OpenPGP armor format
-	std::stringstream secfilename;
-	secfilename << peers[whoami] << "_dkg-sec.asc";
-	armor = "", all.clear();
-	all.insert(all.end(), sec.begin(), sec.end());
-	all.insert(all.end(), uid.begin(), uid.end());
-	all.insert(all.end(), uidsig.begin(), uidsig.end());
-	all.insert(all.end(), ssb.begin(), ssb.end());
-	all.insert(all.end(), subsig.begin(), subsig.end());
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
-	if (opt_verbose > 1)
-		std::cout << armor << std::endl;
-	if (!create_strict_permissions((secfilename.str()).c_str()))
-	{
-		if (errno == EEXIST)
-		{
-			if (!check_strict_permissions((secfilename.str()).c_str()))
-			{
-				std::cerr << "WARNING: weak permissions of existing private" <<
-					" key file detected" << std::endl;
-				if (!set_strict_permissions((secfilename.str()).c_str()))
-				{
-					std::cerr << "ERROR: P_" << whoami << ": setting" <<
-						" permissions for private key file failed" << std::endl;
-					delete dkg, delete dss;
-					delete rbc, delete vtmf, delete aiou, delete aiou2;
-					exit(-1);
-				}
-			}
-			std::cerr << "WARNING: existing private key file have been" <<
-				" overwritten" << std::endl;
-		}
-		else
-		{
-			std::cerr << "ERROR: P_" << whoami << ": creating private key" <<
-				" file failed" << std::endl;
-			delete dkg, delete dss;
-			delete rbc, delete vtmf, delete aiou, delete aiou2;
-			exit(-1);
-		}
-	}
-	std::ofstream secofs((secfilename.str()).c_str(), std::ofstream::out);
-	if (!secofs.good())
-	{
-		std::cerr << "ERROR: P_" << whoami << ": opening private key file" <<
-			" failed" << std::endl;
-		delete dkg, delete dss;
-		delete rbc, delete vtmf, delete aiou, delete aiou2;
-		exit(-1);
-	}
-	secofs << armor;
-	if (!secofs.good())
-	{
-		std::cerr << "ERROR: P_" << whoami << ": writing private key file" <<
-			" failed" << std::endl;
-		delete dkg, delete dss;
-		delete rbc, delete vtmf, delete aiou, delete aiou2;
-		exit(-1);
-	}
-	secofs.close();
-
 	// release DKG
 	delete dkg;
 
@@ -1645,6 +1550,64 @@ void run_instance
 
 	// release asynchronous unicast and broadcast
 	delete aiou, delete aiou2;
+
+	// export generated public keys in OpenPGP armor format
+	std::stringstream pubfilename;
+	pubfilename << peers[whoami] << "_dkg-pub.asc";
+	armor = "", all.clear();
+	all.insert(all.end(), pub.begin(), pub.end());
+	all.insert(all.end(), uid.begin(), uid.end());
+	all.insert(all.end(), uidsig.begin(), uidsig.end());
+	all.insert(all.end(), sub.begin(), sub.end());
+	all.insert(all.end(), subsig.begin(), subsig.end());
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, armor);
+	if (opt_verbose > 1)
+		std::cout << armor << std::endl;
+	if (!write_key_file(pubfilename.str(), armor))
+		exit(-1);
+
+	// export generated private keys in OpenPGP armor format
+	std::stringstream secfilename;
+	secfilename << peers[whoami] << "_dkg-sec.asc";
+	std::string sfilename = secfilename.str();
+	armor = "", all.clear();
+	all.insert(all.end(), sec.begin(), sec.end());
+	all.insert(all.end(), uid.begin(), uid.end());
+	all.insert(all.end(), uidsig.begin(), uidsig.end());
+	all.insert(all.end(), ssb.begin(), ssb.end());
+	all.insert(all.end(), subsig.begin(), subsig.end());
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
+	if (opt_verbose > 1)
+		std::cout << armor << std::endl;
+	if (!create_strict_permissions(sfilename))
+	{
+		if (errno == EEXIST)
+		{
+			if (!check_strict_permissions(sfilename))
+			{
+				std::cerr << "WARNING: weak permissions of existing private" <<
+					" key file detected" << std::endl;
+				if (!set_strict_permissions(sfilename))
+				{
+					std::cerr << "ERROR: P_" << whoami << ": setting" <<
+						" permissions for private key file failed" << std::endl;
+					exit(-1);
+				}
+			}
+			std::cerr << "WARNING: existing private key file have been" <<
+				" overwritten" << std::endl;
+		}
+		else
+		{
+			std::cerr << "ERROR: P_" << whoami << ": creating private key" <<
+				" file failed" << std::endl;
+			exit(-1);
+		}
+	}
+	if (!write_key_file(sfilename, armor))
+		exit(-1);
 }
 
 bool fips_verify

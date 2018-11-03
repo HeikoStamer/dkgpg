@@ -82,7 +82,7 @@ bool read_key_file
 	if (!ifs.eof())
 	{
 		ifs.close();
-		std::cerr << "ERROR: reading public/private key file until EOF" <<
+		std::cerr << "ERROR: reading from public/private key file until EOF" <<
 			" failed" << std::endl;
 		return false;
 	}
@@ -110,7 +110,7 @@ bool read_binary_key_file
 	if (!ifs.eof())
 	{
 		ifs.close();
-		std::cerr << "ERROR: reading public/private key file until EOF" <<
+		std::cerr << "ERROR: reading from public/private key file until EOF" <<
 			" failed" << std::endl;
 		return false;
 	}
@@ -134,7 +134,8 @@ bool write_key_file
 	if (!ofs.good())
 	{
 		ofs.close();
-		std::cerr << "ERROR: writing private key file failed" << std::endl;
+		std::cerr << "ERROR: writing to public/private key file failed" <<
+			std::endl;
 		return false;
 	}
 	ofs.close();
@@ -146,6 +147,19 @@ bool write_key_file
 	 const tmcg_openpgp_armor_t type,
 	 const tmcg_openpgp_octets_t &key)
 {
+	if (type == TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK)
+	{
+		if (!check_strict_permissions(filename))
+		{
+			std::cerr << "WARNING: weak permissions of existing key file" <<
+				" detected" << std::endl;
+			if (!set_strict_permissions(filename))
+			{
+				std::cerr << "WARNING: setting strict permissions for key" <<
+					" file failed" << std::endl;
+			}
+		}
+	}
 	std::string armor;
 	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(type, key, armor);
 	return write_key_file(filename, armor);
@@ -271,7 +285,7 @@ bool read_binary_message
 	std::ifstream ifs(filename.c_str(), std::ifstream::in);
 	if (!ifs.is_open())
 	{
-		std::cerr << "ERROR: cannot open input file" << std::endl;
+		std::cerr << "ERROR: cannot open the input file" << std::endl;
 		return false;
 	}
 	char c;
@@ -297,7 +311,7 @@ bool write_message
 	std::ofstream ofs(filename.c_str(), std::ofstream::out);
 	if (!ofs.good())
 	{
-		std::cerr << "ERROR: cannot open output file" << std::endl;
+		std::cerr << "ERROR: cannot open the output file" << std::endl;
 		return false;
 	}
 	for (size_t i = 0; i < msg.size(); i++)
@@ -321,7 +335,7 @@ bool write_message
 	std::ofstream ofs(filename.c_str(), std::ofstream::out);
 	if (!ofs.good())
 	{
-		std::cerr << "ERROR: cannot open output file" << std::endl;
+		std::cerr << "ERROR: cannot open the output file" << std::endl;
 		return false;
 	}
 	for (size_t i = 0; i < msg.length(); i++)

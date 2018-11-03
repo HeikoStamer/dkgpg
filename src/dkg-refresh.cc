@@ -141,17 +141,16 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
+	delete ring;
 	if (!prv->pub->valid || prv->Weak(opt_verbose))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
 	if (prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -161,7 +160,6 @@ void run_instance
 	if (!init_tDSS(prv, opt_verbose, dss))
 	{
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -170,7 +168,6 @@ void run_instance
 	{
 		std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" << std::endl;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -189,7 +186,6 @@ void run_instance
 				std::cerr << "ERROR: R_" << whoami << ": " << "cannot read" <<
 					" password for protecting channel to R_" << i << std::endl;
 				delete dss;
-				delete ring;
 				delete prv;
 				exit(-1);
 			}
@@ -201,7 +197,6 @@ void run_instance
 					" to next password for protecting channel to R_" <<
 					(i + 1) << std::endl;
 				delete dss;
-				delete ring;
 				delete prv;
 				exit(-1);
 			}
@@ -274,13 +269,13 @@ void run_instance
 			err_log.str();
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
 	if (opt_verbose > 1)
 		std::cerr << "INFO: R_" << whoami << ": log follows " <<
 			std::endl << err_log.str();
+
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
@@ -288,7 +283,32 @@ void run_instance
 			(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 			std::endl;
 	rbc->Sync(synctime);
-	// create an OpenPGP DSA-based primary key using refreshed values from tDSS
+
+	// release RBC
+	delete rbc;
+	
+	// release handles (unicast channel)
+	uP_in.clear(), uP_out.clear(), uP_key.clear();
+	if (opt_verbose)
+	{
+		std::cerr << "INFO: R_" << whoami << ": unicast channels";
+		aiou->PrintStatistics(std::cerr);
+		std::cerr << std::endl;
+	}
+
+	// release handles (broadcast channel)
+	bP_in.clear(), bP_out.clear(), bP_key.clear();
+	if (opt_verbose)
+	{
+		std::cerr << "INFO: R_" << whoami << ": broadcast channel";
+		aiou2->PrintStatistics(std::cerr);
+		std::cerr << std::endl;
+	}
+
+	// release asynchronous unicast and broadcast
+	delete aiou, delete aiou2;
+
+	// create an OpenPGP secret key packet using refreshed values from tDSS
 	gcry_mpi_t n, t, i, qualsize, x_rvss_qualsize, x_i, xprime_i;
 	std::vector<gcry_mpi_t> qual, x_rvss_qual;
 	std::vector< std::vector<gcry_mpi_t> > c_ik;
@@ -298,9 +318,7 @@ void run_instance
 		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
 			" failed for x_i" << std::endl;
 		gcry_mpi_release(x_i);
-		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -311,9 +329,7 @@ void run_instance
 			" failed for xprime_i" << std::endl;
 		gcry_mpi_release(x_i);
 		gcry_mpi_release(xprime_i);
-		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -359,21 +375,19 @@ void run_instance
 					for (size_t kk = 0; kk < c_ik[jj].size(); kk++)
 						gcry_mpi_release(c_ik[jj][kk]);
 				gcry_mpi_release(tmp);
-				delete rbc, delete aiou, delete aiou2;
 				delete dss;
-				delete ring;
 				delete prv;
 				exit(-1); 
 			}
 			c_ik[j].push_back(tmp);
 		}
 	}
-	tmcg_openpgp_octets_t sec;
+	tmcg_openpgp_octets_t pkt;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSecEncodeExperimental107(prv->pub->creationtime, prv->pub->dsa_p,
 			prv->pub->dsa_q, prv->pub->dsa_g, prv->tdss_h, prv->pub->dsa_y, n,
 			t, i, qualsize, qual, x_rvss_qualsize, x_rvss_qual, prv->tdss_capl,
-			c_ik, x_i, xprime_i, passphrase, sec);
+			c_ik, x_i, xprime_i, passphrase, pkt);
 	gcry_mpi_release(x_i);
 	gcry_mpi_release(xprime_i);
 	gcry_mpi_release(n);
@@ -388,133 +402,27 @@ void run_instance
 	for (size_t j = 0; j < c_ik.size(); j++)
 		for (size_t k = 0; k < c_ik[j].size(); k++)
 			gcry_mpi_release(c_ik[j][k]);
-	
-	// export updated private key in OpenPGP armor format
-	tmcg_openpgp_octets_t all;
-	std::string armor;
-	std::stringstream secfilename;
-	secfilename << peers[whoami] << "_dkg-sec.asc";
-	all.insert(all.end(), sec.begin(), sec.end());
-	for (size_t k = 0; k < prv->pub->selfsigs.size(); k++)
-		all.insert(all.end(),
-			(prv->pub->selfsigs[k]->packet).begin(),
-			(prv->pub->selfsigs[k]->packet).end());
-	for (size_t k = 0; k < prv->pub->keyrevsigs.size(); k++)
-		all.insert(all.end(),
-			(prv->pub->keyrevsigs[k]->packet).begin(),
-			(prv->pub->keyrevsigs[k]->packet).end());
-	for (size_t j = 0; j < prv->pub->userids.size(); j++)
-	{
-		TMCG_OpenPGP_UserID *uid = prv->pub->userids[j];
-		if (uid->valid)
-		{
-			all.insert(all.end(),
-				(uid->packet).begin(), (uid->packet).end());
-			for (size_t k = 0; k < uid->selfsigs.size(); k++)
-				all.insert(all.end(),
-					(uid->selfsigs[k]->packet).begin(),
-					(uid->selfsigs[k]->packet).end());
-			for (size_t k = 0; k < uid->revsigs.size(); k++)
-				all.insert(all.end(),
-					(uid->selfsigs[k]->packet).begin(),
-					(uid->selfsigs[k]->packet).end());
-		}
-	}
-	for (size_t j = 0; j < prv->pub->userattributes.size(); j++)
-	{
-		TMCG_OpenPGP_UserAttribute *uat = prv->pub->userattributes[j];
-		if (uat->valid)
-		{
-			all.insert(all.end(),
-				(uat->packet).begin(), (uat->packet).end());
-			for (size_t k = 0; k < uat->selfsigs.size(); k++)
-				all.insert(all.end(),
-					(uat->selfsigs[k]->packet).begin(),
-					(uat->selfsigs[k]->packet).end());
-			for (size_t k = 0; k < uat->revsigs.size(); k++)
-				all.insert(all.end(),
-					(uat->selfsigs[k]->packet).begin(),
-					(uat->selfsigs[k]->packet).end());
-		}
-	}
-	for (size_t j = 0; j < prv->private_subkeys.size(); j++)
-	{
-		TMCG_OpenPGP_PrivateSubkey *ssb = prv->private_subkeys[j];
-		all.insert(all.end(), (ssb->packet).begin(), (ssb->packet).end());
-		TMCG_OpenPGP_Subkey *sub = prv->private_subkeys[j]->pub;
-		for (size_t k = 0; k < sub->selfsigs.size(); k++)
-			all.insert(all.end(),
-				(sub->selfsigs[k]->packet).begin(),
-				(sub->selfsigs[k]->packet).end());
-		for (size_t k = 0; k < sub->bindsigs.size(); k++)
-			all.insert(all.end(),
-				(sub->bindsigs[k]->packet).begin(),
-				(sub->bindsigs[k]->packet).end());
-		for (size_t k = 0; k < sub->pbindsigs.size(); k++)
-			all.insert(all.end(),
-				(sub->pbindsigs[k]->packet).begin(),
-				(sub->pbindsigs[k]->packet).end());
-		for (size_t k = 0; k < sub->keyrevsigs.size(); k++)
-			all.insert(all.end(),
-				(sub->keyrevsigs[k]->packet).begin(),
-				(sub->keyrevsigs[k]->packet).end());
-	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
-	if (opt_verbose > 1)
-		std::cout << armor << std::endl;
-	std::ofstream secofs((secfilename.str()).c_str(),
-		std::ofstream::out | std::ofstream::trunc);
-	if (!secofs.good())
-	{
-		std::cerr << "ERROR: R_" << whoami << ": opening private key file" <<
-			" failed" << std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
-	secofs << armor;
-	if (!secofs.good())
-	{
-		std::cerr << "ERROR: R_" << whoami << ": writing private key file" <<
-			" failed" << std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
-	secofs.close();
-
-	// release RBC
-	delete rbc;
-	
-	// release handles (unicast channel)
-	uP_in.clear(), uP_out.clear(), uP_key.clear();
-	if (opt_verbose)
-	{
-		std::cerr << "INFO: R_" << whoami << ": unicast channels";
-		aiou->PrintStatistics(std::cerr);
-		std::cerr << std::endl;
-	}
-
-	// release handles (broadcast channel)
-	bP_in.clear(), bP_out.clear(), bP_key.clear();
-	if (opt_verbose)
-	{
-		std::cerr << "INFO: R_" << whoami << ": broadcast channel";
-		aiou2->PrintStatistics(std::cerr);
-		std::cerr << std::endl;
-	}
-
-	// release asynchronous unicast and broadcast
-	delete aiou, delete aiou2;
 
 	// release
 	delete dss;
-	delete ring;
+	
+	// replace secret key packet in the existing OpenPGP structure of this key
+	prv->packet.clear();
+	prv->packet.insert(prv->packet.end(), pkt.begin(), pkt.end());
+
+	// export and write updated private key in OpenPGP armor format
+	std::stringstream secfilename;
+	secfilename << peers[whoami] << "_dkg-sec.asc";
+	tmcg_openpgp_octets_t sec;
+	prv->Export(sec);
+	if (!write_key_file(secfilename.str(),
+		TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
+	{
+		delete prv;
+		exit(-1);
+	}
+
+	// release
 	delete prv;
 }
 

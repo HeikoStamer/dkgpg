@@ -140,17 +140,16 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
+	delete ring;
 	if (!prv->pub->valid || prv->Weak(opt_verbose))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
 	if (prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -163,7 +162,6 @@ void run_instance
 	if (!init_tDSS(prv, opt_verbose, dss))
 	{
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -172,7 +170,6 @@ void run_instance
 	{
 		std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" << std::endl;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -191,7 +188,6 @@ void run_instance
 				std::cerr << "ERROR: R_" << whoami << ": " << "cannot read" <<
 					" password for protecting channel to R_" << i << std::endl;
 				delete dss;
-				delete ring;
 				delete prv;
 				exit(-1);
 			}
@@ -203,7 +199,6 @@ void run_instance
 					" to next password for protecting channel to R_" <<
 					(i + 1) << std::endl;
 				delete dss;
-				delete ring;
 				delete prv;
 				exit(-1);
 			}
@@ -297,7 +292,6 @@ void run_instance
 			" received" << std::endl;
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -321,7 +315,6 @@ void run_instance
 			" failed for |q| = " << mpz_sizeinbase(dss->q, 2L) << std::endl;
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -421,7 +414,6 @@ void run_instance
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -433,7 +425,6 @@ void run_instance
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -453,7 +444,6 @@ void run_instance
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -468,7 +458,6 @@ void run_instance
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -480,7 +469,6 @@ void run_instance
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -502,7 +490,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -514,7 +501,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -534,7 +520,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -549,7 +534,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -561,7 +545,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -605,7 +588,6 @@ void run_instance
 
 	// release
 	delete dss;
-	delete ring;
 
 	// convert and append the created signature packets (revsig_pub, revsig_sub)
 	// to existing OpenPGP structures of this key

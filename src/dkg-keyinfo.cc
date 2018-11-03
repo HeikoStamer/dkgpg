@@ -364,7 +364,10 @@ int main
 	for (size_t j = 0; j < prv->pub->userids.size(); j++)
 	{
 		std::cout << "OpenPGP User ID: " << std::endl << "\t";
-		std::cout << prv->pub->userids[j]->userid_sanitized << std::endl;
+		std::cout << prv->pub->userids[j]->userid_sanitized;
+		if (!prv->pub->userids[j]->valid)
+			std::cout << " [INVALID]";
+		std::cout << std::endl;
 	}
 	if (dss != NULL)
 	{

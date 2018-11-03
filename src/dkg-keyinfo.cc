@@ -247,10 +247,10 @@ int main
 		delete ring;
 		return -1;
 	}
+	delete ring;
 	if (!prv->pub->valid || prv->Weak(opt_verbose))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
-		delete ring;
 		delete prv;
 		return -1;
 	}
@@ -258,7 +258,6 @@ int main
 		(prv->pkalgo != TMCG_OPENPGP_PKALGO_DSA))
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
-		delete ring;
 		delete prv;
 		return -1;
 	}
@@ -270,7 +269,6 @@ int main
 		if (!init_tDSS(prv, opt_verbose, dss))
 		{
 			delete dss;
-			delete ring;
 			delete prv;
 			return -1;
 		}
@@ -285,7 +283,6 @@ int main
 		{
 			std::cerr << "ERROR: subkey is invalid or weak" << std::endl;
 			delete dss;
-			delete ring;
 			delete prv;
 			return -1;
 		}
@@ -295,7 +292,6 @@ int main
 			delete dkg;
 			if (dss != NULL)
 				delete dss;
-			delete ring;
 			delete prv;
 			return -1;
 		}
@@ -329,7 +325,7 @@ int main
 	{
 		tmcg_openpgp_revkey_t rk = prv->pub->revkeys[i];
 		tmcg_openpgp_octets_t f(rk.key_fingerprint,
-			 rk.key_fingerprint+sizeof(rk.key_fingerprint));
+			 rk.key_fingerprint + sizeof(rk.key_fingerprint));
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			FingerprintConvertPretty(f, fpr);
 		std::cout << "\t" << fpr << std::endl;
@@ -528,7 +524,6 @@ int main
 				delete dkg;
 			delete dss;
 			delete prv;
-			delete ring;	
 			return -1;
 		}
 		else
@@ -551,7 +546,6 @@ int main
 						delete dkg;
 					delete dss;
 					delete prv;
-					delete ring;
 					return -1;
 				}
 			}
@@ -565,11 +559,10 @@ int main
 				delete dkg;
 			delete dss;
 			delete prv;
-			delete ring;
 			return -1;
 		}
 		// create an OpenPGP private key structure with refreshed values
-		tmcg_openpgp_octets_t sec, ssb;
+		tmcg_openpgp_octets_t pkt, ssb;
 		gcry_mpi_t n, t, i, qualsize, x_rvss_qualsize;
 		std::vector<gcry_mpi_t> qual, x_rvss_qual;
 		n = gcry_mpi_set_ui(NULL, dss->n);
@@ -592,7 +585,7 @@ int main
 				prv->pub->dsa_p, prv->pub->dsa_q, prv->pub->dsa_g, prv->tdss_h,
 				prv->pub->dsa_y, n, t, i, qualsize, qual, x_rvss_qualsize,
 				x_rvss_qual, CAPL_new, prv->tdss_c_ik, prv->tdss_x_i,
-				prv->tdss_xprime_i, passphrase, sec);
+				prv->tdss_xprime_i, passphrase, pkt);
 		gcry_mpi_release(n);
 		gcry_mpi_release(t);
 		gcry_mpi_release(i);
@@ -630,103 +623,31 @@ int main
 				gcry_mpi_release(qual[j]);
 			qual.clear();
 		}
-		// export updated private key in OpenPGP armor format
-		tmcg_openpgp_octets_t all;
-		std::string armor;
-		std::stringstream secfilename;
-		secfilename << thispeer << "_dkg-sec.asc";
-		all.insert(all.end(), sec.begin(), sec.end());
-		for (size_t k = 0; k < prv->pub->selfsigs.size(); k++)
-			all.insert(all.end(),
-				(prv->pub->selfsigs[k]->packet).begin(),
-				(prv->pub->selfsigs[k]->packet).end());
-		for (size_t k = 0; k < prv->pub->keyrevsigs.size(); k++)
-			all.insert(all.end(),
-				(prv->pub->keyrevsigs[k]->packet).begin(),
-				(prv->pub->keyrevsigs[k]->packet).end());
-		for (size_t j = 0; j < prv->pub->userids.size(); j++)
-		{
-			TMCG_OpenPGP_UserID *uid = prv->pub->userids[j];
-			if (uid->valid)
-			{
-				all.insert(all.end(),
-					(uid->packet).begin(), (uid->packet).end());
-				for (size_t k = 0; k < uid->selfsigs.size(); k++)
-					all.insert(all.end(),
-						(uid->selfsigs[k]->packet).begin(),
-						(uid->selfsigs[k]->packet).end());
-				for (size_t k = 0; k < uid->revsigs.size(); k++)
-					all.insert(all.end(),
-						(uid->selfsigs[k]->packet).begin(),
-						(uid->selfsigs[k]->packet).end());
-			}
-		}
-		for (size_t j = 0; j < prv->pub->userattributes.size(); j++)
-		{
-			TMCG_OpenPGP_UserAttribute *uat = prv->pub->userattributes[j];
-			if (uat->valid)
-			{
-				all.insert(all.end(),
-					(uat->packet).begin(), (uat->packet).end());
-				for (size_t k = 0; k < uat->selfsigs.size(); k++)
-					all.insert(all.end(),
-						(uat->selfsigs[k]->packet).begin(),
-						(uat->selfsigs[k]->packet).end());
-				for (size_t k = 0; k < uat->revsigs.size(); k++)
-					all.insert(all.end(),
-						(uat->selfsigs[k]->packet).begin(),
-						(uat->selfsigs[k]->packet).end());
-			}
-		}
+
+		// replace secret key packets in the existing OpenPGP structures
+		prv->packet.clear();
+		prv->packet.insert(prv->packet.end(), pkt.begin(), pkt.end());
 		if (dkg != NULL)
 		{
-			all.insert(all.end(), ssb.begin(), ssb.end());
-			TMCG_OpenPGP_Subkey *sub = prv->private_subkeys[0]->pub;
-			for (size_t k = 0; k < sub->selfsigs.size(); k++)
-				all.insert(all.end(),
-					(sub->selfsigs[k]->packet).begin(),
-					(sub->selfsigs[k]->packet).end());
-			for (size_t k = 0; k < sub->bindsigs.size(); k++)
-				all.insert(all.end(),
-					(sub->bindsigs[k]->packet).begin(),
-					(sub->bindsigs[k]->packet).end());
-			for (size_t k = 0; k < sub->pbindsigs.size(); k++)
-				all.insert(all.end(),
-					(sub->pbindsigs[k]->packet).begin(),
-					(sub->pbindsigs[k]->packet).end());
-			for (size_t k = 0; k < sub->keyrevsigs.size(); k++)
-				all.insert(all.end(),
-					(sub->keyrevsigs[k]->packet).begin(),
-					(sub->keyrevsigs[k]->packet).end());
+			TMCG_OpenPGP_PrivateSubkey *sub = prv->private_subkeys[0];
+			sub->packet.clear();
+			sub->packet.insert(sub->packet.end(), ssb.begin(), ssb.end());
 		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, all, armor);
-		if (opt_verbose > 1)
-			std::cout << armor << std::endl;
-		std::ofstream secofs((secfilename.str()).c_str(),
-			std::ofstream::out | std::ofstream::trunc);
-		if (!secofs.good())
+
+		// export and write updated private key in OpenPGP armor format
+		std::stringstream secfilename;
+		secfilename << thispeer << "_dkg-sec.asc";
+		tmcg_openpgp_octets_t sec;
+		prv->Export(sec);
+		if (!write_key_file(secfilename.str(),
+			TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
 		{
-			std::cerr << "ERROR: opening private key file failed" << std::endl;
 			if (dkg != NULL)
 				delete dkg;
 			delete dss;
 			delete prv;
-			delete ring;
 			return -1;
 		}
-		secofs << armor;
-		if (!secofs.good())
-		{
-			std::cerr << "ERROR: writing private key file failed" << std::endl;
-			if (dkg != NULL)
-				delete dkg;
-			delete dss;
-			delete prv;
-			delete ring;
-			return -1;
-		}
-		secofs.close();
 		if (opt_verbose)
 			std::cerr << "INFO: migration from peer \"" << migrate_peer_from <<
 			"\" to \"" << migrate_peer_to << "\" finished" << std::endl;
@@ -737,8 +658,7 @@ int main
 	if (dss != NULL)
 		delete dss;
 	delete prv;
-	delete ring;
-	
+
 	return 0;
 }
 

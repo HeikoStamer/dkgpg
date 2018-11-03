@@ -59,7 +59,7 @@ std::vector<std::string>	peers;
 bool						instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
-std::string						kfilename;
+std::string						kfilename, reason;
 std::string						passwords, hostname, port;
 
 int 							opt_verbose = 0;
@@ -69,7 +69,7 @@ char							*opt_k = NULL;
 unsigned long int				opt_r = 0, opt_p = 55000, opt_W = 5;
 
 void run_instance
-	(size_t whoami, const time_t sigtime, const size_t reason,
+	(size_t whoami, const time_t sigtime, const size_t rcode,
 	 const size_t num_xtests)
 {
 	// read the key file
@@ -155,7 +155,7 @@ void run_instance
 	}
 	TMCG_OpenPGP_PrivateSubkey *sub = NULL;
 	if (prv->private_subkeys.size())
-		sub = prv->private_subkeys[0];
+		sub = prv->private_subkeys[0]; // FIXME: only the first subkey is used
 
 	// create an instance of tDSS by stored parameters from private key
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
@@ -325,10 +325,49 @@ void run_instance
 		exit(-1);
 	}
 
-	// reason for revocation
-	tmcg_openpgp_byte_t revcode = 0x00;
-	if (reason < 255)
-		revcode = reason;
+	// machine-readable code that denotes the reason for the revocation
+	tmcg_openpgp_byte_t revcode = 0; // default: "No reason specified"
+	if (rcode < 255)
+		revcode = rcode;
+	else
+	{
+		std::cerr << "WARNING: machine-readable revocation code is" <<
+				" too large and ignored" << std::endl;
+	}
+	switch (revcode)
+	{
+		case 0:
+			break;
+		case 1:
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: machine-readable revocation code means" <<
+					" that key is superseded" << std::endl;
+			}
+			break;
+		case 2:
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: machine-readablerevocation code means" <<
+					" that key material has been compromised" << std::endl;
+			}
+			break;
+		case 3:
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: machine-readablerevocation code means" <<
+					" that key is retired and no longer used" << std::endl;
+			}
+			break;
+		case 32:
+			std::cerr << "WARNING: machine-readable revocation code is" <<
+				" not admissible for keys and ignored" << std::endl;
+			revcode = 0;
+		default:
+			std::cerr << "WARNING: machine-readable revocation code is" <<
+				" unknown" << std::endl;
+			break;
+	}
 
 	// compute a hash of pub and sub, respectively
 	tmcg_openpgp_octets_t trailer_pub, pub_hashing, hash_pub, left_pub,
@@ -337,12 +376,12 @@ void run_instance
 		FingerprintCompute(prv->pub->pub_hashing, issuer);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION,
-			hashalgo, csigtime, revcode, "", issuer, trailer_pub);
+			hashalgo, csigtime, revcode, reason, issuer, trailer_pub);
 	if (sub != NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION,
-				hashalgo, csigtime, revcode, "", issuer, trailer_sub);
+				hashalgo, csigtime, revcode, reason, issuer, trailer_sub);
 	}
 	// RFC 4880 ERRATA:
 	// Primary key revocation signatures (type 0x20) hash only the key being
@@ -539,107 +578,6 @@ void run_instance
 			std::endl;
 	rbc->Sync(synctime);
 
-	// export updated public key in OpenPGP armor format
-	std::stringstream pubfilename;
-	pubfilename << peers[whoami] << "_dkg-pub.asc";
-	std::string armor = "";
-	tmcg_openpgp_octets_t all;
-	all.insert(all.end(),
-		prv->pub->packet.begin(), prv->pub->packet.end());
-	all.insert(all.end(), revsig_pub.begin(), revsig_pub.end());
-	for (size_t k = 0; k < prv->pub->selfsigs.size(); k++)
-		all.insert(all.end(),
-			(prv->pub->selfsigs[k]->packet).begin(),
-			(prv->pub->selfsigs[k]->packet).end());
-	for (size_t k = 0; k < prv->pub->keyrevsigs.size(); k++)
-		all.insert(all.end(),
-			(prv->pub->keyrevsigs[k]->packet).begin(),
-			(prv->pub->keyrevsigs[k]->packet).end());
-	for (size_t j = 0; j < prv->pub->userids.size(); j++)
-	{
-		TMCG_OpenPGP_UserID *uid = prv->pub->userids[j];
-		if (uid->valid)
-		{
-			all.insert(all.end(),
-				(uid->packet).begin(), (uid->packet).end());
-			for (size_t k = 0; k < uid->selfsigs.size(); k++)
-				all.insert(all.end(),
-					(uid->selfsigs[k]->packet).begin(),
-					(uid->selfsigs[k]->packet).end());
-			for (size_t k = 0; k < uid->revsigs.size(); k++)
-				all.insert(all.end(),
-					(uid->selfsigs[k]->packet).begin(),
-					(uid->selfsigs[k]->packet).end());
-		}
-	}
-	for (size_t j = 0; j < prv->pub->userattributes.size(); j++)
-	{
-		TMCG_OpenPGP_UserAttribute *uat = prv->pub->userattributes[j];
-		if (uat->valid)
-		{
-			all.insert(all.end(),
-				(uat->packet).begin(), (uat->packet).end());
-			for (size_t k = 0; k < uat->selfsigs.size(); k++)
-				all.insert(all.end(),
-					(uat->selfsigs[k]->packet).begin(),
-					(uat->selfsigs[k]->packet).end());
-			for (size_t k = 0; k < uat->revsigs.size(); k++)
-				all.insert(all.end(),
-					(uat->selfsigs[k]->packet).begin(),
-					(uat->selfsigs[k]->packet).end());
-		}
-	}
-	if (sub != NULL)
-	{
-		TMCG_OpenPGP_Subkey *psub = sub->pub;
-		all.insert(all.end(),
-			psub->packet.begin(), psub->packet.end());
-		all.insert(all.end(), revsig_sub.begin(), revsig_sub.end());
-		for (size_t k = 0; k < psub->selfsigs.size(); k++)
-			all.insert(all.end(),
-				(psub->selfsigs[k]->packet).begin(),
-				(psub->selfsigs[k]->packet).end());
-		for (size_t k = 0; k < psub->bindsigs.size(); k++)
-			all.insert(all.end(),
-				(psub->bindsigs[k]->packet).begin(),
-				(psub->bindsigs[k]->packet).end());
-		for (size_t k = 0; k < psub->pbindsigs.size(); k++)
-			all.insert(all.end(),
-				(psub->pbindsigs[k]->packet).begin(),
-				(psub->pbindsigs[k]->packet).end());
-		for (size_t k = 0; k < psub->keyrevsigs.size(); k++)
-			all.insert(all.end(),
-				(psub->keyrevsigs[k]->packet).begin(),
-				(psub->keyrevsigs[k]->packet).end());
-	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, armor);
-	if (opt_verbose > 1)
-		std::cout << armor << std::endl;
-	std::ofstream pubofs((pubfilename.str()).c_str(), std::ofstream::out);
-	if (!pubofs.good())
-	{
-		std::cerr << "ERROR: R_" << whoami << ": opening public key file" <<
-			" failed" << std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
-	pubofs << armor;
-	if (!pubofs.good())
-	{
-		std::cerr << "ERROR: R_" << whoami << ": writing public key file" <<
-			" failed" << std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete ring;
-		delete prv;
-		exit(-1);
-	}
-	pubofs.close();
-
 	// release RBC
 	delete rbc;
 	
@@ -667,6 +605,66 @@ void run_instance
 	// release
 	delete dss;
 	delete ring;
+
+	// convert and append the created signature packets (revsig_pub, revsig_sub)
+	// to existing OpenPGP structures of this key
+	TMCG_OpenPGP_Signature *si_pub = NULL, *si_sub = NULL;
+	bool parse_ok_pub = CallasDonnerhackeFinneyShawThayerRFC4880::
+		SignatureParse(revsig_pub, opt_verbose, si_pub);
+	if (!parse_ok_pub)
+	{
+		std::cerr << "ERROR: cannot use the created signature" << std::endl;
+		delete prv;
+		exit(-1);
+	}
+	if (opt_verbose)
+		si_pub->PrintInfo();
+	prv->pub->keyrevsigs.push_back(si_pub); // append to private/public key
+	if (sub != NULL)
+	{
+		bool parse_ok_sub = CallasDonnerhackeFinneyShawThayerRFC4880::
+			SignatureParse(revsig_sub, opt_verbose, si_sub);
+		if (!parse_ok_sub)
+		{
+			std::cerr << "ERROR: cannot use the created signature" << std::endl;
+			delete prv;
+			exit(-1);
+		}
+		if (opt_verbose)
+			si_sub->PrintInfo();
+		sub->pub->keyrevsigs.push_back(si_sub); // append to private/public key
+	}
+
+	// export and write updated private key in OpenPGP armor format
+	std::stringstream secfilename;
+	secfilename << peers[whoami] << "_dkg-sec.asc";
+	tmcg_openpgp_octets_t sec;
+	prv->Export(sec);
+	if (!write_key_file(secfilename.str(),
+		TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
+	{
+		delete prv;
+		exit(-1);
+	}
+
+	// export and write updated public key in OpenPGP armor format
+	std::stringstream pubfilename;
+	pubfilename << peers[whoami] << "_dkg-pub.asc";
+	tmcg_openpgp_octets_t pub;
+	prv->RelinkPublicSubkeys(); // relink the contained subkeys
+	prv->pub->Export(pub);
+	prv->RelinkPrivateSubkeys(); // undo the relinking
+	std::string armor;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pub, armor);
+	std::cout << armor << std::endl;
+	if (!write_key_file(pubfilename.str(), armor))
+	{
+		delete prv;
+		exit(-1);
+	}
+
+	// release
 	delete prv;
 }
 

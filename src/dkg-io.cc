@@ -25,7 +25,8 @@
 #include "dkg-io.hh"
 
 bool get_passphrase
-	(const std::string &prompt, const bool echo,
+	(const std::string &prompt,
+	 const bool echo,
 	 tmcg_openpgp_secure_string_t &passphrase)
 {
 	struct termios old_term, new_term;
@@ -64,7 +65,8 @@ bool get_passphrase
 }
 
 bool read_key_file
-	(const std::string &filename, std::string &result)
+	(const std::string &filename,
+	 std::string &result)
 {
 	// read the public/private key from file
 	std::string line;
@@ -80,7 +82,8 @@ bool read_key_file
 	if (!ifs.eof())
 	{
 		ifs.close();
-		std::cerr << "ERROR: reading public/private key file until EOF failed" << std::endl;
+		std::cerr << "ERROR: reading public/private key file until EOF" <<
+			" failed" << std::endl;
 		return false;
 	}
 	ifs.close();
@@ -89,9 +92,11 @@ bool read_key_file
 }
 
 bool read_binary_key_file
-	(const std::string &filename, const tmcg_openpgp_armor_t type, std::string &result)
+	(const std::string &filename,
+	 const tmcg_openpgp_armor_t type,
+	 std::string &result)
 {
-	// read the public/private key from file and convert to ASCII armor
+	// read the public/private key from file and convert result to ASCII armor
 	tmcg_openpgp_octets_t input;
 	std::ifstream ifs(filename.c_str(), std::ifstream::in);
 	if (!ifs.is_open())
@@ -105,12 +110,45 @@ bool read_binary_key_file
 	if (!ifs.eof())
 	{
 		ifs.close();
-		std::cerr << "ERROR: reading public/private key file until EOF failed" << std::endl;
+		std::cerr << "ERROR: reading public/private key file until EOF" <<
+			" failed" << std::endl;
 		return false;
 	}
 	ifs.close();
 	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(type, input, result);
 	return true;
+}
+
+bool write_key_file
+	(const std::string &filename,
+	 const std::string &key)
+{
+	std::ofstream ofs(filename.c_str(), 
+		std::ofstream::out | std::ofstream::trunc);
+	if (!ofs.is_open() || !ofs.good())
+	{
+		std::cerr << "ERROR: cannot open public/private key file" << std::endl;
+		return false;
+	}
+	ofs << key;
+	if (!ofs.good())
+	{
+		ofs.close();
+		std::cerr << "ERROR: writing private key file failed" << std::endl;
+		return false;
+	}
+	ofs.close();
+	return true;
+}
+
+bool write_key_file
+	(const std::string &filename,
+	 const tmcg_openpgp_armor_t type,
+	 const tmcg_openpgp_octets_t &key)
+{
+	std::string armor;
+	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(type, key, armor);
+	return write_key_file(filename, armor);
 }
 
 bool check_strict_permissions
@@ -170,7 +208,8 @@ bool create_strict_permissions
 }
 
 bool read_binary_signature
-	(const std::string &filename, std::string &result)
+	(const std::string &filename,
+	 std::string &result)
 {
 	// read the signature from file and convert to ASCII armor
 	tmcg_openpgp_octets_t input;
@@ -186,16 +225,19 @@ bool read_binary_signature
 	if (!ifs.eof())
 	{
 		ifs.close();
-		std::cerr << "ERROR: reading from input file until EOF failed" << std::endl;
+		std::cerr << "ERROR: reading from input file until EOF failed" <<
+			std::endl;
 		return false;
 	}
 	ifs.close();
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, input, result);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, input, result);
 	return true;
 }
 
 bool read_message
-	(const std::string &filename, std::string &result)
+	(const std::string &filename,
+	 std::string &result)
 {
 	// read the (encrypted) message from file
 	std::string line;
@@ -211,7 +253,8 @@ bool read_message
 	if (!ifs.eof())
 	{
 		ifs.close();
-		std::cerr << "ERROR: reading from input file until EOF failed" << std::endl;
+		std::cerr << "ERROR: reading from input file until EOF failed" <<
+			std::endl;
 		return false;
 	}
 	ifs.close();
@@ -220,9 +263,10 @@ bool read_message
 }
 
 bool read_binary_message
-	(const std::string &filename, std::string &result)
+	(const std::string &filename,
+	 std::string &result)
 {
-	// read the (encrypted) message from file and convert to ASCII armor
+	// read the (encrypted) message from file and convert result to ASCII armor
 	tmcg_openpgp_octets_t input;
 	std::ifstream ifs(filename.c_str(), std::ifstream::in);
 	if (!ifs.is_open())
@@ -236,11 +280,13 @@ bool read_binary_message
 	if (!ifs.eof())
 	{
 		ifs.close();
-		std::cerr << "ERROR: reading from input file until EOF failed" << std::endl;
+		std::cerr << "ERROR: reading from input file until EOF failed" <<
+			std::endl;
 		return false;
 	}
 	ifs.close();
-	CallasDonnerhackeFinneyShawThayerRFC4880::ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, input, result);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, input, result);
 	return true;
 }
 
@@ -333,8 +379,10 @@ bool get_key_by_signature
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyidConvert(signature->issuer, kid);
 		if (verbose > 1)
-			std::cerr << "INFO: lookup for public key with keyid " <<
-				kid << std::endl;
+		{
+			std::cerr << "INFO: lookup for public key with keyid " << kid <<
+				std::endl;
+		}
 		keyref = ring->FindByKeyid(kid);
 		if (keyref == NULL)
 		{

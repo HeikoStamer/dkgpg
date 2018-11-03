@@ -1,7 +1,7 @@
-.TH DKG\-GENERATE "1" "August 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-GENERATE "1" "November 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
-dkg\-generate \-\- distributed key generation for OpenPGP
+dkg\-generate \-\- distributed key generation for OpenPGP (only DSA and ElGamal)
 
 .SH SYNOPSIS
 .B dkg\-generate
@@ -107,15 +107,15 @@ i.e., B/D/E/ and C/E/F/, respectively. The default value of option "\-P" is
 an empty password string (simple default passwords) based on the assumption,
 that GNUnet will protect the exchanged protocol messages.
 .PP
-Additionally, instead of relying on GNUnet CADET protocol the messages can
-be exchanged by the built\-in TCP/IP communication framework. In that case
-the given peer identities from PEERS must be resolvable hostnames and the
-corresponding option "\-H" defines the name of the calling peer within that
-list. The program binds some TCP ports up from 55000 to listen for incoming
-connections and connects to other peers in that port range. The used port
-numbers are determined by the unique position in the canonicalized peer list.
-Since the communication of TCP/IP is not protected by the network itself
-the option "\-P" is mandatory in that case.
+Instead of relying on GNUnet CADET service the messages can be exchanged by
+the built\-in TCP/IP communication framework. In that case the given peer
+identities from PEERS must be resolvable hostnames and the corresponding option
+"\-H" defines the name of the calling peer within that list. The program binds
+some TCP ports up from 55000 to listen for incoming connections and connects
+to other peers in that port range. The used port numbers are determined by the
+unique position of the name in the canonicalized peer list. Since the
+communication of TCP/IP is not protected by the network itself the option "\-P"
+is mandatory in that case.
 .PP
 Please note that in the case of option "\-y" no communication channels are
 needed and thus PEERS should contain only one element and all other

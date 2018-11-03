@@ -487,62 +487,34 @@ void run_instance
 	}
 	prv->pub->userids.push_back(ui); // append to private/public key
 
-	// export updated private key in OpenPGP armor format
+	// export and write updated private key in OpenPGP armor format
 	std::stringstream secfilename;
 	secfilename << peers[whoami] << "_dkg-sec.asc";
-	std::string armor = "";
 	tmcg_openpgp_octets_t sec;
 	prv->Export(sec);
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec, armor);
-	std::ofstream secofs((secfilename.str()).c_str(),
-		std::ofstream::out | std::ofstream::trunc);
-	if (!secofs.good())
+	if (!write_key_file(secfilename.str(),
+		TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": opening private key file" <<
-			" failed" << std::endl;
 		delete prv;
 		exit(-1);
 	}
-	secofs << armor;
-	if (!secofs.good())
-	{
-		std::cerr << "ERROR: P_" << whoami << ": writing private key file" <<
-			" failed" << std::endl;
-		delete prv;
-		exit(-1);
-	}
-	secofs.close();
 
-	// export public key in OpenPGP armor format
+	// export and write updated public key in OpenPGP armor format
 	std::stringstream pubfilename;
 	pubfilename << peers[whoami] << "_dkg-pub.asc";
-	armor = "";
 	tmcg_openpgp_octets_t pub;
 	prv->RelinkPublicSubkeys(); // relink the contained subkeys
 	prv->pub->Export(pub);
 	prv->RelinkPrivateSubkeys(); // undo the relinking
+	std::string armor;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pub, armor);
-	if (opt_verbose > 1)
-		std::cout << armor << std::endl;
-	std::ofstream pubofs((pubfilename.str()).c_str(), std::ofstream::out);
-	if (!pubofs.good())
+	std::cout << armor << std::endl;
+	if (!write_key_file(pubfilename.str(), armor))
 	{
-		std::cerr << "ERROR: P_" << whoami << ": opening public key file" <<
-			" failed" << std::endl;
 		delete prv;
 		exit(-1);
 	}
-	pubofs << armor;
-	if (!pubofs.good())
-	{
-		std::cerr << "ERROR: P_" << whoami << ": writing public key file" <<
-			" failed" << std::endl;
-		delete prv;
-		exit(-1);
-	}
-	pubofs.close();
 
 	// release
 	delete prv;

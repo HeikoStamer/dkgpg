@@ -435,9 +435,9 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 	}
 
-	// compute the trailer and the hash from the signature
+	// compute the trailer and the hash of the signature
 	if (opt_verbose)
-		std::cerr << "INFO: constructing timestamp signature" << std::endl;
+		std::cerr << "INFO: constructing the timestamp signature" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left, issuer;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintCompute(prv->pub->pub_hashing, issuer);
@@ -446,7 +446,10 @@ void run_instance
 	if (opt_a)
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: include an OpenPGP notation" << std::endl;
+		{
+			std::cerr << "INFO: include an OpenPGP notation on accuracy" <<
+				std::endl;
+		}
 		std::string accuracy_name = "accuracy@dkg-timestamp";
 		std::stringstream avs;
 		avs << (unsigned long int)acc;
@@ -459,11 +462,14 @@ void run_instance
 	}
 	if (sn.length() != 0)
 	{
-		if (opt_verbose)
-			std::cerr << "INFO: include an OpenPGP notation" << std::endl;
 		size_t dpos = sn.find(":");
 		if ((dpos != sn.npos) && (dpos > 0) && ((sn.length() - dpos) > 1))
 		{
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: include an OpenPGP notation on S/N" <<
+					std::endl;
+			}
 			std::string serialnumber_name = sn.substr(0, dpos);
 			std::string serialnumber_value = sn.substr(dpos + 1,
 				sn.length() - dpos - 1);
@@ -474,8 +480,10 @@ void run_instance
 			notations.push_back(serialnumber);
 		}
 		else
+		{
 			std::cerr << "WARNING: wrong delimiter position for given" <<
-				" OpenPGP notation" << std::endl;
+				" OpenPGP notation; ignored" << std::endl;
+		}
 	} // TODO: option -t --target => use other variant of TimestampSignature
 	  //       with hash value supplied by caller, cf. [RFC 3161]
 	if (opt_y == NULL)

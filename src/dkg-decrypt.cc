@@ -1668,9 +1668,25 @@ void run_instance
 				if (esk->encrypted_key.size() != 0)
 				{
 					tmcg_openpgp_octets_t decrypted_key, prefix;
-					gcry_error_t ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-						SymmetricDecrypt(esk->encrypted_key, esk_seskey, prefix,
-							false, esk->skalgo, decrypted_key);
+					gcry_error_t ret = 0;
+					if (esk->aeadalgo == 0)
+					{
+						ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+							SymmetricDecrypt(esk->encrypted_key, esk_seskey,
+								prefix, false, esk->skalgo, decrypted_key);
+					}
+					else
+					{
+						tmcg_openpgp_octets_t ad; // additional data
+						ad.push_back(0xC3); // packet tag in new format
+						ad.push_back(esk->version); // packet version number
+						ad.push_back(esk->skalgo); // cipher algorithm octet
+						ad.push_back(esk->aeadalgo); // AEAD algorithm octet
+						ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+							SymmetricDecryptAEAD(esk->encrypted_key, esk_seskey,
+								esk->skalgo, esk->aeadalgo, 0, esk->iv, ad,
+								decrypted_key);
+					}
 					if (ret)
 					{
 						std::cerr << "ERROR: SymmetricDecrypt() failed" <<

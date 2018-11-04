@@ -320,9 +320,11 @@ void run_instance
 	}
 
 	// machine-readable code that denotes the reason for the revocation
-	tmcg_openpgp_byte_t revcode = 0; // default: "No reason specified"
+	tmcg_openpgp_revcode_t revcode = TMCG_OPENPGP_REVCODE_NO_REASON_SPECIFIED;
 	if (rcode < 255)
-		revcode = rcode;
+	{
+		revcode = (tmcg_openpgp_revcode_t)rcode;
+	}
 	else
 	{
 		std::cerr << "WARNING: machine-readable revocation code is" <<
@@ -330,33 +332,33 @@ void run_instance
 	}
 	switch (revcode)
 	{
-		case 0:
+		case TMCG_OPENPGP_REVCODE_NO_REASON_SPECIFIED:
 			break;
-		case 1:
+		case TMCG_OPENPGP_REVCODE_KEY_SUPERSEDED:
 			if (opt_verbose)
 			{
 				std::cerr << "INFO: machine-readable revocation code means" <<
 					" that key is superseded" << std::endl;
 			}
 			break;
-		case 2:
+		case TMCG_OPENPGP_REVCODE_KEY_COMPROMISED:
 			if (opt_verbose)
 			{
 				std::cerr << "INFO: machine-readablerevocation code means" <<
 					" that key material has been compromised" << std::endl;
 			}
 			break;
-		case 3:
+		case TMCG_OPENPGP_REVCODE_KEY_RETIRED:
 			if (opt_verbose)
 			{
 				std::cerr << "INFO: machine-readablerevocation code means" <<
 					" that key is retired and no longer used" << std::endl;
 			}
 			break;
-		case 32:
+		case TMCG_OPENPGP_REVCODE_UID_NO_LONGER_VALID:
 			std::cerr << "WARNING: machine-readable revocation code is" <<
 				" not admissible for keys and ignored" << std::endl;
-			revcode = 0;
+			revcode = TMCG_OPENPGP_REVCODE_NO_REASON_SPECIFIED;
 			break;
 		default:
 			std::cerr << "WARNING: machine-readable revocation code is" <<

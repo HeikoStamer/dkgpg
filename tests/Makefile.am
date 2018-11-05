@@ -19,7 +19,7 @@
 
 TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-keysign t-dkg-encrypt\
  t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-timestamp t-dkg-timestamp-verify\
- t-dkg-adduid t-dkg-refresh t-dkg-revoke\
+ t-dkg-adduid t-dkg-refresh t-dkg-revuid t-dkg-revoke\
  y-dkg-generate y-dkg-keycheck y-dkg-keysign y-dkg-encrypt y-dkg-decrypt\
  y-dkg-sign y-dkg-verify y-dkg-timestamp y-dkg-timestamp-verify
 
@@ -62,6 +62,9 @@ t_dkg_revoke_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
 t_dkg_adduid_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-adduid.cc
+t_dkg_revuid_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+ t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
+ t-dkg-io.hh t-dkg-io.cc t-dkg-revuid.cc
 
 y_dkg_generate_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@

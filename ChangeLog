@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-11-05] added program dkg-revuid to revoke an existing user ID
 * [2018-11-03] dkg-revoke: added option "-R" (human-readable reason)
 * [2018-11-03] dkg-revoke: added output of updated public key to STDOUT
 * [2018-11-03] dkg-revoke: added error handling for some bad revocation codes

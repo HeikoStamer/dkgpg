@@ -29,7 +29,7 @@
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 static const char *about = PACKAGE_STRING " " PACKAGE_URL;
-static const char *protocol = "DKGPG-adduid-1.0";
+static const char *protocol = "DKGPG-revuid-1.0";
 
 #include <sstream>
 #include <fstream>
@@ -152,15 +152,21 @@ void run_instance
 		exit(-1);
 	}
 
-	// check whether user ID is already present
+	// check whether user ID to revoke is present
+	TMCG_OpenPGP_UserID *ui = NULL;
 	for (size_t i = 0; i < prv->pub->userids.size(); i++)
 	{
 		if (userid == prv->pub->userids[i]->userid)
 		{
-			std::cerr << "ERROR: user ID already present" << std::endl;
-			delete prv;
-			exit(-2);
+			ui = prv->pub->userids[i];
+			break;
 		}
+	}
+	if (ui == NULL)
+	{
+		std::cerr << "ERROR: user ID is not present" << std::endl;
+		delete prv;
+		exit(-2);
 	}
 
 	// create an instance of tDSS by stored parameters from private key
@@ -212,7 +218,7 @@ void run_instance
 		else
 		{
 			// use simple key -- we assume that GNUnet provides secure channels
-			key << "dkg-adduid::P_" << (i + whoami);
+			key << "dkg-revuid::P_" << (i + whoami);
 		}
 		uP_in.push_back(pipefd[i][whoami][0]);
 		uP_out.push_back(pipefd[whoami][i][1]);
@@ -233,7 +239,7 @@ void run_instance
 		(opt_W * 60));
 			
 	// create an instance of a reliable broadcast protocol (RBC)
-	std::string myID = "dkg-adduid|" + std::string(protocol) + "|";
+	std::string myID = "dkg-revuid|" + std::string(protocol) + "|";
 	for (size_t i = 0; i < peers.size(); i++)
 		myID += peers[i] + "|";
 	if (opt_verbose)
@@ -326,20 +332,16 @@ void run_instance
 	}
 
 	// prepare OpenPGP structures
-	tmcg_openpgp_octets_t uat;
-	tmcg_openpgp_octets_t uid, uidsig, uidsig_hashing, uidsig_left;
-	tmcg_openpgp_octets_t hash, dsaflags;
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
-	// key may be used to certify other keys, to sign data and has been
-	// split by a secret-sharing mechanism
-	dsaflags.push_back(0x01 | 0x02 | 0x10);
+	tmcg_openpgp_octets_t revsig, revsig_hashing, revsig_left;
+	tmcg_openpgp_octets_t hash, empty;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-			hashalgo, csigtime, prv->pub->expirationtime, dsaflags,
-			prv->pub->fingerprint, uidsig_hashing); 
+		PacketSigPrepareRevocationSignature(
+			TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION, hashalgo, csigtime,
+				TMCG_OPENPGP_REVCODE_UID_NO_LONGER_VALID, "",
+				prv->pub->fingerprint, revsig_hashing);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		CertificationHash(prv->pub->pub_hashing, userid, uat, uidsig_hashing,
-			hashalgo, hash, uidsig_left);
+		CertificationHash(prv->pub->pub_hashing, userid, empty, revsig_hashing,
+			hashalgo, hash, revsig_left);
 
 	// sign the hash
 	tmcg_openpgp_byte_t buffer[1024];
@@ -422,7 +424,7 @@ void run_instance
 		exit(-1);
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		PacketSigEncode(uidsig_hashing, uidsig_left, r, s, uidsig);
+		PacketSigEncode(revsig_hashing, revsig_left, r, s, revsig);
 	gcry_mpi_release(r), gcry_mpi_release(s);
 	mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 
@@ -461,11 +463,11 @@ void run_instance
 	// release
 	delete dss;
 
-	// convert and append the created user ID packet (uid) and the corresponding
-	// signature packet (uidsig) to existing OpenPGP structures of this key
+	// convert and append the corresponding signature packet (revsig) to the
+	// existing OpenPGP structures of this key
 	TMCG_OpenPGP_Signature *si = NULL;
 	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-		SignatureParse(uidsig, opt_verbose, si);
+		SignatureParse(revsig, opt_verbose, si);
 	if (!parse_ok)
 	{
 		std::cerr << "ERROR: cannot use the created signature" << std::endl;
@@ -474,16 +476,14 @@ void run_instance
 	}
 	if (opt_verbose)
 		si->PrintInfo();
-	TMCG_OpenPGP_UserID *ui = new TMCG_OpenPGP_UserID(userid, uid);
-	ui->selfsigs.push_back(si);
-	if (!ui->Check(prv->pub, opt_verbose))
+	ui->revsigs.push_back(si);
+	if (ui->Check(prv->pub, opt_verbose))
 	{
-		std::cerr << "ERROR: validity check of user ID failed" << std::endl;
-		delete ui;
+		std::cerr << "ERROR: validity check of revoked user ID failed" <<
+			std::endl;
 		delete prv;
 		exit(-1);
 	}
-	prv->pub->userids.push_back(ui); // append to private/public key
 
 	// export and write updated private key in OpenPGP armor format
 	std::stringstream secfilename;
@@ -534,7 +534,7 @@ void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("ERROR: dkg-adduid (fork)");
+		perror("ERROR: dkg-revuid (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
@@ -563,7 +563,7 @@ void fork_instance
 int main
 	(int argc, char *const *argv)
 {
-	static const char *usage = "dkg-adduid -u STRING [OPTIONS] PEERS";
+	static const char *usage = "dkg-revuid -u STRING [OPTIONS] PEERS";
 #ifdef GNUNET
 	char *loglev = NULL;
 	char *logfile = NULL;
@@ -600,7 +600,7 @@ int main
 		GNUNET_GETOPT_option_string('u',
 			"uid",
 			"STRING",
-			"user ID to add",
+			"user ID to revoke",
 			&gnunet_opt_u
 		),
 		GNUNET_GETOPT_option_version(version),
@@ -612,7 +612,7 @@ int main
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
 			"INTEGER",
-			"minutes to wait until start of the protocol",
+			"minutes to wait until start of revocation protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
@@ -731,7 +731,7 @@ int main
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
-				std::cout << "  -u STRING      user ID to add" << std::endl;
+				std::cout << "  -u STRING      user ID to revoke" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -744,7 +744,7 @@ int main
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
-				std::cout << "dkg-adduid v" << version <<
+				std::cout << "dkg-revuid v" << version <<
 					" without GNUNET support" << std::endl;
 #endif
 				return 0; // not continue
@@ -772,7 +772,6 @@ int main
 	}
 #ifdef DKGPG_TESTSUITE
 	peers.push_back("Test1");
-	peers.push_back("Test2");
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	userid = "additional userID";
@@ -894,7 +893,7 @@ int main
 		GNUNET_GETOPT_option_string('u',
 			"uid",
 			"STRING",
-			"user ID to add",
+			"user ID to revoke",
 			&gnunet_opt_u
 		),
 		GNUNET_GETOPT_option_flag('V',
@@ -905,7 +904,7 @@ int main
 		GNUNET_GETOPT_option_uint('w',
 			"wait",
 			"INTEGER",
-			"minutes to wait until start of the protocol",
+			"minutes to wait until start of revocation protocol",
 			&gnunet_opt_wait
 		),
 		GNUNET_GETOPT_option_uint('W',
@@ -922,8 +921,7 @@ int main
 		),
 		GNUNET_GETOPT_OPTION_END
 	};
-	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run,
-		argv[0]);
+	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run, argv[0]);
 //	GNUNET_free((void *) argv);
 	if (ret == GNUNET_OK)
 		return 0;
@@ -942,9 +940,9 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if (pipe(pipefd[i][j]) < 0)
-				perror("ERROR: dkg-adduid (pipe)");
+				perror("ERROR: dkg-revuid (pipe)");
 			if (pipe(broadcast_pipefd[i][j]) < 0)
-				perror("ERROR: dkg-adduid (pipe)");
+				perror("ERROR: dkg-revuid (pipe)");
 		}
 	}
 	
@@ -962,7 +960,7 @@ int main
 		if (opt_verbose)
 			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
 		if (waitpid(pid[i], &wstatus, 0) != pid[i])
-			perror("ERROR: dkg-adduid (waitpid)");
+			perror("ERROR: dkg-revuid (waitpid)");
 		if (!WIFEXITED(wstatus))
 		{
 			std::cerr << "ERROR: protocol instance ";
@@ -989,11 +987,11 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("ERROR: dkg-adduid (close)");
+				perror("ERROR: dkg-revuid (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) ||
 				(close(broadcast_pipefd[i][j][1]) < 0))
 			{
-				perror("ERROR: dkg-adduid (close)");
+				perror("ERROR: dkg-revuid (close)");
 			}
 		}
 	}

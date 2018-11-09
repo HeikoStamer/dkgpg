@@ -159,17 +159,16 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
+	delete ring;
 	if (!prv->pub->valid || ((opt_y == NULL) && prv->Weak(opt_verbose)))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
 	if ((prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
-		delete ring;
 		delete prv;
 		exit(-1);
 	}
@@ -187,7 +186,6 @@ void run_instance
 		if (!init_tDSS(prv, opt_verbose, dss))
 		{
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -197,7 +195,6 @@ void run_instance
 			std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" <<
 				std::endl;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -216,7 +213,6 @@ void run_instance
 						"cannot read" << " password for protecting channel" <<
 						" to S_" << i << std::endl;
 					delete dss;
-					delete ring;
 					delete prv;
 					exit(-1);
 				}
@@ -228,7 +224,6 @@ void run_instance
 						" skip to next password for protecting channel to S_" <<
 						(i + 1) << std::endl;
 					delete dss;
-					delete ring;
 					delete prv;
 					exit(-1);
 				}
@@ -315,7 +310,6 @@ void run_instance
 				" received" << std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -338,7 +332,6 @@ void run_instance
 				std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -383,7 +376,6 @@ void run_instance
 				delete rbc, delete aiou, delete aiou2;
 				delete dss;
 			}
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -415,7 +407,6 @@ void run_instance
 				delete rbc, delete aiou, delete aiou2;
 				delete dss;
 			}
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -452,7 +443,6 @@ void run_instance
 				" for h" << std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -468,7 +458,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -489,7 +478,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -504,7 +492,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -516,7 +503,6 @@ void run_instance
 			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -547,7 +533,6 @@ void run_instance
 				std::cerr << "ERROR: public-key algorithm " <<
 					(int)prv->pkalgo << " not supported" << std::endl;
 				gcry_mpi_release(r), gcry_mpi_release(s);
-				delete ring;
 				delete prv;
 				exit(-1);
 		}
@@ -557,7 +542,6 @@ void run_instance
 				"(rc = " << gcry_err_code(ret) << ", str = " <<
 				gcry_strerror(ret) << ")" << std::endl;
 			gcry_mpi_release(r), gcry_mpi_release(s);
-			delete ring;
 			delete prv;
 			exit(-1);
 		}
@@ -581,7 +565,6 @@ void run_instance
 			std::cerr << "ERROR: public-key algorithm " << (int)prv->pkalgo <<
 				" not supported" << std::endl;
 			gcry_mpi_release(r), gcry_mpi_release(s);
-			delete ring;
 			delete prv;
 			exit(-1);
 	}
@@ -618,7 +601,6 @@ void run_instance
 		// release threshold signature scheme
 		delete dss;
 	}
-	delete ring;
 	delete prv;
 
 	// output the result

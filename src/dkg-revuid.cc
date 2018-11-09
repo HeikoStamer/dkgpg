@@ -24,6 +24,10 @@
 #endif
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	#undef GNUNET
+#endif
 #endif
 
 // copy infos from DKGPG package before overwritten by GNUnet headers
@@ -60,27 +64,32 @@ bool						instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
 std::string						kfilename, userid;
-std::string						passwords, hostname, port;
+std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
 char							*opt_P = NULL;
 char							*opt_H = NULL;
 char							*opt_k = NULL, *opt_u = NULL;
+char							*opt_y = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const size_t num_xtests)
 {
 	// read the key file
-	std::string armored_seckey, thispeer = peers[whoami];
-	if (!check_strict_permissions(thispeer + "_dkg-sec.asc"))
+	std::string armored_seckey, pkfname;
+	if (opt_y == NULL)
+		pkfname = peers[whoami] + "_dkg-sec.asc";
+	else
+		pkfname = opt_y;
+	if (!check_strict_permissions(pkfname))
 	{
 		std::cerr << "WARNING: weak permissions of private key file" <<
 			" detected" << std::endl;
-		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
+		if (!set_strict_permissions(pkfname))
 			exit(-1);
 	}
-	if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))
+	if (!read_key_file(pkfname, armored_seckey))
 		exit(-1);
 
 	// read the keyring
@@ -114,6 +123,9 @@ void run_instance
 #ifdef DKGPG_TESTSUITE
 		passphrase = "Test";
 #else
+#ifdef DKGPG_TESTSUITE_Y
+		passphrase = "TestY";
+#else
 		if (!get_passphrase("Enter passphrase to unlock private key", false,
 			passphrase))
 		{
@@ -121,6 +133,7 @@ void run_instance
 			delete ring;
 			exit(-1);
 		}
+#endif
 #endif
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PrivateKeyBlockParse(armored_seckey, opt_verbose, passphrase, prv);
@@ -139,13 +152,13 @@ void run_instance
 		exit(-1);
 	}
 	delete ring;
-	if (!prv->pub->valid || prv->Weak(opt_verbose))
+	if (!prv->pub->valid || ((opt_y == NULL) && prv->Weak(opt_verbose)))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete prv;
 		exit(-1);
 	}
-	if (prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
+	if ((prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
 		delete prv;
@@ -169,166 +182,176 @@ void run_instance
 		exit(-2);
 	}
 
-	// create an instance of tDSS by stored parameters from private key
+	// initialize signature scheme
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
-	if (!init_tDSS(prv, opt_verbose, dss))
+	aiounicast_select *aiou = NULL, *aiou2 = NULL;
+	CachinKursawePetzoldShoupRBC *rbc = NULL;
+	size_t T_RBC = 0;
+	time_t csigtime = 0;
+	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+	if (opt_y == NULL)
 	{
-		delete dss;
-		delete prv;
-		exit(-1);
-	}
-	// create one-to-one mapping based on the stored canonicalized peer list
-	if (!prv->tDSS_CreateMapping(peers, opt_verbose))
-	{
-		std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" << std::endl;
-		delete dss;
-		delete prv;
-		exit(-1);
-	}
-
-	// create communication handles between all players
-	std::vector<int> uP_in, uP_out, bP_in, bP_out;
-	std::vector<std::string> uP_key, bP_key;
-	for (size_t i = 0; i < peers.size(); i++)
-	{
-		std::stringstream key;
-		if (opt_P != NULL)
+		// create an instance of tDSS by stored parameters from private key
+		if (!init_tDSS(prv, opt_verbose, dss))
 		{
-			std::string pwd;
-			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
+		// create one-to-one mapping based on the stored canonicalized peer list
+		if (!prv->tDSS_CreateMapping(peers, opt_verbose))
+		{
+			std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" << std::endl;
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
+		// create communication handles between all players
+		std::vector<int> uP_in, uP_out, bP_in, bP_out;
+		std::vector<std::string> uP_key, bP_key;
+		for (size_t i = 0; i < peers.size(); i++)
+		{
+			std::stringstream key;
+			if (opt_P != NULL)
 			{
-				std::cerr << "ERROR: P_" << whoami << ": " << "cannot read" <<
-					" password for protecting channel to P_" << i << std::endl;
-				delete dss;
-				delete prv;
-				exit(-1);
+				std::string pwd;
+				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
+				{
+					std::cerr << "ERROR: P_" << whoami << ": " <<
+						"cannot read password for protecting channel to P_" <<
+						i << std::endl;
+					delete dss;
+					delete prv;
+					exit(-1);
+				}
+				key << pwd;
+				if (((i + 1) < peers.size()) &&
+					!TMCG_ParseHelper::nx(passwords, '/'))
+				{
+					std::cerr << "ERROR: P_" << whoami << ": " << "cannot" <<
+						" skip to next password for protecting channel to P_" <<
+						(i + 1) << std::endl;
+					delete dss;
+					delete prv;
+					exit(-1);
+				}
 			}
-			key << pwd;
-			if (((i + 1) < peers.size()) &&
-				!TMCG_ParseHelper::nx(passwords, '/'))
+			else
 			{
-				std::cerr << "ERROR: P_" << whoami << ": " << "cannot skip" <<
-					" to next password for protecting channel to P_" <<
-					(i + 1) << std::endl;
-				delete dss;
-				delete prv;
-				exit(-1);
+				// simple key -- we assume that GNUnet provides secure channels
+				key << "dkg-revuid::P_" << (i + whoami);
+			}
+			uP_in.push_back(pipefd[i][whoami][0]);
+			uP_out.push_back(pipefd[whoami][i][1]);
+			uP_key.push_back(key.str());
+			bP_in.push_back(broadcast_pipefd[i][whoami][0]);
+			bP_out.push_back(broadcast_pipefd[whoami][i][1]);
+			bP_key.push_back(key.str());
+		}
+		// create asynchronous authenticated unicast channels
+		aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out,
+			uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		// create asynchronous authenticated unicast channels for broadcast
+		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
+			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		// create an instance of a reliable broadcast protocol (RBC)
+		std::string myID = "dkg-revuid|" + std::string(protocol) + "|";
+		for (size_t i = 0; i < peers.size(); i++)
+			myID += peers[i] + "|";
+		if (opt_verbose)
+			std::cerr << "RBC: myID = " << myID << std::endl;
+		// assume maximum asynchronous t-resilience for RBC
+		T_RBC = (peers.size() - 1) / 3;
+		rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami,
+			aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		rbc->setID(myID);
+		// perform a simple exchange test with debug output
+		for (size_t i = 0; i < num_xtests; i++)
+		{
+			mpz_t xtest;
+			mpz_init_set_ui(xtest, i);
+			std::cerr << "INFO: P_" << whoami << ": xtest = " << xtest <<
+				" <-> ";
+			rbc->Broadcast(xtest);
+			for (size_t ii = 0; ii < peers.size(); ii++)
+			{
+				if (!rbc->DeliverFrom(xtest, ii))
+					std::cerr << "<X> ";
+				else
+					std::cerr << xtest << " ";
+			}
+			std::cerr << std::endl;
+			mpz_clear(xtest);
+		}
+		// participants must agree on a common signature creation time (OpenPGP)
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: agree on a signature creation time for" <<
+				" OpenPGP" << std::endl;
+		}
+		std::vector<time_t> tvs;
+		mpz_t mtv;
+		mpz_init_set_ui(mtv, sigtime);
+		rbc->Broadcast(mtv);
+		tvs.push_back(sigtime);
+		for (size_t i = 0; i < peers.size(); i++)
+		{
+			if (i != whoami)
+			{
+				if (rbc->DeliverFrom(mtv, i))
+				{
+					time_t utv;
+					utv = (time_t)mpz_get_ui(mtv);
+					tvs.push_back(utv);
+				}
+				else
+				{
+					std::cerr << "WARNING: P_" << whoami << ": no signature" <<
+						" creation time stamp received from " << i << std::endl;
+				}
 			}
 		}
+		mpz_clear(mtv);
+		std::sort(tvs.begin(), tvs.end());
+		if (tvs.size() < (peers.size() - T_RBC))
+		{
+			std::cerr << "ERROR: P_" << whoami << ": not enough timestamps" <<
+				" received" << std::endl;
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
+		// use a median value as some kind of gentle agreement
+		csigtime = tvs[tvs.size()/2];
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: P_" << whoami << ": canonicalized signature" <<
+				" creation time = " << csigtime << std::endl;
+		}
+		// select hash algorithm for OpenPGP based on |q| (size in bit)
+		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+		if (mpz_sizeinbase(dss->q, 2L) == 256)
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
+		else if (mpz_sizeinbase(dss->q, 2L) == 384)
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
+		else if (mpz_sizeinbase(dss->q, 2L) == 512)
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 		else
 		{
-			// use simple key -- we assume that GNUnet provides secure channels
-			key << "dkg-revuid::P_" << (i + whoami);
-		}
-		uP_in.push_back(pipefd[i][whoami][0]);
-		uP_out.push_back(pipefd[whoami][i][1]);
-		uP_key.push_back(key.str());
-		bP_in.push_back(broadcast_pipefd[i][whoami][0]);
-		bP_out.push_back(broadcast_pipefd[whoami][i][1]);
-		bP_key.push_back(key.str());
-	}
-
-	// create asynchronous authenticated unicast channels
-	aiounicast_select *aiou = new aiounicast_select(peers.size(), whoami,
-		uP_in, uP_out, uP_key, aiounicast::aio_scheduler_roundrobin,
-		(opt_W * 60));
-
-	// create asynchronous authenticated unicast channels for broadcast protocol
-	aiounicast_select *aiou2 = new aiounicast_select(peers.size(), whoami,
-		bP_in, bP_out, bP_key, aiounicast::aio_scheduler_roundrobin,
-		(opt_W * 60));
-			
-	// create an instance of a reliable broadcast protocol (RBC)
-	std::string myID = "dkg-revuid|" + std::string(protocol) + "|";
-	for (size_t i = 0; i < peers.size(); i++)
-		myID += peers[i] + "|";
-	if (opt_verbose)
-		std::cerr << "RBC: myID = " << myID << std::endl;
-	// assume maximum asynchronous t-resilience for RBC
-	size_t T_RBC = (peers.size() - 1) / 3;
-	CachinKursawePetzoldShoupRBC *rbc =
-		new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2,
-			aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
-	rbc->setID(myID);
-
-	// perform a simple exchange test with debug output
-	for (size_t i = 0; i < num_xtests; i++)
-	{
-		mpz_t xtest;
-		mpz_init_set_ui(xtest, i);
-		std::cerr << "INFO: P_" << whoami << ": xtest = " << xtest << " <-> ";
-		rbc->Broadcast(xtest);
-		for (size_t ii = 0; ii < peers.size(); ii++)
-		{
-			if (!rbc->DeliverFrom(xtest, ii))
-				std::cerr << "<X> ";
-			else
-				std::cerr << xtest << " ";
-		}
-		std::cerr << std::endl;
-		mpz_clear(xtest);
-	}
-
-	// participants must agree on a common signature creation time (OpenPGP)
-	if (opt_verbose)
-		std::cerr << "INFO: agree on a signature creation time for OpenPGP" <<
-			std::endl;
-	time_t csigtime = 0;
-	std::vector<time_t> tvs;
-	mpz_t mtv;
-	mpz_init_set_ui(mtv, sigtime);
-	rbc->Broadcast(mtv);
-	tvs.push_back(sigtime);
-	for (size_t i = 0; i < peers.size(); i++)
-	{
-		if (i != whoami)
-		{
-			if (rbc->DeliverFrom(mtv, i))
-			{
-				time_t utv;
-				utv = (time_t)mpz_get_ui(mtv);
-				tvs.push_back(utv);
-			}
-			else
-			{
-				std::cerr << "WARNING: P_" << whoami << ": no signature" <<
-					" creation time stamp received from " << i << std::endl;
-			}
+			std::cerr << "ERROR: P_" << whoami << ": selecting hash" <<
+				" algorithm failed for |q| = " << mpz_sizeinbase(dss->q, 2L) <<
+				std::endl;
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete prv;
+			exit(-1);
 		}
 	}
-	mpz_clear(mtv);
-	std::sort(tvs.begin(), tvs.end());
-	if (tvs.size() < (peers.size() - T_RBC))
-	{
-		std::cerr << "ERROR: P_" << whoami << ": not enough timestamps" <<
-			" received" << std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
-	}
-	// use a median value as some kind of gentle agreement
-	csigtime = tvs[tvs.size()/2];
-	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": canonicalized signature" <<
-			" creation time = " << csigtime << std::endl;
-
-	// select hash algorithm for OpenPGP based on |q| (size in bit)
-	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
-	if (mpz_sizeinbase(dss->q, 2L) == 256)
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
-	else if (mpz_sizeinbase(dss->q, 2L) == 384)
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
-	else if (mpz_sizeinbase(dss->q, 2L) == 512)
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 	else
 	{
-		std::cerr << "ERROR: P_" << whoami << ": selecting hash algorithm" <<
-			" failed for |q| = " << mpz_sizeinbase(dss->q, 2L) << std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
+		csigtime = sigtime;
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // fixed hash algo SHA2-512
 	}
 
 	// prepare OpenPGP structures
@@ -343,125 +366,194 @@ void run_instance
 		CertificationHash(prv->pub->pub_hashing, userid, empty, revsig_hashing,
 			hashalgo, hash, revsig_left);
 
-	// sign the hash
+	// prepare the hash value
 	tmcg_openpgp_byte_t buffer[1024];
-	gcry_mpi_t r, s, h;
-	mpz_t dsa_m, dsa_r, dsa_s;
 	size_t buflen = 0;
-	gcry_error_t ret;
 	memset(buffer, 0, sizeof(buffer));
-	for (size_t i = 0; ((i < hash.size()) && (i < sizeof(buffer)));
-		i++, buflen++)
+	if (opt_verbose > 1)
+		std::cerr << std::hex << "INFO: hash = ";
+	for (size_t i = 0; i < hash.size(); i++, buflen++)
+	{
+		if (i < sizeof(buffer))
 			buffer[i] = hash[i];
-	r = gcry_mpi_new(2048);
-	s = gcry_mpi_new(2048);
-	mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
-	ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
-	if (ret)
-	{
-		std::cerr << "ERROR: P_" << whoami << ": gcry_mpi_scan() failed" <<
-			" for h" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
-	}
-	if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
-	{
-		std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
-			" failed for dsa_m" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
-	}
-	gcry_mpi_release(h);
-	std::stringstream err_log_sign;
-	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": dss.Sign() on" <<
-			" user ID" << std::endl;
-	if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, prv->tdss_idx2dkg,
-		prv->tdss_dkg2idx, aiou, rbc, err_log_sign))
-	{
-		std::cerr << "ERROR: P_" << whoami << ": " << "tDSS Sign() on" <<
-			" user ID failed" << std::endl;
-		std::cerr << "ERROR: P_" << whoami << ": log follows " << std::endl <<
-			err_log_sign.str();
-		gcry_mpi_release(r), gcry_mpi_release(s);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
+		if (opt_verbose > 1)
+			std::cerr << (int)hash[i] << " ";
 	}
 	if (opt_verbose > 1)
-		std::cerr << "INFO: P_" << whoami << ": log follows " << std::endl <<
-			err_log_sign.str();
-	if (!tmcg_mpz_get_gcry_mpi(r, dsa_r))
+		std::cerr << std::dec << std::endl;
+
+	// sign the hash value
+	gcry_error_t ret;
+	gcry_mpi_t r, s;
+	r = gcry_mpi_new(2048);
+	s = gcry_mpi_new(2048);
+	if (opt_y == NULL)
 	{
-		std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
-			" failed for dsa_r" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s);
+		gcry_mpi_t h;
+		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
+		if (ret)
+		{
+			std::cerr << "ERROR: P_" << whoami << ": gcry_mpi_scan() failed" <<
+				" for h" << std::endl;
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
+		if (opt_verbose > 1)
+			std::cerr << "INFO: P_" << whoami << ": h = " << h << std::endl;
+		mpz_t dsa_m, dsa_r, dsa_s;
+		mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
+		if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
+		{
+			std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
+				" failed for dsa_m" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
+		gcry_mpi_release(h);
+		std::stringstream err_log_sign;
+		if (opt_verbose)
+			std::cerr << "INFO: P_" << whoami << ": dss.Sign()" << std::endl;
+		if (dss == NULL)
+			exit(-2); // should never happen: only here to make scan-build happy
+		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s,
+			prv->tdss_idx2dkg, prv->tdss_dkg2idx, aiou, rbc, err_log_sign))
+		{
+			std::cerr << "ERROR: P_" << whoami << ": " <<
+				"tDSS Sign() failed" << std::endl;
+			std::cerr << "ERROR: P_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
+		if (opt_verbose > 1)
+			std::cerr << "INFO: P_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
+		if (!tmcg_mpz_get_gcry_mpi(r, dsa_r))
+		{
+			std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+				" failed for dsa_r" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
+		if (!tmcg_mpz_get_gcry_mpi(s, dsa_s))
+		{
+			std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+				" failed for dsa_s" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
+			delete prv;
+			exit(-1);
+		}
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
 	}
-	if (!tmcg_mpz_get_gcry_mpi(s, dsa_s))
+	else
 	{
-		std::cerr << "ERROR: P_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
-			" failed for dsa_s" << std::endl;
-		gcry_mpi_release(r), gcry_mpi_release(s);
-		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
+		switch (prv->pkalgo)
+		{
+			case TMCG_OPENPGP_PKALGO_RSA:
+			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignRSA(hash, prv->private_key, hashalgo, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_DSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_ECDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignECDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_EDDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignEdDSA(hash, prv->private_key, r, s);
+				break;
+			default:
+				std::cerr << "ERROR: public-key algorithm " <<
+					(int)prv->pkalgo << " not supported" << std::endl;
+				gcry_mpi_release(r), gcry_mpi_release(s);
+				delete prv;
+				exit(-1);
+		}
+		if (ret)
+		{
+			std::cerr << "ERROR: signing of hash value failed " <<
+				"(rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) << ")" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			delete prv;
+			exit(-1);
+		}
 	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		PacketSigEncode(revsig_hashing, revsig_left, r, s, revsig);
+	switch (prv->pkalgo)
+	{
+		case TMCG_OPENPGP_PKALGO_RSA:
+		case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigEncode(revsig_hashing, revsig_left, s, revsig);
+			break;
+		case TMCG_OPENPGP_PKALGO_DSA:
+		case TMCG_OPENPGP_PKALGO_ECDSA:
+		case TMCG_OPENPGP_PKALGO_EDDSA:
+		case TMCG_OPENPGP_PKALGO_EXPERIMENTAL7:
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigEncode(revsig_hashing, revsig_left, r, s, revsig);
+			break;
+		default:
+			std::cerr << "ERROR: public-key algorithm " << (int)prv->pkalgo <<
+				" not supported" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			delete prv;
+			exit(-1);
+	}
 	gcry_mpi_release(r), gcry_mpi_release(s);
-	mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 
-	// at the end: deliver some more rounds for still waiting parties
-	time_t synctime = aiounicast::aio_timeout_long;
-	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": waiting approximately " <<
-			(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
-			std::endl;
-	rbc->Sync(synctime);
-
-	// release RBC
-	delete rbc;
-	
-	// release handles (unicast channel)
-	uP_in.clear(), uP_out.clear(), uP_key.clear();
-	if (opt_verbose)
+	// release allocated ressources
+	if (opt_y == NULL)
 	{
-		std::cerr << "INFO: P_" << whoami << ": unicast channels";
-		aiou->PrintStatistics(std::cerr);
-		std::cerr << std::endl;
+		// at the end: deliver some more rounds for still waiting parties
+		time_t synctime = aiounicast::aio_timeout_long;
+		if (opt_verbose)
+			std::cerr << "INFO: P_" << whoami << ": waiting approximately " <<
+				(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
+				std::endl;
+		rbc->Sync(synctime);
+		// release RBC
+		delete rbc;
+		// release handles (unicast channel)
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: P_" << whoami << ": unicast channels";
+			aiou->PrintStatistics(std::cerr);
+			std::cerr << std::endl;
+		}
+		// release handles (broadcast channel)
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: P_" << whoami << ": broadcast channel";
+			aiou2->PrintStatistics(std::cerr);
+			std::cerr << std::endl;
+		}
+		// release asynchronous unicast and broadcast
+		delete aiou, delete aiou2;
+		// release threshold signature scheme
+		delete dss;
 	}
-
-	// release handles (broadcast channel)
-	bP_in.clear(), bP_out.clear(), bP_key.clear();
-	if (opt_verbose)
-	{
-		std::cerr << "INFO: P_" << whoami << ": broadcast channel";
-		aiou2->PrintStatistics(std::cerr);
-		std::cerr << std::endl;
-	}
-
-	// release asynchronous unicast and broadcast
-	delete aiou, delete aiou2;
-
-	// release
-	delete dss;
 
 	// convert and append the corresponding signature packet (revsig) to the
 	// existing OpenPGP structures of this key
@@ -524,6 +616,7 @@ char *gnunet_opt_P = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_u = NULL;
 char *gnunet_opt_port = NULL;
+char *gnunet_opt_y = NULL;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
@@ -621,6 +714,12 @@ int main
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
 		),
+		GNUNET_GETOPT_option_string('y',
+			"yaot",
+			"FILNAME",
+			"yet another OpenPGP tool with private key in FILENAME",
+			&gnunet_opt_y
+		),
 		GNUNET_GETOPT_option_uint('x',
 			"x-tests",
 			NULL,
@@ -661,6 +760,8 @@ int main
 	}
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
+	if (gnunet_opt_y != NULL)
+		opt_y = gnunet_opt_y;
 #endif
 
 	// create peer list from remaining arguments
@@ -673,7 +774,7 @@ int main
 			(arg.find("-W") == 0) || (arg.find("-L") == 0) ||
 			(arg.find("-l") == 0) || (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
-			(arg.find("-k") == 0))
+			(arg.find("-k") == 0) || (arg.find("-y") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -710,6 +811,12 @@ int main
 			{
 				opt_W = strtoul(argv[i+1], NULL, 10);
 			}
+			if ((arg.find("-y") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_y == NULL))
+			{
+				yfilename = argv[i+1];
+				opt_y = (char*)yfilename.c_str();
+			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
@@ -738,6 +845,8 @@ int main
 					std::endl;
 				std::cout << "  -W INTEGER     timeout for point-to-point" <<
 					" messages in minutes" << std::endl;
+				std::cout << "  -y FILENAME    yet another OpenPGP tool with" <<
+					" private key in FILENAME" << std::endl;
 #endif
 				return 0; // not continue
 			}
@@ -777,6 +886,14 @@ int main
 	userid = "additional userID";
 	opt_u = (char*)userid.c_str();
 	opt_verbose = 2;
+#else
+#ifdef DKGPG_TESTSUITE_Y
+	yfilename = "TestY-sec.asc";
+	opt_y = (char*)yfilename.c_str();
+	userid = "additional userID";
+	opt_u = (char*)userid.c_str();
+	opt_verbose = 2;
+#endif
 #endif
 
 	// check command line arguments
@@ -786,13 +903,13 @@ int main
 			std::endl;
 		return -1;
 	}
-	if ((opt_H != NULL) && (opt_P == NULL))
+	if ((opt_H != NULL) && (opt_P == NULL) && (opt_y == NULL))
 	{
-		std::cerr << "ERROR: option \"-P\" is necessary due to insecure" <<
-			" network" << std::endl;
+		std::cerr << "ERROR: option \"-P\" required due to insecure network" <<
+			std::endl;
 		return -1;
 	}
-	if (peers.size() < 1)
+	if ((peers.size() < 1) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " <<
 			usage << std::endl;
@@ -804,12 +921,12 @@ int main
 	std::vector<std::string>::iterator it =
 		std::unique(peers.begin(), peers.end());
 	peers.resize(std::distance(peers.begin(), it));
-	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
+	if (((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
 	}
-	if (opt_verbose)
+	if (opt_verbose && (opt_y == NULL))
 	{
 		std::cerr << "INFO: canonicalized peer list = " << std::endl;
 		for (size_t i = 0; i < peers.size(); i++)
@@ -839,7 +956,7 @@ int main
 	// initialize return code
 	int ret = 0;
 	// create underlying point-to-point channels, if built-in TCP/IP requested
-	if (opt_H != NULL)
+	if ((opt_H != NULL) && (opt_y == NULL))
 	{
 		if (port.length())
 			opt_p = strtoul(port.c_str(), NULL, 10); // start port from options
@@ -860,6 +977,12 @@ int main
 		ret = tcpip_io();
 		tcpip_close();
 		tcpip_done();
+		return ret;
+	}
+	else if (opt_y != NULL)
+	{
+		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
+		run_instance(0, time(NULL), 0);
 		return ret;
 	}
 
@@ -912,6 +1035,12 @@ int main
 			"INTEGER",
 			"timeout for point-to-point messages in minutes",
 			&gnunet_opt_W
+		),
+		GNUNET_GETOPT_option_string('y',
+			"yaot",
+			"FILNAME",
+			"yet another OpenPGP tool with private key in FILENAME",
+			&gnunet_opt_y
 		),
 		GNUNET_GETOPT_option_uint('x',
 			"x-tests",

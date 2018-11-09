@@ -210,8 +210,8 @@ void run_instance
 				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 				{
 					std::cerr << "ERROR: S_" << whoami << ": " <<
-						"cannot read" << " password for protecting channel" <<
-						" to S_" << i << std::endl;
+						"cannot read password for protecting channel to S_" <<
+						i << std::endl;
 					delete dss;
 					delete prv;
 					exit(-1);
@@ -277,8 +277,10 @@ void run_instance
 		}
 		// participants must agree on a common signature creation time (OpenPGP)
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: agree on a signature creation time for" <<
 				" OpenPGP" << std::endl;
+		}
 		std::vector<time_t> tvs;
 		mpz_t mtv;
 		mpz_init_set_ui(mtv, sigtime);
@@ -316,8 +318,10 @@ void run_instance
 		// use a median value as some kind of gentle agreement
 		csigtime = tvs[tvs.size()/2];
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: S_" << whoami << ": canonicalized signature" <<
 				" creation time = " << csigtime << std::endl;
+		}
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
 		if (mpz_sizeinbase(dss->q, 2L) == 256)
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)

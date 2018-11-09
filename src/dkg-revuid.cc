@@ -330,7 +330,6 @@ void run_instance
 				" creation time = " << csigtime << std::endl;
 		}
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
-		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
 		if (mpz_sizeinbase(dss->q, 2L) == 256)
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
 		else if (mpz_sizeinbase(dss->q, 2L) == 384)
@@ -578,12 +577,9 @@ void run_instance
 	}
 
 	// export and write updated private key in OpenPGP armor format
-	std::stringstream secfilename;
-	secfilename << peers[whoami] << "_dkg-sec.asc";
 	tmcg_openpgp_octets_t sec;
 	prv->Export(sec);
-	if (!write_key_file(secfilename.str(),
-		TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
+	if (!write_key_file(pkfname, TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
 	{
 		delete prv;
 		exit(-1);
@@ -591,7 +587,10 @@ void run_instance
 
 	// export and write updated public key in OpenPGP armor format
 	std::stringstream pubfilename;
-	pubfilename << peers[whoami] << "_dkg-pub.asc";
+	if (opt_y == NULL)
+		pubfilename << peers[whoami] << "_dkg-pub.asc";
+	else
+		pubfilename << opt_y;
 	tmcg_openpgp_octets_t pub;
 	prv->RelinkPublicSubkeys(); // relink the contained subkeys
 	prv->pub->Export(pub);

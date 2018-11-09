@@ -589,11 +589,6 @@ void run_instance
 	}
 
 	// export and write updated public key in OpenPGP armor format
-	std::stringstream pubfilename;
-	if (opt_y == NULL)
-		pubfilename << peers[whoami] << "_dkg-pub.asc";
-	else
-		pubfilename << opt_y;
 	tmcg_openpgp_octets_t pub;
 	prv->RelinkPublicSubkeys(); // relink the contained subkeys
 	prv->pub->Export(pub);
@@ -602,10 +597,15 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pub, armor);
 	std::cout << armor << std::endl;
-	if (!write_key_file(pubfilename.str(), armor))
+	if (opt_y == NULL)
 	{
-		delete prv;
-		exit(-1);
+		std::stringstream pubfilename;
+		pubfilename << peers[whoami] << "_dkg-pub.asc";
+		if (!write_key_file(pubfilename.str(), armor))
+		{
+			delete prv;
+			exit(-1);
+		}
 	}
 
 	// release

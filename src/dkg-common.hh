@@ -35,6 +35,7 @@
 	#include <errno.h>
 
 	#include <libTMCG.hh>
+	#include <aiounicast_select.hh>
 
 	bool init_tDSS
 		(const TMCG_OpenPGP_Prvkey *prv,
@@ -51,6 +52,31 @@
 		 const TMCG_OpenPGP_Keyring *ring,
 		 const int opt_verbose,
 		 const bool opt_weak = false);
+	void xtest
+		(const size_t num_xtests,
+		 const size_t whoami,
+		 const size_t peers,
+		 CachinKursawePetzoldShoupRBC *rbc);
+	time_t agree_time
+		(const time_t sigtime,
+		 const size_t whoami,
+		 const size_t peers,
+		 const int opt_verbose,
+		 CachinKursawePetzoldShoupRBC *rbc);
+	bool sign_hash
+		(const tmcg_openpgp_octets_t &hash,
+		 const tmcg_openpgp_octets_t &trailer,
+		 const tmcg_openpgp_octets_t &left,
+		 const size_t whoami,
+		 const size_t peers,
+		 TMCG_OpenPGP_Prvkey *prv,
+		 const tmcg_openpgp_hashalgo_t hashalgo,
+		 tmcg_openpgp_octets_t &sig,
+		 const int opt_verbose,
+		 const char *opt_y = NULL,
+		 CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL,
+		 aiounicast_select *aiou = NULL,
+		 CachinKursawePetzoldShoupRBC *rbc = NULL);
 
 #endif
 

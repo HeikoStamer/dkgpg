@@ -238,22 +238,7 @@ void run_instance
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
-	for (size_t i = 0; i < num_xtests; i++)
-	{
-		mpz_t xtest;
-		mpz_init_set_ui(xtest, i);
-		std::cerr << "INFO: R_" << whoami << ": xtest = " << xtest << " <-> ";
-		rbc->Broadcast(xtest);
-		for (size_t ii = 0; ii < peers.size(); ii++)
-		{
-			if (!rbc->DeliverFrom(xtest, ii))
-				std::cerr << "<X> ";
-			else
-				std::cerr << xtest << " ";
-		}
-		std::cerr << std::endl;
-		mpz_clear(xtest);
-	}
+	xtest(num_xtests, whoami, peers.size(), rbc);
 
 	// update the tDSS key (proactive security against mobile adversary)
 	std::stringstream err_log;

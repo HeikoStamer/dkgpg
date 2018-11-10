@@ -293,3 +293,240 @@ bool verify_signature
 	return true;
 }
 
+void xtest
+	(const size_t num_xtests,
+	 const size_t whoami,
+	 const size_t peers,
+	 CachinKursawePetzoldShoupRBC *rbc)
+{
+	for (size_t i = 0; i < num_xtests; i++)
+	{
+		mpz_t xtest;
+		mpz_init_set_ui(xtest, i);
+		std::cerr << "INFO: p_" << whoami << ": xtest = " << xtest << " <-> ";
+		rbc->Broadcast(xtest);
+		for (size_t ii = 0; ii < peers; ii++)
+		{
+			if (!rbc->DeliverFrom(xtest, ii))
+				std::cerr << "<X> ";
+			else
+				std::cerr << xtest << " ";
+		}
+		std::cerr << std::endl;
+		mpz_clear(xtest);
+	}
+}
+
+time_t agree_time
+	(const time_t sigtime,
+	 const size_t whoami,
+	 const size_t peers,
+	 const int opt_verbose,
+	 CachinKursawePetzoldShoupRBC *rbc)
+{
+	if (opt_verbose)
+	{
+		std::cerr << "INFO: agree on a signature creation time for OpenPGP" <<
+			std::endl;
+	}
+	std::vector<time_t> tvs;
+	mpz_t mtv;
+	mpz_init_set_ui(mtv, sigtime);
+	rbc->Broadcast(mtv);
+	tvs.push_back(sigtime);
+	for (size_t i = 0; i < peers; i++)
+	{
+		if (i != whoami)
+		{
+			if (rbc->DeliverFrom(mtv, i))
+			{
+				time_t utv;
+				utv = (time_t)mpz_get_ui(mtv);
+				tvs.push_back(utv);
+			}
+			else
+			{
+				std::cerr << "WARNING: p_" << whoami << ": no signature" <<
+					" creation time stamp received from p_" << i << std::endl;
+			}
+		}
+	}
+	mpz_clear(mtv);
+	std::sort(tvs.begin(), tvs.end()); // sort the received values
+	if (tvs.size() < peers)
+	{
+		std::cerr << "WARNING: p_" << whoami << ": not enough timestamps" <<
+			" received" << std::endl;
+	}
+	if (tvs.size() == 0)
+	{
+		std::cerr << "ERROR: p_" << whoami << ": no timestamps received" <<
+			std::endl;
+		tvs.push_back(0); // add a dummy return value
+	}
+	// use a median value as some kind of gentle agreement
+	time_t csigtime = tvs[tvs.size()/2];
+	if (opt_verbose)
+	{
+		std::cerr << "INFO: p_" << whoami << ": canonicalized signature" <<
+			" creation time = " << csigtime << std::endl;
+	}
+	return csigtime;
+}
+
+bool sign_hash
+	(const tmcg_openpgp_octets_t &hash,
+	 const tmcg_openpgp_octets_t &trailer,
+	 const tmcg_openpgp_octets_t &left,
+	 const size_t whoami,
+	 const size_t peers,
+	 TMCG_OpenPGP_Prvkey *prv,
+	 const tmcg_openpgp_hashalgo_t hashalgo,
+	 tmcg_openpgp_octets_t &sig,
+	 const int opt_verbose,
+	 const char *opt_y,
+	 CanettiGennaroJareckiKrawczykRabinDSS *dss,
+	 aiounicast_select *aiou,
+	 CachinKursawePetzoldShoupRBC *rbc)
+{
+	// prepare the hash value
+	tmcg_openpgp_byte_t buffer[1024];
+	size_t buflen = 0;
+	memset(buffer, 0, sizeof(buffer));
+	if (opt_verbose > 1)
+		std::cerr << std::hex << "INFO: hash = ";
+	for (size_t i = 0; i < hash.size(); i++, buflen++)
+	{
+		if (i < sizeof(buffer))
+			buffer[i] = hash[i];
+		if (opt_verbose > 1)
+			std::cerr << (int)hash[i] << " ";
+	}
+	if (opt_verbose > 1)
+		std::cerr << std::dec << std::endl;
+
+	// sign the hash value
+	gcry_error_t ret;
+	gcry_mpi_t r, s;
+	r = gcry_mpi_new(2048);
+	s = gcry_mpi_new(2048);
+	if (opt_y == NULL)
+	{
+		gcry_mpi_t h;
+		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
+		if (ret)
+		{
+			std::cerr << "ERROR: p_" << whoami << ": gcry_mpi_scan() failed" <<
+				" for h" << std::endl;
+			return false;
+		}
+		if (opt_verbose > 1)
+			std::cerr << "INFO: p_" << whoami << ": h = " << h << std::endl;
+		mpz_t dsa_m, dsa_r, dsa_s;
+		mpz_init(dsa_m), mpz_init(dsa_r), mpz_init(dsa_s);
+		if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
+		{
+			std::cerr << "ERROR: p_" << whoami << ": tmcg_mpz_set_gcry_mpi()" <<
+				" failed for dsa_m" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s), gcry_mpi_release(h);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			return false;
+		}
+		gcry_mpi_release(h);
+		std::stringstream err_log_sign;
+		if (opt_verbose)
+			std::cerr << "INFO: p_" << whoami << ": dss.Sign()" << std::endl;
+		if (dss == NULL)
+			return false; // should never happen: only to make scan-build happy
+		if (!dss->Sign(peers, whoami, dsa_m, dsa_r, dsa_s,
+			prv->tdss_idx2dkg, prv->tdss_dkg2idx, aiou, rbc, err_log_sign))
+		{
+			std::cerr << "ERROR: p_" << whoami << ": " <<
+				"tDSS Sign() failed" << std::endl;
+			std::cerr << "ERROR: p_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			return false;
+		}
+		if (opt_verbose > 1)
+			std::cerr << "INFO: p_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
+		if (!tmcg_mpz_get_gcry_mpi(r, dsa_r))
+		{
+			std::cerr << "ERROR: p_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+				" failed for dsa_r" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			return false;
+		}
+		if (!tmcg_mpz_get_gcry_mpi(s, dsa_s))
+		{
+			std::cerr << "ERROR: p_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+				" failed for dsa_s" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			return false;
+		}
+		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+	}
+	else
+	{
+		switch (prv->pkalgo)
+		{
+			case TMCG_OPENPGP_PKALGO_RSA:
+			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignRSA(hash, prv->private_key, hashalgo, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_DSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_ECDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignECDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_EDDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignEdDSA(hash, prv->private_key, r, s);
+				break;
+			default:
+				std::cerr << "ERROR: public-key algorithm " <<
+					(int)prv->pkalgo << " not supported" << std::endl;
+				gcry_mpi_release(r), gcry_mpi_release(s);
+				return false;
+		}
+		if (ret)
+		{
+			std::cerr << "ERROR: signing of hash value failed " <<
+				"(rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) << ")" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			return false;
+		}
+	}
+	switch (prv->pkalgo)
+	{
+		case TMCG_OPENPGP_PKALGO_RSA:
+		case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigEncode(trailer, left, s, sig);
+			break;
+		case TMCG_OPENPGP_PKALGO_DSA:
+		case TMCG_OPENPGP_PKALGO_ECDSA:
+		case TMCG_OPENPGP_PKALGO_EDDSA:
+		case TMCG_OPENPGP_PKALGO_EXPERIMENTAL7:
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigEncode(trailer, left, r, s, sig);
+			break;
+		default:
+			std::cerr << "ERROR: public-key algorithm " << (int)prv->pkalgo <<
+				" not supported" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			return false;
+	}
+	gcry_mpi_release(r), gcry_mpi_release(s);
+	return true;
+}
+

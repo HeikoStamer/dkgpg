@@ -240,67 +240,9 @@ void run_instance
 	rbc->setID(myID);
 
 	// perform a simple exchange test with debug output
-	for (size_t i = 0; i < num_xtests; i++)
-	{
-		mpz_t xtest;
-		mpz_init_set_ui(xtest, i);
-		std::cerr << "INFO: R_" << whoami << ": xtest = " << xtest << " <-> ";
-		rbc->Broadcast(xtest);
-		for (size_t ii = 0; ii < peers.size(); ii++)
-		{
-			if (!rbc->DeliverFrom(xtest, ii))
-				std::cerr << "<X> ";
-			else
-				std::cerr << xtest << " ";
-		}
-		std::cerr << std::endl;
-		mpz_clear(xtest);
-	}
-
+	xtest(num_xtests, whoami, peers.size(), rbc);
 	// participants must agree on a common signature creation time (OpenPGP)
-	if (opt_verbose)
-		std::cerr << "INFO: agree on a signature creation time for OpenPGP" <<
-			std::endl;
-	time_t csigtime = 0;
-	std::vector<time_t> tvs;
-	mpz_t mtv;
-	mpz_init_set_ui(mtv, sigtime);
-	rbc->Broadcast(mtv);
-	tvs.push_back(sigtime);
-	for (size_t i = 0; i < peers.size(); i++)
-	{
-		if (i != whoami)
-		{
-			if (rbc->DeliverFrom(mtv, i))
-			{
-				time_t utv;
-				utv = (time_t)mpz_get_ui(mtv);
-				tvs.push_back(utv);
-			}
-			else
-			{
-				std::cerr << "WARNING: R_" << whoami << ": no signature" <<
-					" creation time stamp received from " << i << std::endl;
-			}
-		}
-	}
-	mpz_clear(mtv);
-	std::sort(tvs.begin(), tvs.end());
-	if (tvs.size() < (peers.size() - T_RBC))
-	{
-		std::cerr << "ERROR: R_" << whoami << ": not enough timestamps" <<
-			" received" << std::endl;
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
-	}
-	// use a median value as some kind of gentle agreement
-	csigtime = tvs[tvs.size()/2];
-	if (opt_verbose)
-		std::cerr << "INFO: R_" << whoami << ": canonicalized signature" <<
-			" creation time = " << csigtime << std::endl;
-
+	time_t csigtime = agree_time(sigtime, whoami, peers.size(), opt_verbose, rbc);
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
 	if (mpz_sizeinbase(dss->q, 2L) == 256)

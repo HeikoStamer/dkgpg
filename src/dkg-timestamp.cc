@@ -337,23 +337,7 @@ void run_instance
 				aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		rbc->setID(myID);
 		// perform a simple exchange test with debug output
-		for (size_t i = 0; i < num_xtests; i++)
-		{
-			mpz_t xtest;
-			mpz_init_set_ui(xtest, i);
-			std::cerr << "INFO: S_" << whoami << ": xtest = " << xtest <<
-				" <-> ";
-			rbc->Broadcast(xtest);
-			for (size_t ii = 0; ii < peers.size(); ii++)
-			{
-				if (!rbc->DeliverFrom(xtest, ii))
-					std::cerr << "<X> ";
-				else
-					std::cerr << xtest << " ";
-			}
-			std::cerr << std::endl;
-			mpz_clear(xtest);
-		}
+		xtest(num_xtests, whoami, peers.size(), rbc);
 		// participants must agree on a common signature creation time (OpenPGP)
 		if (opt_verbose)
 			std::cerr << "INFO: agree on a signature creation time for" <<

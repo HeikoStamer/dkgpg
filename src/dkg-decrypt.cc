@@ -1268,23 +1268,7 @@ void run_instance
 				aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		rbc->setID(myID);
 		// perform a simple exchange test with debug output
-		for (size_t i = 0; i < num_xtests; i++)
-		{
-			mpz_t xtest;
-			mpz_init_set_ui(xtest, i);
-			std::cerr << "INFO: D_" << whoami << ": xtest = " << xtest <<
-				" <-> ";
-			rbc->Broadcast(xtest);
-			for (size_t ii = 0; ii < peers.size(); ii++)
-			{
-				if (!rbc->DeliverFrom(xtest, ii))
-					std::cerr << "<X> ";
-				else
-					std::cerr << xtest << " ";
-			}
-			std::cerr << std::endl;
-			mpz_clear(xtest);
-		}
+		xtest(num_xtests, whoami, peers.size(), rbc);
 		// initialize for interactive part
 		mpz_t crs_p, crs_q, crs_g, crs_k;
 		mpz_init(crs_p), mpz_init(crs_q), mpz_init(crs_g), mpz_init(crs_k);

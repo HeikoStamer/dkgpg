@@ -1335,7 +1335,7 @@ void run_instance
 			TMCG_DDH_SIZE, TMCG_DLSE_SIZE, false);
 		if (!vtmf->CheckGroup())
 		{
-			std::cerr << "ERROR: D_" << whoami << ": " << "VTMF: Group G was" <<
+			std::cerr << "ERROR: p_" << whoami << ": " << "VTMF: Group G was" <<
 				" not correctly generated!" << std::endl;
 			delete vtmf;
 			mpz_clear(crs_p), mpz_clear(crs_q), mpz_clear(crs_g);
@@ -1366,26 +1366,26 @@ void run_instance
 			{
 				if (!rbc->DeliverFrom(h_j, i))
 				{
-					std::cerr << "WARNING: D_" << whoami << ": no VTMF key" <<
-						" received from D_" << i << std::endl;
+					std::cerr << "WARNING: p_" << whoami << ": no VTMF key" <<
+						" received from p_" << i << std::endl;
 				}
 				if (!rbc->DeliverFrom(nizk_c, i))
 				{
-					std::cerr << "WARNING: D_" << whoami << ": no NIZK c" <<
-						" received from D_" << i << std::endl;
+					std::cerr << "WARNING: p_" << whoami << ": no NIZK c" <<
+						" received from p_" << i << std::endl;
 				}
 				if (!rbc->DeliverFrom(nizk_r, i))
 				{
-					std::cerr << "WARNING: D_" << whoami << ": no NIZK r" <<
-						" received from D_" << i << std::endl;
+					std::cerr << "WARNING: p_" << whoami << ": no NIZK r" <<
+						" received from p_" << i << std::endl;
 				}
 				std::stringstream lej;
 				lej << h_j << std::endl << nizk_c << std::endl << nizk_r <<
 					std::endl;
 				if (!vtmf->KeyGenerationProtocol_UpdateKey(lej))
 				{
-					std::cerr << "WARNING: D_" << whoami << ": VTMF public" <<
-						" key of D_" << i << " was not correctly generated!" <<
+					std::cerr << "WARNING: p_" << whoami << ": VTMF public" <<
+						" key of p_" << i << " was not correctly generated!" <<
 						std::endl;
 				}
 			}
@@ -1431,7 +1431,7 @@ void run_instance
 			else
 			{
 				std::cerr << "WARNING: verification of own decryption share" <<
-					" failed for D_" << whoami << std::endl;
+					" failed for p_" << whoami << std::endl;
 			}
 			// collect other decryption shares
 			if (opt_verbose)
@@ -1447,14 +1447,14 @@ void run_instance
 					if (!rbc->DeliverFrom(idx, i))
 					{
 						std::cerr << "WARNING: DeliverFrom(idx, i) failed" <<
-							" for D_" << i << std::endl;
+							" for p_" << i << std::endl;
 						complaints.push_back(i);
 					}
 					// receive a decryption share
 					if (!rbc->DeliverFrom(r_i, i))
 					{
 						std::cerr << "WARNING: DeliverFrom(r_i, i) failed" <<
-							" for D_" << i << std::endl;
+							" for p_" << i << std::endl;
 						complaints.push_back(i);
 					}
 					// verify decryption share interactively
@@ -1465,7 +1465,7 @@ void run_instance
 						err_log))
 					{
 						std::cerr << "WARNING: bad decryption share of P_" <<
-							idx_dkg << " received from D_" << i << std::endl;
+							idx_dkg << " received from p_" << i << std::endl;
 						if (opt_verbose)
 							std::cerr << err_log.str() << std::endl;
 						complaints.push_back(i);
@@ -1474,9 +1474,9 @@ void run_instance
 						complaints.end())
 					{
 						if (opt_verbose)
-							std::cerr << "INFO: D_" << whoami << ": good" <<
+							std::cerr << "INFO: p_" << whoami << ": good" <<
 								" decryption share of P_" << idx_dkg <<
-								" received from D_" << i << std::endl;
+								" received from p_" << i << std::endl;
 						if (opt_verbose > 1)
 							std::cerr << err_log.str() << std::endl;
 						// collect only verified decryption shares
@@ -1506,7 +1506,7 @@ void run_instance
 						std::cerr << "INFO: prove_decryption_share_" <<
 							"interactive_publiccoin() finished" << std::endl;
 					if (opt_verbose > 1)
-						std::cerr << "INFO: D_" << whoami << ": log follows" <<
+						std::cerr << "INFO: p_" << whoami << ": log follows" <<
 							std::endl << err_log.str();
 				}
 			}
@@ -1548,7 +1548,7 @@ void run_instance
 		// at the end: deliver some more rounds for waiting parties
 		time_t synctime = aiounicast::aio_timeout_long;
 		if (opt_verbose)
-			std::cerr << "INFO: D_" << whoami << ": waiting approximately " <<
+			std::cerr << "INFO: p_" << whoami << ": waiting approximately " <<
 				(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 				std::endl;
 		rbc->Sync(synctime);
@@ -1562,7 +1562,7 @@ void run_instance
 		uP_in.clear(), uP_out.clear(), uP_key.clear();
 		if (opt_verbose)
 		{
-			std::cerr << "INFO: D_" << whoami << ": unicast channels";
+			std::cerr << "INFO: p_" << whoami << ": unicast channels";
 			aiou->PrintStatistics(std::cerr);
 			std::cerr << std::endl;
 		}
@@ -1570,7 +1570,7 @@ void run_instance
 		bP_in.clear(), bP_out.clear(), bP_key.clear();
 		if (opt_verbose)
 		{
-			std::cerr << "INFO: D_" << whoami << ": broadcast channel";
+			std::cerr << "INFO: p_" << whoami << ": broadcast channel";
 			aiou2->PrintStatistics(std::cerr);
 			std::cerr << std::endl;
 		}
@@ -1790,16 +1790,16 @@ void fork_instance
 	{
 		if (pid[whoami] == 0)
 		{
-			/* BEGIN child code: participant D_i */
+			/* BEGIN child code: participant p_i */
 #ifdef GNUNET
 			run_instance(whoami, gnunet_opt_xtests);
 #else
 			run_instance(whoami, 0);
 #endif
 			if (opt_verbose)
-				std::cerr << "INFO: D_" << whoami << ": exit(0)" << std::endl;
+				std::cerr << "INFO: p_" << whoami << ": exit(0)" << std::endl;
 			exit(0);
-			/* END child code: participant D_i */
+			/* END child code: participant p_i */
 		}
 		else
 		{

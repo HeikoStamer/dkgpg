@@ -436,7 +436,7 @@ void tcpip_accept
 					exit(-1);
 				}
 				if (opt_verbose)
-					std::cerr << "INFO: accept connection for P/D/R/S_" <<
+					std::cerr << "INFO: accept connection for p_" <<
 						pi->first << " from address " << ipaddr << std::endl;
 			}
 		}
@@ -471,7 +471,7 @@ void tcpip_accept
 				}
 				if (opt_verbose)
 					std::cerr << "INFO: accept broadcast connection for" <<
-						" P/D/R/S_" << pi->first << " from address " << 
+						" p_" << pi->first << " from address " << 
 						ipaddr << std::endl;
 			}
 		}
@@ -623,7 +623,7 @@ int tcpip_io
 				else if (len == 0)
 				{
 					std::cerr << "WARNING: connection collapsed for" <<
-						" P/D/R/S_" << pi->first << std::endl;
+						" p_" << pi->first << std::endl;
 					tcpip_pipe2socket_out.erase(pi->first);
 					tcpip_pipe2socket_in.erase(pi->first);
 					break;
@@ -632,7 +632,7 @@ int tcpip_io
 				{
 					if (opt_verbose > 1)
 						std::cerr << "INFO: received " << len << " bytes on " <<
-							"connection for P/D/R/S_" << pi->first << std::endl;
+							"connection for p_" << pi->first << std::endl;
 					ssize_t wnum = 0;
 					do
 					{
@@ -701,7 +701,7 @@ int tcpip_io
 				else if (len == 0)
 				{
 					std::cerr << "WARNING: broadcast connection collapsed" <<
-						" for P/D/R/S_" << pi->first << std::endl;
+						" for p_" << pi->first << std::endl;
 					tcpip_broadcast_pipe2socket_out.erase(pi->first);
 					tcpip_broadcast_pipe2socket_in.erase(pi->first);
 					break;
@@ -710,7 +710,7 @@ int tcpip_io
 				{
 					if (opt_verbose > 1)
 						std::cerr << "INFO: received " << len << " bytes on" <<
-							" broadcast connection for P/D/R/S_" <<
+							" broadcast connection for p_" <<
 							pi->first << std::endl;
 					ssize_t wnum = 0;
 					do
@@ -786,7 +786,7 @@ int tcpip_io
 				{
 					if (opt_verbose > 1)
 						std::cerr << "INFO: sending " << len << " bytes on" <<
-							" connection to P/D/R/S_" << i << std::endl;
+							" connection to p_" << i << std::endl;
 					ssize_t wnum = 0;
 					do
 					{
@@ -814,7 +814,7 @@ int tcpip_io
 							else if (errno == ECONNRESET)
 							{
 								std::cerr << "WARNING: connection collapsed" <<
-									" for P/D/R/S_" << i << std::endl;
+									" for p_" << i << std::endl;
 								tcpip_broadcast_pipe2socket_out.erase(i);
 								tcpip_broadcast_pipe2socket_in.erase(i);
 								break;
@@ -836,7 +836,7 @@ int tcpip_io
 				{
 					if (opt_verbose > 1)
 						std::cerr << "INFO: discarding " << len << " bytes" <<
-							" for P/D/R/S_" << i << std::endl;
+							" for p_" << i << std::endl;
 				}
 			}
 			if ((i != thisidx) &&
@@ -872,7 +872,7 @@ int tcpip_io
 				{
 					if (opt_verbose > 1)
 						std::cerr << "INFO: sending " << len << " bytes on" <<
-							" broadcast connection to P/D/R/S_" << i <<
+							" broadcast connection to p_" << i <<
 							std::endl;
 					ssize_t wnum = 0;
 					do
@@ -901,7 +901,7 @@ int tcpip_io
 							else if (errno == ECONNRESET)
 							{
 								std::cerr << "WARNING: broadcast connection" <<
-									" collapsed for P/D/R/S_" << i << std::endl;
+									" collapsed for p_" << i << std::endl;
 								tcpip_broadcast_pipe2socket_out.erase(i);
 								tcpip_broadcast_pipe2socket_in.erase(i);
 								break;
@@ -923,7 +923,7 @@ int tcpip_io
 				{
 					if (opt_verbose > 1)
 						std::cerr << "INFO: discarding " << len << " bytes" <<
-							" for P/D/R/S_" << i << std::endl;
+							" for p_" << i << std::endl;
 				}
 			}
 		}

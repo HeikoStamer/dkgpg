@@ -209,8 +209,8 @@ void run_instance
 				std::string pwd;
 				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 				{
-					std::cerr << "ERROR: S_" << whoami << ": " <<
-						"cannot read password for protecting channel to S_" <<
+					std::cerr << "ERROR: p_" << whoami << ": " <<
+						"cannot read password for protecting channel to p_" <<
 						i << std::endl;
 					delete dss;
 					delete prv;
@@ -220,8 +220,8 @@ void run_instance
 				if (((i + 1) < peers.size()) &&
 					!TMCG_ParseHelper::nx(passwords, '/'))
 				{
-					std::cerr << "ERROR: S_" << whoami << ": " << "cannot" <<
-						" skip to next password for protecting channel to S_" <<
+					std::cerr << "ERROR: p_" << whoami << ": " << "cannot" <<
+						" skip to next password for protecting channel to p_" <<
 						(i + 1) << std::endl;
 					delete dss;
 					delete prv;
@@ -231,7 +231,7 @@ void run_instance
 			else
 			{
 				// simple key -- we assume that GNUnet provides secure channels
-				key << "dkg-sign::S_" << (i + whoami);
+				key << "dkg-sign::p_" << (i + whoami);
 			}
 			uP_in.push_back(pipefd[i][whoami][0]);
 			uP_out.push_back(pipefd[whoami][i][1]);
@@ -270,7 +270,7 @@ void run_instance
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 		else
 		{
-			std::cerr << "ERROR: S_" << whoami << ": selecting hash" <<
+			std::cerr << "ERROR: p_" << whoami << ": selecting hash" <<
 				" algorithm failed for |q| = " << mpz_sizeinbase(dss->q, 2L) <<
 				std::endl;
 			delete rbc, delete aiou, delete aiou2;
@@ -311,7 +311,7 @@ void run_instance
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 			TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
 		{
-			std::cerr << "ERROR: S_" << whoami << ": TextDocumentHash()" <<
+			std::cerr << "ERROR: p_" << whoami << ": TextDocumentHash()" <<
 				" failed; cannot process input file \"" << opt_ifilename <<
 				"\"" << std::endl;
 			if (opt_y == NULL)
@@ -342,7 +342,7 @@ void run_instance
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 			BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
 		{
-			std::cerr << "ERROR: S_" << whoami << ": BinaryDocumentHash()" <<
+			std::cerr << "ERROR: p_" << whoami << ": BinaryDocumentHash()" <<
 				" failed; cannot process input file \"" << opt_ifilename <<
 				"\"" << std::endl;
 			if (opt_y == NULL)
@@ -375,7 +375,7 @@ void run_instance
 		// at the end: deliver some more rounds for still waiting parties
 		time_t synctime = aiounicast::aio_timeout_long;
 		if (opt_verbose)
-			std::cerr << "INFO: S_" << whoami << ": waiting approximately " <<
+			std::cerr << "INFO: p_" << whoami << ": waiting approximately " <<
 				(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 				std::endl;
 		rbc->Sync(synctime);
@@ -384,14 +384,14 @@ void run_instance
 		// release handles (unicast channel)
 		if (opt_verbose)
 		{
-			std::cerr << "INFO: S_" << whoami << ": unicast channels";
+			std::cerr << "INFO: p_" << whoami << ": unicast channels";
 			aiou->PrintStatistics(std::cerr);
 			std::cerr << std::endl;
 		}
 		// release handles (broadcast channel)
 		if (opt_verbose)
 		{
-			std::cerr << "INFO: S_" << whoami << ": broadcast channel";
+			std::cerr << "INFO: p_" << whoami << ": broadcast channel";
 			aiou2->PrintStatistics(std::cerr);
 			std::cerr << std::endl;
 		}
@@ -418,7 +418,7 @@ void run_instance
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 			DashEscapeFile(opt_ifilename, ct_body))
 		{
-			std::cerr << "ERROR: S_" << whoami << ": DashEscapeFile()" <<
+			std::cerr << "ERROR: p_" << whoami << ": DashEscapeFile()" <<
 				" failed; cannot process input file \"" << opt_ifilename <<
 				"\"" << std::endl;
 			exit(-1);
@@ -462,7 +462,7 @@ void fork_instance
 	{
 		if (pid[whoami] == 0)
 		{
-			/* BEGIN child code: participant S_i */
+			/* BEGIN child code: participant p_i */
 			time_t sigtime = time(NULL);
 #ifdef GNUNET
 			run_instance(whoami, sigtime, gnunet_opt_sigexptime,
@@ -471,9 +471,9 @@ void fork_instance
 			run_instance(whoami, sigtime, opt_e, 0);
 #endif
 			if (opt_verbose)
-				std::cerr << "INFO: S_" << whoami << ": exit(0)" << std::endl;
+				std::cerr << "INFO: p_" << whoami << ": exit(0)" << std::endl;
 			exit(0);
-			/* END child code: participant S_i */
+			/* END child code: participant p_i */
 		}
 		else
 		{

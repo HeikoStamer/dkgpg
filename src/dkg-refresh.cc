@@ -183,8 +183,8 @@ void run_instance
 			std::string pwd;
 			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 			{
-				std::cerr << "ERROR: R_" << whoami << ": " << "cannot read" <<
-					" password for protecting channel to R_" << i << std::endl;
+				std::cerr << "ERROR: p_" << whoami << ": cannot read" <<
+					" password for protecting channel to p_" << i << std::endl;
 				delete dss;
 				delete prv;
 				exit(-1);
@@ -193,8 +193,8 @@ void run_instance
 			if (((i + 1) < peers.size()) &&
 				!TMCG_ParseHelper::nx(passwords, '/'))
 			{
-				std::cerr << "ERROR: R_" << whoami << ": " << "cannot skip" <<
-					" to next password for protecting channel to R_" <<
+				std::cerr << "ERROR: p_" << whoami << ": cannot skip" <<
+					" to next password for protecting channel to p_" <<
 					(i + 1) << std::endl;
 				delete dss;
 				delete prv;
@@ -204,7 +204,7 @@ void run_instance
 		else
 		{
 			// use simple key -- we assume that GNUnet provides secure channels
-			key << "dkg-refresh::R_" << (i + whoami);
+			key << "dkg-refresh::p_" << (i + whoami);
 		}
 		uP_in.push_back(pipefd[i][whoami][0]);
 		uP_out.push_back(pipefd[whoami][i][1]);
@@ -243,14 +243,14 @@ void run_instance
 	// update the tDSS key (proactive security against mobile adversary)
 	std::stringstream err_log;
 	if (opt_verbose)
-		std::cerr << "INFO: R_" << whoami << ": dss.Refresh()" << std::endl;
+		std::cerr << "INFO: p_" << whoami << ": dss.Refresh()" << std::endl;
 	if (!dss->Refresh(peers.size(), whoami, prv->tdss_idx2dkg,
 		prv->tdss_dkg2idx, aiou, rbc, err_log, false, cache, cache_mod,
 		&cache_avail))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": " << "tDSS Refresh() failed" <<
+		std::cerr << "ERROR: p_" << whoami << ": " << "tDSS Refresh() failed" <<
 			std::endl;
-		std::cerr << "ERROR: R_" << whoami << ": log follows " << std::endl <<
+		std::cerr << "ERROR: p_" << whoami << ": log follows " << std::endl <<
 			err_log.str();
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
@@ -258,13 +258,13 @@ void run_instance
 		exit(-1);
 	}
 	if (opt_verbose > 1)
-		std::cerr << "INFO: R_" << whoami << ": log follows " <<
+		std::cerr << "INFO: p_" << whoami << ": log follows " <<
 			std::endl << err_log.str();
 
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = aiounicast::aio_timeout_long;
 	if (opt_verbose)
-		std::cerr << "INFO: R_" << whoami << ": waiting approximately " <<
+		std::cerr << "INFO: p_" << whoami << ": waiting approximately " <<
 			(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 			std::endl;
 	rbc->Sync(synctime);
@@ -276,7 +276,7 @@ void run_instance
 	uP_in.clear(), uP_out.clear(), uP_key.clear();
 	if (opt_verbose)
 	{
-		std::cerr << "INFO: R_" << whoami << ": unicast channels";
+		std::cerr << "INFO: p_" << whoami << ": unicast channels";
 		aiou->PrintStatistics(std::cerr);
 		std::cerr << std::endl;
 	}
@@ -285,7 +285,7 @@ void run_instance
 	bP_in.clear(), bP_out.clear(), bP_key.clear();
 	if (opt_verbose)
 	{
-		std::cerr << "INFO: R_" << whoami << ": broadcast channel";
+		std::cerr << "INFO: p_" << whoami << ": broadcast channel";
 		aiou2->PrintStatistics(std::cerr);
 		std::cerr << std::endl;
 	}
@@ -300,7 +300,7 @@ void run_instance
 	x_i = gcry_mpi_snew(2048);
 	if (!tmcg_mpz_get_gcry_mpi(x_i, dss->x_i))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+		std::cerr << "ERROR: p_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
 			" failed for x_i" << std::endl;
 		gcry_mpi_release(x_i);
 		delete dss;
@@ -310,7 +310,7 @@ void run_instance
 	xprime_i = gcry_mpi_snew(2048);
 	if (!tmcg_mpz_get_gcry_mpi(xprime_i, dss->xprime_i))
 	{
-		std::cerr << "ERROR: R_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
+		std::cerr << "ERROR: p_" << whoami << ": tmcg_mpz_get_gcry_mpi()" <<
 			" failed for xprime_i" << std::endl;
 		gcry_mpi_release(x_i);
 		gcry_mpi_release(xprime_i);
@@ -342,7 +342,7 @@ void run_instance
 			tmp = gcry_mpi_new(2048);
 			if (!tmcg_mpz_get_gcry_mpi(tmp, dss->dkg->x_rvss->C_ik[j][k]))
 			{
-				std::cerr << "ERROR: R_" << whoami <<
+				std::cerr << "ERROR: p_" << whoami <<
 					": tmcg_mpz_get_gcry_mpi() failed for" <<
 					" dss->dkg->x_rvss->C_ik[j][k]" << std::endl;
 				gcry_mpi_release(x_i);
@@ -431,16 +431,16 @@ void fork_instance
 	{
 		if (pid[whoami] == 0)
 		{
-			/* BEGIN child code: participant R_i */
+			/* BEGIN child code: participant p_i */
 #ifdef GNUNET
 			run_instance(whoami, gnunet_opt_xtests);
 #else
 			run_instance(whoami, 0);
 #endif
 			if (opt_verbose)
-				std::cerr << "INFO: R_" << whoami << ": exit(0)" << std::endl;
+				std::cerr << "INFO: p_" << whoami << ": exit(0)" << std::endl;
 			exit(0);
-			/* END child code: participant R_i */
+			/* END child code: participant p_i */
 		}
 		else
 		{

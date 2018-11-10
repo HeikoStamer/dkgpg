@@ -33,7 +33,7 @@
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 static const char *about = PACKAGE_STRING " " PACKAGE_URL;
-static const char *protocol = "DKGPG-keysign-1.0";
+static const char *protocol = "DKGPG-addrevoker-1.0";
 
 #include <sstream>
 #include <fstream>
@@ -63,25 +63,19 @@ std::vector<std::string>		peers;
 bool							instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
-std::string						ifilename, ofilename, kfilename;
-std::string						passwords, hostname, port, URI, u, yfilename;
+std::string						ifilename, kfilename;
+std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
 char							*opt_ifilename = NULL;
-char							*opt_ofilename = NULL;
 char							*opt_passwords = NULL;
 char							*opt_hostname = NULL;
-char							*opt_URI = NULL;
-char							*opt_u = NULL;
 char							*opt_k = NULL;
 char							*opt_y = NULL;
-unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
-bool							opt_r = false;
-bool							opt_1 = false, opt_2 = false, opt_3 = false;
+unsigned long int				opt_p = 55000, opt_W = 5;
 
 void run_instance
-	(size_t whoami, const time_t sigtime, const time_t sigexptime,
-	 const size_t num_xtests)
+	(size_t whoami, const time_t sigtime, const size_t num_xtests)
 {
 	// read the key file
 	std::string armored_seckey, pkfname;
@@ -205,7 +199,6 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-		primary->Reduce(); // keep only valid user IDs and user attributes
 	}
 	else
 	{
@@ -278,7 +271,7 @@ void run_instance
 			else
 			{
 				// simple key -- we assume that GNUnet provides secure channels
-				key << "dkg-keysign::p_" << (i + whoami);
+				key << "dkg-addrevoker::p_" << (i + whoami);
 			}
 			uP_in.push_back(pipefd[i][whoami][0]);
 			uP_out.push_back(pipefd[whoami][i][1]);
@@ -294,7 +287,7 @@ void run_instance
 		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
 			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		// create an instance of a reliable broadcast protocol (RBC)
-		std::string myID = "dkg-keysign|" + std::string(protocol) + "|";
+		std::string myID = "dkg-addrevoker|" + std::string(protocol) + "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		if (opt_verbose)
@@ -333,121 +326,31 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 	}
 
-	// prepare the fingerprint, the trailer, and the accumulator of the
-	// certification (revocation) signatures
-	std::string fpr;
-	tmcg_openpgp_octets_t trailer, acc, issuer;
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintComputePretty(primary->pub_hashing, fpr);
+	// prepare trailer and hash for the direct-key signature
+	tmcg_openpgp_octets_t trailer, issuer, revoker, hash, left;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintCompute(prv->pub->pub_hashing, issuer);
-	if (opt_y == NULL)
-	{
-		if (opt_r)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else if (opt_1)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else if (opt_2)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else if (opt_3)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-	}
-	else
-	{
-		if (opt_r)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else if (opt_1)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else if (opt_2)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else if (opt_3)
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-		else
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareCertificationSignature(
-					TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
-	}
-	acc.insert(acc.end(), primary->packet.begin(), primary->packet.end());
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintCompute(primary->pub_hashing, revoker);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigPrepareDesignatedRevoker(prv->pub->pkalgo, hashalgo, csigtime,
+			prv->pub->flags, issuer, primary->pkalgo, revoker, trailer);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		KeyHash(prv->pub->pub_hashing, trailer, hashalgo, hash, left);
+	delete primary;
 
-	// loop through all or selected valid user IDs	
-	for (size_t j = 0; j < primary->userids.size(); j++)
+	// sign the hash value
+	tmcg_openpgp_octets_t drksig;
+	if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
+		drksig, opt_verbose, opt_y, dss, aiou, rbc))
 	{
-		// user ID not selected?
-		if (opt_u && (primary->userids[j]->userid.find(u) ==
-			primary->userids[j]->userid.npos))
-				continue; // skip this user ID
-		// compute the hash of the certified key resp. user ID
-		tmcg_openpgp_octets_t hash, left, empty;
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			CertificationHash(primary->pub_hashing, primary->userids[j]->userid,
-				empty, trailer, hashalgo, hash, left);
-		if (opt_r)
-			std::cerr << "INFO: going to revoke signature on user ID \"" <<
-				primary->userids[j]->userid_sanitized << "\" of key with" <<
-				" fingerprint [ " << fpr << " ]" << std::endl;
-		else
-			std::cerr << "INFO: going to sign user ID \"" <<
-				primary->userids[j]->userid_sanitized << "\" of key with" <<
-				" fingerprint [ " << fpr << "]" << std::endl;
-
-		// sign the hash value
-		tmcg_openpgp_octets_t sig;
-		if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
-			sig, opt_verbose, opt_y, dss, aiou, rbc))
+		if (opt_y == NULL)
 		{
-			if (opt_y == NULL)
-			{
-				delete rbc, delete aiou, delete aiou2;
-				delete dss;
-			}
-			delete primary;
-			delete prv;
-			exit(-1);
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
 		}
-
-		// attach the generated certification (revocation) signature to
-		// public key, selected user IDs, and exportable self-signatures
-		// of these user IDs
-		acc.insert(acc.end(), primary->userids[j]->packet.begin(),
-			primary->userids[j]->packet.end());
-		for (size_t i = 0; i < primary->userids[j]->selfsigs.size(); i++)
-		{
-			if (primary->userids[j]->selfsigs[i]->exportable)
-				acc.insert(acc.end(),
-					primary->userids[j]->selfsigs[i]->packet.begin(),
-					primary->userids[j]->selfsigs[i]->packet.end());
-		}
-		acc.insert(acc.end(), sig.begin(), sig.end());
+		delete prv;
+		exit(-1);
 	}
 
 	// release allocated ressources
@@ -483,46 +386,73 @@ void run_instance
 		// release threshold signature scheme
 		delete dss;
 	}
-	delete primary;
-	delete prv;
 
-	// output the result
-	std::string signedkey;
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, acc, signedkey);
-	if (opt_ofilename != NULL)
+	// convert and append the corresponding signature packet (drksig) to the
+	// existing OpenPGP structures of this key
+	TMCG_OpenPGP_Signature *si = NULL;
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		SignatureParse(drksig, opt_verbose, si);
+	if (!parse_ok)
 	{
-		if (!write_message(opt_ofilename, signedkey))
-			exit(-1);
+		std::cerr << "ERROR: cannot use the created signature" << std::endl;
+		delete prv;
+		exit(-1);
 	}
-	else
-		std::cout << signedkey << std::endl;
+	if (opt_verbose)
+		si->PrintInfo();
+	prv->pub->selfsigs.push_back(si);
+
+	// export and write updated private key in OpenPGP armor format
+	tmcg_openpgp_octets_t sec;
+	prv->Export(sec);
+	if (!write_key_file(pkfname, TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
+	{
+		delete prv;
+		exit(-1);
+	}
+
+	// export and write updated public key in OpenPGP armor format
+	tmcg_openpgp_octets_t pub;
+	prv->RelinkPublicSubkeys(); // relink the contained subkeys
+	prv->pub->Export(pub);
+	prv->RelinkPrivateSubkeys(); // undo the relinking
+	std::string armor;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pub, armor);
+	std::cout << armor << std::endl;
+	if (opt_y == NULL)
+	{
+		std::stringstream pubfilename;
+		pubfilename << peers[whoami] << "_dkg-pub.asc";
+		if (!write_key_file(pubfilename.str(), armor))
+		{
+			delete prv;
+			exit(-1);
+		}
+	}
+
+	// release
+	delete prv;
 }
 
 #ifdef GNUNET
 char *gnunet_opt_hostname = NULL;
 char *gnunet_opt_ifilename = NULL;
-char *gnunet_opt_ofilename = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
-char *gnunet_opt_u = NULL;
-char *gnunet_opt_URI = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
-unsigned int gnunet_opt_sigexptime = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
-int gnunet_opt_r = 0;
-int gnunet_opt_1 = 0, gnunet_opt_2 = 0, gnunet_opt_3 = 0;
 #endif
 
 void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("ERROR: dkg-keysign (fork)");
+		perror("ERROR: dkg-addrevoker (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
@@ -530,10 +460,9 @@ void fork_instance
 			/* BEGIN child code: participant p_i */
 			time_t sigtime = time(NULL);
 #ifdef GNUNET
-			run_instance(whoami, sigtime, gnunet_opt_sigexptime,
-				gnunet_opt_xtests);
+			run_instance(whoami, sigtime, gnunet_opt_xtests);
 #else
-			run_instance(whoami, sigtime, opt_e, 0);
+			run_instance(whoami, sigtime, 0);
 #endif
 			if (opt_verbose)
 				std::cerr << "INFO: p_" << whoami << ": exit(0)" << std::endl;
@@ -552,7 +481,7 @@ void fork_instance
 int main
 	(int argc, char *const *argv)
 {
-	static const char *usage = "dkg-keysign [OPTIONS] -i INPUTFILE PEERS";
+	static const char *usage = "dkg-addrevoker [OPTIONS] -i INPUTFILE PEERS";
 #ifdef GNUNET
 	char *loglev = NULL;
 	char *logfile = NULL;
@@ -560,27 +489,6 @@ int main
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_help(about),
-		GNUNET_GETOPT_option_flag('1',
-			"one",
-			"issuer has not done any verification of the claim of identity",
-			&gnunet_opt_1
-		),
-		GNUNET_GETOPT_option_flag('2',
-			"two",
-			"issuer has done some casual verification of the claim of identity",
-			&gnunet_opt_2
-		),
-		GNUNET_GETOPT_option_flag('3',
-			"three",
-			"issuer has done substantial verification of the claim of identity",
-			&gnunet_opt_3
-		),
-		GNUNET_GETOPT_option_uint('e',
-			"expiration",
-			"INTEGER",
-			"expiration time of generated signature in seconds",
-			&gnunet_opt_sigexptime
-		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
 			"STRING",
@@ -590,7 +498,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"create certification signature on key resp. user ID from FILENAME",
+			"create direct-key signature with external revoker from FILENAME",
 			&gnunet_opt_ifilename
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -601,12 +509,6 @@ int main
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
 		GNUNET_GETOPT_option_loglevel(&loglev),
-		GNUNET_GETOPT_option_string('o',
-			"output",
-			"FILENAME",
-			"write key with certification signature attached to FILENAME",
-			&gnunet_opt_ofilename
-		),
 		GNUNET_GETOPT_option_string('p',
 			"port",
 			"STRING",
@@ -618,23 +520,6 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
-		),
-		GNUNET_GETOPT_option_flag('r',
-			"revocation",
-			"create a certification revocation signature",
-			&gnunet_opt_r
-		),
-		GNUNET_GETOPT_option_string('u',
-			"userid",
-			"STRING",
-			"sign only valid user IDs containing STRING",
-			&gnunet_opt_u
-		),
-		GNUNET_GETOPT_option_string('U',
-			"URI",
-			"STRING",
-			"policy URI tied to signature",
-			&gnunet_opt_URI
 		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
@@ -681,16 +566,10 @@ int main
 	}
 	if (gnunet_opt_ifilename != NULL)
 		opt_ifilename = gnunet_opt_ifilename;
-	if (gnunet_opt_ofilename != NULL)
-		opt_ofilename = gnunet_opt_ofilename;
 	if (gnunet_opt_hostname != NULL)
 		opt_hostname = gnunet_opt_hostname;
 	if (gnunet_opt_passwords != NULL)
 		opt_passwords = gnunet_opt_passwords;
-	if (gnunet_opt_URI != NULL)
-		opt_URI = gnunet_opt_URI;
-	if (gnunet_opt_u != NULL)
-		opt_u = gnunet_opt_u;
 	if (gnunet_opt_k != NULL)
 		opt_k = gnunet_opt_k;
 	if (gnunet_opt_passwords != NULL)
@@ -699,10 +578,6 @@ int main
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
-	if (gnunet_opt_URI != NULL)
-		URI = gnunet_opt_URI; // get policy URI from GNUnet options
-	if (gnunet_opt_u != NULL)
-		u = gnunet_opt_u; // get policy URI from GNUnet options
 	if (gnunet_opt_k != NULL)
 		kfilename = gnunet_opt_k; // get keyring from GNUnet options
 	if (gnunet_opt_y != NULL)
@@ -717,10 +592,8 @@ int main
 		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) ||
 			(arg.find("-w") == 0) || (arg.find("-W") == 0) || 
 		    (arg.find("-L") == 0) || (arg.find("-l") == 0) ||
-			(arg.find("-i") == 0) || (arg.find("-o") == 0) || 
-		    (arg.find("-e") == 0) || (arg.find("-x") == 0) ||
+			(arg.find("-i") == 0) || (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
-		    (arg.find("-u") == 0) || (arg.find("-U") == 0) ||
 			(arg.find("-k") == 0) || (arg.find("-y") == 0))
 		{
 			size_t idx = ++i;
@@ -729,12 +602,6 @@ int main
 			{
 				ifilename = argv[i+1];
 				opt_ifilename = (char*)ifilename.c_str();
-			}
-			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ofilename == NULL))
-			{
-				ofilename = argv[i+1];
-				opt_ofilename = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_hostname == NULL))
@@ -748,28 +615,11 @@ int main
 				passwords = argv[i+1];
 				opt_passwords = (char*)passwords.c_str();
 			}
-			if ((arg.find("-u") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_u == NULL))
-			{
-				u = argv[i+1];
-				opt_u = (char*)u.c_str();
-			}
-			if ((arg.find("-U") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_URI == NULL))
-			{
-				URI = argv[i+1];
-				opt_URI = (char*)URI.c_str();
-			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_k == NULL))
 			{
 				kfilename = argv[i+1];
 				opt_k = (char*)kfilename.c_str();
-			}
-			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_e == 0))
-			{
-				opt_e = strtoul(argv[i+1], NULL, 10);
 			}
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
 				(port.length() == 0))
@@ -789,10 +639,8 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-r") == 0) ||
-			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
-			(arg.find("-V") == 0) || (arg.find("-1") == 0) ||
-			(arg.find("-2") == 0) || (arg.find("-3") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -802,33 +650,16 @@ int main
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
 				std::cout << "  -h, --help       print this help" << std::endl;
-				std::cout << "  -1, --one        issuer has not done any" <<
-					" verification of claim of identity" << std::endl;
-				std::cout << "  -2, --two        issuer has done some casual" <<
-					" verification of claim of identity" << std::endl;
-				std::cout << "  -3, --three      issuer has done substantial" <<
-					" verification of claim of identity" << std::endl;
-				std::cout << "  -e INTEGER       expiration time of" <<
-					" generated signatures in seconds" << std::endl;
 				std::cout << "  -H STRING        hostname (e.g. onion" <<
 					" address) of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME      create certification" <<
-					" signatures on key from FILENAME" << std::endl;
+				std::cout << "  -i FILENAME      create direct-key signature" <<
+					" with external revoker from FILENAME" << std::endl;
 				std::cout << "  -k FILENAME      use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME      write key with" <<
-					" certification signatures attached to FILENAME" <<
-					std::endl;
 				std::cout << "  -p INTEGER       start port for built-in" <<
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING        exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
-				std::cout << "  -r, --revocation create certification" <<
-					" revocation signatures" << std::endl;
-				std::cout << "  -u STRING        sign only valid user IDs" <<
-					" containing STRING" << std::endl;
-				std::cout << "  -U STRING        policy URI tied to" <<
-					" generated signatures" << std::endl;
 				std::cout << "  -v, --version    print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose    turn on verbose output" <<
@@ -840,24 +671,16 @@ int main
 #endif
 				return 0; // not continue
 			}
-			if ((arg.find("-r") == 0) || (arg.find("--revocation") == 0))
-				opt_r = true; // create revocation signature
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
-				std::cout << "dkg-keysign v" << version <<
+				std::cout << "dkg-addrevoker v" << version <<
 					" without GNUNET support" << std::endl;
 #endif
 				return 0; // not continue
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
-			if ((arg.find("-1") == 0) || (arg.find("--one") == 0))
-				opt_1 = true, opt_2 = false, opt_3 = false;
-			if ((arg.find("-2") == 0) || (arg.find("--two") == 0))
-				opt_1 = false, opt_2 = true, opt_3 = false;
-			if ((arg.find("-3") == 0) || (arg.find("--three") == 0))
-				opt_1 = false, opt_2 = false, opt_3 = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -883,10 +706,6 @@ int main
 	peers.push_back("Test4");
 	ifilename = "Test1_dkg-pub.asc";
 	opt_ifilename = (char*)ifilename.c_str();
-	ofilename = "Test1_dkg-pub_signed.asc";
-	opt_ofilename = (char*)ofilename.c_str();
-	opt_e = 44203;
-	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
@@ -894,10 +713,6 @@ int main
 	opt_y = (char*)yfilename.c_str();
 	ifilename = "TestY-pub.asc";
 	opt_ifilename = (char*)ifilename.c_str();
-	ofilename = "TestY-pub_signed.asc";
-	opt_ofilename = (char*)ofilename.c_str();
-	opt_e = 44203;
-	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
 #endif
 #endif
@@ -988,34 +803,13 @@ int main
 	else if (opt_y != NULL)
 	{
 		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
-		run_instance(0, time(NULL), opt_e, 0);
+		run_instance(0, time(NULL), 0);
 		return ret;
 	}
 
 	// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
-		GNUNET_GETOPT_option_flag('1',
-			"one",
-			"issuer has not done any verification of the claim of identity",
-			&gnunet_opt_1
-		),
-		GNUNET_GETOPT_option_flag('2',
-			"two",
-			"issuer has done some casual verification of the claim of identity",
-			&gnunet_opt_2
-		),
-		GNUNET_GETOPT_option_flag('3',
-			"three",
-			"issuer has done substantial verification of the claim of identity",
-			&gnunet_opt_3
-		),
-		GNUNET_GETOPT_option_uint('e',
-			"expiration",
-			"INTEGER",
-			"expiration time of generated signature in seconds",
-			&gnunet_opt_sigexptime
-		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
 			"STRING",
@@ -1025,7 +819,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"create certification signature on key resp. user ID from FILENAME",
+			"create direct-key signature with external revoker from FILENAME",
 			&gnunet_opt_ifilename
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -1033,12 +827,6 @@ int main
 			"FILENAME",
 			"use keyring FILENAME containing external revocation keys",
 			&gnunet_opt_k
-		),
-		GNUNET_GETOPT_option_string('o',
-			"output",
-			"FILENAME",
-			"write key with certification signature attached to FILENAME",
-			&gnunet_opt_ofilename
 		),
 		GNUNET_GETOPT_option_string('p',
 			"port",
@@ -1051,23 +839,6 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
-		),
-		GNUNET_GETOPT_option_flag('r',
-			"revocation",
-			"create a certification revocation signature",
-			&gnunet_opt_r
-		),
-		GNUNET_GETOPT_option_string('u',
-			"userid",
-			"STRING",
-			"sign only valid user IDs containing STRING",
-			&gnunet_opt_u
-		),
-		GNUNET_GETOPT_option_string('U',
-			"URI",
-			"STRING",
-			"policy URI tied to signature",
-			&gnunet_opt_URI
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",
@@ -1120,9 +891,9 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if (pipe(pipefd[i][j]) < 0)
-				perror("ERROR: dkg-keysign (pipe)");
+				perror("ERROR: dkg-addrevoker (pipe)");
 			if (pipe(broadcast_pipefd[i][j]) < 0)
-				perror("ERROR: dkg-keysign (pipe)");
+				perror("ERROR: dkg-addrevoker (pipe)");
 		}
 	}
 	
@@ -1140,7 +911,7 @@ int main
 		if (opt_verbose)
 			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
 		if (waitpid(pid[i], &wstatus, 0) != pid[i])
-			perror("ERROR: dkg-keysign (waitpid)");
+			perror("ERROR: dkg-addrevoker (waitpid)");
 		if (!WIFEXITED(wstatus))
 		{
 			std::cerr << "ERROR: protocol instance ";
@@ -1163,11 +934,11 @@ int main
 		for (size_t j = 0; j < peers.size(); j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("ERROR: dkg-keysign (close)");
+				perror("ERROR: dkg-addrevoker (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) ||
 				(close(broadcast_pipefd[i][j][1]) < 0))
 			{
-				perror("ERROR: dkg-keysign (close)");
+				perror("ERROR: dkg-addrevoker (close)");
 			}
 		}
 	}

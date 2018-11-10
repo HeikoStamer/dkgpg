@@ -325,32 +325,32 @@ bool verify_decryption_share_interactive_publiccoin
 		// check index for sanity
 		if (idx_dkg >= (dkg->v_i).size())
 		{
-			err << "verify PoK: bad idx_dkg for D_" << idx_rbc << std::endl;
+			err << "verify PoK: bad idx_dkg for p_" << idx_rbc << std::endl;
 			throw false;
 		}
 		// check r_i for sanity
 		if (!dkg->CheckElement(r_i))
 		{
-			err << "verify PoK: r_i not in G for D_" << idx_rbc << std::endl;
+			err << "verify PoK: r_i not in G for p_" << idx_rbc << std::endl;
 			throw false;
 		}
 		// verify proof of knowledge (equality of discrete logarithms) [CGS97]
 		// 1. receive and check the commitment, i.e., $a, b \in G$
 		if (!rbc->DeliverFrom(a, idx_rbc))
 		{
-			err << "verify PoK: DeliverFrom(a, idx_rbc) failed for D_" <<
+			err << "verify PoK: DeliverFrom(a, idx_rbc) failed for p_" <<
 				idx_rbc << std::endl;
 			throw false;
 		}
 		if (!rbc->DeliverFrom(b, idx_rbc))
 		{
-			err << "verify PoK: DeliverFrom(b, idx_rbc) failed for D_" <<
+			err << "verify PoK: DeliverFrom(b, idx_rbc) failed for p_" <<
 				idx_rbc << std::endl;
 			throw false;
 		}
 		if (!dkg->CheckElement(a) || !dkg->CheckElement(b))
 		{
-			err << "verify PoK: check commitment failed for D_" <<
+			err << "verify PoK: check commitment failed for p_" <<
 				idx_rbc << std::endl;
 			throw false;
 		}
@@ -361,13 +361,13 @@ bool verify_decryption_share_interactive_publiccoin
 		// 3. receive, check and verify the response
 		if (!rbc->DeliverFrom(r, idx_rbc))
 		{
-			err << "verify PoK: DeliverFrom(r, idx_rbc) failed for D_" <<
+			err << "verify PoK: DeliverFrom(r, idx_rbc) failed for p_" <<
 				idx_rbc << std::endl;
 			throw false;
 		}
 		if (mpz_cmpabs(r, dkg->q) >= 0)
 		{
-			err << "verify PoK: check response failed for D_" <<
+			err << "verify PoK: check response failed for p_" <<
 				idx_rbc << std::endl;
 			throw false;
 		}
@@ -378,7 +378,7 @@ bool verify_decryption_share_interactive_publiccoin
 		mpz_mod(bar, bar, dkg->p);
 		if (mpz_cmp(foo, bar))
 		{
-			err << "verify PoK: verify first equation failed for D_" <<
+			err << "verify PoK: verify first equation failed for p_" <<
 				idx_rbc << std::endl;
 			throw false;
 		}
@@ -388,7 +388,7 @@ bool verify_decryption_share_interactive_publiccoin
 		mpz_mod(bar, bar, dkg->p);
 		if (mpz_cmp(foo, bar))
 		{
-			err << "verify PoK: verify second equation failed for D_" <<
+			err << "verify PoK: verify second equation failed for p_" <<
 				idx_rbc << std::endl;
 			throw false;
 		}
@@ -1208,8 +1208,8 @@ void run_instance
 				std::string pwd;
 				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 				{
-					std::cerr << "ERROR: D_" << whoami << ": " <<
-						"cannot read password for protecting channel to D_" <<
+					std::cerr << "ERROR: p_" << whoami << ": " <<
+						"cannot read password for protecting channel to p_" <<
 						i << std::endl;
 					delete msg;
 					delete dkg;
@@ -1221,9 +1221,9 @@ void run_instance
 				if (((i + 1) < peers.size()) &&
 					!TMCG_ParseHelper::nx(passwords, '/'))
 				{
-					std::cerr << "ERROR: D_" << whoami << ": " <<
+					std::cerr << "ERROR: p_" << whoami << ": " <<
 						"cannot skip to next password for protecting channel" <<
-						" to D_" << (i + 1) << std::endl;
+						" to p_" << (i + 1) << std::endl;
 					delete msg;
 					delete dkg;
 					delete ring;
@@ -1234,7 +1234,7 @@ void run_instance
 			else
 			{
 				// simple key -- we assume that GNUnet provides secure channels
-				key << "dkg-decrypt::D_" << (i + whoami);
+				key << "dkg-decrypt::p_" << (i + whoami);
 			}
 			uP_in.push_back(pipefd[i][whoami][0]);
 			uP_out.push_back(pipefd[whoami][i][1]);

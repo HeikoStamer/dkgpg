@@ -564,7 +564,7 @@ void fork_instance
 	{
 		if (pid[whoami] == 0)
 		{
-			/* BEGIN child code: participant S_i */
+			/* BEGIN child code: participant p_i */
 			time_t sigtime = time(NULL);
 #ifdef GNUNET
 			run_instance(whoami, sigtime, gnunet_opt_xtests);
@@ -572,9 +572,9 @@ void fork_instance
 			run_instance(whoami, sigtime, 0);
 #endif
 			if (opt_verbose)
-				std::cerr << "INFO: S_" << whoami << ": exit(0)" << std::endl;
+				std::cerr << "INFO: p_" << whoami << ": exit(0)" << std::endl;
 			exit(0);
-			/* END child code: participant S_i */
+			/* END child code: participant p_i */
 		}
 		else
 		{

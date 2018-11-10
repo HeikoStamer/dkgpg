@@ -293,14 +293,11 @@ void run_instance
 	// prepare OpenPGP structures
 	tmcg_openpgp_octets_t uat;
 	tmcg_openpgp_octets_t uid, uidsig, uidsig_hashing, uidsig_left;
-	tmcg_openpgp_octets_t hash, dsaflags;
+	tmcg_openpgp_octets_t hash;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
-	// key may be used to certify other keys, to sign data and has been
-	// split by a secret-sharing mechanism
-	dsaflags.push_back(0x01 | 0x02 | 0x10);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-			hashalgo, csigtime, prv->pub->expirationtime, dsaflags,
+			hashalgo, csigtime, prv->pub->expirationtime, prv->pub->flags,
 			prv->pub->fingerprint, uidsig_hashing); 
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		CertificationHash(prv->pub->pub_hashing, userid, uat, uidsig_hashing,

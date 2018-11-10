@@ -702,7 +702,7 @@ int main
 	}
 #ifdef DKGPG_TESTSUITE
 	peers.push_back("Test1");
-	peers.push_back("Test2");
+	peers.push_back("Test3");
 	peers.push_back("Test4");
 	ifilename = "Test1_dkg-pub.asc";
 	opt_ifilename = (char*)ifilename.c_str();

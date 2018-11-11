@@ -7,6 +7,13 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.0.9   This release improves the possibilities of DKGPG further. With the new
+        programs dkg-adduid and dkg-revuid an user ID can be added and revoked,
+        respectively. The program dkg-revoke now supports a human-readable
+        reason for revocation (by option "-R") and dkg-decrypt verifies an
+        included signature according to a given key ring (option "-k"). Last
+        but not least, by the program dkg-addrevoker an external revocation
+        key can be specified.
 1.0.8   With this release a lot of improvements and new features are introduced.
         First of all, passive support for ECDSA, ECDH, and EdDSA (cf. RFC 6637
         and Werner Koch's draft RFC 4880bis) has been added by relying on the

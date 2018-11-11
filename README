@@ -93,24 +93,26 @@ Overview
   DNSSEC root signing key). The program dkg-keysign generates certification
   signatures in a similar manner for each selected and valid user ID of a
   given public key. User attributes are not supported yet. With the program
-  dkg-adduid an additional user ID can be created. Last but not least,the
-  program dkg-revoke generates corresponding revocation signatures (also
-  known as revocation certificates).
+  dkg-adduid an additional user ID can be created and with dkg-revuid a present
+  user ID can be revoked. The program dkg-addrevoker created a direct-key
+  signature which specifies an external key (given by option "-i") that can act
+  as an additional revoker. Last but not least, the program dkg-revoke generates
+  corresponding revocation signatures (also known as revocation certificates).
 
   Please consult the manual pages for detailed information on usage and options.
 
   Note that for building GNUnet support of dkg-generate, dkg-sign, dkg-keysign,
-  dkg-revoke, dkg-refresh, dkg-adduid and the interactive version of dkg-decrypt
-  the development files and environment of a very recent version (at least
-  v0.11.x, which is when writing these lines still not yet released) must be
-  present. However, as workaround for systems without GNUnet a simple TCP/IP
-  based service for the message exchange is included (option "-H <hostname>").
-  To keep confidentiality and integrity of the point-to-point channels in this
-  workaround, some mutually chosen passwords (option "-P <password list>") are
-  required. Moreover, with torsocks and some port forwarding rules for a hidden
-  service (see manual page for details) the TCP/IP based service allows running
-  the interactive DKGPG programs over Tor. (Of course, a local network will
-  also work.)  
+  dkg-revoke, dkg-refresh, dkg-adduid, dkg-revuid, dkg-addrevoker, and the
+  interactive version of dkg-decrypt the development files and environment of a
+  very recent version (at least v0.11.x, which is when writing these lines still
+  not yet released) must be present. However, as workaround for systems without
+  GNUnet a simple TCP/IP based service for the message exchange is included
+  (option "-H <hostname>"). To keep confidentiality and integrity of the point-
+  to-point channels in this TCP/IP-service some mutually chosen and distributed
+  passwords (option "-P <password list>") are required. Moreover, with torsocks
+  and some port forwarding rules for a hidden service (see manual page for the
+  details) this allows running the interactive DKGPG programs over Tor. (Of
+  course, a local network will also work.)
 
 Requirements
 ------------
@@ -178,7 +180,7 @@ Example: working configuration in .muttrc (replacement of classic pgp)
   set pgp_encrypt_only_command="~/bin/dkg-encrypt -k ~/keyring.asc -i %f -r %r"
   set pgp_check_gpg_decrypt_status_fd=no
   set pgp_decryption_okay="^INFO: decrypted message"
-  set pgp_decrypt_command="~/bin/dkg-decrypt -E -V -y ~/secretkey.asc -i %f"
+  set pgp_decrypt_command="~/bin/dkg-decrypt -E -V -k ~/keyring.asc -y ~/secretkey.asc -i %f"
   set pgp_verify_command="~/bin/dkg-verify -V -k ~/keyring.asc -i %f -s %s"
   set pgp_good_sign="^INFO: Good signature"
   set pgp_sign_command="~/bin/dkg-sign -E -t -V -y ~/secretkey.asc -i %f"

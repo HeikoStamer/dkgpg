@@ -11,7 +11,7 @@ the Internet <https://www.gnu.org/licenses>.
         programs dkg-adduid and dkg-revuid an user ID can be added and revoked,
         respectively. The program dkg-revoke now supports a human-readable
         reason for revocation (by option "-R") and dkg-decrypt verifies an
-        included signature according to a given key ring (option "-k"). Last
+        included signature according to a given keyring (option "-k"). Last
         but not least, by the program dkg-addrevoker an external revocation
         key can be specified.
 1.0.8   With this release a lot of improvements and new features are introduced.

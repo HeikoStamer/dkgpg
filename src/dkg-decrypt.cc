@@ -1673,7 +1673,7 @@ void run_instance
 					}
 					if (ret)
 					{
-						std::cerr << "ERROR: SymmetricDecrypt() failed" <<
+						std::cerr << "ERROR: SymmetricDecrypt[AEAD]() failed" <<
 							" with rc = " << gcry_err_code(ret) << std::endl;
 						delete msg;
 						delete dkg;

@@ -1674,7 +1674,8 @@ void run_instance
 					if (ret)
 					{
 						std::cerr << "ERROR: SymmetricDecrypt[AEAD]() failed" <<
-							" with rc = " << gcry_err_code(ret) << std::endl;
+							" with rc = " << gcry_err_code(ret) <<
+							" str = " << gcry_strerror(ret) << std::endl;
 						delete msg;
 						delete dkg;
 						delete ring;

@@ -119,7 +119,7 @@ Requirements
   You need the following programs, libraries and appropriate header files to
   build (GNU gcc/g++ >= 5.4.y or higher is recommended) DKGPG successfully:
 
-  * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.15
+  * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.16
     https://savannah.nongnu.org/projects/libtmcg
   * GNU Multiple Precision Arithmetic Library (libgmp), version >= 4.2.0,
     https://gmplib.org/

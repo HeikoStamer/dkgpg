@@ -1669,7 +1669,7 @@ void run_instance
 						ret = CallasDonnerhackeFinneyShawThayerRFC4880::
 							SymmetricDecryptAEAD(esk->encrypted_key, esk_seskey,
 								esk->skalgo, esk->aeadalgo, 0, esk->iv, ad,
-								decrypted_key);
+								opt_verbose, decrypted_key);
 					}
 					if (ret)
 					{

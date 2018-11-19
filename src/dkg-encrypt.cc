@@ -398,8 +398,44 @@ int main
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSeipdEncode(enc, seipd);
 
+	tmcg_openpgp_octets_t aead;
+	tmcg_openpgp_aeadalgo_t aeadalgo = TMCG_OPENPGP_AEADALGO_OCB;
+#if GCRYPT_VERSION_NUMBER < 0x010900
+	// FIXME: remove, if libgcrypt >= 1.9.0 required by configure.ac
+#else
+	aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
+#endif
+#if GCRYPT_VERSION_NUMBER < 0x010700
+	// FIXME: remove, if libgcrypt >= 1.7.0 required by configure.ac
+#else
+	// additionally, encrypt the message with AEAD algorithm
+	lit.clear(), enc.clear();
+	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
+	tmcg_openpgp_octets_t ad, iv;
+	ad.push_back(0xD4); // packet tag in new format
+	ad.push_back(0x01); // packet version number
+	ad.push_back(TMCG_OPENPGP_SKALGO_AES256); // cipher algorithm octet
+	ad.push_back(aeadalgo); // AEAD algorithm octet
+	ad.push_back(10); // chunk size octet (chunk of size 2^16 bytes)
+	for (size_t i = 0; i < 8; i++)
+		ad.push_back(0x00); // initial eight-octet big-endian chunk index
+	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAEAD(lit,
+		seskey, TMCG_OPENPGP_SKALGO_AES256, aeadalgo, 10, ad, opt_verbose,
+		iv, enc); 
+	if (ret)
+	{
+		std::cerr << "ERROR: SymmetricEncryptAEAD() failed (rc = " <<
+			gcry_err_code(ret) << ")" << std::endl;
+		delete ring;
+		return ret;
+	}
+	CallasDonnerhackeFinneyShawThayerRFC4880::PacketAeadEncode(
+		TMCG_OPENPGP_SKALGO_AES256, aeadalgo, 10, iv, enc, aead);
+#endif
+
 	// iterate through all specified encryption keys
 	tmcg_openpgp_octets_t all;
+	size_t features = 0xFF;
 	for (size_t k = 0; k < keyspec.size(); k++)
 	{
 		TMCG_OpenPGP_Pubkey *primary = NULL;
@@ -510,6 +546,8 @@ int main
 				else
 				{
 					selected.push_back(primary->subkeys[j]);
+					features &= (primary->subkeys[j]->AccumulateFeatures() |
+						primary->AccumulateFeatures());
 					if ((std::find(primary->subkeys[j]->psa.begin(),
 						primary->subkeys[j]->psa.end(), TMCG_OPENPGP_SKALGO_AES256)
 							== primary->subkeys[j]->psa.end()) &&
@@ -518,8 +556,8 @@ int main
 					{
 						if (opt_verbose)
 							std::cerr << "WARNING: AES-256 is none of the" <<
-								" preferred symmetric algorithms;"
-								"use AES-256 anyway" << std::endl;
+								" preferred symmetric algorithms;" <<
+								" use AES-256 anyway" << std::endl;
 					}
 					if (((primary->subkeys[j]->AccumulateFeatures() & 0x01) !=
 							0x01) &&
@@ -529,6 +567,26 @@ int main
 							std::cerr << "WARNING: recipient does not state" <<
 								" support for modification detection (MDC);" <<
 								"use MDC anyway" << std::endl;
+					}
+					if (((primary->subkeys[j]->AccumulateFeatures() & 0x02) !=
+							0x02) &&
+					    ((primary->AccumulateFeatures() & 0x02) != 0x02))
+					{
+						if (opt_verbose)
+							std::cerr << "WARNING: recipient does not state" <<
+								" support for AEAD Encrypted Data Packet;" <<
+								" AEAD disabled" << std::endl;
+					}
+					else if ((std::find(primary->subkeys[j]->paa.begin(),
+						primary->subkeys[j]->paa.end(), TMCG_OPENPGP_AEADALGO_OCB)
+							== primary->subkeys[j]->paa.end()) &&
+					    (std::find(primary->paa.begin(), primary->paa.end(),
+							TMCG_OPENPGP_AEADALGO_OCB) == primary->paa.end()))
+					{
+						if (opt_verbose)
+							std::cerr << "WARNING: OCB is none of the" <<
+								" preferred AEAD algorithms;" <<
+								" use OCB anyway" << std::endl;
 					}
 				}
 			}
@@ -549,6 +607,7 @@ int main
 				delete ring;
 				return -1;
 			}
+			features &= primary->AccumulateFeatures();
 			if (std::find(primary->psa.begin(), primary->psa.end(),
 				TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
 			{
@@ -562,6 +621,20 @@ int main
 					std::cerr << "WARNING: recipient does not state support" <<
 						" for modification detection (MDC);" <<
 						"use MDC protection anyway" << std::endl;
+			}
+			if ((primary->AccumulateFeatures() & 0x02) != 0x02)
+			{
+				if (opt_verbose)
+					std::cerr << "WARNING: recipient does not state support" <<
+						" for AEAD Encrypted Data Packet; AEAD disabled" <<
+						std::endl;
+			}
+			else if (std::find(primary->paa.begin(), primary->paa.end(),
+				TMCG_OPENPGP_AEADALGO_OCB) == primary->paa.end())
+			{
+				if (opt_verbose)
+					std::cerr << "WARNING: OCB is none of the preferred AEAD" <<
+						" algorithms; use OCB anyway" << std::endl;
 			}
 		}
 		else if ((selected.size() == 0) && !primary->valid)
@@ -634,9 +707,20 @@ int main
 		delete primary;
 	}
 
-	// append SEIPD and encode all packages in ASCII armor
+	// append the encrypted data packet(s) according to supported features
+	if (((features & 0x02) == 0x02) && (aead.size() > 0))
+	{
+		// append AEAD, because all selected recipients/keys have support
+		all.insert(all.end(), aead.begin(), aead.end());
+	}
+	else
+	{
+		// append SEIPD, because some selected recipients/keys have no support
+		all.insert(all.end(), seipd.begin(), seipd.end());
+	}
+
+	// encode all packages in ASCII armor
 	std::string armored_message;
-	all.insert(all.end(), seipd.begin(), seipd.end());
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
 

@@ -275,22 +275,30 @@ bool verify_signature
 			data, opt_verbose);
 	else
 		verify_ok = signature->VerifyData(primary->key, data, opt_verbose);
-
-	// release primary key
-	delete primary;
-
+	std::string fpr;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintConvertPlain(primary->fingerprint, fpr);
 	if (!verify_ok)
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: Bad signature included" << std::endl;
-		return false;
+		{
+			std::cerr << "INFO: Bad signature by key " << fpr <<
+				" included" << std::endl;
+		}
 	}
 	else
 	{
 		if (opt_verbose)
-			std::cerr << "INFO: Good signature included" << std::endl;
+		{
+			std::cerr << "INFO: Good signature by key " << fpr <<
+				" included" << std::endl;
+		}
 	}
-	return true;
+
+	// release primary key
+	delete primary;
+
+	return verify_ok;
 }
 
 void xtest

@@ -7,7 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* [2018-11-19] dkg-encrypt: added automatic AEAD support
+* [2018-11-23] dkg-generate: added option "--timestamping" (set key usage flag)
+* [2018-11-19] dkg-decrypt,dkg-encrypt: added AEAD support [draft RFC 4880bis]
 * [2018-11-11] release 1.0.9 of Distributed Privacy Guard (DKGPG)
 * [2018-11-10] added program dkg-addrevoke to specify an external revoker
 * [2018-11-05] added program dkg-revuid to revoke an existing user ID

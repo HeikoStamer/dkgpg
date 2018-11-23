@@ -169,6 +169,9 @@ resilience of threshold DSS protocol (signature scheme)
 \fB\-t\fR, \fB\-\-t\-resilience\fR=\fI\,INTEGER\/\fR
 resilience of DKG protocol (threshold decryption)
 .TP
+\fB\-\-timestamping\fR
+state that the generated key is used for timestamping
+.TP
 \fB\-v\fR, \fB\-\-version\fR
 print the version number of the program
 .TP
@@ -182,7 +185,7 @@ minutes to wait until start of key generation protocol
 timeout for point\-to\-point messages in minutes
 .TP
 \fB\-y\fR, \fB\-\-yaot\fR
-yet another OpenPGP tool
+yet another OpenPGP tool (i.e., generate usual keys)
 
 .SH "SECURITY"
 The current implementation is in experimental state and should NOT
@@ -266,6 +269,9 @@ HiddenServicePort 55017 127.0.0.1:55017
 HiddenServicePort 55018 127.0.0.1:55018
 HiddenServicePort 55019 127.0.0.1:55019
 HiddenServicePort 55020 127.0.0.1:55020
+HiddenServicePort 55021 127.0.0.1:55021
+HiddenServicePort 55022 127.0.0.1:55022
+HiddenServicePort 55023 127.0.0.1:55023
 ..
 HiddenServicePort 55200 127.0.0.1:55200
 ..
@@ -286,6 +292,7 @@ in the sources of this package and additionally can be obtained from Internet
 .SH "SEE ALSO"
 .BR dkg\-encrypt (1),
 .BR dkg\-decrypt (1),
+.BR dkg\-keysign (1),
 .BR dkg\-sign (1),
 .BR dkg\-verify (1),
 .BR dkg\-revoke (1)

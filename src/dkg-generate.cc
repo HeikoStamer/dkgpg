@@ -61,7 +61,7 @@ bool						instance_forked = false;
 tmcg_openpgp_secure_string_t	passphrase;
 std::string						userid, passwords, hostname, port;
 int 							opt_verbose = 0;
-bool							opt_y = false;
+bool							opt_y = false, opt_timestamping = false;
 char							*opt_crs = NULL;
 char							*opt_passwords = NULL;
 char							*opt_hostname = NULL;
@@ -211,6 +211,8 @@ void run_instance
 			FingerprintCompute(pub_hashing, issuer);
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 		dsaflags.push_back(0x01 | 0x02);
+		if (opt_timestamping)
+			dsaflags.push_back(0x08); // "This key may be used for timestamping"
 		sigtime = time(NULL); // current time
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
@@ -1007,6 +1009,8 @@ void run_instance
 		// key may be used to certify other keys, to sign data and has been
 		// split by a secret-sharing mechanism
 		dsaflags.push_back(0x01 | 0x02 | 0x10);
+		if (opt_timestamping)
+			dsaflags.push_back(0x08); // "This key may be used for timestamping"
 		// reuse key creation time as signature creation time
 		sigtime = ckeytime;
 	}
@@ -1014,6 +1018,8 @@ void run_instance
 	{
 		// key may be used to certify other keys and to sign data
 		dsaflags.push_back(0x01 | 0x02);
+		if (opt_timestamping)
+			dsaflags.push_back(0x08); // "This key may be used for timestamping"
 		// for a non-shared DSA primary key no common timestamp required 
 		sigtime = time(NULL); // current time
 	}
@@ -1868,6 +1874,7 @@ unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
 int gnunet_opt_y = 0;
+int gnunet_opt_timestamping = 0;
 #endif
 
 void fork_instance
@@ -1987,6 +1994,11 @@ int main
 			"INTEGER",
 			"resilience of DKG protocol (threshold decryption)",
 			&gnunet_opt_t_resilience
+		),
+		GNUNET_GETOPT_option_flag('\0',
+			"timestamping",
+			"state that the generated key is used for timestamping",
+			&gnunet_opt_timestamping
 		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
@@ -2131,6 +2143,8 @@ int main
 					" protocol (signature scheme)" << std::endl;
 				std::cout << "  -t INTEGER     resilience of tElG protocol" <<
 					" (threshold decryption)" << std::endl;
+				std::cout << "  --timestamping state that the generated key" <<
+					" is used for timestamping" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -2154,6 +2168,8 @@ int main
 				opt_verbose++; // increase verbosity
 			if ((arg.find("-y") == 0) || (arg.find("--yaot") == 0))
 				opt_y = true;
+			if (arg.find("--timestamping") == 0)
+				opt_timestamping = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -2180,6 +2196,8 @@ int main
 	peers.push_back("Test4");
 	opt_verbose = 2;
 	opt_e = 10800;
+	if (tmcg_mpz_wrandom_ui() % 2)
+		opt_timestamping = true;
 	if (tmcg_mpz_wrandom_ui() % 2)
 	{
 		// sometimes test a non-FIPS CRS
@@ -2611,6 +2629,11 @@ int main
 			"resilience of DKG protocol (threshold decryption)",
 			&gnunet_opt_t_resilience
 		),
+		GNUNET_GETOPT_option_flag('\0',
+			"timestamping",
+			"state that the generated key is used for timestamping",
+			&gnunet_opt_timestamping
+		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",
 			"turn on verbose output",
@@ -2691,8 +2714,10 @@ int main
 		{
 			std::cerr << "ERROR: protocol instance ";
 			if (WIFSIGNALED(wstatus))
+			{
 				std::cerr << pid[i] << " terminated by signal " <<
 					WTERMSIG(wstatus) << std::endl;
+			}
 			if (WCOREDUMP(wstatus))
 				std::cerr << pid[i] << " dumped core" << std::endl;
 			ret = -1; // fatal error
@@ -2700,9 +2725,11 @@ int main
 		else if (WIFEXITED(wstatus))
 		{
 			if (opt_verbose)
+			{
 				std::cerr << "INFO: protocol instance " << pid[i] <<
 					" terminated with exit status " << WEXITSTATUS(wstatus) <<
 					std::endl;
+			}
 			if (WEXITSTATUS(wstatus))
 				ret = -2; // error
 		}

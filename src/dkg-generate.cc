@@ -68,7 +68,7 @@ char							*opt_hostname = NULL;
 unsigned long int				opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N;
 unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
 
-bool							fips = false;
+bool							fips = false, rfc = false;
 std::stringstream				crss;
 mpz_t 							cache[TMCG_MAX_SSRANDOMM_CACHE], cache_mod;
 size_t							cache_avail = 0;
@@ -84,11 +84,20 @@ void run_instance
 		// create VTMF instance from CRS
 		BarnettSmartVTMF_dlog *vtmf;
 		if (fips)
+		{
 			vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
 				false); // without VTMF-verifiable generation of $g$ (FIPS mode)
-		else	
+		}
+		else if (rfc)
+		{
+			vtmf = new BarnettSmartVTMF_dlog_GroupQR(crss, TMCG_DDH_SIZE,
+				TMCG_DLSE_SIZE);
+		}
+		else
+		{
 			vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
 				true); // with VTMF-verifiable generation of $g$ (VTMF-vgog)
+		}
 		// check the constructed VTMF instance
 		if (!vtmf->CheckGroup())
 		{
@@ -104,6 +113,8 @@ void run_instance
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
 		else if (mpz_sizeinbase(vtmf->q, 2L) == 512)
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
+//		else if (mpz_sizeinbase(vtmf->q, 2L) > 1024)
+//			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10) FIXME: we need dynamic hashsize here! SHAKE
 		else
 		{
 			std::cerr << "ERROR: selecting hash algorithm failed for |q| = " <<
@@ -445,11 +456,20 @@ void run_instance
 	// create VTMF instance from CRS
 	BarnettSmartVTMF_dlog *vtmf;
 	if (fips)
+	{
 		vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
 			false); // without VTMF-verifiable generation of $g$ (FIPS mode)
-	else	
+	}
+	else if (rfc)
+	{
+		vtmf = new BarnettSmartVTMF_dlog_GroupQR(crss, TMCG_DDH_SIZE,
+			TMCG_DLSE_SIZE);
+	}
+	else
+	{
 		vtmf = new BarnettSmartVTMF_dlog(crss, TMCG_DDH_SIZE, TMCG_DLSE_SIZE,
 			true); // with VTMF-verifiable generation of $g$ (VTMF-vgog)
+	}
 	// check the constructed VTMF instance
 	if (!vtmf->CheckGroup())
 	{
@@ -2222,6 +2242,30 @@ int main
 			"0000000000000000000000000000000000000000000000000000"
 			"0000000000000000000000000000000000000000000000000|";
 	}
+//	else if (tmcg_mpz_wrandom_ui() % 2)
+//	{
+//		// sometimes test a CRS with fixed parameters from RFC 7919
+//		crs = "rfc-crs|m88HxBJpj9yKzDAlXe8tQ0jP0zSNm7oE71YSFt2ZQHiLVO"
+//			"kqnFJOK5EcaSLRHGmrtAhVybt7MarfGJf9DP5NTig8GXokeeHMiR"
+//			"00pxXnWmMmNd4C4JbsbmSKfOyPai66hMPXDybZprvk6E9Towmh8s"
+//			"rAAlz36OkTVJrZ5cKSEnpnDdd0BBwzvGDlstU5ZcuVwdVB7us5tX"
+//			"zyucSJBYoCEWf7VvqbJVYhe4GdvCczMCHGUsEKMsXsg5oBRHyQ6K"
+//			"TXX6PCJp9eo2kB4OvHgI5sZS0FMtzpuDlwcqYdLowuRIucwCFp9o"
+//			"PSBFSvO9TZRMcRXorL6mZQBglR9CcLSg7OSd2Vaa333uj1WH6HfB"
+//			"tkIaRzfwgn1P2XUGQZotOci8gdrvijNFyIdJE6k6qoVMog4SoNHo"
+//			"HZrq1CHx1QqfM2E0bXDAQNCkgzQO7zvcteMCn7xHBwNzQBg0AabM"
+//			"34izE4VrBwpLK3dNTos1CDmDCtTOQ7S0DHYOmSkkKYAmSWMf2bot"
+//			"Yd|O448yaeurZzAUbaNlp4Ri0MhVUjBt3u73VmE7wWHi8rAkhNQO"
+//			"cehA2cJIEAiddOQwaLkzIwYgIQpd9pZbhXgjrL48GuNKK8gMDV0P"
+//			"yltlOBOBoX629nwItEAKhUCnM33LgClbzImuvxs374juTOLZRQa5"
+//			"NzWYCNEkevmXoAE7OutbooV5ayUxd6swRk2moSFyJkaYxR2wlzzS"
+//			"JE9amP67GKYkxvIekmLp28JxbJUg68dFR7ABRGwL2u5idzD3AEll"
+//			"YCb9uZpP1N5XCSdq92wHj07gRzux6syJQHJfuTSDeSJT67uZuCj5"
+//			"cjSh4jmigJDluQfYOHi5qNiZbJAjL3hEJWFnI1WWxMVl8Y8paws9"
+//			"IDzpyLOVhWGk8DHuRhJM4LJvxrMgcz9Jec3N3QPFgPL2EPBdu8mv"
+//			"v0b8yViQKg170IlbaDBbNLUiC3zxoRpB6OYydayBzi5q05IIg1XM"
+//			"Uc2FvayPff1ogjuR0b6t6bRjhD3j06dmCOENNAH5OEGBKWIuRmJ|2|1|";
+//	}
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	peers.push_back("TestY");
@@ -2254,6 +2298,30 @@ int main
 			"0000000000000000000000000000000000000000000000000000"
 			"0000000000000000000000000000000000000000000000000|";
 	}
+//	else if (tmcg_mpz_wrandom_ui() % 2)
+//	{
+//		// sometimes test a CRS with fixed parameters from RFC 7919
+//		crs = "rfc-crs|m88HxBJpj9yKzDAlXe8tQ0jP0zSNm7oE71YSFt2ZQHiLVO"
+//			"kqnFJOK5EcaSLRHGmrtAhVybt7MarfGJf9DP5NTig8GXokeeHMiR"
+//			"00pxXnWmMmNd4C4JbsbmSKfOyPai66hMPXDybZprvk6E9Towmh8s"
+//			"rAAlz36OkTVJrZ5cKSEnpnDdd0BBwzvGDlstU5ZcuVwdVB7us5tX"
+//			"zyucSJBYoCEWf7VvqbJVYhe4GdvCczMCHGUsEKMsXsg5oBRHyQ6K"
+//			"TXX6PCJp9eo2kB4OvHgI5sZS0FMtzpuDlwcqYdLowuRIucwCFp9o"
+//			"PSBFSvO9TZRMcRXorL6mZQBglR9CcLSg7OSd2Vaa333uj1WH6HfB"
+//			"tkIaRzfwgn1P2XUGQZotOci8gdrvijNFyIdJE6k6qoVMog4SoNHo"
+//			"HZrq1CHx1QqfM2E0bXDAQNCkgzQO7zvcteMCn7xHBwNzQBg0AabM"
+//			"34izE4VrBwpLK3dNTos1CDmDCtTOQ7S0DHYOmSkkKYAmSWMf2bot"
+//			"Yd|O448yaeurZzAUbaNlp4Ri0MhVUjBt3u73VmE7wWHi8rAkhNQO"
+//			"cehA2cJIEAiddOQwaLkzIwYgIQpd9pZbhXgjrL48GuNKK8gMDV0P"
+//			"yltlOBOBoX629nwItEAKhUCnM33LgClbzImuvxs374juTOLZRQa5"
+//			"NzWYCNEkevmXoAE7OutbooV5ayUxd6swRk2moSFyJkaYxR2wlzzS"
+//			"JE9amP67GKYkxvIekmLp28JxbJUg68dFR7ABRGwL2u5idzD3AEll"
+//			"YCb9uZpP1N5XCSdq92wHj07gRzux6syJQHJfuTSDeSJT67uZuCj5"
+//			"cjSh4jmigJDluQfYOHi5qNiZbJAjL3hEJWFnI1WWxMVl8Y8paws9"
+//			"IDzpyLOVhWGk8DHuRhJM4LJvxrMgcz9Jec3N3QPFgPL2EPBdu8mv"
+//			"v0b8yViQKg170IlbaDBbNLUiC3zxoRpB6OYydayBzi5q05IIg1XM"
+//			"Uc2FvayPff1ogjuR0b6t6bRjhD3j06dmCOENNAH5OEGBKWIuRmJ|2|1|";
+//	}
 #endif
 #endif
 
@@ -2376,6 +2444,13 @@ int main
 			std::cerr << "INFO: verifying domain parameters (according to" <<
 				" FIPS 186-4 section A.1.1.2)" << std::endl;
 		fips = true;
+	}
+	else if (TMCG_ParseHelper::cm(crs, "rfc-crs", '|'))
+	{
+		if (opt_verbose)
+			std::cerr << "INFO: verifying domain parameters (fixed by RFC" <<
+				" 7919)" << std::endl;
+		rfc = true;
 	}
 	else
 	{

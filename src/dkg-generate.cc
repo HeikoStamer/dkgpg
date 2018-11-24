@@ -1995,7 +1995,7 @@ int main
 			"resilience of DKG protocol (threshold decryption)",
 			&gnunet_opt_t_resilience
 		),
-		GNUNET_GETOPT_option_flag('\0',
+		GNUNET_GETOPT_option_flag('T',
 			"timestamping",
 			"state that the generated key is used for timestamping",
 			&gnunet_opt_timestamping
@@ -2119,7 +2119,7 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-y") == 0))
+			(arg.find("-y") == 0) || (arg.find("-T") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -2143,8 +2143,8 @@ int main
 					" protocol (signature scheme)" << std::endl;
 				std::cout << "  -t INTEGER     resilience of tElG protocol" <<
 					" (threshold decryption)" << std::endl;
-				std::cout << "  --timestamping state that the generated key" <<
-					" is used for timestamping" << std::endl;
+				std::cout << "  -T, --timestamping state that the generated" <<
+					" key is used for timestamping" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -2168,7 +2168,7 @@ int main
 				opt_verbose++; // increase verbosity
 			if ((arg.find("-y") == 0) || (arg.find("--yaot") == 0))
 				opt_y = true;
-			if (arg.find("--timestamping") == 0)
+			if ((arg.find("-T") == 0) || (arg.find("--timestamping") == 0))
 				opt_timestamping = true;
 			continue;
 		}
@@ -2631,7 +2631,7 @@ int main
 			"resilience of DKG protocol (threshold decryption)",
 			&gnunet_opt_t_resilience
 		),
-		GNUNET_GETOPT_option_flag('\0',
+		GNUNET_GETOPT_option_flag('T',
 			"timestamping",
 			"state that the generated key is used for timestamping",
 			&gnunet_opt_timestamping

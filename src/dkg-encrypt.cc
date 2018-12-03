@@ -144,6 +144,7 @@ int main
 	char	*opt_o = NULL;
 	char	*opt_s = NULL;
 	char	*opt_k = NULL;
+	unsigned long int opt_a = 0;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -151,7 +152,8 @@ int main
 		std::string arg = argv[i+1];
 		// ignore options
 		if ((arg.find("-i") == 0) || (arg.find("-o") == 0) ||
-			(arg.find("-s") == 0) || (arg.find("-k") == 0))
+			(arg.find("-s") == 0) || (arg.find("-k") == 0) ||
+			(arg.find("-a") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -178,6 +180,11 @@ int main
 				kfilename = argv[i+1];
 				opt_k = (char*)kfilename.c_str();
 			}
+			if ((arg.find("-a") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_a == 0))
+			{
+				opt_a = strtoul(argv[i+1], NULL, 10);
+			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
@@ -191,6 +198,8 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
+				std::cout << "  -a INTEGER          enforce use of AEAD" <<
+					" algorithm INTEGER (cf. RFC 4880bis)" << std::endl;
 				std::cout << "  -b, --binary        write encrypted message" <<
 					" in binary format (only if -i)" << std::endl;
 				std::cout << "  -h, --help          print this help" <<
@@ -249,6 +258,12 @@ int main
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
+#if GCRYPT_VERSION_NUMBER < 0x010700
+	// FIXME: remove, if libgcrypt >= 1.7.0 required by configure.ac
+#else
+	if (tmcg_mpz_wrandom_ui() % 2)
+		opt_a = 2; // sometimes test AEAD with OCB
+#endif
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	keyspec.push_back("TestY-pub.asc");
@@ -257,6 +272,12 @@ int main
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
+#if GCRYPT_VERSION_NUMBER < 0x010700
+	// FIXME: remove, if libgcrypt >= 1.7.0 required by configure.ac
+#else
+	if (tmcg_mpz_wrandom_ui() % 2)
+		opt_a = 2; // sometimes test AEAD with OCB
+#endif
 #endif
 #endif
 
@@ -399,7 +420,7 @@ int main
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSeipdEncode(enc, seipd);
 
 	tmcg_openpgp_octets_t aead;
-	tmcg_openpgp_aeadalgo_t aeadalgo = TMCG_OPENPGP_AEADALGO_OCB;
+	tmcg_openpgp_aeadalgo_t aeadalgo = TMCG_OPENPGP_AEADALGO_OCB; // default
 #if GCRYPT_VERSION_NUMBER < 0x010900
 	// FIXME: remove, if libgcrypt >= 1.9.0 required by configure.ac
 #else
@@ -408,7 +429,9 @@ int main
 #if GCRYPT_VERSION_NUMBER < 0x010700
 	// FIXME: remove, if libgcrypt >= 1.7.0 required by configure.ac
 #else
-	// additionally, encrypt the message with AEAD algorithm
+	// additionally, encrypt the message with appropriate AEAD algorithm
+	if (opt_a != 0)
+		aeadalgo = (tmcg_openpgp_aeadalgo_t)opt_a; // enforce given algorithm
 	lit.clear(), enc.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
 	tmcg_openpgp_octets_t ad, iv;
@@ -546,8 +569,8 @@ int main
 				else
 				{
 					selected.push_back(primary->subkeys[j]);
-					features &= (primary->subkeys[j]->AccumulateFeatures() |
-						primary->AccumulateFeatures());
+					size_t skf = primary->subkeys[j]->AccumulateFeatures(); 
+					features &= (skf | primary->AccumulateFeatures());
 					if ((std::find(primary->subkeys[j]->psa.begin(),
 						primary->subkeys[j]->psa.end(), TMCG_OPENPGP_SKALGO_AES256)
 							== primary->subkeys[j]->psa.end()) &&
@@ -559,8 +582,7 @@ int main
 								" preferred symmetric algorithms;" <<
 								" use AES-256 anyway" << std::endl;
 					}
-					if (((primary->subkeys[j]->AccumulateFeatures() & 0x01) !=
-							0x01) &&
+					if (((skf & 0x01) != 0x01) && !opt_a &&
 					    ((primary->AccumulateFeatures() & 0x01) != 0x01))
 					{
 						if (opt_verbose)
@@ -568,8 +590,7 @@ int main
 								" support for modification detection (MDC);" <<
 								"use MDC anyway" << std::endl;
 					}
-					if (((primary->subkeys[j]->AccumulateFeatures() & 0x02) !=
-							0x02) &&
+					if (((skf & 0x02) != 0x02) && !opt_a &&
 					    ((primary->AccumulateFeatures() & 0x02) != 0x02))
 					{
 						if (opt_verbose)
@@ -577,22 +598,30 @@ int main
 								" support for AEAD Encrypted Data Packet;" <<
 								" AEAD disabled" << std::endl;
 					}
-					else if ((std::find(primary->subkeys[j]->paa.begin(),
-						primary->subkeys[j]->paa.end(), TMCG_OPENPGP_AEADALGO_OCB)
-							== primary->subkeys[j]->paa.end()) &&
-					    (std::find(primary->paa.begin(), primary->paa.end(),
-							TMCG_OPENPGP_AEADALGO_OCB) == primary->paa.end()))
+					if (((skf & 0x02) != 0x02) && opt_a &&
+					    ((primary->AccumulateFeatures() & 0x02) != 0x02))
 					{
 						if (opt_verbose)
-							std::cerr << "WARNING: OCB is none of the" <<
-								" preferred AEAD algorithms;" <<
-								" use OCB anyway" << std::endl;
+							std::cerr << "WARNING: recipient does not state" <<
+								" support for AEAD Encrypted Data Packet;" <<
+								" AEAD enforced by option -a" << std::endl;
+					}
+					if ((std::find(primary->subkeys[j]->paa.begin(),
+						primary->subkeys[j]->paa.end(), aeadalgo)
+							== primary->subkeys[j]->paa.end()) &&
+					    (std::find(primary->paa.begin(), primary->paa.end(),
+							aeadalgo) == primary->paa.end()))
+					{
+						if (opt_verbose)
+							std::cerr << "WARNING: selected algorithm is none" <<
+								" of the preferred AEAD algorithms" << std::endl;
 					}
 				}
 			}
 		}
 
-		// check primary key, if no encryption-capable subkeys have been selected
+		// check primary key, if no encryption-capable subkeys have been
+		// selected previously
 		if ((selected.size() == 0) && primary->valid) 
 		{	
 			if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
@@ -615,31 +644,38 @@ int main
 					std::cerr << "WARNING: AES-256 is none of the preferred" <<
 						" symmetric algorithms; use AES-256 anyway" << std::endl;
 			}
-			if ((primary->AccumulateFeatures() & 0x01) != 0x01)
+			if (((primary->AccumulateFeatures() & 0x01) != 0x01) && !opt_a)
 			{
 				if (opt_verbose)
 					std::cerr << "WARNING: recipient does not state support" <<
 						" for modification detection (MDC);" <<
 						"use MDC protection anyway" << std::endl;
 			}
-			if ((primary->AccumulateFeatures() & 0x02) != 0x02)
+			if (((primary->AccumulateFeatures() & 0x02) != 0x02) && !opt_a)
 			{
 				if (opt_verbose)
 					std::cerr << "WARNING: recipient does not state support" <<
 						" for AEAD Encrypted Data Packet; AEAD disabled" <<
 						std::endl;
 			}
-			else if (std::find(primary->paa.begin(), primary->paa.end(),
-				TMCG_OPENPGP_AEADALGO_OCB) == primary->paa.end())
+			if (((primary->AccumulateFeatures() & 0x02) != 0x02) && opt_a)
 			{
 				if (opt_verbose)
-					std::cerr << "WARNING: OCB is none of the preferred AEAD" <<
-						" algorithms; use OCB anyway" << std::endl;
+					std::cerr << "WARNING: recipient does not state support" <<
+						" for AEAD Encrypted Data Packet; AEAD enforced by" <<
+						" option -a" << std::endl;
+			}
+			if (std::find(primary->paa.begin(), primary->paa.end(), aeadalgo) ==
+				primary->paa.end())
+			{
+				if (opt_verbose)
+					std::cerr << "WARNING: selected algorithm is none of the" <<
+						" preferred AEAD algorithms" << std::endl;
 			}
 		}
 		else if ((selected.size() == 0) && !primary->valid)
 		{
-			std::cerr << "ERROR: no valid public key for encryption found" <<
+			std::cerr << "ERROR: no valid public key found for encryption" <<
 				std::endl;
 			delete primary;
 			delete ring;
@@ -711,6 +747,11 @@ int main
 	if (((features & 0x02) == 0x02) && (aead.size() > 0))
 	{
 		// append AEAD, because all selected recipients/keys have support
+		all.insert(all.end(), aead.begin(), aead.end());
+	}
+	else if (opt_a && (aead.size() > 0))
+	{
+		// append AEAD, because it use has been enforced by option -a
 		all.insert(all.end(), aead.begin(), aead.end());
 	}
 	else

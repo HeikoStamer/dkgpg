@@ -7,9 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* dkg-encrypt: add option "-a" (enforce use of AEAD algorithms for encryption)
-* dkg-generate, dkg-adduid, dkg-addrevoker: add option "-d" (hide that it is a distributed key)
 + dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())
 + dkg-tools: use getopt parser with long options (even if no GNUnet support)
+- dkg-generate,dkg-adduid,dkg-addrevoker: add option "-d" (hide some key flags)
 - dkg-decrypt: add a fake image header (png) for bluring decryption shares

@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "October 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "December 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \-\- simple message encryption with AES\-256 according to OpenPGP
@@ -21,14 +21,16 @@ each of these subkeys. This behaviour can be tweaked by the option "\-s", which
 limits the selected subkey based on its key ID or fingerprint.
 .PP
 Note that RSA, ElGamal, and ECDH are the supported public\-key encryption
-algorithms, and that AES\-256 is fixed as the symmetric cipher. 
+algorithms, and that AES\-256 is fixed as the symmetric cipher. With the
+option "\-a" the use of a specified AEAD algorithm can be enforced. This
+choice of the user is independed of the stated feature set from the public key. 
 .PP
 First, the symmetric cipher with a randomly chosen 256\-bit session key is
 applied to the (text) message. An integrity protection packet (MDC) is always
-appended. Then the session key is transformed by PKCS#1 v1.5 block encoding and
-encrypted with the corresponding public\-key algorithm for each selected subkey.
-For ECDH the encoding scheme and the encryption rules from RFC 6637 are
-employed.
+appended, if no AEAD algorithm is used. Then the session key is transformed by
+PKCS#1 v1.5 block encoding and encrypted with the corresponding public\-key
+algorithm for each selected subkey. For ECDH the encoding scheme and the
+encryption rules from RFC 6637 are employed.
 .PP
 With the option "\-t" the included key ID of each subkey is thrown away, i.e.,
 instead a "wild card" or speculative key ID is used. This format helps to reduce
@@ -43,6 +45,9 @@ be specified with option "\-o".
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
+.TP
+\fB\-a\fR \fI\,INTEGER\/\fR
+enforce use of AEAD algorithm INTEGER (cf. RFC 4880bis)
 .TP
 \fB\-b\fR, \fB\-\-binary\fR
 write encrypted message in binary format (only if option \-i given)

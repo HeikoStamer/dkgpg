@@ -372,14 +372,14 @@ void gnunet_shutdown_task
 		job = NULL;
 	}
 	// release buffered messages
-	while (send_queue.size())
+	while (!send_queue.empty())
 	{
 		DKG_BufferListEntry ble = send_queue.front();
 		DKG_Buffer qbuf = ble.second;
 		delete [] qbuf.second;
 		send_queue.pop_front();
 	}
-	while (send_queue_broadcast.size())
+	while (!send_queue_broadcast.empty())
 	{
 		DKG_BufferListEntry ble = send_queue_broadcast.front();
 		DKG_Buffer qbuf = ble.second;
@@ -457,7 +457,7 @@ void gnunet_io
 	io = NULL;
 
 	// send messages to peers
-	if (send_queue.size())
+	if (!send_queue.empty())
 	{
 		DKG_BufferListEntry ble = send_queue.front();
 		if (pipe2channel_in.count(ble.first)) // have input channel to this peer?
@@ -481,7 +481,7 @@ void gnunet_io
 	}
 
 	// send broadcast messages to peers
-	if (send_queue_broadcast.size())
+	if (!send_queue_broadcast.empty())
 	{
 		DKG_BufferListEntry ble = send_queue_broadcast.front();
 		if (pipe2channel_in.count(ble.first)) // have input channel to this peer?
@@ -505,7 +505,7 @@ void gnunet_io
 	}
 
 	// reschedule I/O task, if further messages available
-	if (send_queue.size() || send_queue_broadcast.size())
+	if (!send_queue.empty() || !send_queue_broadcast.empty())
 		io = GNUNET_SCHEDULER_add_now(&gnunet_io, NULL);
 
 	// schedule tasks for reading the input pipes 

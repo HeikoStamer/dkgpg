@@ -8,61 +8,65 @@ Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
 
 Introduction
 ------------
-  The Distributed Privacy Guard (DKGPG) implements Distributed Key
-  Generation (DKG) and Threshold Cryptography for OpenPGP. The generated
-  public keys are compatible with the standard and thus can be used by any
-  RFC4880-compliant application (e.g. GnuPG). The main purposes of this
-  software are distributing power among multiple parties, eliminating single
-  points of failure, and increasing the difficulty of side-channel attacks
-  on private key material.
+  Distributed Privacy Guard (DKGPG) implements Distributed Key Generation (DKG)
+  and Threshold Cryptography for OpenPGP. The generated public keys are
+  compatible with the standard and thus can be used by any RFC4880-compliant
+  application (e.g. GnuPG). The main purposes of this software are distributing
+  power among multiple parties, eliminating single points of failure, and
+  increasing the difficulty of side-channel attacks on private key material.
 
   Using well-established multi-party protocols a shared private key and a
   common public key (DSA/ElGamal) are generated. Then further interactive
-  protocols perform the private operations like decryption and signing of
-  files or keys, provided that a previously defined threshold of parties/
-  devices take part in the distributed computation. For completeness DKGPG
-  also contains programs for public-key encryption and signature verification.
+  protocols perform the private operations like decryption of messages and
+  signing of files or keys, provided that a previously defined threshold of
+  parties/devices take part in the distributed computation. For completeness
+  DKGPG contains programs for public-key encryption and signature verification.
 
   The security is based on the well-established assumption that computing
   discrete logarithms in large prime order subgroups of Zp (finite field) is
-  hard. The current implementation is still experimental and should NOT be
-  used for production. Some details about the design criteria can be found
-  in these presentation slides: http://www.nongnu.org/libtmcg/dg81_slides.pdf
+  believed to be hard. The current implementation is still experimental and
+  should NOT be used for production, because it has been not yet reviewed by
+  and independend party. Some details about design criteria can be found in
+  these presentation slides: http://www.nongnu.org/libtmcg/dg81_slides.pdf
 
-  DKGPG is Free Software according to the definition of the Free Software
+  DKGPG is 'Free Software' according to the definition of the Free Software
   Foundation. The source code is released under the GNU General Public License.
 
 Overview
 --------
-  Distributed Privacy Guard contains a bunch of command-line programs: 
-  The program dkg-generate provides an implementation of key generation for
-  DSA/DSS and the ElGamal cryptosystem. The generation and refresh (the latter
-  is done by a separated program called dkg-refresh) it needs a lot of strong
-  quality randomness (cf. D. Eastlake, J. Schiller, and S. Crocker: Randomness
-  Requirements for Security, Network Working Group, Request for Comments:
-  4086, June 2005) obtained from the GNU Crypto Library (libgcrypt), that
-  means, the execution will slow down or even fail on systems (e.g. headless
-  servers) where only low entropy sources for /dev/random (i.e. the source
-  of strong randomness for libgcrypt) are available. The high-level protocols
-  and the basic OpenPGP operations are from another library of the author,
-  i.e., Toolbox for Mental Card Games (LibTMCG). If this library is built with
-  optional support of Botan (another cryptographic library), then the needed
-  randomness additionally incorporates Botan::AutoSeeded_RNG as a source. 
+  Distributed Privacy Guard consists of a bunch of command-line programs: 
+  The program dkg-generate provides an implementation of distributed key share
+  generation for DSA/DSS and the ElGamal cryptosystem. The generation and the
+  refresh (the latter is done by a separated program called dkg-refresh) needs
+  a lot of strong quality randomness (see e.g. D. Eastlake, J. Schiller, and
+  S. Crocker: Randomness Requirements for Security, Network Working Group,
+  Request for Comments: 4086, June 2005) obtained by DKGPG from the GNU Crypto
+  Library (libgcrypt), that means, the execution will slow down or even fail on
+  systems (e.g. headless servers) if only low entropy sources for /dev/random
+  (i.e. the source of strong randomness for libgcrypt) are available. The random
+  number generation, input/output operations, arithmetic functions, OpenPGP
+  support, and some high-level protocols are provided by another library of the
+  author, i.e., Toolbox for Mental Card Games (LibTMCG). If this LibTMCG is
+  built with optional support of Botan (another C++ crypto library), then the
+  aquired random numbers incorporate randomness from Botan::AutoSeeded_RNG as
+  an additional source to rely not only on libgcrypt's RNG implementation.
 
   Due to the interactiveness of the protocols a lot of messages resp. data have
   to be exchanged between participating parties in a secure way. We employ
   GNUnet, and in particular its mesh routed CADET service, to establish private
   point-to-point and separated broadcast channels for this message exchange.
-  A so-called reliable broadcast protocol (RBC) from LibTMCG is used as
+  A so-called reliable broadcast protocol (RBC) from LibTMCG is used as a weak
   mechanism to achieve some validity, consistency, and totality in a most
-  likely asynchronous communication environment. However, there are still some
-  limitations and predefined timeout values (use option "-W" to adjust). Timing
-  problems may be recognized by looking for error messages with prefix "rbc"
-  on STDERR output.
+  likely asynchronous communication environment. However, there are limitations
+  (termination is not guaranteed) and predefined timeout values. Timing problems
+  may be recognized by looking for error messages with prefix "rbc" on STDERR
+  output of the interactive programs. In such a case the predefined timeout
+  value (default: five minutes) can be adjusted by using option "-W".
 
   The program dkg-encrypt encrypts a text message for a given public key in
   OpenPGP format. It uses AES256 as fixed symmetric cipher and most of the
-  public-key algorithms defined by OpenPGP. Of course, a similar encryption
+  public-key algorithms defined by OpenPGP and even AEAD algorithms from draft
+  RFC 4880bis, if they are supported by libgcrypt. Of course, a similar work
   can be achieved by any OpenPGP-compatible implementation, the program is
   only included for completeness. Conversely, a corresponding threshold
   decryption protocol (see Ronald Cramer, Rosario Gennaro, and Berry

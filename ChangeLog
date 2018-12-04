@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-12-04] release 1.1.0 of Distributed Privacy Guard (DKGPG)
 * [2018-12-03] dkg-encrypt: added option "-a" (enforce use of AEAD algorithm)
 * [2018-11-24] dkg-gencrs: added option "-r" (domain parameters from RFC 7919)
 * [2018-11-23] dkg-generate: added option "--timestamping" (set key usage flag)

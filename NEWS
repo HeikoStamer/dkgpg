@@ -7,8 +7,11 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
-1.1.0   TODO
-        Please note that this release requires LibTMCG version >= 1.3.16.
+1.1.0   In this release AEAD support (cf. draft RFC 4880bis) has been added
+        for dkg-encrypt and dkg-decrypt. Please note that it requires LibTMCG
+        version >= 1.3.16 and at least libgcrypt version >= 1.7.0 for OCB mode.
+        Moreover, if dkg-generate is called with the new option "--timestamping"
+        then a corresponding key usage flag from draft RFC 4880bis is set. 
 1.0.9   This release improves the possibilities of DKGPG further. With the new
         programs dkg-adduid and dkg-revuid an user ID can be added and revoked,
         respectively. The program dkg-revoke now supports a human-readable

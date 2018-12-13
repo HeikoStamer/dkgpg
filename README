@@ -64,10 +64,10 @@ Overview
   value (default: five minutes) can be adjusted by using option "-W".
 
   The program dkg-encrypt encrypts a text message for a given public key in
-  OpenPGP format. It uses AES256 as fixed symmetric cipher and most of the
-  public-key algorithms defined by OpenPGP and even AEAD algorithms from draft
-  RFC 4880bis, if they are supported by libgcrypt. Of course, a similar work
-  can be achieved by any OpenPGP-compatible implementation, the program is
+  OpenPGP format. It uses AES256 as fixed symmetric cipher, most of the
+  public-key algorithms defined by OpenPGP, and even AEAD algorithms from draft
+  RFC 4880bis, if they are supported by libgcrypt. Of course, a similar result
+  can be achieved by any OpenPGP-compatible implementation --- this program is
   only included for completeness. Conversely, a corresponding threshold
   decryption protocol (see Ronald Cramer, Rosario Gennaro, and Berry
   Schoenmakers: A Secure and Optimally Efficient Multi-Authority Election
@@ -75,33 +75,33 @@ Overview
   has been implemented by the program dkg-decrypt. It provides an interactive
   version and a non-interactive version for computing, verifying, and combining
   the required decryption shares from participating players. Finally, if
-  everything is sane, it outputs the decrypted message. Included signatures can
-  be verified by using the option "-k" and a keyring that contains the required
-  public keys. Since DKGPG 1.0.8 dkg-decrypt supports the option "-y" that turns
-  it into a regular OpenPGP implementation operating with any given private key.
-  This option is also available for the programs dkg-generate, dkg-sign,
-  dkg-keysign, and dkg-timestamp. 
+  everything is sane, it outputs the decrypted message. Included OpenPGP
+  signatures can be verified by using the option "-k" and a keyring that
+  contains the required public keys. Since DKGPG 1.0.8 dkg-decrypt supports the
+  option "-y" that turns it into a regular OpenPGP implementation operating with
+  any given private key. This option is also available for other programs like
+  dkg-generate, dkg-sign, dkg-keysign, and dkg-timestamp. 
 
   The programs dkg-keycheck and dkg-keyinfo provide basic information on given
   OpenPGP public and private keys, respectively. By option "-m" of dkg-keyinfo
-  the migration of a peer identity is achieved. Please note that only the stored
-  name of the peer is migrated, the private key material keeps unchanged. Thus
-  afterwards all parties should refresh their shares by dkg-refresh.
+  the migration of a peer identity is achieved. Note that only the stored name
+  of the peer is migrated, other parts of the private key material are not
+  changed. Afterwards all parties should refresh their shares by dkg-refresh.
 
   The program dkg-sign creates a detached signature on a binary or a text file,
   if a sufficient threshold of the parties work together in the interactive
   signing protocol. Such a detached signature can be verified with any OpenPGP-
-  compatible implementation or the included programm dkg-verify. Thus DKGPG
-  solves the problem of distributed code-signing without secret key splitting
-  (e.g. libgfshare) and laborious reconstruction ceremonies (e.g. as used for
-  DNSSEC root signing key). The program dkg-keysign generates certification
-  signatures in a similar manner for each selected and valid user ID of a
-  given public key. User attributes are not supported yet. With the program
-  dkg-adduid an additional user ID can be created and with dkg-revuid a present
-  user ID can be revoked. The program dkg-addrevoker created a direct-key
-  signature which specifies an external key (given by option "-i") that can act
-  as an additional revoker. Last but not least, the program dkg-revoke generates
-  corresponding revocation signatures (also known as revocation certificates).
+  compatible software or the included programm dkg-verify. Thus DKGPG solves
+  the problem of distributed code-signing without secret key splitting (e.g.
+  libgfshare) and laborious reconstruction ceremonies (e.g. as used for DNSSEC
+  root signing key). The program dkg-keysign generates certification signatures
+  in a similar manner for each selected and valid user ID of a given public key.
+  User attributes are not supported yet. With the program dkg-adduid an
+  additional user ID can be created and with dkg-revuid a present user ID can be
+  revoked. The program dkg-addrevoker creates a direct-key signature which
+  specifies an external key (given by option "-i") that can act as an additional
+  revoker. Last but not least, the program dkg-revoke generates corresponding
+  revocation signatures (also known as revocation certificates) for the key.
 
   Please consult the manual pages for detailed information on usage and options.
 

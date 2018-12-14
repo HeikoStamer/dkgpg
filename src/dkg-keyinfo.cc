@@ -357,6 +357,9 @@ int main
 	// in the possession of more than one person.
 	if ((allflags & 0x80) == 0x80)
 		std::cout << "G";
+	// This key may be used for timestamping. [draft RFC 4880bis]
+	if ((allflags & 0x0800) == 0x0800)
+		std::cout << "T";
 	if (allflags == 0x00)
 		std::cout << "undefined";
 	std::cout << std::endl;
@@ -471,6 +474,9 @@ int main
 		// in the possession of more than one person.
 		if ((allflags & 0x80) == 0x80)
 			std::cout << "G";
+		// This key may be used for timestamping. [draft RFC 4880bis]
+		if ((allflags & 0x0800) == 0x0800)
+			std::cout << "T";
 		if (allflags == 0x00)
 			std::cout << "undefined";
 		std::cout << std::endl;

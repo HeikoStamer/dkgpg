@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20181208])
+AC_REVISION([20181214])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.1.1], [HeikoStamer@gmx.net], [dkgpg],

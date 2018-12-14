@@ -25,10 +25,10 @@
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
 #endif
-#ifdef DKGPG_TESTSUITE_TS
+#ifdef DKGPG_TESTSUITE_Y
 	#undef GNUNET
 #endif
-#ifdef DKGPG_TESTSUITE_Y
+#ifdef DKGPG_TESTSUITE_TS
 	#undef GNUNET
 #endif
 

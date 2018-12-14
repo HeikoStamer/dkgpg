@@ -189,7 +189,7 @@ int main
 	filename = "TestTS1_dkg-pub.asc";
 	sfilename = "Test1_output_timestamp.sig";
 	opt_s = (char*)sfilename.c_str();
-	kfilename = "TestTS1_dkg-pub.asc";
+	kfilename = "Test1_dkg-pub.asc";
 	opt_k = (char*)kfilename.c_str();	
 	opt_verbose = 2;
 #else

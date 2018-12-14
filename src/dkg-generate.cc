@@ -25,6 +25,9 @@
 #ifdef DKGPG_TESTSUITE
 	#undef GNUNET
 #endif
+#ifdef DKGPG_TESTSUITE_TS
+	#undef GNUNET
+#endif
 #ifdef DKGPG_TESTSUITE_Y
 	#undef GNUNET
 #endif
@@ -223,7 +226,10 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 		dsaflags.push_back(0x01 | 0x02);
 		if (opt_timestamping)
+		{
+			// FIXME: openpgp-wg: the first octet of usage flags should be zero?
 			dsaflags.push_back(0x08); // "This key may be used for timestamping"
+		}
 		sigtime = time(NULL); // current time
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
@@ -1030,7 +1036,10 @@ void run_instance
 		// split by a secret-sharing mechanism
 		dsaflags.push_back(0x01 | 0x02 | 0x10);
 		if (opt_timestamping)
+		{
+			// FIXME: openpgp-wg: the first octet of usage flags should be zero?
 			dsaflags.push_back(0x08); // "This key may be used for timestamping"
+		}
 		// reuse key creation time as signature creation time
 		sigtime = ckeytime;
 	}
@@ -1039,7 +1048,10 @@ void run_instance
 		// key may be used to certify other keys and to sign data
 		dsaflags.push_back(0x01 | 0x02);
 		if (opt_timestamping)
+		{
+			// FIXME: openpgp-wg: the first octet of usage flags should be zero?
 			dsaflags.push_back(0x08); // "This key may be used for timestamping"
+		}
 		// for a non-shared DSA primary key no common timestamp required 
 		sigtime = time(NULL); // current time
 	}
@@ -2217,8 +2229,6 @@ int main
 	opt_verbose = 2;
 	opt_e = 10800;
 	if (tmcg_mpz_wrandom_ui() % 2)
-		opt_timestamping = true;
-	if (tmcg_mpz_wrandom_ui() % 2)
 	{
 		// sometimes test a non-FIPS CRS
 		crs = "crs|VMyMoPc2vb51ofxb4f2rebOSONnfhitfGcYxdav2D4wqBTeZrC"
@@ -2267,13 +2277,21 @@ int main
 //			"Uc2FvayPff1ogjuR0b6t6bRjhD3j06dmCOENNAH5OEGBKWIuRmJ|2|1|";
 //	}
 #else
+#ifdef DKGPG_TESTSUITE_TS
+	peers.push_back("TestTS1");
+	peers.push_back("TestTS2");
+	peers.push_back("TestTS3");
+	peers.push_back("TestTS4");
+	opt_verbose = 2;
+	opt_e = 10800;
+	opt_timestamping = true;
+#else
 #ifdef DKGPG_TESTSUITE_Y
 	peers.push_back("TestY");
 	opt_y = true;
 	opt_verbose = 2;
 	opt_e = 10800;
-	if (tmcg_mpz_wrandom_ui() % 2)
-		opt_timestamping = true;
+	opt_timestamping = true;
 	if (tmcg_mpz_wrandom_ui() % 2)
 	{
 		// sometimes test a non-FIPS CRS
@@ -2322,6 +2340,7 @@ int main
 //			"v0b8yViQKg170IlbaDBbNLUiC3zxoRpB6OYydayBzi5q05IIg1XM"
 //			"Uc2FvayPff1ogjuR0b6t6bRjhD3j06dmCOENNAH5OEGBKWIuRmJ|2|1|";
 //	}
+#endif
 #endif
 #endif
 

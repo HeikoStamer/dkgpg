@@ -173,6 +173,13 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
+	if ((prv->pub->AccumulateFlags() & 0x0800) != 0x0800)
+	{
+		std::cerr << "ERROR: primary key is not intented for timestamping" <<
+			std::endl;
+		delete prv;
+		exit(-1);
+	}
 
 	// read the target signature from stdin or from file
 	std::string armored_signature;
@@ -868,9 +875,9 @@ int main
 		}
 	}
 #ifdef DKGPG_TESTSUITE
-	peers.push_back("Test2");
-	peers.push_back("Test3");
-	peers.push_back("Test4");
+	peers.push_back("TestTS2");
+	peers.push_back("TestTS3");
+	peers.push_back("TestTS4");
 	ifilename = "Test1_output.sig";
 	opt_i = (char*)ifilename.c_str();
 	ofilename = "Test1_output_timestamp.sig";

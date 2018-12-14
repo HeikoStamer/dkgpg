@@ -186,10 +186,10 @@ int main
 		filename = arg;
 	}
 #ifdef DKGPG_TESTSUITE
-	filename = "Test1_dkg-pub.asc";
+	filename = "TestTS1_dkg-pub.asc";
 	sfilename = "Test1_output_timestamp.sig";
 	opt_s = (char*)sfilename.c_str();
-	kfilename = "Test1_dkg-pub.asc";
+	kfilename = "TestTS1_dkg-pub.asc";
 	opt_k = (char*)kfilename.c_str();	
 	opt_verbose = 2;
 #else
@@ -507,12 +507,12 @@ int main
 		delete ring;
 		return -2;
 	}
-	// 3. key usage flags (signatures made by keys not with the "signing"
+	// 3. key usage flags (signatures made by keys not with the "timestamping"
 	//    capability are not valid)
-	if (!opt_weak && ((keyusage & 0x02) != 0x02))
+	if (!opt_weak && ((keyusage & 0x0800) != 0x0800))
 	{
 		std::cerr << "ERROR: corresponding key of timestamp authority" <<
-			" was not intented for signing" << std::endl;
+			" was not intented for timestamping" << std::endl;
 		delete target_signature;
 		delete signature;
 		delete primary;

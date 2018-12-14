@@ -7,6 +7,9 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-12-14] changed some test cases with key usage flag for timestamping
+* [2018-12-14] dkg-timestamp: allow only keys with dedicated usage flag
+* [2018-12-14] dkg-timestamp-verify: allow only keys with dedicated usage flag
 * [2018-12-14] dkg-keyinfo: added output of key usage flag for timestamping
 * [2018-12-08] release 1.1.0 of Distributed Privacy Guard (DKGPG)
 * [2018-12-03] dkg-encrypt: added option "-a" (enforce use of AEAD algorithm)

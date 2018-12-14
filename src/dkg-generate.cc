@@ -2407,6 +2407,10 @@ int main
 	userid = "TestGroup <testing@localhost>";
 	passphrase = "Test";
 #else
+#ifdef DKGPG_TESTSUITE_TS
+	userid = "TestGroupTS <testing@localhost>";
+	passphrase = "Test";
+#else
 #ifdef DKGPG_TESTSUITE_Y
 	userid = "TestGroupY <testing@localhost>";
 	passphrase = "TestY";
@@ -2432,6 +2436,7 @@ int main
 				std::endl;
 	}
 	while (passphrase != passphrase_check);
+#endif
 #endif
 #endif
 

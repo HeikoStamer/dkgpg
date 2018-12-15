@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2018-12-15] changed syncronization time for the final rounds of RBC protocol
 * [2018-12-14] changed some test cases with key usage flag for timestamping
 * [2018-12-14] dkg-timestamp: allow only keys with dedicated usage flag
 * [2018-12-14] dkg-timestamp-verify: allow only keys with dedicated usage flag

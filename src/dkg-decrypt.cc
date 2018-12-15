@@ -1546,7 +1546,7 @@ void run_instance
 			}
 		}			
 		// at the end: deliver some more rounds for waiting parties
-		time_t synctime = aiounicast::aio_timeout_long;
+		time_t synctime = (opt_W * 6);
 		if (opt_verbose)
 			std::cerr << "INFO: p_" << whoami << ": waiting approximately " <<
 				(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<

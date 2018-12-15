@@ -19,11 +19,11 @@
 
 TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-keysign t-dkg-encrypt\
  t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-adduid t-dkg-refresh t-dkg-revuid\
- t-dkg-addrevoker t-dkg-revoke\
+ t-dkg-addrevoker\
  y-dkg-generate y-dkg-keycheck y-dkg-keysign y-dkg-encrypt y-dkg-decrypt\
  y-dkg-sign y-dkg-verify y-dkg-timestamp y-dkg-timestamp-verify\
  y-dkg-adduid y-dkg-revuid y-dkg-addrevoker\
- ts-dkg-generate ts-dkg-timestamp ts-dkg-timestamp-verify
+ ts-dkg-generate ts-dkg-timestamp ts-dkg-timestamp-verify t-dkg-revoke
 
 AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@\
  @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@

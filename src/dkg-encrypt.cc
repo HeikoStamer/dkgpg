@@ -249,6 +249,27 @@ int main
 		}
 		keyspec.push_back(arg);
 	}
+
+	// lock memory
+	bool force_secmem = false;
+	if (!lock_memory())
+	{
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
+			" for full memory protection" << std::endl;
+		// at least try to use libgcrypt's secure memory
+		force_secmem = true;
+	}
+
+	// initialize LibTMCG
+	if (!init_libTMCG(force_secmem))
+	{
+		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		return -1;
+	}
+	if (opt_verbose)
+		std::cerr << "INFO: using LibTMCG version " <<
+			version_libTMCG() << std::endl;
+
 #ifdef DKGPG_TESTSUITE
 	keyspec.push_back("Test1_dkg-pub.asc");
 	if (!opt_binary)
@@ -294,26 +315,6 @@ int main
 			"is not supported" << std::endl;
 		return -1;
 	}
-
-	// lock memory
-	bool force_secmem = false;
-	if (!lock_memory())
-	{
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
-			" for full memory protection" << std::endl;
-		// at least try to use libgcrypt's secure memory
-		force_secmem = true;
-	}
-
-	// initialize LibTMCG
-	if (!init_libTMCG(force_secmem))
-	{
-		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
-		return -1;
-	}
-	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " <<
-			version_libTMCG() << std::endl;
 
 	// read the public key from file
 	std::string armored_pubkey;

@@ -887,6 +887,29 @@ int main
 		filename = arg;
 	}
 
+	// lock memory
+	bool force_secmem = false;
+	if (opt_p)
+	{
+		if (!lock_memory())
+		{
+			std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK" <<
+				" required for full memory protection" << std::endl;
+			// at least try to use libgcrypt's secure memory
+			force_secmem = true;
+		}
+	}
+
+	// initialize LibTMCG
+	if (!init_libTMCG(force_secmem))
+	{
+		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		return -1;
+	}
+	if (opt_verbose)
+		std::cerr << "INFO: using LibTMCG version " <<
+			version_libTMCG() << std::endl;
+
 #ifdef DKGPG_TESTSUITE_Y
 	if (tmcg_mpz_wrandom_ui() % 2)
 	{
@@ -913,29 +936,6 @@ int main
 			std::endl;
 		return -1;
 	} 
-
-	// lock memory
-	bool force_secmem = false;
-	if (opt_p)
-	{
-		if (!lock_memory())
-		{
-			std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK" <<
-				" required for full memory protection" << std::endl;
-			// at least try to use libgcrypt's secure memory
-			force_secmem = true;
-		}
-	}
-
-	// initialize LibTMCG
-	if (!init_libTMCG(force_secmem))
-	{
-		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
-		return -1;
-	}
-	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " <<
-			version_libTMCG() << std::endl;
 
 	// choose input format of key file
 	tmcg_openpgp_armor_t format = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 

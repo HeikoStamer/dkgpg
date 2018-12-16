@@ -112,15 +112,6 @@ int main
 		factor++;
 	}
 
-#ifdef DKGPG_TESTSUITE
-	factor = 1;
-	if (tmcg_mpz_wrandom_ui() % 2)
-		fips = "DKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPG";
-	else if (tmcg_mpz_wrandom_ui() % 2)
-		opt_r = true;
-	opt_verbose = 2;
-#endif
-
 	// initialize LibTMCG
 	if (!init_libTMCG())
 	{
@@ -130,6 +121,15 @@ int main
 	if (opt_verbose)
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+
+#ifdef DKGPG_TESTSUITE
+	factor = 1;
+	if (tmcg_mpz_wrandom_ui() % 2)
+		fips = "DKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPGTESTSUITEDKGPG";
+	else if (tmcg_mpz_wrandom_ui() % 2)
+		opt_r = true;
+	opt_verbose = 2;
+#endif
 
 	// generate primes and generator according to FIPS 186-4
 	if (fips.length())

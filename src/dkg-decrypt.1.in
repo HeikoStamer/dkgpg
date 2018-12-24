@@ -1,4 +1,4 @@
-.TH DKG\-DECRYPT "1" "November 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-DECRYPT "1" "December 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-decrypt \-\- threshold decryption for OpenPGP (only ElGamal)
@@ -86,6 +86,9 @@ read encrypted message rather from FILENAME than STDIN
 .TP
 \fB\-k\fR \fI\,FILENAME\/\fR
 verify included signatures using keyring FILENAME
+.TP
+\fB\-K\fR, \fB\-\-weak\fR
+allow weak keys to verify included signatures
 .TP
 \fB\-L\fR, \fB\-\-log\fR=\fI\,LOGLEVEL\/\fR
 configure logging to use LOGLEVEL

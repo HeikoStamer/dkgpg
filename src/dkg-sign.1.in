@@ -1,4 +1,4 @@
-.TH DKG\-SIGN "1" "November 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-SIGN "1" "December 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-sign \-\- threshold signature scheme for OpenPGP (only DSA/DSS)
@@ -81,7 +81,7 @@ Arguments mandatory for long options are also mandatory for short options.
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME
 .TP
-fB\-C\fR, \fB\-\-clear\fR
+\fB\-C\fR, \fB\-\-clear\fR
 apply cleartext signature framework (cf. RFC 4880)
 .TP
 \fB\-e\fR, \fB\-\-expiration\fR=\fI\,INTEGER\/\fR

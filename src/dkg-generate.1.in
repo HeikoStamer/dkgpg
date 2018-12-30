@@ -1,4 +1,4 @@
-.TH DKG\-GENERATE "1" "November 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-GENERATE "1" "December 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-generate \-\- distributed key generation for OpenPGP (only DSA and ElGamal)
@@ -272,9 +272,9 @@ HiddenServicePort 55020 127.0.0.1:55020
 HiddenServicePort 55021 127.0.0.1:55021
 HiddenServicePort 55022 127.0.0.1:55022
 HiddenServicePort 55023 127.0.0.1:55023
-..
+\&...
 HiddenServicePort 55200 127.0.0.1:55200
-..
+\&...
 .RE
 .fi
 

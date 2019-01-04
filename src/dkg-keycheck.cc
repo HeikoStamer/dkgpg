@@ -139,7 +139,7 @@ bool decomp
 		if (power)
 			result[primes[i]] = power;
 	}
-	if (!mpz_cmp_ui(foo, 1L))
+	if (mpz_cmp_ui(foo, 1L) == 0)
 		full = true;
 	mpz_clear(foo);
 	return full;
@@ -152,7 +152,7 @@ bool order
 {
 	mpz_t foo;
 	
-	if (!mpz_cmp_ui(a, 1L))
+	if (mpz_cmp_ui(a, 1L) == 0)
 	{
 		mpz_set_ui(result, 1L);
 		return true; // a is the identity element

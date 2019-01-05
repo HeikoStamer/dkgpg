@@ -1,4 +1,4 @@
-Copyright (C)  2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+Copyright (C)  2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later
@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-01-05] dkg-keycheck: increased number of small primes (B = 80000)
 * [2018-12-16] dkg-gencrs,dkg-generate,dkg-encrypt,dkg-keycheck: fixes too late
                initialization of LibTMCG resp. libgcrypt during some test cases
 * [2018-12-15] changed syncronization time for the final rounds of RBC protocol

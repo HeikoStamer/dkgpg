@@ -7,6 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-01-12] dkg-generate: added option "--no-passphrase" (disable protection)
+* [2019-01-12] dkg-generate: added option "-u" (provide user ID by cmdline)
 * [2019-01-05] dkg-keycheck: increased number of small primes (B = 80000)
 * [2018-12-16] dkg-gencrs,dkg-generate,dkg-encrypt,dkg-keycheck: fixes too late
                initialization of LibTMCG resp. libgcrypt during some test cases

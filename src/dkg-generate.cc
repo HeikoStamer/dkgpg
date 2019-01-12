@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -65,9 +65,11 @@ tmcg_openpgp_secure_string_t	passphrase;
 std::string						userid, passwords, hostname, port;
 int 							opt_verbose = 0;
 bool							opt_y = false, opt_timestamping = false;
+bool							opt_nopassphrase = false;
 char							*opt_crs = NULL;
 char							*opt_passwords = NULL;
 char							*opt_hostname = NULL;
+char							*opt_u = NULL;
 unsigned long int				opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N;
 unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
 
@@ -117,7 +119,7 @@ void run_instance
 		else if (mpz_sizeinbase(vtmf->q, 2L) == 512)
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
 //		else if (mpz_sizeinbase(vtmf->q, 2L) > 1024)
-//			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10) FIXME: we need dynamic hashsize here! SHAKE
+//			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10) FIXME: we need dynamic hashsize here! e.g. SHAKE
 		else
 		{
 			std::cerr << "ERROR: selecting hash algorithm failed for |q| = " <<
@@ -1898,6 +1900,7 @@ char *gnunet_opt_crs = NULL;
 char *gnunet_opt_hostname = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
+char *gnunet_opt_u = NULL;
 unsigned int gnunet_opt_t_resilience = DKGPG_MAX_N;
 unsigned int gnunet_opt_s_resilience = DKGPG_MAX_N;
 unsigned int gnunet_opt_keyexptime = 0;
@@ -1907,6 +1910,7 @@ unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
 int gnunet_opt_y = 0;
 int gnunet_opt_timestamping = 0;
+int gnunet_opt_nopassphrase = 0;
 #endif
 
 void fork_instance
@@ -2003,6 +2007,11 @@ int main
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
 		GNUNET_GETOPT_option_loglevel(&loglev),
+		GNUNET_GETOPT_option_flag('N',
+			"no-passphrase",
+			"disable private key protection",
+			&gnunet_opt_nopassphrase
+		),
 		GNUNET_GETOPT_option_string('p',
 			"port",
 			"STRING",
@@ -2031,6 +2040,12 @@ int main
 			"timestamping",
 			"state that the generated key is used for timestamping",
 			&gnunet_opt_timestamping
+		),
+		GNUNET_GETOPT_option_string('u',
+			"uid",
+			"STRING",
+			"user ID of the generated key",
+			&gnunet_opt_u
 		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
@@ -2088,6 +2103,11 @@ int main
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
+	if (gnunet_opt_u != NULL)
+	{
+		userid = gnunet_opt_u; // get userid from GNUnet options
+		opt_u = gnunet_opt_u;
+	}
 #endif
 
 	// create peer list from remaining arguments
@@ -2101,7 +2121,7 @@ int main
 			(arg.find("-l") == 0) || (arg.find("-g") == 0) ||
 			(arg.find("-x") == 0) || (arg.find("-s") == 0) ||
 			(arg.find("-e") == 0) || (arg.find("-P") == 0) ||
-			(arg.find("-H") == 0))
+			(arg.find("-H") == 0) || (arg.find("-u") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-g") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -2142,6 +2162,12 @@ int main
 			{
 				port = argv[i+1];
 			}
+			if ((arg.find("-u") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_u == NULL))
+			{
+				userid = argv[i+1];
+				opt_u = (char*)userid.c_str();
+			}
 			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_W == 5))
 			{
@@ -2151,7 +2177,8 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-y") == 0) || (arg.find("-T") == 0))
+			(arg.find("-y") == 0) || (arg.find("-T") == 0) ||
+			(arg.find("-N") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -2167,6 +2194,8 @@ int main
 					" defines underlying DDH-hard group" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
+				std::cout << "  -N, --no-passphrase  disable private key" <<
+					" protection" << std::endl;
 				std::cout << "  -p INTEGER     start port for built-in" <<
 					" TCP/IP message exchange service" << std::endl; 
 				std::cout << "  -P STRING      exchanged passwords to" <<
@@ -2175,8 +2204,10 @@ int main
 					" protocol (signature scheme)" << std::endl;
 				std::cout << "  -t INTEGER     resilience of tElG protocol" <<
 					" (threshold decryption)" << std::endl;
-				std::cout << "  -T, --timestamping state that the generated" <<
+				std::cout << "  -T, --timestamping  state that the generated" <<
 					" key is used for timestamping" << std::endl;
+				std::cout << "  -u STRING      user ID of the generated key" <<
+					std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -2202,6 +2233,8 @@ int main
 				opt_y = true;
 			if ((arg.find("-T") == 0) || (arg.find("--timestamping") == 0))
 				opt_timestamping = true;
+			if ((arg.find("-N") == 0) || (arg.find("--no-passphrase") == 0))
+				opt_nopassphrase = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -2416,27 +2449,38 @@ int main
 	userid = "TestGroupY <testing@localhost>";
 	passphrase = "TestY";
 #else
-	std::cerr << "1. Please enter an OpenPGP-style user ID (name <email>): ";
-	std::getline(std::cin, userid);
-	std::cin.clear();
-	tmcg_openpgp_secure_string_t passphrase_check;
-	std::string ps1 = "2. Passphrase to protect your part of the private key";
-	std::string ps2 = "Please repeat the given passphrase to continue";
-	do
+	if (userid.length() == 0)
 	{
-		passphrase = "", passphrase_check = "";
-		if (!get_passphrase(ps1, false, passphrase))
-			return -1;
-		if (!get_passphrase(ps2, false, passphrase_check))
-			return -1;
-		if (passphrase != passphrase_check)
-			std::cerr << "WARNING: passphrase does not match;" <<
-				" please try again" << std::endl;
-		else if (passphrase == "")
-			std::cerr << "WARNING: no key protection due to empty passphrase" <<
-				std::endl;
+		std::cerr << "Please enter an OpenPGP-style user ID (name <email>): ";
+		std::getline(std::cin, userid);
+		std::cin.clear();
 	}
-	while (passphrase != passphrase_check);
+	if (opt_nopassphrase)
+	{
+		std::cerr << "WARNING: private key protection disabled due to option" <<
+			" --no-passphrase" << std::endl;
+	}
+	else
+	{
+		tmcg_openpgp_secure_string_t passphrase_check;
+		std::string ps1 = "Passphrase to protect your part of the private key";
+		std::string ps2 = "Please repeat the given passphrase to continue";
+		do
+		{
+			passphrase = "", passphrase_check = "";
+			if (!get_passphrase(ps1, false, passphrase))
+				return -1;
+			if (!get_passphrase(ps2, false, passphrase_check))
+				return -1;
+			if (passphrase != passphrase_check)
+				std::cerr << "WARNING: passphrase does not match;" <<
+					" please try again" << std::endl;
+			else if (passphrase == "")
+				std::cerr << "WARNING: private key protection disabled due" <<
+					" to empty passphrase" << std::endl;
+		}
+		while (passphrase != passphrase_check);
+	}
 #endif
 #endif
 #endif
@@ -2638,9 +2682,9 @@ int main
 		mpz_clear(fips_counter), mpz_clear(fips_index);
 	}
 	// initialize cache
-	std::cerr << "3. We need a lot of entropy to cache very strong" <<
+	std::cerr << "We need a lot of entropy to cache very strong" <<
 		" randomness for key generation." << std::endl;
-	std::cerr << "   Please use other programs, move the mouse, and type on" <<
+	std::cerr << "Please use other programs, move the mouse, and type on" <<
 		" your keyboard: " << std::endl;
 	if (opt_y)
 		tmcg_mpz_ssrandomm_cache_init(cache, cache_mod, cache_avail, 2, fips_q);
@@ -2707,6 +2751,11 @@ int main
 			"hostname (e.g. onion address) of this peer within PEERS",
 			&gnunet_opt_hostname
 		),
+		GNUNET_GETOPT_option_flag('N',
+			"no-passphrase",
+			"disable private key protection",
+			&gnunet_opt_nopassphrase
+		),
 		GNUNET_GETOPT_option_string('p',
 			"port",
 			"STRING",
@@ -2735,6 +2784,12 @@ int main
 			"timestamping",
 			"state that the generated key is used for timestamping",
 			&gnunet_opt_timestamping
+		),
+		GNUNET_GETOPT_option_string('u',
+			"uid",
+			"STRING",
+			"user ID of the generated key",
+			&gnunet_opt_u
 		),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",

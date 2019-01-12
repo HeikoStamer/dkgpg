@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -69,7 +69,8 @@ std::string						passwords, hostname, port, yfilename;
 int 							opt_verbose = 0;
 char							*opt_P = NULL;
 char							*opt_H = NULL;
-char							*opt_k = NULL, *opt_u = NULL;
+char							*opt_k = NULL;
+char							*opt_u = NULL;
 char							*opt_y = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+# Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 #
 # This file is part of Distributed Privacy Guard (DKGPG).
 #
@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20181214])
+AC_REVISION([20190118])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.1.1], [HeikoStamer@gmx.net], [dkgpg],
@@ -218,9 +218,9 @@ AC_SUBST(GNUNET_CFLAGS)
 LDFLAGS="$backup_LDFLAGS"
 CPPFLAGS="$backup_CPPFLAGS"
 
-# Enable all compiler warnings by default
-CFLAGS="$CFLAGS -Wall"
-CXXFLAGS="$CXXFLAGS -Wall"
+# Enable all compiler warnings by default and some more
+CFLAGS="$CFLAGS -Wall -Wextra"
+CXXFLAGS="$CXXFLAGS -Wall -Wextra"
 
 # Linking the sources for subdirectory tests
 AC_CONFIG_LINKS([tests/t-dkg-gencrs.cc:src/dkg-gencrs.cc])

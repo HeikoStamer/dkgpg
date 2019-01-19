@@ -409,8 +409,9 @@ void tcpip_accept
 		{
 			if (FD_ISSET(pi->second, &rfds))
 			{
-				struct sockaddr_storage sin = { 0, { 0 }, 0 };
+				struct sockaddr_storage sin;
 				socklen_t slen = (socklen_t)sizeof(sin);
+				memset(&sin, 0, sizeof(sin));
 				int connfd = accept(pi->second, (struct sockaddr*)&sin, &slen);
 				if (connfd < 0)
 				{
@@ -445,8 +446,9 @@ void tcpip_accept
 		{
 			if (FD_ISSET(pi->second, &rfds))
 			{
-				struct sockaddr_storage sin = { 0, { 0 }, 0 };
+				struct sockaddr_storage sin;
 				socklen_t slen = (socklen_t)sizeof(sin);
+				memset(&sin, 0, sizeof(sin));
 				int connfd = accept(pi->second, (struct sockaddr*)&sin, &slen);
 				if (connfd < 0)
 				{

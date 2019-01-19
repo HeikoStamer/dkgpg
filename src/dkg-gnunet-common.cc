@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -85,6 +85,8 @@ std::map<size_t, struct GNUNET_CADET_Channel*> 	pipe2channel_in;
 void gnunet_hello_callback
 	(void *cls, const struct GNUNET_MessageHeader *hello)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	if (hello == NULL)
 	{
 		GNUNET_log(GNUNET_ERROR_TYPE_ERROR, "No hello message in callback\n");
@@ -107,6 +109,8 @@ void gnunet_hello_callback
 int check_gnunet_data_callback
 	(void *cls, const struct GNUNET_MessageHeader *message)
 {
+	if ((cls == NULL) && (message == NULL))
+		cls = NULL; // dummy code to supress compiler warning
 	return GNUNET_OK;
 }
 
@@ -196,6 +200,8 @@ void handle_gnunet_data_callback
 void gnunet_pipe_ready
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	pt = NULL;
 	for (size_t i = 0; i < peers.size(); i++)
 	{
@@ -240,6 +246,8 @@ void gnunet_pipe_ready
 void gnunet_broadcast_pipe_ready
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	pt_broadcast = NULL;
 	for (size_t i = 0; i < peers.size(); i++)
 	{
@@ -284,6 +292,8 @@ void gnunet_broadcast_pipe_ready
 void gnunet_channel_ended
 	(void *cls, const struct GNUNET_CADET_Channel *channel)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	// deregister the ended channel	
 	for (size_t i = 0; i < peers.size(); i++)
 	{
@@ -311,6 +321,8 @@ void* gnunet_channel_incoming
 	(void *cls, struct GNUNET_CADET_Channel *channel,
 	 const struct GNUNET_PeerIdentity *initiator)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	if (gnunet_opt_verbose)
 		std::cerr << "INFO: incoming channel from " <<
 			GNUNET_i2s_full(initiator) << std::endl;
@@ -336,6 +348,8 @@ void* gnunet_channel_incoming
 void gnunet_shutdown_task
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	GNUNET_log(GNUNET_ERROR_TYPE_DEBUG, "Shutdown\n");
 	// cancel scheduled tasks
 	if (pt_broadcast != NULL)
@@ -456,6 +470,8 @@ void gnunet_shutdown_task
 void gnunet_io
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	io = NULL;
 
 	// send messages to peers
@@ -527,6 +543,8 @@ void gnunet_io
 void gnunet_connect
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	ct = NULL;
 
 	for (size_t i = 0; i < peers.size(); i++)
@@ -595,6 +613,8 @@ void gnunet_connect
 void gnunet_statistics
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	st = NULL;
 
 	if ((gnunet_opt_verbose) && (opt_verbose > 1))
@@ -643,6 +663,8 @@ void gnunet_statistics
 void gnunet_fork
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	ft = NULL;
 
 	if (pipe2channel_in.size() == (peers.size() - 1))
@@ -663,6 +685,8 @@ void gnunet_fork
 void gnunet_init
 	(void *cls)
 {
+	if (cls == NULL)
+		cls = NULL; // dummy code to supress compiler warning
 	job = NULL;
 
 	// wait until we got our own peer identity from TRANSPORT
@@ -711,6 +735,9 @@ void gnunet_init
 void gnunet_run(void *cls, char *const *args, const char *cfgfile,
 	const struct GNUNET_CONFIGURATION_Handle *cfg)
 {
+	if ((args == NULL) && (cfgfile == NULL)) 
+		args = NULL; // dummy code to supress compiler warning
+
 	// initialize peer2pipe and pipe2peer mapping
 	for (size_t i = 0; i < peers.size(); i++)
 	{

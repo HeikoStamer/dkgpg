@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -161,7 +161,7 @@ void tcpip_bindports
 	}
 	for (uint16_t port = local_start; port < local_end; port++, i++)
 	{
-		struct addrinfo hints = { 0 }, *res, *rp;
+		struct addrinfo hints = { 0, 0, 0, 0, 0, 0, 0, 0 }, *res, *rp;
 		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_ADDRCONFIG;
@@ -273,7 +273,7 @@ size_t tcpip_connect
 			uint16_t peer_offset = (uint16_t)tcpip_peer2pipe[tcpip_thispeer];
 			uint16_t port = start + (i * peers_size) + peer_offset;
 			int ret;
-			struct addrinfo hints = { 0 }, *res, *rp;
+			struct addrinfo hints = { 0, 0, 0, 0, 0, 0, 0, 0 }, *res, *rp;
 			hints.ai_family = AF_INET;
 			hints.ai_socktype = SOCK_STREAM;
 			hints.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG;
@@ -409,7 +409,7 @@ void tcpip_accept
 		{
 			if (FD_ISSET(pi->second, &rfds))
 			{
-				struct sockaddr_storage sin = { 0 };
+				struct sockaddr_storage sin = { 0, { 0 }, 0 };
 				socklen_t slen = (socklen_t)sizeof(sin);
 				int connfd = accept(pi->second, (struct sockaddr*)&sin, &slen);
 				if (connfd < 0)
@@ -445,7 +445,7 @@ void tcpip_accept
 		{
 			if (FD_ISSET(pi->second, &rfds))
 			{
-				struct sockaddr_storage sin = { 0 };
+				struct sockaddr_storage sin = { 0, { 0 }, 0 };
 				socklen_t slen = (socklen_t)sizeof(sin);
 				int connfd = accept(pi->second, (struct sockaddr*)&sin, &slen);
 				if (connfd < 0)

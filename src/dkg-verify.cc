@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -47,7 +47,8 @@ int main
 	char		*opt_k = NULL;
 	char		*opt_s = NULL;
 	std::string	sigfrom_str, sigto_str;
-	struct tm	sigfrom_tm = { 0 }, sigto_tm = { 0 };
+	struct tm	sigfrom_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	struct tm	sigto_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 , 0};
 	time_t		sigfrom = 1243810800, sigto = time(NULL);
 
 	// parse command line arguments

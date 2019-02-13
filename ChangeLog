@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-02-07] dkg-tcpip-common: setting ai_family to AF_UNSPEC (fix resolving)
 * [2019-01-16] configure.ac: added compiler option "-Wextra"
 * [2019-01-12] dkg-generate: added option "--no-passphrase" (disable protection)
 * [2019-01-12] dkg-generate: added option "-u" (provide user ID by cmdline)

@@ -162,7 +162,7 @@ void tcpip_bindports
 	for (uint16_t port = local_start; port < local_end; port++, i++)
 	{
 		struct addrinfo hints = { 0, 0, 0, 0, 0, 0, 0, 0 }, *res, *rp;
-		hints.ai_family = AF_INET;
+		hints.ai_family = AF_UNSPEC; // AF_INET; FIXME: resolving IPv4-only does not work
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_ADDRCONFIG;
 		std::stringstream ports;
@@ -274,7 +274,7 @@ size_t tcpip_connect
 			uint16_t port = start + (i * peers_size) + peer_offset;
 			int ret;
 			struct addrinfo hints = { 0, 0, 0, 0, 0, 0, 0, 0 }, *res, *rp;
-			hints.ai_family = AF_INET;
+			hints.ai_family = AF_UNSPEC; // AF_INET; FIXME: resolving IPv4-only does not work
 			hints.ai_socktype = SOCK_STREAM;
 			hints.ai_flags = AI_NUMERICSERV | AI_ADDRCONFIG;
 			if (broadcast)

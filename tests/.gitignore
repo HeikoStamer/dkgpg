@@ -1,0 +1,10 @@
+.deps
+t-dkg-*
+ts-dkg-*
+y-dkg-*
+*.cc
+*.o
+*.trs
+*.asc
+*.sig
+*.bin

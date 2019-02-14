@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -77,6 +77,8 @@
 		 CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL,
 		 aiounicast_select *aiou = NULL,
 		 CachinKursawePetzoldShoupRBC *rbc = NULL);
+	void canonicalize
+		(std::vector<std::string> &plist);
 
 #endif
 

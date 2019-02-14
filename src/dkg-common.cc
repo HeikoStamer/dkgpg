@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -536,5 +536,13 @@ bool sign_hash
 	}
 	gcry_mpi_release(r), gcry_mpi_release(s);
 	return true;
+}
+
+void canonicalize
+	(std::vector<std::string> &p)
+{
+	std::sort(p.begin(), p.end());
+	std::vector<std::string>::iterator it = std::unique(p.begin(), p.end());
+	p.resize(std::distance(p.begin(), it));
 }
 

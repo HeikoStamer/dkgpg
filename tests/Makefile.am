@@ -1,4 +1,4 @@
-# Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+# Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 #
 # This file is part of Distributed Privacy Guard (DKGPG).
 #
@@ -33,8 +33,8 @@ noinst_PROGRAMS = $(TESTS)
 
 t_dkg_gencrs_SOURCES = t-dkg-gencrs.cc
 t_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
- t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-io.hh t-dkg-io.cc\
- t-dkg-generate.cc
+ t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
+ t-dkg-io.hh t-dkg-io.cc t-dkg-generate.cc
 t_dkg_keyinfo_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-keyinfo.cc
 t_dkg_keysign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
@@ -69,8 +69,8 @@ t_dkg_addrevoker_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
 y_dkg_generate_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 y_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
- t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-io.hh t-dkg-io.cc\
- t-dkg-generate.cc
+ t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
+ t-dkg-io.hh t-dkg-io.cc t-dkg-generate.cc
 y_dkg_keycheck_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 y_dkg_keycheck_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-keycheck.cc
@@ -125,8 +125,8 @@ y_dkg_addrevoker_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
 ts_dkg_generate_CPPFLAGS = -DDKGPG_TESTSUITE_TS -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 ts_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
- t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-io.hh t-dkg-io.cc\
- t-dkg-generate.cc
+ t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
+ t-dkg-io.hh t-dkg-io.cc t-dkg-generate.cc
 ts_dkg_timestamp_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-timestamp.cc

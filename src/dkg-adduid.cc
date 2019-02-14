@@ -712,12 +712,7 @@ int main
 			usage << std::endl;
 		return -1;
 	}
-
-	// canonicalize peer list
-	std::sort(peers.begin(), peers.end());
-	std::vector<std::string>::iterator it =
-		std::unique(peers.begin(), peers.end());
-	peers.resize(std::distance(peers.begin(), it));
+	canonicalize(peers);
 	if (((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;

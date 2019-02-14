@@ -1,4 +1,4 @@
-# Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+# Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 #
 # This file is part of Distributed Privacy Guard (DKGPG).
 #
@@ -33,7 +33,8 @@ dkg_gencrs_SOURCES = dkg-gencrs.cc
 dkg_gencrs_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
  @LIBGMP_LIBS@
 dkg_generate_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
- dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-io.hh dkg-io.cc dkg-generate.cc
+ dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
+ dkg-io.hh dkg-io.cc dkg-generate.cc
 dkg_encrypt_SOURCES = dkg-io.hh dkg-io.cc dkg-encrypt.cc
 dkg_encrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
  @LIBGMP_LIBS@

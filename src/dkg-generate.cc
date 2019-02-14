@@ -54,6 +54,7 @@ static const char *protocol = "DKGPG-generate-1.0";
 #include "dkg-tcpip-common.hh"
 #include "dkg-gnunet-common.hh"
 #include "dkg-io.hh"
+#include "dkg-common.hh"
 
 int							pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
 int							broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
@@ -2413,10 +2414,7 @@ int main
 	}
 
 	// canonicalize peer list and setup threshold values for tDSS/DSA and tElG
-	std::sort(peers.begin(), peers.end());
-	std::vector<std::string>::iterator it =
-		std::unique(peers.begin(), peers.end());
-	peers.resize(std::distance(peers.begin(), it));
+	canonicalize(peers);
 	T = (peers.size() - 1) / 2; // default: maximum t-resilience for tElG
 	S = (peers.size() - 1) / 2; // default: maximum s-resilience for tDSS/DSA
 	if (((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)) && !opt_y)

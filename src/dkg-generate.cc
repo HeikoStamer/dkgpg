@@ -514,24 +514,8 @@ void run_instance
 		new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami, aiou2,
 		aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	rbc->setID(myID);
-
 	// perform a simple exchange test with debug output
-	for (size_t i = 0; i < num_xtests; i++)
-	{
-		mpz_t xtest;
-		mpz_init_set_ui(xtest, i);
-		std::cerr << "INFO: P_" << whoami << ": xtest = " << xtest << " <-> ";
-		rbc->Broadcast(xtest);
-		for (size_t ii = 0; ii < peers.size(); ii++)
-		{
-			if (!rbc->DeliverFrom(xtest, ii))
-				std::cerr << "<X> ";
-			else
-				std::cerr << xtest << " ";
-		}
-		std::cerr << std::endl;
-		mpz_clear(xtest);
-	}
+	xtest(num_xtests, whoami, peers.size(), rbc);
 			
 	// create and exchange temporary VTMF keys in order to bootstrap the
 	// $h$-generation for tElG and tDSS/DSA protocols [JL00]
@@ -679,47 +663,7 @@ void run_instance
 
 	// all participants must agree on a common key creation time (OpenPGP),
 	// because otherwise key ID and subkey ID does not match
-	if (opt_verbose)
-		std::cerr << "INFO: agree on a key creation time for OpenPGP" <<
-			std::endl;
-	time_t ckeytime = 0;
-	std::vector<time_t> tvs;
-	mpz_t mtv;
-	mpz_init_set_ui(mtv, keytime);
-	rbc->Broadcast(mtv);
-	tvs.push_back(keytime);
-	for (size_t i = 0; i < peers.size(); i++)
-	{
-		if (i != whoami)
-		{
-			if (rbc->DeliverFrom(mtv, i))
-			{
-				time_t utv;
-				utv = (time_t)mpz_get_ui(mtv);
-				tvs.push_back(utv);
-			}
-			else
-			{
-				std::cerr << "WARNING: P_" << whoami << ": no key creation" <<
-					" time received from " << i << std::endl;
-			}
-		}
-	}
-	mpz_clear(mtv);
-	std::sort(tvs.begin(), tvs.end());
-	if (tvs.size() < (peers.size() - T_RBC))
-	{
-		std::cerr << "ERROR: P_" << whoami << ": not enough timestamps" <<
-			" received" << std::endl;
-		delete dkg, delete dss;
-		delete rbc, delete vtmf, delete aiou, delete aiou2;
-		exit(-1);
-	}
-	// use a median value as some kind of gentle agreement
-	ckeytime = tvs[tvs.size()/2];
-	if (opt_verbose)
-		std::cerr << "INFO: P_" << whoami << ": canonicalized key creation" <<
-			" time = " << ckeytime << std::endl;
+	time_t ckeytime = agree_time(keytime, whoami, peers.size(), opt_verbose, rbc);
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;

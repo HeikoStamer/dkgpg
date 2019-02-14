@@ -58,7 +58,7 @@
 		 const size_t peers,
 		 CachinKursawePetzoldShoupRBC *rbc);
 	time_t agree_time
-		(const time_t sigtime,
+		(const time_t mytime,
 		 const size_t whoami,
 		 const size_t peers,
 		 const int opt_verbose,

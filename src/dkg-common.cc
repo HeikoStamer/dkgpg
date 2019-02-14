@@ -326,22 +326,19 @@ void xtest
 }
 
 time_t agree_time
-	(const time_t sigtime,
+	(const time_t mytime,
 	 const size_t whoami,
 	 const size_t peers,
 	 const int opt_verbose,
 	 CachinKursawePetzoldShoupRBC *rbc)
 {
 	if (opt_verbose)
-	{
-		std::cerr << "INFO: agree on a signature creation time for OpenPGP" <<
-			std::endl;
-	}
+		std::cerr << "INFO: agree on a creation time for OpenPGP" << std::endl;
 	std::vector<time_t> tvs;
 	mpz_t mtv;
-	mpz_init_set_ui(mtv, sigtime);
+	mpz_init_set_ui(mtv, mytime);
 	rbc->Broadcast(mtv);
-	tvs.push_back(sigtime);
+	tvs.push_back(mytime);
 	for (size_t i = 0; i < peers; i++)
 	{
 		if (i != whoami)
@@ -354,8 +351,8 @@ time_t agree_time
 			}
 			else
 			{
-				std::cerr << "WARNING: p_" << whoami << ": no signature" <<
-					" creation time stamp received from p_" << i << std::endl;
+				std::cerr << "WARNING: p_" << whoami << ": no creation" <<
+					" timestamp received from p_" << i << std::endl;
 			}
 		}
 	}
@@ -370,16 +367,16 @@ time_t agree_time
 	{
 		std::cerr << "ERROR: p_" << whoami << ": no timestamps received" <<
 			std::endl;
-		tvs.push_back(0); // add a dummy return value
+		tvs.push_back(0); // add at least one dummy return value
 	}
 	// use a median value as some kind of gentle agreement
-	time_t csigtime = tvs[tvs.size()/2];
+	time_t coctime = tvs[tvs.size()/2];
 	if (opt_verbose)
 	{
-		std::cerr << "INFO: p_" << whoami << ": canonicalized signature" <<
-			" creation time = " << csigtime << std::endl;
+		std::cerr << "INFO: p_" << whoami << ": canonicalized OpenPGP" <<
+			" creation time = " << coctime << std::endl;
 	}
-	return csigtime;
+	return coctime;
 }
 
 bool sign_hash

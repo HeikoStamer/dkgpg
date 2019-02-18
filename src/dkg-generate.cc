@@ -2634,25 +2634,7 @@ int main
 	// create underlying point-to-point channels, if built-in TCP/IP requested
 	if ((opt_hostname != NULL) && !opt_y)
 	{
-		if (port.length())
-			opt_p = strtoul(port.c_str(), NULL, 10); // get start port from "-p"
-		if ((opt_p < 1) || (opt_p > 65535))
-		{
-			std::cerr << "ERROR: no valid TCP start port given" << std::endl;
-			return -1;
-		}
-		tcpip_init(hostname);
-		tcpip_bindports((uint16_t)opt_p, false);
-		tcpip_bindports((uint16_t)opt_p, true);
-		while (tcpip_connect((uint16_t)opt_p, false) < peers.size())
-			sleep(1);
-		while (tcpip_connect((uint16_t)opt_p, true) < peers.size())
-			sleep(1);
-		tcpip_accept();
-		tcpip_fork();
-		ret = tcpip_io();
-		tcpip_close();
-		tcpip_done();
+		ret = run_tcpip(peers.size(), opt_p, hostname, port);
 		// release cache
 		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 		// finish

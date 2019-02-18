@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -60,6 +60,11 @@
 		();
 	void tcpip_done
 		();
+	int run_tcpip
+		(const size_t peers,
+		 unsigned long int opt_p,
+		 const std::string &hostname,
+		 const std::string &port);
 
 #endif
 

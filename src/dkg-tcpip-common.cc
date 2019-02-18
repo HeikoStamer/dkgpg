@@ -1002,3 +1002,33 @@ void tcpip_done
 	}
 }
 
+int run_tcpip
+	(const size_t peers,
+	 unsigned long int opt_p,
+	 const std::string &hostname,
+	 const std::string &port)
+{
+	assert(peers <= DKGPG_MAX_N);
+	int ret = 0;
+	if (port.length())
+		opt_p = strtoul(port.c_str(), NULL, 10); // get start port from option
+	if ((opt_p < 1) || (opt_p > 65535))
+	{
+		std::cerr << "ERROR: no valid TCP start port given" << std::endl;
+		return -1;
+	}
+	tcpip_init(hostname);
+	tcpip_bindports((uint16_t)opt_p, false);
+	tcpip_bindports((uint16_t)opt_p, true);
+	while (tcpip_connect((uint16_t)opt_p, false) < peers)
+		sleep(1);
+	while (tcpip_connect((uint16_t)opt_p, true) < peers)
+		sleep(1);
+	tcpip_accept();
+	tcpip_fork();
+	ret = tcpip_io();
+	tcpip_close();
+	tcpip_done();
+	return ret;
+}
+

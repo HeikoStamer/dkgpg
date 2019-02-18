@@ -562,20 +562,21 @@ void canonicalize
 }
 
 int run_localtest
-	(const size_t peers_size, const int opt_verbose,
+	(const size_t peers,
+	 const int opt_verbose,
 	 pid_t pid[DKGPG_MAX_N],
 	 int pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
 	 int bpipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
 	 void (*fork_instance)(const size_t))
 {
-	assert(peers_size <= DKGPG_MAX_N);
+	assert(peers <= DKGPG_MAX_N);
 	int ret = 0;
-	std::cerr << "INFO: running local test with " << peers_size <<
-		" participants" << std::endl;
+	std::cerr << "INFO: running local test with " << peers << " participants" <<
+		std::endl;
 	// open pipes
-	for (size_t i = 0; i < peers_size; i++)
+	for (size_t i = 0; i < peers; i++)
 	{
-		for (size_t j = 0; j < peers_size; j++)
+		for (size_t j = 0; j < peers; j++)
 		{
 			if (pipe(pipefd[i][j]) < 0)
 				perror("ERROR: dkg-common:run_localtest (pipe)");
@@ -585,14 +586,14 @@ int run_localtest
 	}
 	
 	// start childs
-	for (size_t i = 0; i < peers_size; i++)
+	for (size_t i = 0; i < peers; i++)
 		fork_instance(i);
 
 	// sleep for five seconds
 	sleep(5);
 	
 	// wait for childs and close pipes
-	for (size_t i = 0; i < peers_size; i++)
+	for (size_t i = 0; i < peers; i++)
 	{
 		int wstatus = 0;
 		if (opt_verbose)
@@ -622,7 +623,7 @@ int run_localtest
 			if (WEXITSTATUS(wstatus))
 				ret = -2; // error
 		}
-		for (size_t j = 0; j < peers_size; j++)
+		for (size_t j = 0; j < peers; j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
 				perror("ERROR: dkg-common:run_localtest (close)");

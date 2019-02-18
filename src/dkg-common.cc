@@ -561,3 +561,75 @@ void canonicalize
 	p.resize(std::distance(p.begin(), it));
 }
 
+int run_localtest
+	(const size_t peers_size, const int opt_verbose,
+	 pid_t pid[DKGPG_MAX_N],
+	 int pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+	 int bpipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+	 void (*fork_instance)(const size_t))
+{
+	assert(peers_size <= DKGPG_MAX_N);
+	int ret = 0;
+	std::cerr << "INFO: running local test with " << peers_size <<
+		" participants" << std::endl;
+	// open pipes
+	for (size_t i = 0; i < peers_size; i++)
+	{
+		for (size_t j = 0; j < peers_size; j++)
+		{
+			if (pipe(pipefd[i][j]) < 0)
+				perror("ERROR: dkg-common:run_localtest (pipe)");
+			if (pipe(bpipefd[i][j]) < 0)
+				perror("ERROR: dkg-common:run_localtest (pipe)");
+		}
+	}
+	
+	// start childs
+	for (size_t i = 0; i < peers_size; i++)
+		fork_instance(i);
+
+	// sleep for five seconds
+	sleep(5);
+	
+	// wait for childs and close pipes
+	for (size_t i = 0; i < peers_size; i++)
+	{
+		int wstatus = 0;
+		if (opt_verbose)
+			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
+		if (waitpid(pid[i], &wstatus, 0) != pid[i])
+			perror("ERROR: dkg-common:run_localtest (waitpid)");
+		if (!WIFEXITED(wstatus))
+		{
+			std::cerr << "ERROR: protocol instance ";
+			if (WIFSIGNALED(wstatus))
+			{
+				std::cerr << pid[i] << " terminated by signal " <<
+					WTERMSIG(wstatus) << std::endl;
+			}
+			if (WCOREDUMP(wstatus))
+				std::cerr << pid[i] << " dumped core" << std::endl;
+			ret = -1; // fatal error
+		}
+		else if (WIFEXITED(wstatus))
+		{
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: protocol instance " << pid[i] <<
+					" terminated with exit status " << WEXITSTATUS(wstatus) <<
+					std::endl;
+			}
+			if (WEXITSTATUS(wstatus))
+				ret = -2; // error
+		}
+		for (size_t j = 0; j < peers_size; j++)
+		{
+			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
+				perror("ERROR: dkg-common:run_localtest (close)");
+			if ((close(bpipefd[i][j][0]) < 0) || (close(bpipefd[i][j][1]) < 0))
+				perror("ERROR: dkg-common:run_localtest (close)");
+		}
+	}
+	return ret;
+}
+

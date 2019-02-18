@@ -33,6 +33,7 @@
 	#include <ctime>
 	#include <unistd.h>
 	#include <errno.h>
+	#include <sys/wait.h>
 
 	#include <libTMCG.hh>
 	#include <aiounicast_select.hh>
@@ -82,6 +83,12 @@
 		 CachinKursawePetzoldShoupRBC *rbc = NULL);
 	void canonicalize
 		(std::vector<std::string> &plist);
+	int run_localtest
+		(const size_t peers_size, const int opt_verbose,
+		 pid_t pid[DKGPG_MAX_N],
+		 int pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+		 int bpipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+		 void (*fork_instance)(const size_t));
 
 #endif
 

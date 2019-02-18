@@ -571,8 +571,8 @@ int run_localtest
 {
 	assert(peers <= DKGPG_MAX_N);
 	int ret = 0;
-	std::cerr << "INFO: running local test with " << peers << " participants" <<
-		std::endl;
+	std::cerr << "WARNING: running only a local test with " << peers <<
+		" participants" << std::endl;
 	// open pipes
 	for (size_t i = 0; i < peers; i++)
 	{

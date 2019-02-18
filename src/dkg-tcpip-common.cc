@@ -131,10 +131,10 @@ void tcpip_init
 }
 
 void tcpip_bindports
-	(const uint16_t start, const bool broadcast)
+	(const uint16_t stpo, const bool broadcast)
 {
 	if (opt_verbose > 2)
-		std::cerr << "INFO: tcpip_bindports(" << start << ", " <<
+		std::cerr << "INFO: tcpip_bindports(" << stpo << ", " <<
 			(broadcast ? "true" : "false") << ") called" << std::endl;
 	uint16_t peers_size = 0;
 	if (peers.size() <= DKGPG_MAX_N)
@@ -151,7 +151,7 @@ void tcpip_bindports
 	uint16_t peer_offset = tcpip_peer2pipe[tcpip_thispeer] * peers_size;
 	if (opt_verbose > 2)
 		std::cerr << "INFO: peer_offset = " << peer_offset << std::endl;
-	uint16_t local_start = start + peer_offset;
+	uint16_t local_start = stpo + peer_offset;
 	uint16_t local_end = local_start + peers_size;
 	size_t i = 0;
 	if (broadcast)
@@ -248,10 +248,10 @@ void tcpip_bindports
 }
 
 size_t tcpip_connect
-	(const uint16_t start, const bool broadcast)
+	(const uint16_t stpo, const bool broadcast)
 {
 	if (opt_verbose > 2)
-		std::cerr << "INFO: tcpip_connect(" << start << ", " <<
+		std::cerr << "INFO: tcpip_connect(" << stpo << ", " <<
 			(broadcast ? "true" : "false") << ") called" << std::endl;
 	for (size_t i = 0; i < peers.size(); i++)
 	{
@@ -271,7 +271,7 @@ size_t tcpip_connect
 				exit(-1);
 			}
 			uint16_t peer_offset = (uint16_t)tcpip_peer2pipe[tcpip_thispeer];
-			uint16_t port = start + (i * peers_size) + peer_offset;
+			uint16_t port = stpo + (i * peers_size) + peer_offset;
 			int ret;
 			struct addrinfo hints = { 0, 0, 0, 0, 0, 0, 0, 0 }, *res, *rp;
 			hints.ai_family = AF_UNSPEC; // AF_INET; FIXME: resolving IPv4-only does not work
@@ -1004,25 +1004,25 @@ void tcpip_done
 
 int run_tcpip
 	(const size_t peers,
-	 unsigned long int opt_p,
+	 unsigned long int stpo,
 	 const std::string &hostname,
 	 const std::string &port)
 {
 	assert(peers <= DKGPG_MAX_N);
 	int ret = 0;
 	if (port.length())
-		opt_p = strtoul(port.c_str(), NULL, 10); // get start port from option
-	if ((opt_p < 1) || (opt_p > 65535))
+		stpo = strtoul(port.c_str(), NULL, 10); // get start port from options
+	if ((stpo < 1) || (stpo > 65535))
 	{
 		std::cerr << "ERROR: no valid TCP start port given" << std::endl;
 		return -1;
 	}
 	tcpip_init(hostname);
-	tcpip_bindports((uint16_t)opt_p, false);
-	tcpip_bindports((uint16_t)opt_p, true);
-	while (tcpip_connect((uint16_t)opt_p, false) < peers)
+	tcpip_bindports((uint16_t)stpo, false);
+	tcpip_bindports((uint16_t)stpo, true);
+	while (tcpip_connect((uint16_t)stpo, false) < peers)
 		sleep(1);
-	while (tcpip_connect((uint16_t)opt_p, true) < peers)
+	while (tcpip_connect((uint16_t)stpo, true) < peers)
 		sleep(1);
 	tcpip_accept();
 	tcpip_fork();

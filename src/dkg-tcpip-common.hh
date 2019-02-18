@@ -47,9 +47,9 @@
 	void tcpip_init
 		(const std::string &hostname);
 	void tcpip_bindports
-		(const uint16_t start, const bool broadcast);
+		(const uint16_t stpo, const bool broadcast);
 	size_t tcpip_connect
-		(const uint16_t start, const bool broadcast);
+		(const uint16_t stpo, const bool broadcast);
 	void tcpip_accept
 		();
 	void tcpip_fork
@@ -62,7 +62,7 @@
 		();
 	int run_tcpip
 		(const size_t peers,
-		 unsigned long int opt_p,
+		 unsigned long int stpo,
 		 const std::string &hostname,
 		 const std::string &port);
 

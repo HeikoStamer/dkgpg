@@ -764,7 +764,8 @@ int main
 	// create underlying point-to-point channels, if built-in TCP/IP requested
 	if (opt_hostname != NULL)
 	{
-		return run_tcpip(peers.size(), opt_p, hostname, port);
+		ret = run_tcpip(peers.size(), opt_p, hostname, port);
+		return ret;
 	}
 
 	// start interactive variant with GNUnet or otherwise a local test

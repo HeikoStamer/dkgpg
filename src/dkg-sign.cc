@@ -262,13 +262,7 @@ void run_instance
 		// participants must agree on a common signature creation time (OpenPGP)
 		csigtime = agree_time(sigtime, whoami, peers.size(), opt_verbose, rbc);
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
-		if (mpz_sizeinbase(dss->q, 2L) == 256)
-			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
-		else if (mpz_sizeinbase(dss->q, 2L) == 384)
-			hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
-		else if (mpz_sizeinbase(dss->q, 2L) == 512)
-			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
-		else
+		if (!select_hashalgo(dss, hashalgo))
 		{
 			std::cerr << "ERROR: p_" << whoami << ": selecting hash" <<
 				" algorithm failed for |q| = " << mpz_sizeinbase(dss->q, 2L) <<

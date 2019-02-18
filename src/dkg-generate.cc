@@ -667,16 +667,10 @@ void run_instance
 
 	// select hash algorithm for OpenPGP based on |q| (size in bit)
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
-	if (mpz_sizeinbase(vtmf->q, 2L) == 256)
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
-	else if (mpz_sizeinbase(vtmf->q, 2L) == 384)
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
-	else if (mpz_sizeinbase(vtmf->q, 2L) == 512)
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
-	else
+	if (!select_hashalgo(dss, hashalgo))
 	{
 		std::cerr << "ERROR: P_" << whoami << ": selecting hash algorithm" <<
-			" failed for |q| = " << mpz_sizeinbase(vtmf->q, 2L) << std::endl;
+			" failed for |q| = " << mpz_sizeinbase(dss->q, 2L) << std::endl;
 		delete dkg, delete dss;
 		delete rbc, delete vtmf, delete aiou, delete aiou2;
 		exit(-1);

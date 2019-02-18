@@ -63,6 +63,9 @@
 		 const size_t peers,
 		 const int opt_verbose,
 		 CachinKursawePetzoldShoupRBC *rbc);
+	bool select_hashalgo
+		(CanettiGennaroJareckiKrawczykRabinDSS *dss,
+		 tmcg_openpgp_hashalgo_t &hashalgo);
 	bool sign_hash
 		(const tmcg_openpgp_octets_t &hash,
 		 const tmcg_openpgp_octets_t &trailer,

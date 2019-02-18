@@ -379,6 +379,24 @@ time_t agree_time
 	return coctime;
 }
 
+bool select_hashalgo
+	(CanettiGennaroJareckiKrawczykRabinDSS *dss,
+	 tmcg_openpgp_hashalgo_t &hashalgo)
+{
+	if (dss == NULL)
+		return false;
+	// select hash algorithm for OpenPGP based on |q| (size in bit)
+	if (mpz_sizeinbase(dss->q, 2L) == 256)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA256; // SHA256 (alg 8)
+	else if (mpz_sizeinbase(dss->q, 2L) == 384)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
+	else if (mpz_sizeinbase(dss->q, 2L) == 512)
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
+	else
+		return false;
+	return true;
+}
+
 bool sign_hash
 	(const tmcg_openpgp_octets_t &hash,
 	 const tmcg_openpgp_octets_t &trailer,

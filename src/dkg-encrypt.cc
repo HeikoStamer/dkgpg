@@ -436,15 +436,16 @@ int main
 	lit.clear(), enc.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
 	tmcg_openpgp_octets_t ad, iv;
+	tmcg_openpgp_byte_t cs = 10; // fixed chunk of size 2^16 bytes
 	ad.push_back(0xD4); // packet tag in new format
 	ad.push_back(0x01); // packet version number
 	ad.push_back(TMCG_OPENPGP_SKALGO_AES256); // cipher algorithm octet
 	ad.push_back(aeadalgo); // AEAD algorithm octet
-	ad.push_back(10); // chunk size octet (chunk of size 2^16 bytes)
+	ad.push_back(cs); // chunk size octet
 	for (size_t i = 0; i < 8; i++)
 		ad.push_back(0x00); // initial eight-octet big-endian chunk index
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAEAD(lit,
-		seskey, TMCG_OPENPGP_SKALGO_AES256, aeadalgo, 10, ad, opt_verbose,
+		seskey, TMCG_OPENPGP_SKALGO_AES256, aeadalgo, cs, ad, opt_verbose,
 		iv, enc); 
 	if (ret)
 	{
@@ -454,7 +455,7 @@ int main
 		return ret;
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketAeadEncode(
-		TMCG_OPENPGP_SKALGO_AES256, aeadalgo, 10, iv, enc, aead);
+		TMCG_OPENPGP_SKALGO_AES256, aeadalgo, cs, iv, enc, aead);
 #endif
 
 	// iterate through all specified encryption keys

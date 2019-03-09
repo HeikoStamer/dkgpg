@@ -718,7 +718,7 @@ int main
 	}
 
 	// lock memory
-	bool force_secmem = false;
+	bool force_secmem = false, should_unlock = false;
 	if (!lock_memory())
 	{
 		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
@@ -726,108 +726,110 @@ int main
 		// at least try to use libgcrypt's secure memory
 		force_secmem = true;
 	}
+	else
+		should_unlock = true;
 
 	// initialize LibTMCG
 	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	if (opt_verbose)
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
 	
-	// initialize return code
+	// initialize return code and do the main work
 	int ret = 0;
-	// create underlying point-to-point channels, if built-in TCP/IP requested
 	if ((opt_H != NULL) && (opt_y == NULL))
 	{
-		return run_tcpip(peers.size(), opt_p, hostname, port);
+		// start interactive variant, if built-in TCP/IP requested
+		ret = run_tcpip(peers.size(), opt_p, hostname, port);
 	}
 	else if (opt_y != NULL)
 	{
-		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
+		// start a single instance as replacement for GnuPG et al.
 		run_instance(0, time(NULL), 0);
-		return ret;
 	}
-
-	// start interactive variant with GNUnet or otherwise a local test
-#ifdef GNUNET
-	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
-		GNUNET_GETOPT_option_string('H',
-			"hostname",
-			"STRING",
-			"hostname (e.g. onion address) of this peer within PEERS",
-			&gnunet_opt_H
-		),
-		GNUNET_GETOPT_option_string('k',
-			"keyring",
-			"FILENAME",
-			"use keyring FILENAME containing external revocation keys",
-			&gnunet_opt_k
-		),
-		GNUNET_GETOPT_option_string('p',
-			"port",
-			"STRING",
-			"GNUnet CADET port to listen/connect",
-			&gnunet_opt_port
-		),
-		GNUNET_GETOPT_option_string('P',
-			"passwords",
-			"STRING",
-			"exchanged passwords to protect private and broadcast channels",
-			&gnunet_opt_P
-		),
-		GNUNET_GETOPT_option_string('u',
-			"uid",
-			"STRING",
-			"user ID to revoke",
-			&gnunet_opt_u
-		),
-		GNUNET_GETOPT_option_flag('V',
-			"verbose",
-			"turn on verbose output",
-			&gnunet_opt_verbose
-		),
-		GNUNET_GETOPT_option_uint('w',
-			"wait",
-			"INTEGER",
-			"minutes to wait until start of revocation protocol",
-			&gnunet_opt_wait
-		),
-		GNUNET_GETOPT_option_uint('W',
-			"aiou-timeout",
-			"INTEGER",
-			"timeout for point-to-point messages in minutes",
-			&gnunet_opt_W
-		),
-		GNUNET_GETOPT_option_string('y',
-			"yaot",
-			"FILNAME",
-			"yet another OpenPGP tool with private key in FILENAME",
-			&gnunet_opt_y
-		),
-		GNUNET_GETOPT_option_uint('x',
-			"x-tests",
-			NULL,
-			"number of exchange tests",
-			&gnunet_opt_xtests
-		),
-		GNUNET_GETOPT_OPTION_END
-	};
-	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run,
-		argv[0]);
-//	GNUNET_free((void *) argv);
-	if (ret == GNUNET_OK)
-		return 0;
 	else
-		return -1;
+	{
+		// start interactive variant with GNUnet or otherwise a local test
+#ifdef GNUNET
+		static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+			GNUNET_GETOPT_option_string('H',
+				"hostname",
+				"STRING",
+				"hostname (e.g. onion address) of this peer within PEERS",
+				&gnunet_opt_H
+			),
+			GNUNET_GETOPT_option_string('k',
+				"keyring",
+				"FILENAME",
+				"use keyring FILENAME containing external revocation keys",
+				&gnunet_opt_k
+			),
+			GNUNET_GETOPT_option_string('p',
+				"port",
+				"STRING",
+				"GNUnet CADET port to listen/connect",
+				&gnunet_opt_port
+			),
+			GNUNET_GETOPT_option_string('P',
+				"passwords",
+				"STRING",
+				"exchanged passwords to protect private and broadcast channels",
+				&gnunet_opt_P
+			),
+			GNUNET_GETOPT_option_string('u',
+				"uid",
+				"STRING",
+				"user ID to revoke",
+				&gnunet_opt_u
+			),
+			GNUNET_GETOPT_option_flag('V',
+				"verbose",
+				"turn on verbose output",
+				&gnunet_opt_verbose
+			),
+			GNUNET_GETOPT_option_uint('w',
+				"wait",
+				"INTEGER",
+				"minutes to wait until start of revocation protocol",
+				&gnunet_opt_wait
+			),
+			GNUNET_GETOPT_option_uint('W',
+				"aiou-timeout",
+				"INTEGER",
+				"timeout for point-to-point messages in minutes",
+				&gnunet_opt_W
+			),
+			GNUNET_GETOPT_option_string('y',
+				"yaot",
+				"FILNAME",
+				"yet another OpenPGP tool with private key in FILENAME",
+				&gnunet_opt_y
+			),
+			GNUNET_GETOPT_option_uint('x',
+				"x-tests",
+				NULL,
+				"number of exchange tests",
+				&gnunet_opt_xtests
+			),
+			GNUNET_GETOPT_OPTION_END
+		};
+		ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions,
+			&gnunet_run, argv[0]);
+		if (ret != GNUNET_OK)
+			ret = -1;
 #else
-	std::cerr << "WARNING: GNUnet CADET is required for the message exchange" <<
-		" of this program" << std::endl;
+		ret = run_localtest(peers.size(), opt_verbose, pid, pipefd,
+			broadcast_pipefd, &fork_instance);
 #endif
-
-	return run_localtest(peers.size(), opt_verbose, pid, pipefd,
-		broadcast_pipefd, &fork_instance);
+	}
+	if (should_unlock)
+		unlock_memory();
+	return ret;
 }
 

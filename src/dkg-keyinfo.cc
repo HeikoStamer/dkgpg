@@ -161,7 +161,7 @@ int main
 	}
 
 	// lock memory
-	bool force_secmem = false;
+	bool force_secmem = false, should_unlock = false;
 	if (!lock_memory())
 	{
 		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
@@ -169,11 +169,15 @@ int main
 		// at least try to use libgcrypt's secure memory
 		force_secmem = true;
 	}
+	else
+		should_unlock = true;
 
 	// initialize LibTMCG
 	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	if (opt_verbose)
@@ -187,17 +191,29 @@ int main
 		std::cerr << "WARNING: weak permissions of private key file" <<
 			" detected" << std::endl;
 		if (!set_strict_permissions(thispeer + "_dkg-sec.asc"))
+		{
+			if (should_unlock)
+				unlock_memory();
 			return -1;
+		}
 	}
 	if (!read_key_file(thispeer + "_dkg-sec.asc", armored_seckey))
+	{
+		if (should_unlock)
+			unlock_memory();
 		return -1;
+	}
 
 	// read the keyring
 	std::string armored_pubring;
 	if (opt_k)
 	{
 		if (!read_key_file(kfilename, armored_pubring))
+		{
+			if (should_unlock)
+				unlock_memory();
 			return -1;
+		}
 	}
 
 	// parse the keyring, the private key and corresponding signatures
@@ -228,6 +244,8 @@ int main
 		{
 			std::cerr << "ERROR: cannot read passphrase" << std::endl;
 			delete ring;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 #endif
@@ -245,6 +263,8 @@ int main
 	{
 		std::cerr << "ERROR: cannot use the provided private key" << std::endl;
 		delete ring;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	delete ring;
@@ -252,6 +272,8 @@ int main
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete prv;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	if ((prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) &&
@@ -259,6 +281,8 @@ int main
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
 		delete prv;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 
@@ -270,6 +294,8 @@ int main
 		{
 			delete dss;
 			delete prv;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 	}
@@ -284,6 +310,8 @@ int main
 			std::cerr << "ERROR: subkey is invalid or weak" << std::endl;
 			delete dss;
 			delete prv;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		// create an instance of tElG by stored parameters from private key
@@ -293,6 +321,8 @@ int main
 			if (dss != NULL)
 				delete dss;
 			delete prv;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 	}
@@ -533,6 +563,8 @@ int main
 				delete dkg;
 			delete dss;
 			delete prv;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		else
@@ -555,6 +587,8 @@ int main
 						delete dkg;
 					delete dss;
 					delete prv;
+					if (should_unlock)
+						unlock_memory();
 					return -1;
 				}
 			}
@@ -568,6 +602,8 @@ int main
 				delete dkg;
 			delete dss;
 			delete prv;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		// create an OpenPGP private key structure with refreshed values
@@ -655,6 +691,8 @@ int main
 				delete dkg;
 			delete dss;
 			delete prv;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if (opt_verbose)
@@ -667,6 +705,8 @@ int main
 	if (dss != NULL)
 		delete dss;
 	delete prv;
+	if (should_unlock)
+		unlock_memory();
 
 	return 0;
 }

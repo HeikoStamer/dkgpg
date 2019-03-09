@@ -2194,26 +2194,6 @@ int main
 		}
 	}
 
-	// lock memory
-	bool force_secmem = false;
-	if (!lock_memory())
-	{
-		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
-			" for full memory protection" << std::endl;
-		// at least try to use libgcrypt's secure memory
-		force_secmem = true;
-	}
-
-	// initialize LibTMCG
-	if (!init_libTMCG(force_secmem))
-	{
-		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
-		return -1;
-	}
-	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
-			std::endl;
-
 #ifdef DKGPG_TESTSUITE
 	peers.push_back("Test1");
 	peers.push_back("Test2");
@@ -2372,6 +2352,30 @@ int main
 			std::cerr << peers[i] << std::endl;
 	}
 
+	// lock memory
+	bool force_secmem = false, should_unlock = false;
+	if (!lock_memory())
+	{
+		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
+			" for full memory protection" << std::endl;
+		// at least try to use libgcrypt's secure memory
+		force_secmem = true;
+	}
+	else
+		should_unlock = true;
+
+	// initialize LibTMCG
+	if (!init_libTMCG(force_secmem))
+	{
+		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		if (should_unlock)
+			unlock_memory();
+		return -1;
+	}
+	if (opt_verbose)
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
+
 	// read userid and passphrase
 #ifdef DKGPG_TESTSUITE
 	userid = "TestGroup <testing@localhost>";
@@ -2405,9 +2409,17 @@ int main
 		{
 			passphrase = "", passphrase_check = "";
 			if (!get_passphrase(ps1, false, passphrase))
+			{
+				if (should_unlock)
+					unlock_memory();
 				return -1;
+			}
 			if (!get_passphrase(ps2, false, passphrase_check))
+			{
+				if (should_unlock)
+					unlock_memory();
 				return -1;
+			}
 			if (passphrase != passphrase_check)
 				std::cerr << "WARNING: passphrase does not match;" <<
 					" please try again" << std::endl;
@@ -2461,6 +2473,8 @@ int main
 	{
 		std::cerr << "ERROR: common reference string (CRS) is not valid" <<
 			std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	// parse p, q, g, k from CRS
@@ -2476,6 +2490,8 @@ int main
 				std::endl;
 			mpz_clear(crsmpz);
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		else if ((mpz_set_str(crsmpz, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
@@ -2485,6 +2501,8 @@ int main
 				std::endl;
 			mpz_clear(crsmpz);
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		crss << crsmpz << std::endl;
@@ -2523,6 +2541,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if ((mpz_set_str(fips_hashalgo, mpz_str.c_str(),
@@ -2533,6 +2553,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
@@ -2542,6 +2564,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if ((mpz_set_str(fips_dps, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
@@ -2552,6 +2576,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
@@ -2561,6 +2587,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if ((mpz_set_str(fips_counter, mpz_str.c_str(),
@@ -2571,6 +2599,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
@@ -2580,6 +2610,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if ((mpz_set_str(fips_index, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
@@ -2590,6 +2622,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		if (mpz_get_ui(fips_hashalgo) != GCRY_MD_SHA256) 
@@ -2599,6 +2633,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		// check the domain parameters according to FIPS 186-4 sections
@@ -2611,6 +2647,8 @@ int main
 			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
 			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
 			mpz_clear(fips_counter), mpz_clear(fips_index);
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		// release
@@ -2629,137 +2667,124 @@ int main
 			((2 * (S + 1)) + (2 * (T + 1))), fips_q);
 	std::cerr << "Thank you!" << std::endl;
 	mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-	// initialize return code
+	// initialize return code and do the main work
 	int ret = 0;
-	// create underlying point-to-point channels, if built-in TCP/IP requested
 	if ((opt_hostname != NULL) && !opt_y)
 	{
+		// start interactive variant, if built-in TCP/IP requested
 		ret = run_tcpip(peers.size(), opt_p, hostname, port);
-		// release cache
-		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
-		// finish
-		return ret;
 	}
 	else if (opt_y)
 	{
-		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
+		// start a single instance as replacement for GnuPG et al.
 		run_instance(0, time(NULL), opt_e, 0);
-		// release cache
-		tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
-		return ret;
 	}
-
-#ifdef GNUNET
-	static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
-		GNUNET_GETOPT_option_uint('e',
-			"expiration",
-			"INTEGER",
-			"expiration time of generated keys in seconds",
-			&gnunet_opt_keyexptime
-		),
-		GNUNET_GETOPT_option_string('g',
-			"group",
-			"STRING",
-			"common reference string that defines the underlying DDH-hard group",
-			&gnunet_opt_crs
-		),
-		GNUNET_GETOPT_option_string('H',
-			"hostname",
-			"STRING",
-			"hostname (e.g. onion address) of this peer within PEERS",
-			&gnunet_opt_hostname
-		),
-		GNUNET_GETOPT_option_flag('N',
-			"no-passphrase",
-			"disable private key protection",
-			&gnunet_opt_nopassphrase
-		),
-		GNUNET_GETOPT_option_string('p',
-			"port",
-			"STRING",
-			"GNUnet CADET port to listen/connect",
-			&gnunet_opt_port
-		),
-		GNUNET_GETOPT_option_string('P',
-			"passwords",
-			"STRING",
-			"exchanged passwords to protect private and broadcast channels",
-			&gnunet_opt_passwords
-		),
-		GNUNET_GETOPT_option_uint('s',
-			"s-resilience",
-			"INTEGER",
-			"resilience of threshold DSS protocol (signature scheme)",
-			&gnunet_opt_s_resilience
-		),
-		GNUNET_GETOPT_option_uint('t',
-			"t-resilience",
-			"INTEGER",
-			"resilience of DKG protocol (threshold decryption)",
-			&gnunet_opt_t_resilience
-		),
-		GNUNET_GETOPT_option_flag('T',
-			"timestamping",
-			"state that the generated key is used for timestamping",
-			&gnunet_opt_timestamping
-		),
-		GNUNET_GETOPT_option_string('u',
-			"uid",
-			"STRING",
-			"user ID of the generated key",
-			&gnunet_opt_u
-		),
-		GNUNET_GETOPT_option_flag('V',
-			"verbose",
-			"turn on verbose output",
-			&gnunet_opt_verbose
-		),
-		GNUNET_GETOPT_option_uint('w',
-			"wait",
-			"INTEGER",
-			"minutes to wait until start of key generation protocol",
-			&gnunet_opt_wait
-		),
-		GNUNET_GETOPT_option_uint('W',
-			"aiou-timeout",
-			"INTEGER",
-			"timeout for point-to-point messages in minutes",
-			&gnunet_opt_W
-		),
-		GNUNET_GETOPT_option_uint('x',
-			"x-tests",
-			NULL,
-			"number of exchange tests",
-			&gnunet_opt_xtests
-		),
-		GNUNET_GETOPT_option_flag('y',
-			"yaot",
-			"yet another OpenPGP tool",
-			&gnunet_opt_y
-		),
-		GNUNET_GETOPT_OPTION_END
-	};
-	ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions, &gnunet_run,
-		argv[0]);
-//	GNUNET_free((void *) argv);
-	// release cache
-	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
-	// finish
-	if (ret == GNUNET_OK)
-		return 0;
 	else
-		return -1;
+	{
+#ifdef GNUNET
+		static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+			GNUNET_GETOPT_option_uint('e',
+				"expiration",
+				"INTEGER",
+				"expiration time of generated keys in seconds",
+				&gnunet_opt_keyexptime
+			),
+			GNUNET_GETOPT_option_string('g',
+				"group",
+				"STRING",
+				"common reference string that defines the underlying DDH-hard group",
+				&gnunet_opt_crs
+			),
+			GNUNET_GETOPT_option_string('H',
+				"hostname",
+				"STRING",
+				"hostname (e.g. onion address) of this peer within PEERS",
+				&gnunet_opt_hostname
+			),
+			GNUNET_GETOPT_option_flag('N',
+				"no-passphrase",
+				"disable private key protection",
+				&gnunet_opt_nopassphrase
+			),
+			GNUNET_GETOPT_option_string('p',
+				"port",
+				"STRING",
+				"GNUnet CADET port to listen/connect",
+				&gnunet_opt_port
+			),
+			GNUNET_GETOPT_option_string('P',
+				"passwords",
+				"STRING",
+				"exchanged passwords to protect private and broadcast channels",
+				&gnunet_opt_passwords
+			),
+			GNUNET_GETOPT_option_uint('s',
+				"s-resilience",
+				"INTEGER",
+				"resilience of threshold DSS protocol (signature scheme)",
+				&gnunet_opt_s_resilience
+			),
+			GNUNET_GETOPT_option_uint('t',
+				"t-resilience",
+				"INTEGER",
+				"resilience of DKG protocol (threshold decryption)",
+				&gnunet_opt_t_resilience
+			),
+			GNUNET_GETOPT_option_flag('T',
+				"timestamping",
+				"state that the generated key is used for timestamping",
+				&gnunet_opt_timestamping
+			),
+			GNUNET_GETOPT_option_string('u',
+				"uid",
+				"STRING",
+				"user ID of the generated key",
+				&gnunet_opt_u
+			),
+			GNUNET_GETOPT_option_flag('V',
+				"verbose",
+				"turn on verbose output",
+				&gnunet_opt_verbose
+			),
+			GNUNET_GETOPT_option_uint('w',
+				"wait",
+				"INTEGER",
+				"minutes to wait until start of key generation protocol",
+				&gnunet_opt_wait
+			),
+			GNUNET_GETOPT_option_uint('W',
+				"aiou-timeout",
+				"INTEGER",
+				"timeout for point-to-point messages in minutes",
+				&gnunet_opt_W
+			),
+			GNUNET_GETOPT_option_uint('x',
+				"x-tests",
+				NULL,
+				"number of exchange tests",
+				&gnunet_opt_xtests
+			),
+			GNUNET_GETOPT_option_flag('y',
+				"yaot",
+				"yet another OpenPGP tool",
+				&gnunet_opt_y
+			),
+			GNUNET_GETOPT_OPTION_END
+		};
+		ret = GNUNET_PROGRAM_run(argc, argv, usage, about, myoptions,
+			&gnunet_run, argv[0]);
+		if (ret != GNUNET_OK)
+			ret = -1;
 #else
-	std::cerr << "WARNING: GNUnet CADET is required for the message exchange" <<
-		" of this program" << std::endl;
+		ret = run_localtest(peers.size(), opt_verbose, pid, pipefd,
+			broadcast_pipefd, &fork_instance);
 #endif
-
-	ret = run_localtest(peers.size(), opt_verbose, pid, pipefd,
-		broadcast_pipefd, &fork_instance);
-	
+	}
 	// release cache
 	tmcg_mpz_ssrandomm_cache_done(cache, cache_mod, cache_avail);
 	// finish
+	if (should_unlock)
+		unlock_memory();
 	return ret;
 }
 

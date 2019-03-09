@@ -119,8 +119,6 @@ void run_instance
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA384; // SHA384 (alg 9)
 		else if (mpz_sizeinbase(vtmf->q, 2L) == 512)
 			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10)
-//		else if (mpz_sizeinbase(vtmf->q, 2L) > 1024)
-//			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // SHA512 (alg 10) FIXME: we need dynamic hashsize here! e.g. SHAKE
 		else
 		{
 			std::cerr << "ERROR: selecting hash algorithm failed for |q| = " <<
@@ -1834,6 +1832,153 @@ bool fips_verify
 		return true;
 }
 
+bool pqg_extract
+	(std::string crs, const bool fips,
+	 mpz_ptr fips_p, mpz_ptr fips_q, mpz_ptr fips_g)
+{
+	std::string mpz_str;
+	mpz_t crsmpz;
+	mpz_init(crsmpz);
+	for (size_t i = 0; i < 4; i++)
+	{
+		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(crsmpz);
+			return false;
+		}
+		else if ((mpz_set_str(crsmpz, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			!TMCG_ParseHelper::nx(crs, '|'))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(crsmpz);
+			return false;
+		}
+		crss << crsmpz << std::endl;
+		if (i == 0)
+		{
+			mpz_set(fips_p, crsmpz);
+			if (opt_verbose > 1)
+				std::cerr << "INFO: p";
+		}
+		else if (i == 1)
+		{
+			mpz_set(fips_q, crsmpz);
+			if (opt_verbose > 1)
+				std::cerr << "INFO: q";
+		}
+		else if (i == 2)
+		{
+			mpz_set(fips_g, crsmpz);
+			if (opt_verbose > 1)
+				std::cerr << "INFO: g";
+		}
+		if ((opt_verbose > 1) && (i < 3))
+			std::cerr << " (" << mpz_sizeinbase(crsmpz, 2L) << " bits) = " <<
+				crsmpz << std::endl;
+	}
+	mpz_clear(crsmpz);
+	if (fips)
+	{
+		mpz_t fips_hashalgo, fips_dps, fips_counter, fips_index;
+		mpz_init_set_ui(fips_hashalgo, 0L), mpz_init_set_ui(fips_dps, 0L);
+		mpz_init_set_ui(fips_counter, 0L), mpz_init_set_ui(fips_index, 0L);
+		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if ((mpz_set_str(fips_hashalgo, mpz_str.c_str(),
+			TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(crs, '|'))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if ((mpz_set_str(fips_dps, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			(!TMCG_ParseHelper::nx(crs, '|')))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if ((mpz_set_str(fips_counter, mpz_str.c_str(),
+			TMCG_MPZ_IO_BASE) < 0) || (!TMCG_ParseHelper::nx(crs, '|')))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if ((mpz_set_str(fips_index, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
+			(!TMCG_ParseHelper::nx(crs, '|')))
+		{
+			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
+				std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		if (mpz_get_ui(fips_hashalgo) != GCRY_MD_SHA256) 
+		{
+			std::cerr << "ERROR: hash function is not approved according to" <<
+				" FIPS 186-4" << std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		// check the domain parameters according to FIPS 186-4 sections
+		// A.1.1.3 and A.2.4
+		if (!fips_verify(fips_p, fips_q, fips_g, fips_hashalgo, fips_dps,
+			fips_counter, fips_index))
+		{
+			std::cerr << "ERROR: domain parameters are not set according to" <<
+				" FIPS 186-4" << std::endl;
+			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+			mpz_clear(fips_counter), mpz_clear(fips_index);
+			return false;
+		}
+		// release
+		mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
+		mpz_clear(fips_counter), mpz_clear(fips_index);
+	}
+	return true;
+}
+
 #ifdef GNUNET
 char *gnunet_opt_crs = NULL;
 char *gnunet_opt_hostname = NULL;
@@ -2225,30 +2370,6 @@ int main
 			"0000000000000000000000000000000000000000000000000000"
 			"0000000000000000000000000000000000000000000000000|";
 	}
-//	else if (tmcg_mpz_wrandom_ui() % 2)
-//	{
-//		// sometimes test a CRS with fixed parameters from RFC 7919
-//		crs = "rfc-crs|m88HxBJpj9yKzDAlXe8tQ0jP0zSNm7oE71YSFt2ZQHiLVO"
-//			"kqnFJOK5EcaSLRHGmrtAhVybt7MarfGJf9DP5NTig8GXokeeHMiR"
-//			"00pxXnWmMmNd4C4JbsbmSKfOyPai66hMPXDybZprvk6E9Towmh8s"
-//			"rAAlz36OkTVJrZ5cKSEnpnDdd0BBwzvGDlstU5ZcuVwdVB7us5tX"
-//			"zyucSJBYoCEWf7VvqbJVYhe4GdvCczMCHGUsEKMsXsg5oBRHyQ6K"
-//			"TXX6PCJp9eo2kB4OvHgI5sZS0FMtzpuDlwcqYdLowuRIucwCFp9o"
-//			"PSBFSvO9TZRMcRXorL6mZQBglR9CcLSg7OSd2Vaa333uj1WH6HfB"
-//			"tkIaRzfwgn1P2XUGQZotOci8gdrvijNFyIdJE6k6qoVMog4SoNHo"
-//			"HZrq1CHx1QqfM2E0bXDAQNCkgzQO7zvcteMCn7xHBwNzQBg0AabM"
-//			"34izE4VrBwpLK3dNTos1CDmDCtTOQ7S0DHYOmSkkKYAmSWMf2bot"
-//			"Yd|O448yaeurZzAUbaNlp4Ri0MhVUjBt3u73VmE7wWHi8rAkhNQO"
-//			"cehA2cJIEAiddOQwaLkzIwYgIQpd9pZbhXgjrL48GuNKK8gMDV0P"
-//			"yltlOBOBoX629nwItEAKhUCnM33LgClbzImuvxs374juTOLZRQa5"
-//			"NzWYCNEkevmXoAE7OutbooV5ayUxd6swRk2moSFyJkaYxR2wlzzS"
-//			"JE9amP67GKYkxvIekmLp28JxbJUg68dFR7ABRGwL2u5idzD3AEll"
-//			"YCb9uZpP1N5XCSdq92wHj07gRzux6syJQHJfuTSDeSJT67uZuCj5"
-//			"cjSh4jmigJDluQfYOHi5qNiZbJAjL3hEJWFnI1WWxMVl8Y8paws9"
-//			"IDzpyLOVhWGk8DHuRhJM4LJvxrMgcz9Jec3N3QPFgPL2EPBdu8mv"
-//			"v0b8yViQKg170IlbaDBbNLUiC3zxoRpB6OYydayBzi5q05IIg1XM"
-//			"Uc2FvayPff1ogjuR0b6t6bRjhD3j06dmCOENNAH5OEGBKWIuRmJ|2|1|";
-//	}
 #else
 #ifdef DKGPG_TESTSUITE_TS
 	peers.push_back("TestTS1");
@@ -2289,30 +2410,6 @@ int main
 			"0000000000000000000000000000000000000000000000000000"
 			"0000000000000000000000000000000000000000000000000|";
 	}
-//	else if (tmcg_mpz_wrandom_ui() % 2)
-//	{
-//		// sometimes test a CRS with fixed parameters from RFC 7919
-//		crs = "rfc-crs|m88HxBJpj9yKzDAlXe8tQ0jP0zSNm7oE71YSFt2ZQHiLVO"
-//			"kqnFJOK5EcaSLRHGmrtAhVybt7MarfGJf9DP5NTig8GXokeeHMiR"
-//			"00pxXnWmMmNd4C4JbsbmSKfOyPai66hMPXDybZprvk6E9Towmh8s"
-//			"rAAlz36OkTVJrZ5cKSEnpnDdd0BBwzvGDlstU5ZcuVwdVB7us5tX"
-//			"zyucSJBYoCEWf7VvqbJVYhe4GdvCczMCHGUsEKMsXsg5oBRHyQ6K"
-//			"TXX6PCJp9eo2kB4OvHgI5sZS0FMtzpuDlwcqYdLowuRIucwCFp9o"
-//			"PSBFSvO9TZRMcRXorL6mZQBglR9CcLSg7OSd2Vaa333uj1WH6HfB"
-//			"tkIaRzfwgn1P2XUGQZotOci8gdrvijNFyIdJE6k6qoVMog4SoNHo"
-//			"HZrq1CHx1QqfM2E0bXDAQNCkgzQO7zvcteMCn7xHBwNzQBg0AabM"
-//			"34izE4VrBwpLK3dNTos1CDmDCtTOQ7S0DHYOmSkkKYAmSWMf2bot"
-//			"Yd|O448yaeurZzAUbaNlp4Ri0MhVUjBt3u73VmE7wWHi8rAkhNQO"
-//			"cehA2cJIEAiddOQwaLkzIwYgIQpd9pZbhXgjrL48GuNKK8gMDV0P"
-//			"yltlOBOBoX629nwItEAKhUCnM33LgClbzImuvxs374juTOLZRQa5"
-//			"NzWYCNEkevmXoAE7OutbooV5ayUxd6swRk2moSFyJkaYxR2wlzzS"
-//			"JE9amP67GKYkxvIekmLp28JxbJUg68dFR7ABRGwL2u5idzD3AEll"
-//			"YCb9uZpP1N5XCSdq92wHj07gRzux6syJQHJfuTSDeSJT67uZuCj5"
-//			"cjSh4jmigJDluQfYOHi5qNiZbJAjL3hEJWFnI1WWxMVl8Y8paws9"
-//			"IDzpyLOVhWGk8DHuRhJM4LJvxrMgcz9Jec3N3QPFgPL2EPBdu8mv"
-//			"v0b8yViQKg170IlbaDBbNLUiC3zxoRpB6OYydayBzi5q05IIg1XM"
-//			"Uc2FvayPff1ogjuR0b6t6bRjhD3j06dmCOENNAH5OEGBKWIuRmJ|2|1|";
-//	}
 #endif
 #endif
 #endif
@@ -2448,7 +2545,7 @@ int main
 		T = (peers.size() - 1); // apply an upper limit on T
 	if (S > ((peers.size() - 1) / 2))
 		S = (peers.size() - 1) / 2; // apply an upper limit on S
-	// check magic of CRS (common reference string)
+	// check magic bytes of CRS (common reference string)
 	if (TMCG_ParseHelper::cm(crs, "crs", '|'))
 	{
 		if (opt_verbose)
@@ -2477,183 +2574,15 @@ int main
 			unlock_memory();
 		return -1;
 	}
-	// parse p, q, g, k from CRS
-	std::string mpz_str;
-	mpz_t crsmpz, fips_p, fips_q, fips_g;
-	mpz_init(crsmpz);
+	// extract p, q, g from CRS
+	mpz_t fips_p, fips_q, fips_g;
 	mpz_init(fips_p), mpz_init(fips_q), mpz_init(fips_g);
-	for (size_t i = 0; i < 4; i++)
+	if (!pqg_extract(crs, fips, fips_p, fips_q, fips_g))
 	{
-		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(crsmpz);
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		else if ((mpz_set_str(crsmpz, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
-			!TMCG_ParseHelper::nx(crs, '|'))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(crsmpz);
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		crss << crsmpz << std::endl;
-		if (i == 0)
-		{
-			mpz_set(fips_p, crsmpz);
-			if (opt_verbose > 1)
-				std::cerr << "INFO: p";
-		}
-		else if (i == 1)
-		{
-			mpz_set(fips_q, crsmpz);
-			if (opt_verbose > 1)
-				std::cerr << "INFO: q";
-		}
-		else if (i == 2)
-		{
-			mpz_set(fips_g, crsmpz);
-			if (opt_verbose > 1)
-				std::cerr << "INFO: g";
-		}
-		if ((opt_verbose > 1) && (i < 3))
-			std::cerr << " (" << mpz_sizeinbase(crsmpz, 2L) << " bits) = " <<
-				crsmpz << std::endl;
-	}
-	mpz_clear(crsmpz);
-	if (fips)
-	{
-		mpz_t fips_hashalgo, fips_dps, fips_counter, fips_index;
-		mpz_init_set_ui(fips_hashalgo, 0L), mpz_init_set_ui(fips_dps, 0L);
-		mpz_init_set_ui(fips_counter, 0L), mpz_init_set_ui(fips_index, 0L);
-		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if ((mpz_set_str(fips_hashalgo, mpz_str.c_str(),
-			TMCG_MPZ_IO_BASE) < 0) || !TMCG_ParseHelper::nx(crs, '|'))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if ((mpz_set_str(fips_dps, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
-			(!TMCG_ParseHelper::nx(crs, '|')))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if ((mpz_set_str(fips_counter, mpz_str.c_str(),
-			TMCG_MPZ_IO_BASE) < 0) || (!TMCG_ParseHelper::nx(crs, '|')))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if (!TMCG_ParseHelper::gs(crs, '|', mpz_str))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if ((mpz_set_str(fips_index, mpz_str.c_str(), TMCG_MPZ_IO_BASE) < 0) ||
-			(!TMCG_ParseHelper::nx(crs, '|')))
-		{
-			std::cerr << "ERROR: common reference string (CRS) is corrupted" <<
-				std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		if (mpz_get_ui(fips_hashalgo) != GCRY_MD_SHA256) 
-		{
-			std::cerr << "ERROR: hash function is not approved according to" <<
-				" FIPS 186-4" << std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		// check the domain parameters according to FIPS 186-4 sections
-		// A.1.1.3 and A.2.4
-		if (!fips_verify(fips_p, fips_q, fips_g, fips_hashalgo, fips_dps,
-			fips_counter, fips_index))
-		{
-			std::cerr << "ERROR: domain parameters are not set according to" <<
-				" FIPS 186-4" << std::endl;
-			mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
-			mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-			mpz_clear(fips_counter), mpz_clear(fips_index);
-			if (should_unlock)
-				unlock_memory();
-			return -1;
-		}
-		// release
-		mpz_clear(fips_hashalgo), mpz_clear(fips_dps);
-		mpz_clear(fips_counter), mpz_clear(fips_index);
+		mpz_clear(fips_p), mpz_clear(fips_q), mpz_clear(fips_g);
+		if (should_unlock)
+			unlock_memory();
+		return -1;
 	}
 	// initialize cache
 	std::cerr << "We need a lot of entropy to cache very strong" <<

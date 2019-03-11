@@ -1,4 +1,4 @@
-.TH DKG\-GENERATE "1" "January 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-GENERATE "1" "March 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-generate \-\- distributed key generation for OpenPGP (tDSS and tElG)
@@ -133,7 +133,9 @@ should be handled very carefully because all parties not involved are excluded
 (disqualified) from all further private key operations.
 .PP
 Please note that the program interactively asks for a user ID (e.g. name or
-email) on STDIN, if the option "\-u" is omitted. 
+email) on STDIN, if the option "\-u" is omitted. Moreover, according to
+RFC 4880 a passphrase is used to protect the private key. Given option "\-N"
+this protection is disabled and the private key material is stored in clear.
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
@@ -162,7 +164,7 @@ configure logging to use LOGLEVEL
 configure logging to write logs to FILENAME
 .TP
 \fB\-N\fR, \fB\-\-no\-passphrase\fR
-disable private key protection
+disable private key protection by passphrase
 .TP
 \fB\-p\fR, \fB\-\-port\fR=\fI\,STRING\/\fR
 GNUnet CADET port to listen/connect

@@ -119,7 +119,7 @@ communication of TCP/IP is not protected by the network itself the option "\-P"
 is mandatory in that case.
 .PP
 Please note that in the case of option "\-y" no communication channels are
-used and thus PEERS should contain only one element and all other
+required and thus PEERS should contain only one element and all other
 communication options (e.g. option "\-H") should be omitted.
 .PP
 The included program 

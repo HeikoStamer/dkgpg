@@ -2418,7 +2418,8 @@ int main
 		std::string dds_radix;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			Radix64Encode(dds_input, dds_radix, false);
-		std::cerr << "Your decryption share (keep confidential): " <<
+		std::cerr << "Your decryption share (keep it confidential, i.e.," <<
+			" share only within the group of decrypting parties): " <<
 			dds_radix << std::endl;
 		size_t idx;
 		mpz_t r_i, c, r;

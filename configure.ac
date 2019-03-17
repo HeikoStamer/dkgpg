@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20190306])
+AC_REVISION([20190317])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.1.1], [HeikoStamer@gmx.net], [dkgpg],
@@ -119,7 +119,7 @@ AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
 	AC_MSG_ERROR([some headers are missing]))
 
 AC_CHECK_HEADERS([zlib.h], , AC_MSG_ERROR([zlib header is missing]))
-if test "x$libbz" == "x1"
+if test "x$libbz" = "x1"
 then
 AC_CHECK_HEADERS([bzlib.h], , AC_MSG_ERROR([bzlib header is missing]))
 fi
@@ -180,7 +180,7 @@ AC_ARG_WITH(gnunet, [AS_HELP_STRING([--with-gnunet=<path>],
 	esac
 	], [AC_MSG_RESULT([--with-gnunet not specified])])
 
-if test "x$gnunet" == "x0" -a ! "x$lookin" == "x"
+if test "x$gnunet" = "x0" -a ! "x$lookin" = "x"
 then
 	GNUNET_LIBS="-L${lookin}/lib"
 	GNUNET_CFLAGS="-I${lookin}/include"
@@ -200,7 +200,7 @@ then
 	 [#include <gnunet/platform.h>])
 	AC_CHECK_LIB([gnunetcadet], [GNUNET_CADET_connect], [LIBS=""], [gnunet=0])
 fi
-if test "x$gnunet" == "x1"
+if test "x$gnunet" = "x1"
 then
 	AC_DEFINE(GNUNET, , [Define to enable GNUnet support])
 	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetutil"
@@ -208,7 +208,7 @@ then
 	GNUNET_LIBS="${GNUNET_LIBS} -lgnunettransport"
 	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetcadet"
 fi
-if test "x$gnunet" == "x0"
+if test "x$gnunet" = "x0"
 then
 	GNUNET_LIBS=""
 	GNUNET_CFLAGS=""

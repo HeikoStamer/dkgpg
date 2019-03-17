@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -624,15 +624,31 @@ int main
 
 		// check primary key, if no encryption-capable subkeys have been
 		// selected previously
-		if ((selected.size() == 0) && primary->valid) 
-		{	
-			if (((primary->AccumulateFlags() & 0x04) != 0x04) &&
-			    ((primary->AccumulateFlags() & 0x08) != 0x08) &&
-			    (!primary->AccumulateFlags() &&
-					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
-					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY)))
+		if ((selected.size() == 0) && primary->valid)
+		{
+			// encryption-capable key or RSA key without flags?
+			if (((primary->AccumulateFlags() & 0x04) == 0x04) ||
+			    ((primary->AccumulateFlags() & 0x08) == 0x08))
 			{
-				std::cerr << "ERROR: no encryption-capable RSA public key" <<
+				if (opt_verbose)
+				{
+					std::cerr << "INFO: primary key is encryption-capable" <<
+						std::endl;
+				}
+			}
+			else if ((primary->AccumulateFlags() == 0) &&
+					((primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
+					(primary->pkalgo == TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY)))
+			{
+				if (opt_verbose)
+				{
+					std::cerr << "WARNING: primary key of type RSA without" <<
+						" key flags found and selected" << std::endl;
+				}
+			}
+			else
+			{
+				std::cerr << "ERROR: no encryption-capable public key" <<
 					" found" << std::endl;
 				delete primary;
 				delete ring;

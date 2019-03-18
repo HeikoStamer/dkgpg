@@ -2186,10 +2186,10 @@ int main
 	}
 	else
 	{
-		std::cerr << "Please enter the encrypted message (in ASCII Armor;" <<
-			" ^D for EOF): " << std::endl;
+		std::cerr << "Please enter the encrypted message (in ASCII Armor)" <<
+			" and \"EOF\" on last line: " << std::endl;
 		std::string line;
-		while (std::getline(std::cin, line))
+		while (std::getline(std::cin, line) && (line != "EOF"))
 			armored_message += line + "\r\n";
 		std::cin.clear();
 	}
@@ -2442,9 +2442,9 @@ int main
 		mpz_ptr tmp1 = new mpz_t();
 		mpz_init_set(tmp1, r_i);
 		interpol_parties.push_back(dkg->i), interpol_shares.push_back(tmp1);
-		std::cerr << "Enter decryption shares (one per line; ^D for EOF)" <<
-			" from other parties/devices:" << std::endl;
-		while (std::getline(std::cin, dds_radix))
+		std::cerr << "Enter decryption shares (one per line) from other" <<
+			" parties/devices and \"EOF\" on last line: " << std::endl;
+		while (std::getline(std::cin, dds_radix) && (dds_radix != "EOF"))
 		{
 			tmcg_openpgp_octets_t dds_output;
 			dds = "", idx = 0;

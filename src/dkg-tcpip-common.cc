@@ -136,6 +136,8 @@ void tcpip_bindports
 	if (opt_verbose > 2)
 		std::cerr << "INFO: tcpip_bindports(" << stpo << ", " <<
 			(broadcast ? "true" : "false") << ") called" << std::endl;
+	if (opt_verbose > 2)
+		std::cerr << "INFO: FD_SETSIZE = " << FD_SETSIZE << std::endl;
 	uint16_t peers_size = 0;
 	if (peers.size() <= DKGPG_MAX_N)
 	{
@@ -362,6 +364,8 @@ void tcpip_accept
 {
 	if (opt_verbose > 2)
 		std::cerr << "INFO: tcpip_accept(...) called" << std::endl;
+	if (opt_verbose > 2)
+		std::cerr << "INFO: FD_SETSIZE = " << FD_SETSIZE << std::endl;
 	while ((tcpip_pipe2socket_in.size() < peers.size()) ||
 		(tcpip_broadcast_pipe2socket_in.size() < peers.size()))
 	{
@@ -372,16 +376,38 @@ void tcpip_accept
 		for (tcpip_mci_t pi = tcpip_pipe2socket.begin();
 			pi != tcpip_pipe2socket.end(); ++pi)
 		{
-			FD_SET(pi->second, &rfds);
-			if (pi->second > maxfd)
-				maxfd = pi->second;
+			if (pi->second < FD_SETSIZE)
+			{
+				FD_SET(pi->second, &rfds);
+				if (pi->second > maxfd)
+					maxfd = pi->second;
+			}
+			else
+			{
+				std::cerr << "ERROR: file descriptor value of internal pipe" <<
+					" exceeds FD_SETSIZE" << std::endl;
+				tcpip_close();
+				tcpip_done();
+				exit(-1);
+			}
 		}
 		for (tcpip_mci_t pi = tcpip_broadcast_pipe2socket.begin();
 			pi != tcpip_broadcast_pipe2socket.end(); ++pi)
 		{
-			FD_SET(pi->second, &rfds);
-			if (pi->second > maxfd)
-				maxfd = pi->second;
+			if (pi->second < FD_SETSIZE)
+			{
+				FD_SET(pi->second, &rfds);
+				if (pi->second > maxfd)
+					maxfd = pi->second;
+			}
+			else
+			{
+				std::cerr << "ERROR: file descriptor value of internal pipe" <<
+					" exceeds FD_SETSIZE" << std::endl;
+				tcpip_close();
+				tcpip_done();
+				exit(-1);
+			}
 		}
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
@@ -480,7 +506,6 @@ void tcpip_accept
 	}
 }
 
-
 void tcpip_fork
 	()
 {
@@ -548,9 +573,20 @@ int tcpip_io
 		{
 			if (pi->first != thisidx)
 			{
-				FD_SET(pi->second, &rfds);
-				if (pi->second > maxfd)
-					maxfd = pi->second;
+				if (pi->second < FD_SETSIZE)
+				{
+					FD_SET(pi->second, &rfds);
+					if (pi->second > maxfd)
+						maxfd = pi->second;
+				}
+				else
+				{
+					std::cerr << "ERROR: file descriptor value of internal" <<
+						" pipe exceeds FD_SETSIZE" << std::endl;
+					tcpip_close();
+					tcpip_done();
+					exit(-1);
+				}
 			}
 		}
 		for (tcpip_mci_t pi = tcpip_broadcast_pipe2socket_in.begin();
@@ -558,21 +594,54 @@ int tcpip_io
 		{
 			if (pi->first != thisidx)
 			{
-				FD_SET(pi->second, &rfds);
-				if (pi->second > maxfd)
-					maxfd = pi->second;
+				if (pi->second < FD_SETSIZE)
+				{
+					FD_SET(pi->second, &rfds);
+					if (pi->second > maxfd)
+						maxfd = pi->second;
+				}
+				else
+				{
+					std::cerr << "ERROR: file descriptor value of internal" <<
+						" pipe exceeds FD_SETSIZE" << std::endl;
+					tcpip_close();
+					tcpip_done();
+					exit(-1);
+				}
 			}
 		}
 		for (size_t i = 0; i < peers.size(); i++)
 		{
 			if (i != thisidx)
 			{
-				FD_SET(pipefd[thisidx][i][0], &rfds);
-				if (pipefd[thisidx][i][0] > maxfd)
-					maxfd = pipefd[thisidx][i][0];
-				FD_SET(broadcast_pipefd[thisidx][i][0], &rfds);
-				if (broadcast_pipefd[thisidx][i][0] > maxfd)
-					maxfd = broadcast_pipefd[thisidx][i][0];
+				if (pipefd[thisidx][i][0] < FD_SETSIZE)
+				{
+					FD_SET(pipefd[thisidx][i][0], &rfds);
+					if (pipefd[thisidx][i][0] > maxfd)
+						maxfd = pipefd[thisidx][i][0];
+				}
+				else
+				{
+					std::cerr << "ERROR: file descriptor value of internal" <<
+						" pipe exceeds FD_SETSIZE" << std::endl;
+					tcpip_close();
+					tcpip_done();
+					exit(-1);
+				}
+				if (broadcast_pipefd[thisidx][i][0] < FD_SETSIZE)
+				{
+					FD_SET(broadcast_pipefd[thisidx][i][0], &rfds);
+					if (broadcast_pipefd[thisidx][i][0] > maxfd)
+						maxfd = broadcast_pipefd[thisidx][i][0];
+				}
+				else
+				{
+					std::cerr << "ERROR: file descriptor value of internal" <<
+						" pipe exceeds FD_SETSIZE" << std::endl;
+					tcpip_close();
+					tcpip_done();
+					exit(-1);
+				}
 			}
 		}
 		tv.tv_sec = 1;

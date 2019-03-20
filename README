@@ -22,11 +22,11 @@ Introduction
   parties/devices take part in the distributed computation. For completeness
   DKGPG contains programs for public-key encryption and signature verification.
 
-  The security is based on the well-established assumption that computing
-  discrete logarithms in large prime order subgroups of Zp (finite field) is
-  believed to be hard. The current implementation is still experimental and
-  should NOT be used for production, because it has been not yet reviewed by
-  and independend party. Some details about design criteria can be found in
+  The security is based on the well-established cryptographic assumption that
+  computing discrete logarithms in large prime order subgroups of Z_p (finite
+  field) is hard. The current implementation is still experimental and should
+  NOT be used for production, because it has been not yet reviewed by an
+  independend third party. Some details about design criteria can be found in
   these presentation slides: http://www.nongnu.org/libtmcg/dg81_slides.pdf
 
   DKGPG is 'Free Software' according to the definition of the Free Software

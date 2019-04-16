@@ -2186,11 +2186,15 @@ int main
 	}
 	else
 	{
-		std::cerr << "Please enter the encrypted message (in ASCII Armor)" <<
-			" and \"EOF\" on last line: " << std::endl;
+		std::cerr << "Enter encrypted message (ending with a single line" <<
+			" \"-----END PGP MESSAGE-----\"):" << std::endl;
 		std::string line;
-		while (std::getline(std::cin, line) && (line != "EOF"))
+		while (std::getline(std::cin, line))
+		{
 			armored_message += line + "\r\n";
+			if (line.find("-----END PGP MESSAGE-----") != std::string::npos)
+				break;
+		}	
 		std::cin.clear();
 	}
 

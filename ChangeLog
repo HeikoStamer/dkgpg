@@ -8,7 +8,7 @@ in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
 * [2019-04-27] release 1.1.1 of Distributed Privacy Guard (DKGPG)
-* [2019-04-27] dkg-common: added wait_instance() and fork if option "-y" set
+* [2019-04-27] dkg-common: added wait_instance() and fork, if option "-y" given
 * [2019-04-16] dkg-decrypt: added auto-detection for "end of message" in input
 * [2019-03-18] dkg-decrypt: changed input ending for STDIN (because ^D fails)
 * [2019-03-18] dkg-tcpip-common: added missing sanity check for FD_SET

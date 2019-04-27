@@ -2526,7 +2526,8 @@ int main
 	else if (opt_y != NULL)
 	{
 		// start a single instance as replacement for GnuPG et al.
-		run_instance(0, 0);
+		fork_instance(0);
+		ret = wait_instance(0, opt_verbose, pid);
 	}
 	else
 	{

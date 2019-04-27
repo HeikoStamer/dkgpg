@@ -561,6 +561,45 @@ void canonicalize
 	p.resize(std::distance(p.begin(), it));
 }
 
+int wait_instance
+	(const size_t whoami,
+	 const int opt_verbose,
+	 pid_t pid[DKGPG_MAX_N])
+{
+	int wstatus = 0;
+	if (opt_verbose)
+		std::cerr << "INFO: waitpid(" << pid[whoami] << ")" << std::endl;
+	if (waitpid(pid[whoami], &wstatus, 0) != pid[whoami])
+	{
+		perror("ERROR: dkg-common:wait_instance (waitpid)");
+		return -1; // waitpid failed
+	}
+	if (!WIFEXITED(wstatus))
+	{
+		std::cerr << "ERROR: protocol instance ";
+		if (WIFSIGNALED(wstatus))
+		{
+			std::cerr << pid[whoami] << " terminated by signal " <<
+				WTERMSIG(wstatus) << std::endl;
+		}
+		if (WCOREDUMP(wstatus))
+			std::cerr << pid[whoami] << " dumped core" << std::endl;
+		return -1; // fatal error
+	}
+	else if (WIFEXITED(wstatus))
+	{
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: protocol instance " << pid[whoami] <<
+				" terminated with exit status " << WEXITSTATUS(wstatus) <<
+				std::endl;
+		}
+		if (WEXITSTATUS(wstatus))
+			return -2; // error
+	}
+	return 0;
+}
+
 int run_localtest
 	(const size_t peers,
 	 const int opt_verbose,
@@ -595,34 +634,9 @@ int run_localtest
 	// wait for childs and close pipes
 	for (size_t i = 0; i < peers; i++)
 	{
-		int wstatus = 0;
-		if (opt_verbose)
-			std::cerr << "INFO: waitpid(" << pid[i] << ")" << std::endl;
-		if (waitpid(pid[i], &wstatus, 0) != pid[i])
-			perror("ERROR: dkg-common:run_localtest (waitpid)");
-		if (!WIFEXITED(wstatus))
-		{
-			std::cerr << "ERROR: protocol instance ";
-			if (WIFSIGNALED(wstatus))
-			{
-				std::cerr << pid[i] << " terminated by signal " <<
-					WTERMSIG(wstatus) << std::endl;
-			}
-			if (WCOREDUMP(wstatus))
-				std::cerr << pid[i] << " dumped core" << std::endl;
-			ret = -1; // fatal error
-		}
-		else if (WIFEXITED(wstatus))
-		{
-			if (opt_verbose)
-			{
-				std::cerr << "INFO: protocol instance " << pid[i] <<
-					" terminated with exit status " << WEXITSTATUS(wstatus) <<
-					std::endl;
-			}
-			if (WEXITSTATUS(wstatus))
-				ret = -2; // error
-		}
+		int iret = wait_instance(i, opt_verbose, pid);
+		if (iret != 0)
+			ret = iret; // return error, if any instance failed
 		for (size_t j = 0; j < peers; j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
@@ -633,4 +647,5 @@ int run_localtest
 	}
 	return ret;
 }
+
 

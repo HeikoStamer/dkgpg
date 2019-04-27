@@ -83,6 +83,10 @@
 		 CachinKursawePetzoldShoupRBC *rbc = NULL);
 	void canonicalize
 		(std::vector<std::string> &plist);
+	int wait_instance
+		(const size_t whoami,
+		 const int opt_verbose,
+		 pid_t pid[DKGPG_MAX_N]);
 	int run_localtest
 		(const size_t peers,
 		 const int opt_verbose,

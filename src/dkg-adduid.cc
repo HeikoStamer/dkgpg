@@ -753,7 +753,8 @@ int main
 	else if (opt_y != NULL)
 	{
 		// run as replacement for GnuPG et al. (yet-another-openpgp-tool)
-		run_instance(0, time(NULL), 0);
+		fork_instance(0);
+		ret = wait_instance(0, opt_verbose, pid);
 	}
 	else
 	{

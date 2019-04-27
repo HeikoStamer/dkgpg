@@ -8,11 +8,13 @@ included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
 1.1.1   Some small improvements have been applied for dkg-generate: Two new
-        options ("-U" and "-N") allow the non-interactive usage of the program.
-        Moreover, now dkg-timestamp and dkg-timestamp-verify require a new key
-        usage flag from RFC 4880bis to select so-called timestamping keys.
+        options ("-u" and "-N") allow providing the initial user ID and to
+        disable the passphrase at command line. Moreover, since this release
+        dkg-timestamp and dkg-timestamp-verify require a special key usage flag
+        from recent RFC 4880bis draft to select so-called timestamping keys.
         Finally, the synchronization time of the internally used broadcast
-        protocol was reduced to a more reasonable amount.
+        protocol was reduced to a more reasonable amount and in dkg-decrypt the
+        detection of end of data for message and decryption shares was changed.
 1.1.0   In this release AEAD support (cf. draft RFC 4880bis) has been added
         for dkg-encrypt and dkg-decrypt. Please note that it requires LibTMCG
         version >= 1.3.16 and at least libgcrypt version >= 1.7.0 for OCB mode.

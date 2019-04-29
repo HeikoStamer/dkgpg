@@ -121,8 +121,11 @@ void run_instance
 	bool parse_ok;
 	if (opt_k)
 	{
+		int opt_verbose_ring = opt_verbose;
+		if (opt_verbose_ring > 0)
+			opt_verbose_ring--;
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-			PublicKeyringParse(armored_pubring, opt_verbose, ring);
+			PublicKeyringParse(armored_pubring, opt_verbose_ring, ring);
 		if (!parse_ok)
 		{
 			std::cerr << "WARNING: cannot use the given keyring" << std::endl;

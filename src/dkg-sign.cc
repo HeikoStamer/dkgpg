@@ -76,6 +76,7 @@ char							*opt_k = NULL;
 char							*opt_y = NULL;
 unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
 bool							opt_t = false, opt_E = false, opt_C = false;
+bool							opt_v5 = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime,
@@ -282,20 +283,23 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // fixed hash algo SHA2-512
 	}
 
-	// compute the hash of the input file
+	// prepare signature and compute the hash of the input file
 	if (opt_verbose)
 		std::cerr << "INFO: hashing the input file \"" << opt_ifilename <<
 			"\"" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left;
+	bool hret = false;
 	if (opt_t || opt_C)
 	{
-		if (opt_y == NULL)
+		if (opt_v5)
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
+				PacketSigPrepareDetachedSignatureV5(
 					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
-					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
-					trailer);
+					prv->pub->pkalgo, hashalgo, csigtime, sigexptime, URI,
+					prv->pub->fingerprint, trailer);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				TextDocumentHashV5(opt_ifilename, trailer, hashalgo, hash, left);
 		}
 		else
 		{
@@ -304,31 +308,22 @@ void run_instance
 					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT, prv->pkalgo,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
 					trailer);
-		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-			TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
-		{
-			std::cerr << "ERROR: p_" << whoami << ": TextDocumentHash()" <<
-				" failed; cannot process input file \"" << opt_ifilename <<
-				"\"" << std::endl;
-			if (opt_y == NULL)
-			{
-				delete rbc, delete aiou, delete aiou2;
-				delete dss;
-			}
-			delete prv;
-			exit(-1);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left);
 		}
 	}
 	else
 	{
-		if (opt_y == NULL)
+		if (opt_v5)
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
+				PacketSigPrepareDetachedSignatureV5(
+					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pub->pkalgo,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
 					trailer);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				BinaryDocumentHashV5(opt_ifilename, trailer, hashalgo, hash,
+					left);
 		}
 		else
 		{
@@ -337,21 +332,23 @@ void run_instance
 					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pkalgo,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
 					trailer);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash,
+					left);
 		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-			BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash, left))
+	}
+	if (!hret)
+	{
+		std::cerr << "ERROR: p_" << whoami << ": [Text|Binary]DocumentHash" <<
+			"[V5]() failed; cannot process input file \"" << opt_ifilename <<
+			"\"" << std::endl;
+		if (opt_y == NULL)
 		{
-			std::cerr << "ERROR: p_" << whoami << ": BinaryDocumentHash()" <<
-				" failed; cannot process input file \"" << opt_ifilename <<
-				"\"" << std::endl;
-			if (opt_y == NULL)
-			{
-				delete rbc, delete aiou, delete aiou2;
-				delete dss;
-			}
-			delete prv;
-			exit(-1);
+			delete rbc, delete aiou, delete aiou2;
+			delete dss;
 		}
+		delete prv;
+		exit(-1);
 	}
 
 	// sign the hash value
@@ -446,6 +443,7 @@ int gnunet_opt_verbose = 0;
 int gnunet_opt_t = 0;
 int gnunet_opt_E = 0;
 int gnunet_opt_C = 0;
+int gnunet_opt_v5 = 0;
 #endif
 
 void fork_instance
@@ -489,6 +487,11 @@ int main
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
+		GNUNET_GETOPT_option_flag('5',
+			"v5",
+			"generate a v5 signature (cf. RFC 4880bis-06)",
+			&gnunet_opt_v5
+		),
 		GNUNET_GETOPT_option_flag('C',
 			"clear",
 			"apply cleartext signature framework (cf. RFC 4880)",
@@ -699,7 +702,7 @@ int main
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
 			(arg.find("-t") == 0) || (arg.find("-E") == 0) ||
-			(arg.find("-C") == 0))
+			(arg.find("-C") == 0) || (arg.find("-5") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -708,6 +711,8 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
+				std::cout << "  -5, --v5       generate a v5 signature" <<
+					std::endl;
 				std::cout << "  -C, --clear    apply cleartext signature" <<
 					" framework (cf. RFC 4880)" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
@@ -748,6 +753,8 @@ int main
 				opt_E = true;
 			if ((arg.find("-t") == 0) || (arg.find("--text") == 0))
 				opt_t = true;
+			if ((arg.find("-5") == 0) || (arg.find("--v5") == 0))
+				opt_v5 = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
@@ -875,6 +882,11 @@ int main
 		// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 		static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+			GNUNET_GETOPT_option_flag('5',
+				"v5",
+				"generate a v5 signature (cf. RFC 4880bis-06)",
+				&gnunet_opt_v5
+			),
 			GNUNET_GETOPT_option_flag('C',
 				"clear",
 				"apply cleartext signature framework (cf. RFC 4880)",
@@ -982,5 +994,4 @@ int main
 		unlock_memory();
 	return ret;
 }
-
 

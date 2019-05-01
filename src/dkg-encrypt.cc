@@ -536,9 +536,9 @@ int main
 			// subkey not selected?
 			std::string kid, fpr;
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				KeyidCompute(primary->subkeys[j]->sub_hashing, kid);
+				KeyidConvert(primary->subkeys[j]->id, kid);
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				FingerprintCompute(primary->subkeys[j]->sub_hashing, fpr);
+				FingerprintConvertPlain(primary->subkeys[j]->fingerprint, fpr);
 			if (opt_s && (kid != s) && (fpr != s))
 				continue;
 			// encryption-capable subkey?

@@ -335,7 +335,7 @@ void run_instance
 	std::string fpr;
 	tmcg_openpgp_octets_t trailer, acc, issuer;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintComputePretty(primary->pub_hashing, fpr);
+		FingerprintConvertPretty(primary->fingerprint, fpr);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintCompute(prv->pub->pub_hashing, issuer);
 	if (opt_y == NULL)

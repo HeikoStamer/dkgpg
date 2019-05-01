@@ -1970,12 +1970,12 @@ int main
 	int ret = 0;
 	std::string kid, fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		KeyidCompute(primary->pub_hashing, kid);
+		KeyidConvert(primary->id, kid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintComputePretty(primary->pub_hashing, fpr);
-	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << "\t";
+		FingerprintConvertPretty(primary->fingerprint, fpr);
+	std::cout << "OpenPGP Key ID of primary key: " << std::endl << "\t";
 	std::cout << kid << std::endl;
-	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << "\t";
+	std::cout << "OpenPGP Fingerprint of primary key: " << std::endl << "\t";
 	std::cout << fpr << std::endl;
 	std::cout << "OpenPGP Key Creation Time: " <<
 		std::endl << "\t" << ctime(&primary->creationtime);
@@ -2316,12 +2316,12 @@ int main
 		if (sub->Weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak subkey detected" << std::endl;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			KeyidCompute(sub->sub_hashing, kid);
+			KeyidConvert(sub->id, kid);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintComputePretty(sub->sub_hashing, fpr);
-		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << "\t";
+			FingerprintConvertPretty(sub->fingerprint, fpr);
+		std::cout << "OpenPGP Key ID of subkey: " << std::endl << "\t";
 		std::cout << kid << std::endl;
-		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << "\t";
+		std::cout << "OpenPGP Fingerprint of subkey: " << std::endl << "\t";
 		std::cout << fpr << std::endl;
 		std::cout << "OpenPGP Subkey Creation Time: " << std::endl << "\t" <<
 			ctime(&sub->creationtime);

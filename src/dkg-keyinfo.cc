@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -330,12 +330,12 @@ int main
 	// show information w.r.t. primary key
 	std::string kid, fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		KeyidCompute(prv->pub->pub_hashing, kid);
+		KeyidConvert(prv->pub->id, kid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintComputePretty(prv->pub->pub_hashing, fpr);
-	std::cout << "OpenPGP V4 Key ID of primary key: " << std::endl << "\t";
+		FingerprintConvertPretty(prv->pub->fingerprint, fpr);
+	std::cout << "OpenPGP Key ID of primary key: " << std::endl << "\t";
 	std::cout << kid << std::endl;
-	std::cout << "OpenPGP V4 fingerprint of primary key: " << std::endl << "\t";
+	std::cout << "OpenPGP Fingerprint of primary key: " << std::endl << "\t";
 	std::cout << fpr << std::endl;
 	std::cout << "OpenPGP Key Creation Time: " <<
 		std::endl << "\t" << ctime(&prv->pub->creationtime);
@@ -447,12 +447,12 @@ int main
 		TMCG_OpenPGP_PrivateSubkey *sub = prv->private_subkeys[0];
 		std::string kid2, fpr2;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			KeyidCompute(sub->pub->sub_hashing, kid2);
+			KeyidConvert(sub->pub->id, kid2);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintComputePretty(sub->pub->sub_hashing, fpr2);
-		std::cout << "OpenPGP V4 Key ID of subkey: " << std::endl << "\t";
+			FingerprintConvertPretty(sub->pub->fingerprint, fpr2);
+		std::cout << "OpenPGP Key ID of subkey: " << std::endl << "\t";
 		std::cout << kid2 << std::endl;
-		std::cout << "OpenPGP V4 fingerprint of subkey: " << std::endl << "\t";
+		std::cout << "OpenPGP Fingerprint of subkey: " << std::endl << "\t";
 		std::cout << fpr2 << std::endl;
 		std::cout << "OpenPGP Key Creation Time: " <<
 			std::endl << "\t" << ctime(&sub->pub->creationtime);

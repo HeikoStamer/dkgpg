@@ -7,8 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* [2019-06-16] dkg-sign: added option "-5" (generate v5 signature) and respect
-               new v5 key format regarding size of issuer fingerprint subpacket 
+
+* [2019-06-16] dkg-sign: added option "-5" (generate v5 signature format) 
 * [2019-06-15] dkg-decrypt: simplified CLI for symmetric-key decryption mode
 * [2019-06-04] configure.ac: fixed unwanted modification of variable CPPFLAGS
 * [2019-06-01] release 1.1.2 of Distributed Privacy Guard (DKGPG)

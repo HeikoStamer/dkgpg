@@ -298,8 +298,13 @@ void run_instance
 					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
 					prv->pub->pkalgo, hashalgo, csigtime, sigexptime, URI,
 					prv->pub->fingerprint, trailer);
+			tmcg_openpgp_octets_t htrailer(trailer);				
+			// For detached signatures 6 zero bytes are hashed instead.
+			for (size_t i = 0; i < 6; i++)
+				htrailer.push_back(0);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				TextDocumentHashV5(opt_ifilename, trailer, hashalgo, hash, left);
+				TextDocumentHashV5(opt_ifilename, htrailer, hashalgo, hash,
+				left);
 		}
 		else
 		{
@@ -321,9 +326,13 @@ void run_instance
 					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pub->pkalgo,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
 					trailer);
+			tmcg_openpgp_octets_t htrailer(trailer);				
+			// For detached signatures 6 zero bytes are hashed instead.
+			for (size_t i = 0; i < 6; i++)
+				htrailer.push_back(0);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				BinaryDocumentHashV5(opt_ifilename, trailer, hashalgo, hash,
-					left);
+				BinaryDocumentHashV5(opt_ifilename, htrailer, hashalgo, hash,
+				left);
 		}
 		else
 		{

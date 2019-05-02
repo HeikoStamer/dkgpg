@@ -7,8 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* all: add support for v5 keys (i.e. remove FingerprintCompute() calls)
-* dkg-keysign: select keys resp. userids from given keyring
+* dkg-keysign: select keys resp. userids from a given keyring
 + dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())
 + dkg-decrypt: write provided decryption share to file (non-interactive mode)

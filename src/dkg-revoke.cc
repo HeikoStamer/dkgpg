@@ -308,13 +308,12 @@ void run_instance
 	// revoked. Subkey revocation signature (type 0x28) hash first the primary
 	// key and then the subkey being revoked.
 	tmcg_openpgp_octets_t trailer_pub, pub_hashing, hash_pub, left_pub,
-		trailer_sub, sub_hashing, hash_sub, left_sub, issuer;
+		trailer_sub, sub_hashing, hash_sub, left_sub;
 	tmcg_openpgp_octets_t revsig_pub, revsig_sub;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(prv->pub->pub_hashing, issuer);
-	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION,
-			hashalgo, csigtime, revcode, reason, issuer, trailer_pub);
+			hashalgo, csigtime, revcode, reason, prv->pub->fingerprint,
+			trailer_pub);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyHash(prv->pub->pub_hashing, trailer_pub, hashalgo, hash_pub,
 			left_pub);
@@ -330,7 +329,8 @@ void run_instance
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION,
-				hashalgo, csigtime, revcode, reason, issuer, trailer_sub);
+				hashalgo, csigtime, revcode, reason, prv->pub->fingerprint,
+				trailer_sub);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyHash(prv->pub->pub_hashing, sub->pub->sub_hashing, trailer_sub,
 				hashalgo, hash_sub, left_sub);

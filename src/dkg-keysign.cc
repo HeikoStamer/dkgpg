@@ -333,38 +333,41 @@ void run_instance
 	// prepare the fingerprint, the trailer, and the accumulator of the
 	// certification (revocation) signatures
 	std::string fpr;
-	tmcg_openpgp_octets_t trailer, acc, issuer;
+	tmcg_openpgp_octets_t trailer, acc;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintConvertPretty(primary->fingerprint, fpr);
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(prv->pub->pub_hashing, issuer);
 	if (opt_y == NULL)
 	{
 		if (opt_r)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else if (opt_1)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else if (opt_2)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else if (opt_3)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 	}
 	else
 	{
@@ -372,27 +375,32 @@ void run_instance
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else if (opt_1)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else if (opt_2)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else if (opt_3)
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 		else
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareCertificationSignature(
 					TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, issuer, trailer);
+					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
+					trailer);
 	}
 	acc.insert(acc.end(), primary->packet.begin(), primary->packet.end());
 

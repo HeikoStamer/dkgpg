@@ -321,14 +321,11 @@ void run_instance
 	}
 
 	// prepare trailer and hash for the direct-key signature
-	tmcg_openpgp_octets_t trailer, issuer, revoker, hash, left;
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(prv->pub->pub_hashing, issuer);
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(primary->pub_hashing, revoker);
+	tmcg_openpgp_octets_t trailer, hash, left;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareDesignatedRevoker(prv->pub->pkalgo, hashalgo, csigtime,
-			prv->pub->flags, issuer, primary->pkalgo, revoker, trailer);
+			prv->pub->flags, prv->pub->fingerprint, primary->pkalgo,
+			primary->fingerprint, trailer);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyHash(prv->pub->pub_hashing, trailer, hashalgo, hash, left);
 	delete primary;

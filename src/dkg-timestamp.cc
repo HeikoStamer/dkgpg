@@ -415,9 +415,7 @@ void run_instance
 	// compute the trailer and the hash of the signature
 	if (opt_verbose)
 		std::cerr << "INFO: constructing the timestamp signature" << std::endl;
-	tmcg_openpgp_octets_t trailer, hash, left, issuer;
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintCompute(prv->pub->pub_hashing, issuer);
+	tmcg_openpgp_octets_t trailer, hash, left;
 	tmcg_openpgp_notations_t notations;
 	tmcg_openpgp_notation_t accuracy, serialnumber;
 	if (opt_a)
@@ -467,15 +465,15 @@ void run_instance
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
-				hashalgo, csigtime, URI, issuer, signature_body, notations,
-				trailer);
+				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
+				notations, trailer);
 	}
 	else
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareTimestampSignature(prv->pkalgo,
-				hashalgo, csigtime, URI, issuer, signature_body, notations,
-				trailer);
+				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
+				notations, trailer);
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		StandaloneHash(trailer, hashalgo, hash, left);

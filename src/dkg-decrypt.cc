@@ -73,7 +73,7 @@ std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
 bool							opt_binary = false, opt_E = false;
-bool							opt_weak = false;
+bool							opt_weak = false, opt_s = false;
 char							*opt_ifilename = NULL;
 char							*opt_ofilename = NULL;
 char							*opt_passwords = NULL;
@@ -783,109 +783,117 @@ bool decrypt_message
 	(const tmcg_openpgp_secure_octets_t seskey, const TMCG_OpenPGP_Keyring *ring,
 	 TMCG_OpenPGP_Message *msg, tmcg_openpgp_octets_t &content)
 {
-	tmcg_openpgp_octets_t decmsg, infmsg;
-	if (!msg->Decrypt(seskey, opt_verbose, decmsg))
+	tmcg_openpgp_octets_t decmsg;
+	if (!opt_s)
 	{
-		std::cerr << "ERROR: message decryption failed" << std::endl;
-		return false;
+		if (!msg->Decrypt(seskey, opt_verbose, decmsg))
+		{
+			std::cerr << "ERROR: message decryption failed" << std::endl;
+			return false;
+		}
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
+			opt_verbose, msg))
+		{
+			std::cerr << "ERROR: message parsing failed" << std::endl;
+			return false;
+		}
 	}
-	if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
-		opt_verbose, msg))
+	// handle compressed message
+	tmcg_openpgp_octets_t infmsg;
+	if ((msg->compressed_data).size() != 0)
 	{
-		std::cerr << "ERROR: message parsing failed" << std::endl;
+		bool decompress_ok = false;
+		switch (msg->compalgo)
+		{
+			case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
+				for (size_t i = 0; i < (msg->compressed_data).size(); i++)
+					infmsg.push_back(msg->compressed_data[i]);
+				decompress_ok = true; // no compression
+				break;
+			case TMCG_OPENPGP_COMPALGO_ZIP:
+			case TMCG_OPENPGP_COMPALGO_ZLIB:
+				decompress_ok = decompress_libz(msg, infmsg);
+				break;
+#ifdef LIBBZ
+			case TMCG_OPENPGP_COMPALGO_BZIP2:
+				decompress_ok = decompress_libbz(msg, infmsg);
+				break;
+#endif
+			default:
+				if (opt_verbose > 1)
+				{
+					std::cerr << "WARNING: compression algorithm " <<
+						(int)msg->compalgo << " is not supported" <<
+						std::endl;
+				}
+		}
+		if (!decompress_ok)
+		{
+			std::cerr << "ERROR: decompression failed" << std::endl;
+			return false;
+		}
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(infmsg,
+			opt_verbose, msg))
+		{
+			std::cerr << "ERROR: message parsing failed" << std::endl;
+			return false;
+		}
+	}
+	// handle decompressed message
+	if ((msg->literal_data).size() == 0)
+	{
+		std::cerr << "ERROR: no literal data in decrypted message" <<
+			std::endl;
 		return false;
 	}
 	else
 	{
-		// handle compressed message
-		if ((msg->compressed_data).size() != 0)
+		// verify included signatures based on keys from keyring
+		if ((opt_k != NULL) && ((msg->signatures).size() > 0))
 		{
-			bool decompress_ok = false;
-			switch (msg->compalgo)
+			bool vf = true, vf_one = false;
+			for (size_t i = 0; i < (msg->signatures).size(); i++)
 			{
-				case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
-					for (size_t i = 0; i < (msg->compressed_data).size(); i++)
-						infmsg.push_back(msg->compressed_data[i]);
-					decompress_ok = true; // no compression
-					break;
-				case TMCG_OPENPGP_COMPALGO_ZIP:
-				case TMCG_OPENPGP_COMPALGO_ZLIB:
-					decompress_ok = decompress_libz(msg, infmsg);
-					break;
-#ifdef LIBBZ
-				case TMCG_OPENPGP_COMPALGO_BZIP2:
-					decompress_ok = decompress_libbz(msg, infmsg);
-					break;
-#endif
-				default:
-					if (opt_verbose > 1)
-					{
-						std::cerr << "WARNING: compression algorithm " <<
-							(int)msg->compalgo << " is not supported" <<
-							std::endl;
-					}
-			}
-			if (!decompress_ok)
-			{
-				std::cerr << "ERROR: decompression failed" << std::endl;
-				return false;
-			}
-			if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(infmsg,
-				opt_verbose, msg))
-			{
-				std::cerr << "ERROR: message parsing failed" << std::endl;
-				return false;
-			}
-		}
-		// handle decompressed message
-		if ((msg->literal_data).size() == 0)
-		{
-			std::cerr << "ERROR: no literal data in decrypted message" <<
-				std::endl;
-			return false;
-		}
-		else
-		{
-			// verify included signatures based on keys from keyring
-			if ((opt_k != NULL) && ((msg->signatures).size() > 0))
-			{
-				bool vf = true;
-				for (size_t i = 0; i < (msg->signatures).size(); i++)
+				const TMCG_OpenPGP_Signature *sig = msg->signatures[i];
+				std::string ak;
+				if (get_key_by_signature(ring, sig, opt_verbose, ak))
 				{
-					const TMCG_OpenPGP_Signature *sig = msg->signatures[i];
-					std::string ak;
-					if (get_key_by_signature(ring, sig, opt_verbose, ak))
+					if (!verify_signature(msg->literal_data, ak, sig, ring,
+						opt_verbose, opt_weak))
 					{
-						if (!verify_signature(msg->literal_data, ak, sig,
-							ring, opt_verbose, opt_weak))
-						{
-							vf = false;
-							std::cerr << "WARNING: verification of" <<
+						vf = false;
+						std::cerr << "WARNING: verification of included" <<
 							" signature #" << i << " failed" << std::endl;
-						}	
 					}
 					else
-					{
-						std::cerr << "WARNING: cannot verify" <<
-							" signature #" << i << " due to missing" <<
-							" public key" << std::endl;
-					}
+						vf_one = true;
 				}
-				if (!vf)
+				else
 				{
-					std::cerr << "ERROR: verification of included" <<
-						" signature(s) failed" << std::endl;
-					return false;
+					std::cerr << "WARNING: cannot verify included signature" <<
+						" #" << i << " due to missing public key" << std::endl;
 				}
 			}
-			// copy the content of literal data packet
-			content.insert(content.end(), (msg->literal_data).begin(),
-				(msg->literal_data).end());
+			if (!vf)
+			{
+				std::cerr << "ERROR: verification of included signature(s)" <<
+					" failed" << std::endl;
+				return false;
+			}
+			if (opt_s && !vf_one)
+			{
+				std::cerr << "ERROR: none of the included signature(s)" <<
+					" is valid" << std::endl;
+				return false;
+			}
 		}
-		if (msg->filename == "_CONSOLE")
-			std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
-				std::endl;
+		// copy the content of literal data packet
+		content.insert(content.end(), (msg->literal_data).begin(),
+			(msg->literal_data).end());
 	}
+	if (msg->filename == "_CONSOLE")
+		std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
+			std::endl;
 	return true;
 }
 
@@ -1125,7 +1133,7 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if (msg->encrypted_message.size() == 0)
+	if (!opt_s && (msg->encrypted_message.size() == 0))
 	{
 		std::cerr << "ERROR: no encrypted data found" << std::endl;
 		delete msg;
@@ -1184,7 +1192,7 @@ void run_instance
 			}
 		}
 	}
-	if ((esks.size() == 0) && (msg->SKESKs.size() == 0))
+	if ((esks.size() == 0) && (msg->SKESKs.size() == 0) && !opt_s)
 	{
 		std::cerr << "ERROR: no admissible encrypted session key found" <<
 			std::endl;
@@ -1713,7 +1721,7 @@ void run_instance
 				exit(-1);
 			}
 		}
-		else
+		else if (!opt_s)
 		{
 			std::cerr << "ERROR: every PKESK decryption failed" << std::endl;
 			delete msg;
@@ -1783,6 +1791,7 @@ int gnunet_opt_verbose = 0;
 int gnunet_opt_weak = 0;
 int gnunet_opt_binary = 0;
 int gnunet_opt_E = 0;
+int gnunet_opt_s = 0;
 #endif
 
 void fork_instance
@@ -1882,6 +1891,11 @@ int main
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
+		),
+		GNUNET_GETOPT_option_flag('s',
+			"signed-only",
+			"allow signed-only message",
+			&gnunet_opt_s
 		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
@@ -2012,7 +2026,8 @@ int main
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
 			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
 			(arg.find("-n") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-E") == 0) || (arg.find("-K") == 0))
+			(arg.find("-E") == 0) || (arg.find("-K") == 0) ||
+			(arg.find("-s") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -2043,6 +2058,8 @@ int main
 					" built-in TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING              exchanged passwords" <<
 					" to protect private and broadcast channels" << std::endl;
+				std::cout << "  -s, --signed-only      allow signed-only" <<
+					" message" << std::endl;
 				std::cout << "  -v, --version          print the version" <<
 					" number" << std::endl;
 				std::cout << "  -V, --verbose          turn on verbose" <<
@@ -2060,6 +2077,8 @@ int main
 				opt_E = true;
 			if ((arg.find("-K") == 0) || (arg.find("--weak") == 0))
 				opt_weak = true;
+			if ((arg.find("-s") == 0) || (arg.find("--signed-only") == 0))
+				opt_s = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
@@ -2595,6 +2614,11 @@ int main
 				"STRING",
 				"exchanged passwords to protect private and broadcast channels",
 				&gnunet_opt_passwords
+			),
+			GNUNET_GETOPT_option_flag('s',
+				"signed-only",
+				"allow signed-only message",
+				&gnunet_opt_s
 			),
 			GNUNET_GETOPT_option_flag('V',
 				"verbose",

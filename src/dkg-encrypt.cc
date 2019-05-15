@@ -45,6 +45,7 @@ bool encrypt_session_key
 		{
 			std::cerr << "ERROR: AsymmetricEncryptRSA() failed (rc = " <<
 				gcry_err_code(ret) << ")" << std::endl;
+			gcry_mpi_release(me);
 			return false;
 		}
 		CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -71,6 +72,8 @@ bool encrypt_session_key
 		{
 			std::cerr << "ERROR: AsymmetricEncryptElgamal() failed" <<
 				" (rc = " << gcry_err_code(ret) << ")" << std::endl;
+			gcry_mpi_release(gk);
+			gcry_mpi_release(myk);
 			return false;
 		}
 		CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -119,7 +122,7 @@ bool encrypt_session_key
 	bool ret;
 	if (pub->pkalgo != TMCG_OPENPGP_PKALGO_RSA)
 	{
-		return false; // only RSA is an encryption-capable primary key 
+		return false; // only RSA is an encryption-capable primary key algo
 	}
 	TMCG_OpenPGP_Subkey *sub = new TMCG_OpenPGP_Subkey(pub->pkalgo,
 		pub->creationtime, pub->expirationtime, pub->rsa_n, pub->rsa_e,

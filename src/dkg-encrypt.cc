@@ -221,7 +221,7 @@ int main
 					" number" << std::endl;
 				std::cout << "  -V, --verbose       turn on verbose output" <<
 					std::endl;
-				std::cout << "  -w, --weak          allow weak keys" <<
+				std::cout << "  -w, --weak          allow weak public keys" <<
 					std::endl;
 				return 0; // not continue
 			}

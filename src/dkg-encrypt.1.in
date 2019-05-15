@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "December 2018" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "May 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \-\- simple message encryption with AES\-256 according to OpenPGP
@@ -9,12 +9,13 @@ dkg\-encrypt \-\- simple message encryption with AES\-256 according to OpenPGP
 .IR KEYSPEC
 
 .SH DESCRIPTION
-This program encrypts a (text) message read from STDIN or a file according to
-the OpenPGP standard (RFC 4880). KEYSPEC is either a list of fingerprints for
-keys in a keyring (if options "\-r" and "\-k" are given) or a single argument
-representing a name of a file that contains a ASCII\-armored public key block
-with any encryption\-capable subkey (recommended) or an encryption\-capable
-primary key (used to last resort).
+This program encrypts a (text) message read from STDIN or from a file specified
+by its path (if option "\-i" is used) according to the OpenPGP standard (RFC
+4880). KEYSPEC is either a list of fingerprints for keys from a keyring (if
+options "\-r" and "\-k" are given) or a single argument representing a path and
+name of a file that contains an ASCII\-armored public key block with any
+encryption\-capable subkey (recommended) or an encryption\-capable primary key
+(used to last resort).
 If more than one valid admissible encryption subkey is found in a key block
 specified in this way, than the generated symmetric session key is encrypted for
 each of these subkeys. This behaviour can be tweaked by the option "\-s", which
@@ -87,10 +88,10 @@ The current implementation is in experimental state and should NOT
 be used in production environments.
 
 .SH "REPORTING BUGS"
-Security vulnerabilities or cryptographic complaints should be reported
-via an email directly to
+Security vulnerabilities or cryptographic flaws should be reported by an email
+directly to
 <HeikoStamer@gmx.net>.
-Reported problems will be published after they've been fixed.
+In that way reported problems will be published after they've been fixed.
 .PP
 Please report all other bugs via public bug tracker <https://savannah.nongnu.org/bugs/?func=additem&group=dkgpg>
 .PP
@@ -98,7 +99,7 @@ Home page of Distributed Privacy Guard (DKGPG): <https://savannah.nongnu.org/pro
 
 .SH "COPYRIGHT"
 .TP
-Copyright (C)  2017, 2018 Heiko Stamer <HeikoStamer@gmx.net>
+Copyright (C)  2017, 2018, 2019 Heiko Stamer <HeikoStamer@gmx.net>
 .PP
 Permission is granted to copy, distribute and/or modify this document under
 the terms of the GNU Free Documentation License, Version 1.3 or any later

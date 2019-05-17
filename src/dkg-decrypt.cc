@@ -615,6 +615,61 @@ bool check_esk
 	return true;
 }
 
+gcry_error_t decrypt_kek
+	(const tmcg_openpgp_octets_t &kek, const tmcg_openpgp_skalgo_t algo,
+	 const tmcg_openpgp_secure_octets_t &key, tmcg_openpgp_secure_octets_t &out)
+{
+	gcry_error_t ret = 0;
+	size_t bs = CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmIVLength(algo); // get block size of algorithm
+	size_t ks = CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmKeyLength(algo); // get key size of algorithm
+	if ((bs == 0) || (ks == 0))
+		return gcry_error(GPG_ERR_CIPHER_ALGO); // error: bad algorithm
+	unsigned char *buf = (unsigned char*)gcry_malloc_secure(kek.size());
+	if (buf == NULL)
+		return gcry_error(GPG_ERR_RESOURCE_LIMIT); // cannot alloc secure memory
+	gcry_cipher_hd_t hd;
+	ret = gcry_cipher_open(&hd, CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmSymGCRY(algo), GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE);
+	if (ret)
+	{
+		gcry_free(buf);
+		return ret;
+	}
+	for (size_t i = 0; i < key.size(); i++)
+		buf[i] = key[i];
+	ret = gcry_cipher_setkey(hd, buf, key.size());
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	// set "an IV of all zeros" [RFC 4880]
+	ret = gcry_cipher_setiv(hd, NULL, 0);
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	for (size_t i = 0; i < kek.size(); i++)
+		buf[i] = kek[i];
+	ret = gcry_cipher_decrypt(hd, buf, kek.size(), NULL, 0);
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	for (size_t i = 0; i < kek.size(); i++)
+		out.push_back(buf[i]);
+	gcry_free(buf);
+	gcry_cipher_close(hd);
+	return ret;
+}
+
 bool decompress_libz
 	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_octets_t &infmsg)
 {
@@ -1633,25 +1688,21 @@ void run_instance
 			for (size_t i = 0; i < msg->SKESKs.size(); i++)
 			{
 				const TMCG_OpenPGP_SKESK *esk = msg->SKESKs[i];
-				tmcg_openpgp_secure_octets_t esk_seskey;
+				tmcg_openpgp_secure_octets_t kek;
+				size_t klen = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AlgorithmKeyLength(esk->skalgo);
 				switch (esk->s2k_type)
 				{
 					case TMCG_OPENPGP_STRINGTOKEY_SIMPLE:
 					case TMCG_OPENPGP_STRINGTOKEY_SALTED:
-						CallasDonnerhackeFinneyShawThayerRFC4880::S2KCompute(
-								esk->s2k_hashalgo,
-								CallasDonnerhackeFinneyShawThayerRFC4880::
-									AlgorithmKeyLength(esk->skalgo),
-								esk_passphrase, esk->s2k_salt, false,
-								esk->s2k_count, esk_seskey);
+						CallasDonnerhackeFinneyShawThayerRFC4880::
+							S2KCompute(esk->s2k_hashalgo, klen, esk_passphrase,
+								esk->s2k_salt, false, esk->s2k_count, kek);
 						break;
 					case TMCG_OPENPGP_STRINGTOKEY_ITERATED:
-						CallasDonnerhackeFinneyShawThayerRFC4880::S2KCompute(
-								esk->s2k_hashalgo,
-								CallasDonnerhackeFinneyShawThayerRFC4880::
-									AlgorithmKeyLength(esk->skalgo),
-								esk_passphrase, esk->s2k_salt, true,
-								esk->s2k_count, esk_seskey);
+						CallasDonnerhackeFinneyShawThayerRFC4880::
+							S2KCompute(esk->s2k_hashalgo, klen, esk_passphrase,
+								esk->s2k_salt, true, esk->s2k_count, kek);
 						break;
 					default:
 						if (opt_verbose)
@@ -1659,16 +1710,20 @@ void run_instance
 								" supported; skip SKESK" << std::endl;
 						break;
 				}
-				seskey.clear();
-				if (esk->encrypted_key.size() != 0)
+				if (opt_verbose > 2)
 				{
-					tmcg_openpgp_octets_t decrypted_key, prefix;
+					std::cerr << "INFO: kek.size() = " << kek.size() <<
+						std::endl;
+				}
+				seskey.clear();
+				if (esk->encrypted_key.size() > 0)
+				{
+					tmcg_openpgp_octets_t decrypted_key;
 					gcry_error_t ret = 0;
 					if (esk->aeadalgo == 0)
 					{
-						ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-							SymmetricDecrypt(esk->encrypted_key, esk_seskey,
-								prefix, false, esk->skalgo, decrypted_key);
+						ret = decrypt_kek(esk->encrypted_key, esk->skalgo, kek,
+							seskey);
 					}
 					else
 					{
@@ -1678,7 +1733,7 @@ void run_instance
 						ad.push_back(esk->skalgo); // cipher algorithm octet
 						ad.push_back(esk->aeadalgo); // AEAD algorithm octet
 						ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-							SymmetricDecryptAEAD(esk->encrypted_key, esk_seskey,
+							SymmetricDecryptAEAD(esk->encrypted_key, kek,
 								esk->skalgo, esk->aeadalgo, 0, esk->iv, ad,
 								opt_verbose, decrypted_key);
 					}
@@ -1699,8 +1754,8 @@ void run_instance
 				else
 				{
 					seskey.push_back(esk->skalgo);
-					for (size_t j = 0; j < esk_seskey.size(); j++)
-						seskey.push_back(esk_seskey[j]);
+					for (size_t j = 0; j < kek.size(); j++)
+						seskey.push_back(kek[j]);
 				}
 				// quick check, whether decryption of session key was successful
 				tmcg_openpgp_octets_t tmpmsg;				

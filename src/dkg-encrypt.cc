@@ -135,7 +135,7 @@ bool encrypt_session_key
 int main
 	(int argc, char **argv)
 {
-	static const char *usage = "dkg-encrypt [OPTIONS] KEYSPEC";
+	static const char *usage = "dkg-encrypt [OPTIONS] [KEYSPEC]";
 	static const char *about = PACKAGE_STRING " " PACKAGE_URL;
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 
@@ -254,7 +254,7 @@ int main
 	}
 
 	// lock memory
-	bool force_secmem = false;
+	bool force_secmem = false, should_unlock = false;
 	if (!lock_memory())
 	{
 		std::cerr << "WARNING: locking memory failed; CAP_IPC_LOCK required" <<
@@ -262,16 +262,22 @@ int main
 		// at least try to use libgcrypt's secure memory
 		force_secmem = true;
 	}
+	else
+		should_unlock = true;
 
 	// initialize LibTMCG
 	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " <<
 			version_libTMCG() << std::endl;
+	}
 
 #ifdef DKGPG_TESTSUITE
 	keyspec.push_back("Test1_dkg-pub.asc");
@@ -306,31 +312,35 @@ int main
 #endif
 
 	// check command line arguments
-	if (keyspec.size() < 1)
-	{
-		std::cerr << "ERROR: argument KEYSPEC is missing; usage: " <<
-			usage << std::endl;
-		return -1;
-	}
 	if (!opt_r && (keyspec.size() > 1))
 	{
 		std::cerr << "ERROR: wrong KEYSPEC; more than one file" <<
 			"is not supported" << std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 
 	// read the public key from file
 	std::string armored_pubkey;
-	if (!opt_r)
+	if (!opt_r && (keyspec.size() == 1))
 	{
 		if (!read_key_file(keyspec[0], armored_pubkey))
+		{
+			if (should_unlock)
+				unlock_memory();
 			return -1;
+		}
 	}
 
 	// read the keyring
 	std::string armored_pubring;
 	if ((opt_k != NULL) && !read_key_file(kfilename, armored_pubring))
+	{
+		if (should_unlock)
+			unlock_memory();
 		return -1;
+	}
 
 	// parse the keyring
 	TMCG_OpenPGP_Keyring *ring = NULL;
@@ -369,6 +379,8 @@ int main
 		if (!read_message(ifilename, input_msg))
 		{
 			delete ring;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		for (size_t i = 0; i < input_msg.length(); i++)
@@ -388,6 +400,7 @@ int main
 	gcry_error_t ret;
 	tmcg_openpgp_octets_t lit, prefix, enc;
 	tmcg_openpgp_secure_octets_t seskey;
+	tmcg_openpgp_skalgo_t skalgo = TMCG_OPENPGP_SKALGO_AES256;
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit,
 		seskey, prefix, true, enc); // seskey and prefix only
@@ -396,6 +409,8 @@ int main
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
 			gcry_err_code(ret) << ")" << std::endl;
 		delete ring;
+		if (should_unlock)
+			unlock_memory();
 		return ret;
 	}
 	tmcg_openpgp_octets_t mdc_hashing, hash, mdc, seipd;
@@ -422,6 +437,8 @@ int main
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
 			gcry_err_code(ret) << ")" << std::endl;
 		delete ring;
+		if (should_unlock)
+			unlock_memory();
 		return ret;
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSeipdEncode(enc, seipd);
@@ -445,27 +462,199 @@ int main
 	tmcg_openpgp_byte_t cs = 10; // fixed chunk of size 2^16 bytes
 	ad.push_back(0xD4); // packet tag in new format
 	ad.push_back(0x01); // packet version number
-	ad.push_back(TMCG_OPENPGP_SKALGO_AES256); // cipher algorithm octet
+	ad.push_back(skalgo); // cipher algorithm octet
 	ad.push_back(aeadalgo); // AEAD algorithm octet
 	ad.push_back(cs); // chunk size octet
 	for (size_t i = 0; i < 8; i++)
 		ad.push_back(0x00); // initial eight-octet big-endian chunk index
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAEAD(lit,
-		seskey, TMCG_OPENPGP_SKALGO_AES256, aeadalgo, cs, ad, opt_verbose,
-		iv, enc); 
+		seskey, skalgo, aeadalgo, cs, ad, opt_verbose, iv, enc); 
 	if (ret)
 	{
 		std::cerr << "ERROR: SymmetricEncryptAEAD() failed (rc = " <<
 			gcry_err_code(ret) << ")" << std::endl;
 		delete ring;
+		if (should_unlock)
+			unlock_memory();
 		return ret;
 	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::PacketAeadEncode(
-		TMCG_OPENPGP_SKALGO_AES256, aeadalgo, cs, iv, enc, aead);
+	CallasDonnerhackeFinneyShawThayerRFC4880::PacketAeadEncode(skalgo,
+		aeadalgo, cs, iv, enc, aead);
 #endif
 
-	// iterate through all specified encryption keys
+	// perform password-based symmetric encryption, if no keyspec given
 	tmcg_openpgp_octets_t all;
+	if (keyspec.size() == 0)
+	{
+		tmcg_openpgp_secure_string_t passphrase, passphrase_check;
+		std::string ps1 = "Passphrase to protect this message";
+		std::string ps2 = "Please repeat the given passphrase to continue";
+		do
+		{
+			passphrase = "", passphrase_check = "";
+			if (!get_passphrase(ps1, false, passphrase))
+			{
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -1;
+			}
+			if (!get_passphrase(ps2, false, passphrase_check))
+			{
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -1;
+			}
+			if (passphrase != passphrase_check)
+			{
+				std::cerr << "WARNING: passphrase does not match;" <<
+					" please try again" << std::endl;
+			}
+			else if (passphrase == "")
+			{
+				std::cerr << "WARNING: empty passphrase is not" <<
+					" permitted" << std::endl;
+			}
+		}
+		while ((passphrase != passphrase_check) || (passphrase == ""));
+
+		// encrypt session key with passphrase according to S2K
+		tmcg_openpgp_octets_t plain, salt, iv, es;
+		tmcg_openpgp_hashalgo_t s2k_hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+		tmcg_openpgp_byte_t rand[8], count = 0xFD; // set resonable S2K count
+		tmcg_openpgp_secure_octets_t kek;
+		gcry_randomize(rand, sizeof(rand), GCRY_STRONG_RANDOM);
+		for (size_t i = 0; i < sizeof(rand); i++)
+			salt.push_back(rand[i]);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			S2KCompute(s2k_hashalgo, 32, passphrase, salt, true, count, kek);
+		if (opt_verbose > 2)
+		{
+			std::cerr << "INFO: kek.size() = " << kek.size() << std::endl;
+			std::cerr << "INFO: seskey.size() = " << seskey.size() << std::endl;
+			std::cerr << "INFO: seskey[0] = " << (int)seskey[0] << std::endl;
+		}
+		if ((seskey.size() == 35) && (kek.size() == 32))
+		{
+			// strip the always appended checksum from session key
+			plain.insert(plain.end(), seskey.begin(), seskey.end()-2);
+		}
+		else
+			std::cerr << "ERROR: bad session key for SKESK" << std::endl;
+		if (opt_a != 0)
+		{
+			tmcg_openpgp_aeadalgo_t aeadalgo = (tmcg_openpgp_aeadalgo_t)opt_a;
+			tmcg_openpgp_octets_t ad;
+			ad.push_back(0xC3);
+			ad.push_back(0x05);
+			ad.push_back(skalgo);
+			ad.push_back(opt_a);
+			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				SymmetricEncryptAEAD(plain, kek, skalgo, aeadalgo, 0, ad,
+				opt_verbose, iv, es);
+			if (ret)
+			{
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -20;
+			}
+		}
+		else
+		{
+			unsigned char *buf = (unsigned char*)gcry_malloc_secure(33);
+			if (buf == NULL)
+			{
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -20;
+			}
+			gcry_cipher_hd_t hd;
+			ret = gcry_cipher_open(&hd, GCRY_CIPHER_AES256,
+				GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE);
+			if (ret)
+			{
+				gcry_free(buf);
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -21;
+			}
+			for (size_t i = 0; i < kek.size(); i++)
+				buf[i] = kek[i];
+			ret = gcry_cipher_setkey(hd, buf, kek.size());
+			if (ret)
+			{
+				gcry_free(buf);
+				gcry_cipher_close(hd);
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -22;
+			}
+			// set "an IV of all zeros" [RFC 4880]
+			ret = gcry_cipher_setiv(hd, NULL, 0);
+			if (ret)
+			{
+				gcry_free(buf);
+				gcry_cipher_close(hd);
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -23;
+			}
+			for (size_t i = 0; i < plain.size(); i++)
+				buf[i] = plain[i];
+			ret = gcry_cipher_encrypt(hd, buf, plain.size(), NULL, 0);
+			if (ret)
+			{
+				gcry_free(buf);
+				gcry_cipher_close(hd);
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -24;
+			}
+			for (size_t i = 0; i < plain.size(); i++)
+				es.push_back(buf[i]);
+			gcry_free(buf);
+			gcry_cipher_close(hd);
+		}
+		if (opt_verbose > 2)
+			std::cerr << "INFO: es.size() = " << es.size() << std::endl;
+
+		// create a corresponding SKESK packet
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTagEncode(3, all);
+		if (opt_a != 0)
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketLengthEncode(6+salt.size()+iv.size()+es.size(), all);
+			all.push_back(5); // V5 format
+			all.push_back(skalgo);
+			all.push_back(aeadalgo);
+			all.push_back(TMCG_OPENPGP_STRINGTOKEY_ITERATED); // Iterated+Salted
+			all.push_back(s2k_hashalgo); // S2K hash algo
+			all.insert(all.end(), salt.begin(), salt.end()); // salt
+			all.push_back(count); // count, a one-octet, coded value
+			all.insert(all.end(), iv.begin(), iv.end()); // AEAD IV
+		}
+		else
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketLengthEncode(5+salt.size()+es.size(), all);
+			all.push_back(4); // V4 format
+			all.push_back(skalgo);
+			all.push_back(TMCG_OPENPGP_STRINGTOKEY_ITERATED); // Iterated+Salted
+			all.push_back(s2k_hashalgo); // S2K hash algo
+			all.insert(all.end(), salt.begin(), salt.end()); // salt
+			all.push_back(count); // count, a one-octet, coded value
+		}
+		all.insert(all.end(), es.begin(), es.end()); // encrypted session key
+	}
+
+	// iterate through all specified encryption keys
 	size_t features = 0xFF;
 	for (size_t k = 0; k < keyspec.size(); k++)
 	{
@@ -482,6 +671,8 @@ int main
 				std::cerr << "ERROR: encryption key not found in keyring" <<
 					std::endl; 
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			tmcg_openpgp_octets_t pkts;
@@ -510,6 +701,8 @@ int main
 					std::cerr << "ERROR: primary key is not valid" << std::endl;
 					delete primary;
 					delete ring;
+					if (should_unlock)
+						unlock_memory();
 					return -1;
 				}
 			}
@@ -521,6 +714,8 @@ int main
 					std::endl;
 				delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 		}
@@ -529,6 +724,8 @@ int main
 			std::cerr << "ERROR: cannot use the provided public key" <<
 				std::endl;
 			delete ring;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 
@@ -580,10 +777,10 @@ int main
 					size_t skf = primary->subkeys[j]->AccumulateFeatures(); 
 					features &= (skf | primary->AccumulateFeatures());
 					if ((std::find(primary->subkeys[j]->psa.begin(),
-						primary->subkeys[j]->psa.end(), TMCG_OPENPGP_SKALGO_AES256)
+						primary->subkeys[j]->psa.end(), skalgo)
 							== primary->subkeys[j]->psa.end()) &&
 					    (std::find(primary->psa.begin(), primary->psa.end(),
-							TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end()))
+							skalgo) == primary->psa.end()))
 					{
 						if (opt_verbose)
 							std::cerr << "WARNING: AES-256 is none of the" <<
@@ -658,11 +855,13 @@ int main
 					" found" << std::endl;
 				delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			features &= primary->AccumulateFeatures();
 			if (std::find(primary->psa.begin(), primary->psa.end(),
-				TMCG_OPENPGP_SKALGO_AES256) == primary->psa.end())
+				skalgo) == primary->psa.end())
 			{
 				if (opt_verbose)
 					std::cerr << "WARNING: AES-256 is none of the preferred" <<
@@ -703,6 +902,8 @@ int main
 				std::endl;
 			delete primary;
 			delete ring;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 
@@ -732,6 +933,8 @@ int main
 			{
 				delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			all.insert(all.end(), pkesk.begin(), pkesk.end());
@@ -758,6 +961,8 @@ int main
 			{
 				delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			all.insert(all.end(), pkesk.begin(), pkesk.end());
@@ -768,7 +973,7 @@ int main
 	}
 
 	// append the encrypted data packet(s) according to supported features
-	if (((features & 0x02) == 0x02) && (aead.size() > 0))
+	if (((features & 0x02) == 0x02) && (aead.size() > 0) && (keyspec.size() > 0))
 	{
 		// append AEAD, because all selected recipients/keys have support
 		all.insert(all.end(), aead.begin(), aead.end());
@@ -789,32 +994,28 @@ int main
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
 
+	// release keyring and locked memory
+	delete ring;
+	if (should_unlock)
+		unlock_memory();
+
 	// write out the result
 	if (opt_o != NULL)
 	{
 		if (opt_binary)
 		{
 			if (!write_message(ofilename, all))
-			{
-				delete ring;
 				return -1;
-			}
 		}
 		else
 		{
 			if (!write_message(ofilename, armored_message))
-			{
-				delete ring;
 				return -1;
-			}
 		}
 	}
 	else
 		std::cout << armored_message << std::endl;
 
-	// release keyring
-	delete ring;
-	
 	return 0;
 }
 

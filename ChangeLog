@@ -7,6 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-05-17] dkg-decrypt: fixed SKESK decryption by adding decrypt_kek()
+* [2019-05-17] dkg-encrypt: added symmetric-key encrypted session key (SKESK)
 * [2019-05-04] dkg-decrypt: added option "-s" (allow signed-only message)
 * [2019-05-02] dkg-addrevoker,dkg-keysign,dkg-sign,dkg-revoke,dkg-timestamp:
                avoid fingerprint recomputation w.r.t. recently changed format

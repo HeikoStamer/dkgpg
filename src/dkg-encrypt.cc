@@ -538,7 +538,7 @@ int main
 		aeadalgo, cs, iv, enc, aead);
 #endif
 
-	// perform password-based symmetric encryption, if no keyspec given
+	// perform a password-based symmetric encryption, if no keyspec given
 	tmcg_openpgp_octets_t all;
 	if (keyspec.size() == 0)
 	{
@@ -972,6 +972,11 @@ int main
 		delete primary;
 	}
 
+	// release keyring and locked memory
+	delete ring;
+	if (should_unlock)
+		unlock_memory();
+
 	// append the encrypted data packet(s) according to supported features
 	if (((features & 0x02) == 0x02) && (aead.size() > 0) && (keyspec.size() > 0))
 	{
@@ -993,11 +998,6 @@ int main
 	std::string armored_message;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
-
-	// release keyring and locked memory
-	delete ring;
-	if (should_unlock)
-		unlock_memory();
 
 	// write out the result
 	if (opt_o != NULL)

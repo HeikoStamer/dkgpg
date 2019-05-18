@@ -626,7 +626,8 @@ gcry_error_t decrypt_kek
 		AlgorithmKeyLength(algo); // get key size of algorithm
 	if ((bs == 0) || (ks == 0))
 		return gcry_error(GPG_ERR_CIPHER_ALGO); // error: bad algorithm
-	unsigned char *buf = (unsigned char*)gcry_malloc_secure(kek.size());
+	size_t buflen = (kek.size() >= key.size()) ? kek.size() : key.size();
+	unsigned char *buf = (unsigned char*)gcry_malloc_secure(buflen);
 	if (buf == NULL)
 		return gcry_error(GPG_ERR_RESOURCE_LIMIT); // cannot alloc secure memory
 	gcry_cipher_hd_t hd;

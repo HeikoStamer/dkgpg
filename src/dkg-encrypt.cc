@@ -31,7 +31,7 @@
 
 bool encrypt_session_key
 	(const TMCG_OpenPGP_Subkey* sub, const tmcg_openpgp_secure_octets_t &seskey,
-	 const tmcg_openpgp_octets_t &subkeyid, tmcg_openpgp_octets_t &pkesk)
+	 const tmcg_openpgp_octets_t &subkeyid, tmcg_openpgp_octets_t &out)
 {
 	gcry_error_t ret;
 	if ((sub->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
@@ -49,7 +49,7 @@ bool encrypt_session_key
 			return false;
 		}
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketPkeskEncode(subkeyid, me, pkesk);
+			PacketPkeskEncode(subkeyid, me, out);
 		gcry_mpi_release(me);
 	}
 	else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ELGAMAL)
@@ -77,7 +77,7 @@ bool encrypt_session_key
 			return false;
 		}
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketPkeskEncode(subkeyid, gk, myk, pkesk);
+			PacketPkeskEncode(subkeyid, gk, myk, out);
 		gcry_mpi_release(gk);
 		gcry_mpi_release(myk);
 	}
@@ -103,7 +103,7 @@ bool encrypt_session_key
 			return false;
 		}
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketPkeskEncode(subkeyid, ecepk, rkwlen, rkw, pkesk);
+			PacketPkeskEncode(subkeyid, ecepk, rkwlen, rkw, out);
 		gcry_mpi_release(ecepk);
 	}
 	else
@@ -117,7 +117,7 @@ bool encrypt_session_key
 
 bool encrypt_session_key
 	(const TMCG_OpenPGP_Pubkey* pub, const tmcg_openpgp_secure_octets_t &seskey,
-	 const tmcg_openpgp_octets_t &keyid, tmcg_openpgp_octets_t &pkesk)
+	 const tmcg_openpgp_octets_t &keyid, tmcg_openpgp_octets_t &out)
 {
 	bool ret;
 	if (pub->pkalgo != TMCG_OPENPGP_PKALGO_RSA)
@@ -127,8 +127,64 @@ bool encrypt_session_key
 	TMCG_OpenPGP_Subkey *sub = new TMCG_OpenPGP_Subkey(pub->pkalgo,
 		pub->creationtime, pub->expirationtime, pub->rsa_n, pub->rsa_e,
 		pub->packet);
-	ret = encrypt_session_key(sub, seskey, keyid, pkesk);
+	ret = encrypt_session_key(sub, seskey, keyid, out);
 	delete sub;
+	return ret;
+}
+
+gcry_error_t encrypt_kek
+	(const tmcg_openpgp_octets_t &kek, const tmcg_openpgp_skalgo_t algo,
+	 const tmcg_openpgp_secure_octets_t &key, tmcg_openpgp_octets_t &out)
+{
+	gcry_error_t ret = 0;
+	size_t bs = CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmIVLength(algo); // get block size of algorithm
+	size_t ks = CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmKeyLength(algo); // get key size of algorithm
+	if ((bs == 0) || (ks == 0))
+		return gcry_error(GPG_ERR_CIPHER_ALGO); // error: bad algorithm
+	size_t buflen = (kek.size() >= key.size()) ? kek.size() : key.size();
+	unsigned char *buf = (unsigned char*)gcry_malloc_secure(buflen);
+	if (buf == NULL)
+		return gcry_error(GPG_ERR_RESOURCE_LIMIT); // cannot alloc secure memory
+	gcry_cipher_hd_t hd;
+	ret = gcry_cipher_open(&hd, CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmSymGCRY(algo), GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE);
+	if (ret)
+	{
+		gcry_free(buf);
+		return ret;
+	}
+	for (size_t i = 0; i < key.size(); i++)
+		buf[i] = key[i];
+	ret = gcry_cipher_setkey(hd, buf, key.size());
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	// set "an IV of all zeros" [RFC 4880]
+	ret = gcry_cipher_setiv(hd, NULL, 0);
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	for (size_t i = 0; i < kek.size(); i++)
+		buf[i] = kek[i];
+	ret = gcry_cipher_encrypt(hd, buf, kek.size(), NULL, 0);
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	for (size_t i = 0; i < kek.size(); i++)
+		out.push_back(buf[i]);
+	gcry_free(buf);
+	gcry_cipher_close(hd);
 	return ret;
 }
 
@@ -553,75 +609,19 @@ int main
 			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
 				SymmetricEncryptAEAD(plain, kek, skalgo, aeadalgo, 0, ad,
 				opt_verbose, iv, es);
-			if (ret)
-			{
-				delete ring;
-				if (should_unlock)
-					unlock_memory();
-				return -20;
-			}
 		}
 		else
 		{
-			unsigned char *buf = (unsigned char*)gcry_malloc_secure(33);
-			if (buf == NULL)
-			{
-				delete ring;
-				if (should_unlock)
-					unlock_memory();
-				return -20;
-			}
-			gcry_cipher_hd_t hd;
-			ret = gcry_cipher_open(&hd, GCRY_CIPHER_AES256,
-				GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE);
-			if (ret)
-			{
-				gcry_free(buf);
-				delete ring;
-				if (should_unlock)
-					unlock_memory();
-				return -21;
-			}
-			for (size_t i = 0; i < kek.size(); i++)
-				buf[i] = kek[i];
-			ret = gcry_cipher_setkey(hd, buf, kek.size());
-			if (ret)
-			{
-				gcry_free(buf);
-				gcry_cipher_close(hd);
-				delete ring;
-				if (should_unlock)
-					unlock_memory();
-				return -22;
-			}
-			// set "an IV of all zeros" [RFC 4880]
-			ret = gcry_cipher_setiv(hd, NULL, 0);
-			if (ret)
-			{
-				gcry_free(buf);
-				gcry_cipher_close(hd);
-				delete ring;
-				if (should_unlock)
-					unlock_memory();
-				return -23;
-			}
-			for (size_t i = 0; i < plain.size(); i++)
-				buf[i] = plain[i];
-			ret = gcry_cipher_encrypt(hd, buf, plain.size(), NULL, 0);
-			if (ret)
-			{
-				gcry_free(buf);
-				gcry_cipher_close(hd);
-				delete ring;
-				if (should_unlock)
-					unlock_memory();
-				return -24;
-			}
-			for (size_t i = 0; i < plain.size(); i++)
-				es.push_back(buf[i]);
-			gcry_free(buf);
-			gcry_cipher_close(hd);
+			ret = encrypt_kek(plain, skalgo, kek, es);
 		}
+		if (ret)
+		{
+			delete ring;
+			if (should_unlock)
+				unlock_memory();
+			return -20;
+		}
+
 		if (opt_verbose > 2)
 			std::cerr << "INFO: es.size() = " << es.size() << std::endl;
 

@@ -687,13 +687,13 @@ bool decompress_libz
 	if (zlibVersion()[0] != myZlibVersion[0])
 	{
 		if (opt_verbose > 1)
-			std::cerr << "ERROR: incompatible zlib version" << std::endl;
+			std::cerr << "ERROR: incompatible zlib versions found" << std::endl;
 		return false;
 	}
 	else if (std::strcmp(zlibVersion(), ZLIB_VERSION) != 0)
 	{
 		if (opt_verbose > 1)
-			std::cerr << "WARNING: different zlib version" << std::endl;
+			std::cerr << "WARNING: different zlib versions found" << std::endl;
 	}
 	switch (msg->compalgo)
 	{
@@ -704,7 +704,7 @@ bool decompress_libz
 			rc = inflateInit(&zs);
 			break;
 		default:
-			if (opt_verbose > 1)
+			if (opt_verbose)
 				std::cerr << "ERROR: compression algorithm " <<
 					(int)msg->compalgo << " is not supported" << std::endl;
 			return false;
@@ -736,13 +736,22 @@ bool decompress_libz
 			}
 			zs.avail_in = zlen;
 			zs.next_in = zin;
+			for (size_t i = 0; i < 4; i++)
+			{
+				if ((zs.avail_in < sizeof(zin)) &&
+					(msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
+				{
+					if (opt_verbose > 1)
+					{
+						std::cerr << "INFO: fill with 0xFF at zs.avail_in = " <<
+							zs.avail_in << std::endl;
+					}
+					zin[zs.avail_in] = 0xFF; // dummy byte to fake zlib header
+					zs.avail_in++;
+				}
+			}
 		}
-		if ((zs.avail_in < sizeof(zin)) &&
-			(msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
-		{
-			zin[zs.avail_in] = 0xFF; // dummy character to fake zlib structure
-			zs.avail_in++;
-		}
+
 		memset(zout, 0, sizeof(zout));
 		zs.avail_out = sizeof(zout);
 		zs.next_out = zout;
@@ -836,13 +845,13 @@ bool decompress_libbz
 #endif
 
 bool decrypt_message
-	(const tmcg_openpgp_secure_octets_t seskey, const TMCG_OpenPGP_Keyring *ring,
+	(const tmcg_openpgp_secure_octets_t key, const TMCG_OpenPGP_Keyring *ring,
 	 TMCG_OpenPGP_Message *msg, tmcg_openpgp_octets_t &content)
 {
 	tmcg_openpgp_octets_t decmsg;
 	if (!opt_s)
 	{
-		if (!msg->Decrypt(seskey, opt_verbose, decmsg))
+		if (!msg->Decrypt(key, opt_verbose, decmsg))
 		{
 			std::cerr << "ERROR: message decryption failed" << std::endl;
 			return false;

@@ -1701,9 +1701,20 @@ void run_instance
 				tmcg_openpgp_secure_octets_t kek;
 				size_t klen = CallasDonnerhackeFinneyShawThayerRFC4880::
 					AlgorithmKeyLength(esk->skalgo);
+				if (opt_verbose > 2)
+				{
+					std::cerr << "INFO: s2k_salt = " << std::hex;
+					for (size_t j = 0; j < (esk->s2k_salt).size(); j++)
+						std::cerr << (int)esk->s2k_salt[j] << " ";
+					std::cerr << std::dec << std::endl;
+				}
 				switch (esk->s2k_type)
 				{
 					case TMCG_OPENPGP_STRINGTOKEY_SIMPLE:
+						if (opt_verbose)
+							std::cerr << "WARNING: S2K specifier not" <<
+								" supported; skip SKESK" << std::endl;
+						break;
 					case TMCG_OPENPGP_STRINGTOKEY_SALTED:
 						CallasDonnerhackeFinneyShawThayerRFC4880::
 							S2KCompute(esk->s2k_hashalgo, klen, esk_passphrase,
@@ -1724,6 +1735,10 @@ void run_instance
 				{
 					std::cerr << "INFO: kek.size() = " << kek.size() <<
 						std::endl;
+					std::cerr << "INFO: kek = " << std::hex;
+					for (size_t j = 0; j < kek.size(); j++)
+						std::cerr << (int)kek[j] << " ";
+					std::cerr << std::dec << std::endl;
 				}
 				seskey.clear();
 				if (esk->encrypted_key.size() > 0)

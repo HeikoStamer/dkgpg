@@ -1790,7 +1790,7 @@ int main
 	}
 
 	// lock memory
-	bool force_secmem = false;
+	bool force_secmem = false, should_unlock = false;
 	if (opt_p)
 	{
 		if (!lock_memory())
@@ -1800,17 +1800,23 @@ int main
 			// at least try to use libgcrypt's secure memory
 			force_secmem = true;
 		}
+		else
+			should_unlock = true;
 	}
 
 	// initialize LibTMCG
 	if (!init_libTMCG(force_secmem))
 	{
 		std::cerr << "ERROR: initialization of LibTMCG failed" << std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	if (opt_verbose)
-		std::cerr << "INFO: using LibTMCG version " <<
-			version_libTMCG() << std::endl;
+	{
+		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
+			std::endl;
+	}
 
 #ifdef DKGPG_TESTSUITE_Y
 	if (tmcg_mpz_wrandom_ui() % 2)
@@ -1830,12 +1836,16 @@ int main
 	{
 		std::cerr << "ERROR: argument KEYFILE is missing; usage: " <<
 			usage << std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	if (opt_y && (opt_k == NULL))
 	{
 		std::cerr << "ERROR: no keyring specified (option -k missing)" <<
 			std::endl;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	} 
 
@@ -1851,12 +1861,20 @@ int main
 		if (opt_b)
 		{
 			if (!read_binary_key_file(filename, format, armored_pubkey))
+			{
+				if (should_unlock)
+					unlock_memory();
 				return -1;
+			}
 		}
 		else
 		{
 			if (!read_key_file(filename, armored_pubkey))
+			{
+				if (should_unlock)
+					unlock_memory();
 				return -1;
+			}
 		}
 	}
 
@@ -1868,12 +1886,20 @@ int main
 		if (opt_b)
 		{
 			if (!read_binary_key_file(kfilename, kformat, armored_pubring))
+			{
+				if (should_unlock)
+					unlock_memory();
 				return -1;
+			}
 		}
 		else
 		{
 			if (!read_key_file(kfilename, armored_pubring))
+			{
+				if (should_unlock)
+					unlock_memory();
 				return -1;
+			}
 		}
 	}
 
@@ -1903,6 +1929,8 @@ int main
 		if (ring->List(filename) == 0)
 			ret = -1;
 		delete ring;
+		if (should_unlock)
+			unlock_memory();
 		return ret;
 	}
 	else if (opt_p)
@@ -1920,6 +1948,8 @@ int main
 			{
 				std::cerr << "ERROR: cannot read passphrase" << std::endl;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 #endif
@@ -1955,6 +1985,8 @@ int main
 			{
 				delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			} 
 		}
@@ -1963,6 +1995,8 @@ int main
 	{
 		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
 		delete ring;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 
@@ -2052,6 +2086,8 @@ int main
 			else
 				delete primary;
 			delete ring;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		ret = rsa_check(rsa_n, rsa_e);
@@ -2075,6 +2111,8 @@ int main
 			else
 				delete primary;
 			delete ring;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		ret = dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
@@ -2255,6 +2293,8 @@ int main
 		else
 			delete primary;
 		delete ring;
+		if (should_unlock)
+			unlock_memory();
 		return -1;
 	}
 	if (opt_p)
@@ -2285,6 +2325,8 @@ int main
 						mpz_clear(rsa_n), mpz_clear(rsa_e);
 						delete prv;
 						delete ring;
+						if (should_unlock)
+							unlock_memory();
 						return -1;
 					}
 					ret = rsa_check(rsa_p, rsa_q, rsa_d, rsa_n, rsa_e);
@@ -2396,6 +2438,8 @@ int main
 				else
 					delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			ret = rsa_check(rsa_n, rsa_e);
@@ -2419,6 +2463,8 @@ int main
 				else
 					delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			if (primary->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
@@ -2434,6 +2480,8 @@ int main
 					else
 						delete primary;
 					delete ring;
+					if (should_unlock)
+						unlock_memory();
 					return -1;
 				}
 			}
@@ -2462,6 +2510,8 @@ int main
 				else
 					delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			ret = dsa_check(dsa_p, dsa_q, dsa_g, dsa_y);
@@ -2507,6 +2557,8 @@ int main
 			else
 				delete primary;
 			delete ring;
+			if (should_unlock)
+				unlock_memory();
 			return -1;
 		}
 		// additional part for checking DSA signatures
@@ -2529,6 +2581,8 @@ int main
 				else
 					delete primary;
 				delete ring;
+				if (should_unlock)
+					unlock_memory();
 				return -1;
 			}
 			for (size_t i = 0; i < sub->selfsigs.size(); i++)
@@ -2641,6 +2695,8 @@ int main
 							mpz_clear(rsa_n), mpz_clear(rsa_e);
 							delete prv;
 							delete ring;
+							if (should_unlock)
+								unlock_memory();
 							return -1;
 						}
 						ret = rsa_check(rsa_p, rsa_q, rsa_d, rsa_n, rsa_e);
@@ -2684,6 +2740,10 @@ int main
 	else
 		delete primary;
 	delete ring;
+
+	// unlock secure memory
+	if (should_unlock)
+		unlock_memory();
 	
 	return ret;
 }

@@ -181,8 +181,10 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+	}
 
 	// read the key file
 	std::string armored_seckey, thispeer = peers[0];
@@ -705,6 +707,8 @@ int main
 	if (dss != NULL)
 		delete dss;
 	delete prv;
+
+	// unlock secure memory
 	if (should_unlock)
 		unlock_memory();
 

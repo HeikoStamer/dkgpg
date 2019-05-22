@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-05-22] added non-installing program dkg-fuzzer (generate fuzzy samples)
 * [2019-05-18] dkg-decrypt: fixed "ZLIB ERROR: -3 invalid block type"
 * [2019-05-17] dkg-decrypt: fixed SKESK V4 decryption by adding decrypt_kek()
 * [2019-05-17] dkg-encrypt: added symmetric-key encrypted session key (SKESK)

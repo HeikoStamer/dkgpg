@@ -1,4 +1,4 @@
-# Copyright (C) 2017, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+# Copyright (C) 2019  Heiko Stamer <HeikoStamer@gmx.net>
 #
 # This file is part of Distributed Privacy Guard (DKGPG).
 #
@@ -17,9 +17,12 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-SUBDIRS = src tests tools
-DIST_SUBDIRS = src tests tools
+AM_CPPFLAGS = -I$(top_srcdir)/src @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@\
+ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
+LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 
-EXTRA_DIST = AUTHORS BUGS COPYING FDL INSTALL NEWS README TODO THANKS\
-	ChangeLog
+noinst_PROGRAMS = dkg-fuzzer
+
+dkg_fuzzer_SOURCES = dkg-fuzzer.cc
+
 

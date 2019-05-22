@@ -222,7 +222,7 @@ CPPFLAGS="$backup_CPPFLAGS"
 CFLAGS="$CFLAGS -Wall -Wextra"
 CXXFLAGS="$CXXFLAGS -Wall -Wextra"
 
-# Linking the sources for subdirectory tests
+# Linking some sources for subdirectories tests and tools
 AC_CONFIG_LINKS([tests/t-dkg-gencrs.cc:src/dkg-gencrs.cc])
 AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.hh:src/dkg-tcpip-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-tcpip-common.cc:src/dkg-tcpip-common.cc])
@@ -247,6 +247,8 @@ AC_CONFIG_LINKS([tests/t-dkg-revoke.cc:src/dkg-revoke.cc])
 AC_CONFIG_LINKS([tests/t-dkg-adduid.cc:src/dkg-adduid.cc])
 AC_CONFIG_LINKS([tests/t-dkg-revuid.cc:src/dkg-revuid.cc])
 AC_CONFIG_LINKS([tests/t-dkg-addrevoker.cc:src/dkg-addrevoker.cc])
+AC_CONFIG_LINKS([tools/dkg-io.hh:src/dkg-io.hh])
+AC_CONFIG_LINKS([tools/dkg-io.cc:src/dkg-io.cc])
 
 # Define output
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile tools/Makefile\

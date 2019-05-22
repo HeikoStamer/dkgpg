@@ -23,6 +23,6 @@ LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 
 noinst_PROGRAMS = dkg-fuzzer
 
-dkg_fuzzer_SOURCES = dkg-fuzzer.cc
+dkg_fuzzer_SOURCES = dkg-io.hh dkg-io.cc dkg-fuzzer.cc
 
 

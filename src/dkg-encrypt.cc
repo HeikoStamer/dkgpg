@@ -260,7 +260,7 @@ int main
 				std::cout << "  -a INTEGER          enforce use of AEAD" <<
 					" algorithm INTEGER (cf. RFC 4880bis)" << std::endl;
 				std::cout << "  -b, --binary        write encrypted message" <<
-					" in binary format (only if -i)" << std::endl;
+					" in binary format (only if -o used)" << std::endl;
 				std::cout << "  -h, --help          print this help" <<
 					std::endl;
 				std::cout << "  -i FILENAME         read message rather" <<

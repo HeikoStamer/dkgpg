@@ -115,10 +115,12 @@ int main
 				(TMCG_OPENPGP_SIGNATURE_THIRD_PARTY_CONFIRMATION + 1));
 		tmcg_openpgp_pkalgo_t pkalgo = 
 			(tmcg_openpgp_pkalgo_t)(tmcg_mpz_wrandom_ui() %
-				(TMCG_OPENPGP_PKALGO_EXPERIMENTAL10 + 1));
+				(TMCG_OPENPGP_PKALGO_EDDSA + 1));
+//				(TMCG_OPENPGP_PKALGO_EXPERIMENTAL10 + 1));
 		tmcg_openpgp_hashalgo_t hashalgo = 
 			(tmcg_openpgp_hashalgo_t)(tmcg_mpz_wrandom_ui() %
-				(TMCG_OPENPGP_HASHALGO_EXPERIMENTAL10 + 1));
+				(TMCG_OPENPGP_HASHALGO_SHA3_512 + 1));
+//				(TMCG_OPENPGP_HASHALGO_EXPERIMENTAL10 + 1));
 
 		tmcg_openpgp_octets_t trailer, hash, left, sig, fpr;
 		time_t csigtime = tmcg_mpz_wrandom_ui();
@@ -139,6 +141,8 @@ int main
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareDetachedSignature(type, pkalgo, hashalgo,
 				csigtime, sigexptime, URI, fpr, trailer);
+		for (size_t i = 0; i < (1 + tmcg_mpz_wrandom_ui() % 3); i++)
+			left.push_back(tmcg_mpz_wrandom_ui() % 256);
 
 		gcry_mpi_t r, s;
 		r = gcry_mpi_new(2048);

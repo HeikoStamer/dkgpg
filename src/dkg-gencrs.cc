@@ -119,8 +119,10 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+	}
 
 #ifdef DKGPG_TESTSUITE
 	factor = 1;

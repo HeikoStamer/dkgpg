@@ -83,17 +83,14 @@ bool encrypt_session_key
 	}
 	else if (sub->pkalgo == TMCG_OPENPGP_PKALGO_ECDH)
 	{
-		tmcg_openpgp_octets_t rcpfpr;
 		gcry_mpi_t ecepk;
 		size_t rkwlen = 0;
 		tmcg_openpgp_byte_t rkw[256];
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintCompute(sub->sub_hashing, rcpfpr);
 		ecepk = gcry_mpi_new(1024);
 		memset(rkw, 0, sizeof(rkw));
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
 			AsymmetricEncryptECDH(seskey, sub->key, sub->kdf_hashalgo,
-				sub->kdf_skalgo, sub->ec_curve, rcpfpr, ecepk,
+				sub->kdf_skalgo, sub->ec_curve, sub->fingerprint, ecepk,
 				rkwlen, rkw);
 		if (ret)
 		{

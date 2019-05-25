@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -85,11 +85,20 @@
 		();
 	bool unlock_memory
 		();
+	bool get_key_by_fingerprint
+		(const TMCG_OpenPGP_Keyring *ring,
+		 const std::string &fingerprint,
+		 const int verbose,
+		 std::string &armored_key);
+	bool get_key_by_keyid
+		(const TMCG_OpenPGP_Keyring *ring,
+		 const std::string &keyid,
+		 const int verbose,
+		 std::string &armored_key);
 	bool get_key_by_signature
 		(const TMCG_OpenPGP_Keyring *ring,
 		 const TMCG_OpenPGP_Signature *signature,
 		 const int verbose,
 		 std::string &armored_key);
-
 #endif
 

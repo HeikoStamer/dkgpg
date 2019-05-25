@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -374,6 +374,46 @@ bool unlock_memory
 	return true;
 }
 
+bool get_key_by_fingerprint
+	(const TMCG_OpenPGP_Keyring *ring, const std::string &fingerprint,
+	 const int verbose, std::string &armored_key)
+{
+	// get the public key from keyring based on fingerprint
+	if (verbose > 1)
+		std::cerr << "INFO: lookup for public key with fingerprint " <<
+			"\"" << fingerprint << "\"" << std::endl;
+	const TMCG_OpenPGP_Pubkey *keyref = ring->Find(fingerprint);
+	if (keyref == NULL)
+		return false;
+	// extract ASCII-armored public key
+	tmcg_openpgp_octets_t pkts;
+	keyref->Export(pkts);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts, armored_key);
+	return true;
+}
+
+bool get_key_by_keyid
+	(const TMCG_OpenPGP_Keyring *ring, const std::string &keyid,
+	 const int verbose, std::string &armored_key)
+{
+	// get the public key from keyring based on key ID
+	if (verbose > 1)
+	{
+		std::cerr << "INFO: lookup for public key with keyid " <<
+			"\"" << keyid << "\"" << std::endl;
+	}
+	const TMCG_OpenPGP_Pubkey *keyref = ring->FindByKeyid(keyid);
+	if (keyref == NULL)
+		return false;
+	// extract ASCII-armored public key
+	tmcg_openpgp_octets_t pkts;
+	keyref->Export(pkts);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts, armored_key);
+	return true;
+}
+
 bool get_key_by_signature
 	(const TMCG_OpenPGP_Keyring *ring, const TMCG_OpenPGP_Signature *signature,
 	 const int verbose, std::string &armored_key)
@@ -382,33 +422,18 @@ bool get_key_by_signature
 	std::string fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintConvertPlain(signature->issuerfpr, fpr);
-	if (verbose > 1)
-		std::cerr << "INFO: lookup for public key with fingerprint " <<
-			fpr << std::endl;
-	const TMCG_OpenPGP_Pubkey *keyref = ring->Find(fpr);
-	if (keyref == NULL)
+	if (!get_key_by_fingerprint(ring, fpr, verbose, armored_key))
 	{
 		// get the public key from keyring based on key ID
 		std::string kid;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyidConvert(signature->issuer, kid);
-		if (verbose > 1)
+		if (!get_key_by_keyid(ring, kid, verbose, armored_key))
 		{
-			std::cerr << "INFO: lookup for public key with keyid " << kid <<
-				std::endl;
-		}
-		keyref = ring->FindByKeyid(kid);
-		if (keyref == NULL)
-		{
-			std::cerr << "ERROR: public key not found in keyring" << std::endl; 
+			std::cerr << "ERROR: public key not found in keyring" << std::endl;
 			return false;
 		}
 	}
-	// extract ASCII-armored public key
-	tmcg_openpgp_octets_t pkts;
-	keyref->Export(pkts);
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts, armored_key);
 	return true;
 }
 

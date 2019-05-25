@@ -64,6 +64,7 @@ bool							instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
 std::string						ifilename, ofilename, kfilename;
+std::string						Kfilename, fingerprint;
 std::string						passwords, hostname, port, URI, u, yfilename;
 
 int 							opt_verbose = 0;
@@ -74,6 +75,8 @@ char							*opt_hostname = NULL;
 char							*opt_URI = NULL;
 char							*opt_u = NULL;
 char							*opt_k = NULL;
+char							*opt_K = NULL;
+char							*opt_fingerprint = NULL;
 char							*opt_y = NULL;
 unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
 bool							opt_r = false;
@@ -103,9 +106,43 @@ void run_instance
 		exit(-1);
 
 	// read the public key
+	bool parse_ok;
 	std::string armored_pubkey;
-	if (!read_key_file(opt_ifilename, armored_pubkey))
-		exit(-1);
+	if (opt_ifilename != NULL)
+	{
+		if (!read_key_file(opt_ifilename, armored_pubkey))
+			exit(-1);
+	}
+	else if (opt_K != NULL)
+	{
+		std::string armored_certring;
+		if (!read_key_file(Kfilename, armored_certring))
+			exit(-1);
+		TMCG_OpenPGP_Keyring *certring = NULL;
+		int opt_verbose_ring = opt_verbose;
+		if (opt_verbose_ring > 0)
+			opt_verbose_ring--;
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyringParse(armored_certring, opt_verbose_ring, certring);
+		if (!parse_ok)
+		{
+			std::cerr << "ERROR: cannot use the given keyring" << std::endl;
+			exit(-1);
+		}
+		if (!get_key_by_fingerprint(certring, fingerprint, opt_verbose,
+			armored_pubkey))
+		{
+			if (!get_key_by_keyid(certring, fingerprint, opt_verbose,
+				armored_pubkey))
+			{
+				std::cerr << "ERROR: public key not found in keyring" <<
+					std::endl;
+				delete certring;
+				exit(-1);
+			}
+		}
+		delete certring;
+	}
 
 	// read the keyring
 	std::string armored_pubring;
@@ -118,7 +155,6 @@ void run_instance
 	// parse the keyring, the private key and corresponding signatures
 	TMCG_OpenPGP_Prvkey *prv = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
-	bool parse_ok;
 	if (opt_k)
 	{
 		int opt_verbose_ring = opt_verbose;
@@ -404,7 +440,8 @@ void run_instance
 	}
 	acc.insert(acc.end(), primary->packet.begin(), primary->packet.end());
 
-	// loop through all or selected valid user IDs	
+	// loop through all or selected valid user IDs
+	bool anything_signed = false;
 	for (size_t j = 0; j < primary->userids.size(); j++)
 	{
 		// user ID not selected?
@@ -424,6 +461,7 @@ void run_instance
 			std::cerr << "INFO: going to sign user ID \"" <<
 				primary->userids[j]->userid_sanitized << "\" of key with" <<
 				" fingerprint [ " << fpr << "]" << std::endl;
+		anything_signed = true;
 
 		// sign the hash value
 		tmcg_openpgp_octets_t sig;
@@ -491,6 +529,13 @@ void run_instance
 	delete primary;
 	delete prv;
 
+	// check the result
+	if (!anything_signed)
+	{
+		std::cerr << "ERROR: no user ID selected and signed" << std::endl;
+		exit(-2);
+	}
+
 	// output the result
 	std::string signedkey;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -512,6 +557,8 @@ char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
 char *gnunet_opt_u = NULL;
 char *gnunet_opt_URI = NULL;
+char *gnunet_opt_K = NULL;
+char *gnunet_opt_fingerprint = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
 unsigned int gnunet_opt_sigexptime = 0;
@@ -586,6 +633,12 @@ int main
 			"expiration time of generated signature in seconds",
 			&gnunet_opt_sigexptime
 		),
+		GNUNET_GETOPT_option_string('f',
+			"fingerprint",
+			"STRING",
+			"fingerprint of the public key for certification",
+			&gnunet_opt_fingerprint
+		),
 		GNUNET_GETOPT_option_string('H',
 			"hostname",
 			"STRING",
@@ -597,6 +650,12 @@ int main
 			"FILENAME",
 			"create certification signature on key resp. user ID from FILENAME",
 			&gnunet_opt_ifilename
+		),
+		GNUNET_GETOPT_option_string('K',
+			"keys",
+			"FILENAME",
+			"select public key for certification from keyring FILENAME",
+			&gnunet_opt_K
 		),
 		GNUNET_GETOPT_option_string('k',
 			"keyring",
@@ -696,6 +755,10 @@ int main
 		opt_URI = gnunet_opt_URI;
 	if (gnunet_opt_u != NULL)
 		opt_u = gnunet_opt_u;
+	if (gnunet_opt_K != NULL)
+		opt_K = gnunet_opt_K;
+	if (gnunet_opt_fingerprint != NULL)
+		opt_fingerprint = gnunet_opt_fingerprint;
 	if (gnunet_opt_k != NULL)
 		opt_k = gnunet_opt_k;
 	if (gnunet_opt_passwords != NULL)
@@ -708,6 +771,10 @@ int main
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 	if (gnunet_opt_u != NULL)
 		u = gnunet_opt_u; // get policy URI from GNUnet options
+	if (gnunet_opt_K != NULL)
+		Kfilename = gnunet_opt_K; // get keyring from GNUnet options
+	if (gnunet_opt_fingerprint != NULL)
+		fingerprint = gnunet_opt_fingerprint; // get fingerprint from GNUnet options
 	if (gnunet_opt_k != NULL)
 		kfilename = gnunet_opt_k; // get keyring from GNUnet options
 	if (gnunet_opt_y != NULL)
@@ -726,9 +793,16 @@ int main
 		    (arg.find("-e") == 0) || (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
 		    (arg.find("-u") == 0) || (arg.find("-U") == 0) ||
-			(arg.find("-k") == 0) || (arg.find("-y") == 0))
+			(arg.find("-K") == 0) || (arg.find("-k") == 0) ||
+			(arg.find("-f") == 0) || (arg.find("-y") == 0))
 		{
 			size_t idx = ++i;
+			if ((arg.find("-f") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_fingerprint == NULL))
+			{
+				fingerprint = argv[i+1];
+				opt_fingerprint = (char*)fingerprint.c_str();
+			}
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_ifilename == NULL))
 			{
@@ -764,6 +838,12 @@ int main
 			{
 				URI = argv[i+1];
 				opt_URI = (char*)URI.c_str();
+			}
+			if ((arg.find("-K") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_K == NULL))
+			{
+				Kfilename = argv[i+1];
+				opt_K = (char*)Kfilename.c_str();
 			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_k == NULL))
@@ -815,10 +895,14 @@ int main
 					" verification of claim of identity" << std::endl;
 				std::cout << "  -e INTEGER       expiration time of" <<
 					" generated signatures in seconds" << std::endl;
+				std::cout << "  -f STRING        fingerprint of the public" <<
+					" key for certification" << std::endl;
 				std::cout << "  -H STRING        hostname (e.g. onion" <<
 					" address) of this peer within PEERS" << std::endl;
 				std::cout << "  -i FILENAME      create certification" <<
 					" signatures on key from FILENAME" << std::endl;
+				std::cout << "  -K FILENAME      select public key for" <<
+					" certification from keyring FILENAME" << std::endl;
 				std::cout << "  -k FILENAME      use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
 				std::cout << "  -o FILENAME      write key with" <<
@@ -908,10 +992,16 @@ int main
 #endif
 
 	// check command line arguments
-	if (opt_ifilename == NULL)
+	if ((opt_ifilename == NULL) && (opt_K == NULL))
 	{
-		std::cerr << "ERROR: option -i required to specify an input file" <<
-			std::endl;
+		std::cerr << "ERROR: option \"-i\" or \"-K\" is required to specify" <<
+			" an input file" << std::endl;
+		return -1;
+	}
+	if ((opt_K != NULL) && (opt_fingerprint == NULL))
+	{
+		std::cerr << "ERROR: option \"-f\" is required to select public key" <<
+			" for certification" << std::endl;
 		return -1;
 	}
 	if ((opt_hostname != NULL) && (opt_passwords == NULL) && (opt_y == NULL))
@@ -1002,6 +1092,12 @@ int main
 				"expiration time of generated signature in seconds",
 				&gnunet_opt_sigexptime
 			),
+			GNUNET_GETOPT_option_string('f',
+				"fingerprint",
+				"STRING",
+				"fingerprint of the public key for certification",
+				&gnunet_opt_fingerprint
+			),
 			GNUNET_GETOPT_option_string('H',
 				"hostname",
 				"STRING",
@@ -1013,6 +1109,12 @@ int main
 				"FILENAME",
 				"create certification signature on key resp. user ID from FILENAME",
 				&gnunet_opt_ifilename
+			),
+			GNUNET_GETOPT_option_string('K',
+				"keys",
+				"FILENAME",
+				"select public key for certification from keyring FILENAME",
+				&gnunet_opt_K
 			),
 			GNUNET_GETOPT_option_string('k',
 				"keyring",

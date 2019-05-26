@@ -46,6 +46,8 @@
 		(const std::string &prompt,
 		 const bool echo,
 		 tmcg_openpgp_secure_string_t &passphrase);
+	bool check_confirmation
+		(const std::string &prompt);
 	bool read_key_file
 		(const std::string &filename,
 		 std::string &result);

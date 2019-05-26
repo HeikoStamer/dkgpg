@@ -79,8 +79,8 @@ char							*opt_K = NULL;
 char							*opt_fingerprint = NULL;
 char							*opt_y = NULL;
 unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
-bool							opt_r = false;
 bool							opt_1 = false, opt_2 = false, opt_3 = false;
+bool							opt_a = false, opt_r = false;
 
 void run_instance
 	(size_t whoami, const time_t sigtime, const time_t sigexptime,
@@ -461,6 +461,16 @@ void run_instance
 			std::cerr << "INFO: going to sign user ID \"" <<
 				primary->userids[j]->userid_sanitized << "\" of key with" <<
 				" fingerprint [ " << fpr << "]" << std::endl;
+		if (opt_a)
+		{
+			std::string p = "Please confirm operation by entering the string";
+			if (!check_confirmation(p))
+			{
+				std::cerr << "WARNING: operation has been cancelled" <<
+					std::endl;
+				continue;
+			}
+		}
 		anything_signed = true;
 
 		// sign the hash value
@@ -566,8 +576,8 @@ unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
-int gnunet_opt_r = 0;
 int gnunet_opt_1 = 0, gnunet_opt_2 = 0, gnunet_opt_3 = 0;
+int gnunet_opt_a = 0, gnunet_opt_r = 0;
 #endif
 
 void fork_instance
@@ -626,6 +636,11 @@ int main
 			"three",
 			"issuer has done substantial verification of the claim of identity",
 			&gnunet_opt_3
+		),
+		GNUNET_GETOPT_option_flag('a',
+			"ask",
+			"require confirmation from STDIN for each signature",
+			&gnunet_opt_a
 		),
 		GNUNET_GETOPT_option_uint('e',
 			"expiration",
@@ -874,10 +889,11 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-r") == 0) ||
-			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
-			(arg.find("-V") == 0) || (arg.find("-1") == 0) ||
-			(arg.find("-2") == 0) || (arg.find("-3") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-a") == 0) ||
+			(arg.find("-r") == 0) || (arg.find("-v") == 0) ||
+			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
+			(arg.find("-1") == 0) || (arg.find("-2") == 0) ||
+			(arg.find("-3") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -886,19 +902,21 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
-				std::cout << "  -h, --help       print this help" << std::endl;
 				std::cout << "  -1, --one        issuer has not done any" <<
 					" verification of claim of identity" << std::endl;
 				std::cout << "  -2, --two        issuer has done some casual" <<
 					" verification of claim of identity" << std::endl;
 				std::cout << "  -3, --three      issuer has done substantial" <<
 					" verification of claim of identity" << std::endl;
+				std::cout << "  -a, --ask        require confirmation from" <<
+					" STDIN for each signature" << std::endl;
 				std::cout << "  -e INTEGER       expiration time of" <<
 					" generated signatures in seconds" << std::endl;
 				std::cout << "  -f STRING        fingerprint of the public" <<
 					" key for certification" << std::endl;
 				std::cout << "  -H STRING        hostname (e.g. onion" <<
 					" address) of this peer within PEERS" << std::endl;
+				std::cout << "  -h, --help       print this help" << std::endl;
 				std::cout << "  -i FILENAME      create certification" <<
 					" signatures on key from FILENAME" << std::endl;
 				std::cout << "  -K FILENAME      select public key for" <<
@@ -929,6 +947,8 @@ int main
 #endif
 				return 0; // not continue
 			}
+			if ((arg.find("-a") == 0) || (arg.find("--ask") == 0))
+				opt_a = true; // require confirmation
 			if ((arg.find("-r") == 0) || (arg.find("--revocation") == 0))
 				opt_r = true; // create revocation signature
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
@@ -1085,6 +1105,11 @@ int main
 				"three",
 				"issuer has done substantial verification of the claim of identity",
 				&gnunet_opt_3
+			),
+			GNUNET_GETOPT_option_flag('a',
+				"ask",
+				"require confirmation from STDIN for each signature",
+				&gnunet_opt_a
 			),
 			GNUNET_GETOPT_option_uint('e',
 				"expiration",

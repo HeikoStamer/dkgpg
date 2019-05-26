@@ -64,6 +64,26 @@ bool get_passphrase
 	return true;
 }
 
+bool check_confirmation
+	(const std::string &prompt)
+{
+	std::string input, confirm;
+	// create a random confirmation challenge of 2^24 bit
+	tmcg_openpgp_octets_t c;
+	unsigned char buf[3];
+	gcry_randomize(buf, sizeof(buf), GCRY_STRONG_RANDOM);
+	for (size_t i = 0; i < sizeof(buf); i++)
+		c.push_back(buf[i]);
+	CallasDonnerhackeFinneyShawThayerRFC4880::Radix64Encode(c, confirm, false);
+	// read and check the confirmation challenge
+	std::cerr << prompt.c_str() << " \"" << confirm << "\": ";
+	std::getline(std::cin, input);
+	std::cin.clear();
+	if (input == confirm)
+		return true;
+	return false;
+}
+
 bool read_key_file
 	(const std::string &filename,
 	 std::string &result)

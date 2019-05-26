@@ -99,6 +99,9 @@ issuer has done some casual verification of the claim of identity
 \fB\-3\fR, \fB\-\-three\fR
 issuer has done substantial verification of the claim of identity
 .TP
+\fB\-a\fR, \fB\-\-ask\fR
+require confirmation from STDIN for each signature
+.TP
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME
 .TP

@@ -30,6 +30,265 @@
 
 #include "dkg-io.hh"
 
+void fuzzy_signature
+	(tmcg_openpgp_octets_t &out)
+{
+	tmcg_openpgp_signature_t type;
+	switch (tmcg_mpz_wrandom_ui() % 16)
+	{
+		case 1:
+			type = TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT;
+			break;
+		case 2:
+			type = TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT;
+			break;
+		case 3:
+			type = TMCG_OPENPGP_SIGNATURE_STANDALONE;
+			break;
+		case 4:
+			type = TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION;
+			break;
+		case 5:
+			type = TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION;
+			break;
+		case 6:
+			type = TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION;
+			break;
+		case 7:
+			type = TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION;
+			break;
+		case 8:
+			type = TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING;
+			break;
+		case 9:
+			type = TMCG_OPENPGP_SIGNATURE_PRIMARY_KEY_BINDING;
+			break;
+		case 10:
+			type = TMCG_OPENPGP_SIGNATURE_DIRECTLY_ON_A_KEY;
+			break;
+		case 11:
+			type = TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION;
+			break;
+		case 12:
+			type = TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION;
+			break;
+		case 13:
+			type = TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION;
+			break;
+		case 14:
+			type = TMCG_OPENPGP_SIGNATURE_TIMESTAMP;
+			break;
+		case 15:
+			type = TMCG_OPENPGP_SIGNATURE_THIRD_PARTY_CONFIRMATION;
+			break;
+		default:
+			type = (tmcg_openpgp_signature_t)0x03; // out of spec
+	}
+	tmcg_openpgp_pkalgo_t pkalgo;
+	switch (tmcg_mpz_wrandom_ui() % 22)
+	{
+		case 1:
+			pkalgo = TMCG_OPENPGP_PKALGO_RSA;
+			break;
+		case 2:
+			pkalgo = TMCG_OPENPGP_PKALGO_RSA_ENCRYPT_ONLY;
+			break;
+		case 3:
+			pkalgo = TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY;
+			break;
+		case 4:
+			pkalgo = TMCG_OPENPGP_PKALGO_ELGAMAL;
+			break;
+		case 5:
+			pkalgo = TMCG_OPENPGP_PKALGO_DSA;
+			break;
+		case 6:
+			pkalgo = TMCG_OPENPGP_PKALGO_ECDH;
+			break;
+		case 7:
+			pkalgo = TMCG_OPENPGP_PKALGO_ECDSA;
+			break;
+		case 8:
+			pkalgo = TMCG_OPENPGP_PKALGO_EDDSA;
+			break;
+		case 9:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL0;
+			break;
+		case 10:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL1;
+			break;
+		case 11:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL2;
+			break;
+		case 12:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL3;
+			break;
+		case 13:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL4;
+			break;
+		case 14:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL5;
+			break;
+		case 15:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL6;
+			break;
+		case 16:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL7;
+			break;
+		case 17:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL8;
+			break;
+		case 18:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL9;
+			break;
+		case 19:
+			pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL10;
+			break;
+		case 20:
+			pkalgo = (tmcg_openpgp_pkalgo_t)20; // out of spec (ElGamal)
+			break;
+		case 21:
+			pkalgo = (tmcg_openpgp_pkalgo_t)21; // out of spec (X9.42)
+			break;
+		default:
+			pkalgo = (tmcg_openpgp_pkalgo_t)0x00; // out of spec
+	}
+	tmcg_openpgp_hashalgo_t hashalgo;
+	switch (tmcg_mpz_wrandom_ui() % 26)
+	{
+		case 1:
+			hashalgo = TMCG_OPENPGP_HASHALGO_MD5;
+			break;
+		case 2:
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA1;
+			break;
+		case 3:
+			hashalgo = TMCG_OPENPGP_HASHALGO_RMD160;
+			break;
+		case 4:
+			hashalgo = (tmcg_openpgp_hashalgo_t)4; // out of spec (double-width SHA)
+			break;
+		case 5:
+			hashalgo = (tmcg_openpgp_hashalgo_t)5; // out of spec (MD2)
+			break;
+		case 6:
+			hashalgo = (tmcg_openpgp_hashalgo_t)6; // out of spec (TIGER192)
+			break;
+		case 7:
+			hashalgo = (tmcg_openpgp_hashalgo_t)7; // out of spec (HAVAL)
+			break;
+		case 8:
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA256;
+			break;
+		case 9:
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA384;
+			break;
+		case 10:
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+			break;
+		case 11:
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA224;
+			break;
+		case 12:
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA3_256;
+			break;
+		case 13:
+			hashalgo = (tmcg_openpgp_hashalgo_t)13; // out of spec
+			break;
+		case 14:
+			hashalgo = TMCG_OPENPGP_HASHALGO_SHA3_512;
+			break;
+		case 15:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL0;
+			break;
+		case 16:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL1;
+			break;
+		case 17:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL2;
+			break;
+		case 18:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL3;
+			break;
+		case 19:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL4;
+			break;
+		case 20:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL5;
+			break;
+		case 21:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL6;
+			break;
+		case 22:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL7;
+			break;
+		case 23:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL8;
+			break;
+		case 24:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL9;
+			break;
+		case 25:
+			hashalgo = TMCG_OPENPGP_HASHALGO_EXPERIMENTAL10;
+			break;
+		default:
+			hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN; // out of spec
+	}
+	tmcg_openpgp_octets_t trailer, hash, left, fpr;
+	time_t csigtime = tmcg_mpz_wrandom_ui();
+	time_t sigexptime = tmcg_mpz_wrandom_ui();
+	std::string URI;
+	for (size_t i = 0; i < tmcg_mpz_wrandom_ui() % 256; i++)
+		URI += "A";
+	if (tmcg_mpz_wrandom_ui() % 2)
+	{
+		for (size_t i = 0; i < 20; i++)
+			fpr.push_back(tmcg_mpz_wrandom_ui() % 256); // V4 key
+	}
+	else
+	{
+		for (size_t i = 0; i < 32; i++)
+			fpr.push_back(tmcg_mpz_wrandom_ui() % 256); // V5 key
+	}
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigPrepareDetachedSignature(type, pkalgo, hashalgo,
+			csigtime, sigexptime, URI, fpr, trailer);
+/*
+	out.push_back(4); // V4 format
+	out.push_back(type); // type
+	out.push_back(pkalgo); // public-key algorithm
+	out.push_back(hashalgo); // hash algorithm
+*/
+
+	for (size_t i = 0; i < (1 + tmcg_mpz_wrandom_ui() % 3); i++)
+		left.push_back(tmcg_mpz_wrandom_ui() % 256);
+
+	gcry_mpi_t r, s;
+	r = gcry_mpi_new(2048);
+	gcry_mpi_randomize(r, tmcg_mpz_wrandom_ui() % 32000, GCRY_WEAK_RANDOM);
+	s = gcry_mpi_new(2048);
+	gcry_mpi_randomize(s, tmcg_mpz_wrandom_ui() % 32000, GCRY_WEAK_RANDOM);
+	switch (pkalgo)
+	{
+		case TMCG_OPENPGP_PKALGO_RSA:
+		case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigEncode(trailer, left, s, out);
+			break;
+		case TMCG_OPENPGP_PKALGO_DSA:
+		case TMCG_OPENPGP_PKALGO_ECDSA:
+		case TMCG_OPENPGP_PKALGO_EDDSA:
+		case TMCG_OPENPGP_PKALGO_EXPERIMENTAL7:
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigEncode(trailer, left, r, s, out);
+			break;
+		default:
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigEncode(trailer, left, s, out);
+	}
+	gcry_mpi_release(r), gcry_mpi_release(s);
+}
+
 int main
 	(int argc, char **argv)
 {
@@ -108,86 +367,30 @@ int main
 	}
 
 	// do fuzzy things
+	tmcg_openpgp_octets_t pkts;
 	if ((pktcls == "SIGNATURE") || (pktcls == "signature"))
+		fuzzy_signature(pkts);
+
+	if (pkts.size() > 0)
 	{
-		tmcg_openpgp_signature_t type =	
-			(tmcg_openpgp_signature_t)(tmcg_mpz_wrandom_ui() %
-				(TMCG_OPENPGP_SIGNATURE_THIRD_PARTY_CONFIRMATION + 1));
-		tmcg_openpgp_pkalgo_t pkalgo = 
-			(tmcg_openpgp_pkalgo_t)(tmcg_mpz_wrandom_ui() %
-				(TMCG_OPENPGP_PKALGO_EDDSA + 1));
-//				(TMCG_OPENPGP_PKALGO_EXPERIMENTAL10 + 1));
-		tmcg_openpgp_hashalgo_t hashalgo = 
-			(tmcg_openpgp_hashalgo_t)(tmcg_mpz_wrandom_ui() %
-				(TMCG_OPENPGP_HASHALGO_SHA3_512 + 1));
-//				(TMCG_OPENPGP_HASHALGO_EXPERIMENTAL10 + 1));
-
-		tmcg_openpgp_octets_t trailer, hash, left, sig, fpr;
-		time_t csigtime = tmcg_mpz_wrandom_ui();
-		time_t sigexptime = tmcg_mpz_wrandom_ui();
-		std::string URI;
-		for (size_t i = 0; i < tmcg_mpz_wrandom_ui() % 256; i++)
-			URI += "A";
-		if (tmcg_mpz_wrandom_ui() % 2)
-		{
-			for (size_t i = 0; i < 20; i++)
-				fpr.push_back(tmcg_mpz_wrandom_ui() % 256); // V4 key
-		}
-		else
-		{
-			for (size_t i = 0; i < 32; i++)
-				fpr.push_back(tmcg_mpz_wrandom_ui() % 256); // V5 key
-		}
+		std::string pstr;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareDetachedSignature(type, pkalgo, hashalgo,
-				csigtime, sigexptime, URI, fpr, trailer);
-		for (size_t i = 0; i < (1 + tmcg_mpz_wrandom_ui() % 3); i++)
-			left.push_back(tmcg_mpz_wrandom_ui() % 256);
-
-		gcry_mpi_t r, s;
-		r = gcry_mpi_new(2048);
-		gcry_mpi_randomize(r, tmcg_mpz_wrandom_ui() % 32000, GCRY_WEAK_RANDOM);
-		s = gcry_mpi_new(2048);
-		gcry_mpi_randomize(s, tmcg_mpz_wrandom_ui() % 32000, GCRY_WEAK_RANDOM);
-		switch (pkalgo)
-		{
-			case TMCG_OPENPGP_PKALGO_RSA:
-			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, s, sig);
-				break;
-			case TMCG_OPENPGP_PKALGO_DSA:
-			case TMCG_OPENPGP_PKALGO_ECDSA:
-			case TMCG_OPENPGP_PKALGO_EDDSA:
-			case TMCG_OPENPGP_PKALGO_EXPERIMENTAL7:
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, r, s, sig);
-				break;
-			default:
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, s, sig);
-		}
-		gcry_mpi_release(r), gcry_mpi_release(s);
-
-		// prepare the output
-		std::string sigstr;
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
+			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, pkts, pstr);
 		if (opt_ofilename != NULL)
 		{
 			if (opt_binary)
 			{
-				if (!write_message(ofilename, sig))
+				if (!write_message(ofilename, pkts))
 					return -1;
 			}
 			else
 			{
-				if (!write_message(ofilename, sigstr))
+				if (!write_message(ofilename, pstr))
 					return -1;
 			}
 		}
 		else
-			std::cout << sigstr << std::endl;
+			std::cout << pstr << std::endl;
 	}
 	else
 	{

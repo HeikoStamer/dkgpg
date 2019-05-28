@@ -30,8 +30,100 @@
 
 #include "dkg-io.hh"
 
+void fuzzy_append_some
+	(tmcg_openpgp_octets_t &out, const size_t min, const size_t mod)
+{
+	size_t len = min + (tmcg_mpz_wrandom_ui() % mod);
+	for (size_t i = 0; i < len; i++)
+		out.push_back(tmcg_mpz_wrandom_ui() % 256);
+}
+
 void fuzzy_signature
-	(tmcg_openpgp_octets_t &out)
+	(tmcg_openpgp_octets_t &out, const bool corrupt); // forward declaration
+
+void fuzzy_subpacket
+	(tmcg_openpgp_octets_t &out, const bool corrupt)
+{
+	tmcg_openpgp_octets_t subpkt;
+	tmcg_openpgp_byte_t type = tmcg_mpz_wrandom_ui() % 35;
+	switch (type)
+	{
+		case 4:
+		case 7:
+			if (corrupt)
+				fuzzy_append_some(subpkt, 0, 3);
+			else
+				subpkt.push_back(tmcg_mpz_wrandom_ui() % 2);
+			break;
+		case 2:
+		case 3:
+		case 9:
+			if (corrupt)
+				fuzzy_append_some(subpkt, 0, 9);
+			else
+			{
+				time_t sigtime = tmcg_mpz_wrandom_ui();
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketTimeEncode(sigtime, subpkt);
+			}
+			break;
+		case 16: // Issuer
+			if (corrupt)
+				fuzzy_append_some(subpkt, 0, 65);
+			else
+			{
+				for (size_t i = 0; i < 8; i++)
+					subpkt.push_back(tmcg_mpz_wrandom_ui() % 256);
+			}
+			break;
+		case 11:
+		case 21:
+		case 22:
+		case 34:
+			if (corrupt)
+				fuzzy_append_some(subpkt, 8000, 1);
+			else
+				fuzzy_append_some(subpkt, 1, 8);
+			break;
+		case 32: // Embedded Signature
+			{
+				tmcg_openpgp_octets_t sig;
+				fuzzy_signature(sig, corrupt);
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketBodyExtract(sig, 0, subpkt);
+			}
+			break;
+		case 33: // Issuer Fingerprint
+			if (corrupt)
+				fuzzy_append_some(subpkt, 0, 65);
+			else
+			{
+				if (tmcg_mpz_wrandom_ui() % 2)
+				{
+					subpkt.push_back(4); // V4
+					for (size_t i = 0; i < 20; i++)
+						subpkt.push_back(tmcg_mpz_wrandom_ui() % 256);
+				}
+				else
+				{
+					subpkt.push_back(5); // V5
+					for (size_t i = 0; i < 32; i++)
+						subpkt.push_back(tmcg_mpz_wrandom_ui() % 256);
+				}
+			}
+			break;
+		default:
+			fuzzy_append_some(subpkt, 512, 512);
+	}
+	bool critical = true;
+	if (tmcg_mpz_wrandom_ui() % 2)
+		critical = false;
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		SubpacketEncode(type, critical, subpkt, out);
+}
+
+void fuzzy_signature
+	(tmcg_openpgp_octets_t &out, const bool corrupt)
 {
 	tmcg_openpgp_signature_t type;
 	switch (tmcg_mpz_wrandom_ui() % 16)
@@ -234,36 +326,29 @@ void fuzzy_signature
 		default:
 			hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN; // out of spec
 	}
-	tmcg_openpgp_octets_t trailer, hash, left, fpr;
-	time_t csigtime = tmcg_mpz_wrandom_ui();
-	time_t sigexptime = tmcg_mpz_wrandom_ui();
-	std::string URI;
-	for (size_t i = 0; i < tmcg_mpz_wrandom_ui() % 256; i++)
-		URI += "A";
-	if (tmcg_mpz_wrandom_ui() % 2)
+	tmcg_openpgp_octets_t trailer, hspd, uspd, left;
+	trailer.push_back(4); // V4 format
+	trailer.push_back(type); // type
+	trailer.push_back(pkalgo); // public-key algorithm
+	trailer.push_back(hashalgo); // hash algorithm
+	do
 	{
-		for (size_t i = 0; i < 20; i++)
-			fpr.push_back(tmcg_mpz_wrandom_ui() % 256); // V4 key
+		hspd.clear(), uspd.clear();
+		for (size_t i = 0; i < tmcg_mpz_wrandom_ui() % 10; i++)
+			fuzzy_subpacket(hspd, corrupt);
+		for (size_t i = 0; i < tmcg_mpz_wrandom_ui() % 10; i++)
+			fuzzy_subpacket(uspd, corrupt);
 	}
-	else
-	{
-		for (size_t i = 0; i < 32; i++)
-			fpr.push_back(tmcg_mpz_wrandom_ui() % 256); // V5 key
-	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		PacketSigPrepareDetachedSignature(type, pkalgo, hashalgo,
-			csigtime, sigexptime, URI, fpr, trailer);
-/*
-	out.push_back(4); // V4 format
-	out.push_back(type); // type
-	out.push_back(pkalgo); // public-key algorithm
-	out.push_back(hashalgo); // hash algorithm
-*/
-
+	while ((hspd.size() > 20000) || (uspd.size() > 20000));
+	trailer.push_back((hspd.size() >> 8) & 0xFF); // hashed subpacket data
+	trailer.push_back(hspd.size() & 0xFF);
+	trailer.insert(trailer.end(), hspd.begin(), hspd.end());
+	trailer.push_back((uspd.size() >> 8) & 0xFF); // unhashed subpacket data
+	trailer.push_back(uspd.size() & 0xFF);
+	trailer.insert(trailer.end(), uspd.begin(), uspd.end());
 	for (size_t i = 0; i < (1 + tmcg_mpz_wrandom_ui() % 3); i++)
 		left.push_back(tmcg_mpz_wrandom_ui() % 256);
-
-	gcry_mpi_t r, s;
+	gcry_mpi_t r, s; // create fake-signature values
 	r = gcry_mpi_new(2048);
 	gcry_mpi_randomize(r, tmcg_mpz_wrandom_ui() % 32000, GCRY_WEAK_RANDOM);
 	s = gcry_mpi_new(2048);
@@ -297,7 +382,7 @@ int main
 	static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 	std::string pktcls, ofilename;
 	int opt_verbose = 0;
-	bool opt_binary = false;
+	bool opt_binary = false, opt_corrupt = false;
 	char *opt_ofilename = NULL;
 
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -316,7 +401,7 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-b") == 0))
+			(arg.find("-b") == 0) || (arg.find("-c") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -326,6 +411,8 @@ int main
 					" mandatory for short options." << std::endl;
 				std::cout << "  -b, --binary   write generated sample in" <<
 					" binary format (only if -o used)" << std::endl;
+				std::cout << "  -c, --corrupt  allow somehow corrupted" <<
+					" samples" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -o FILENAME    write generated sample to" <<
 					" FILENAME" << std::endl;
@@ -337,6 +424,8 @@ int main
 			}
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
 				opt_binary = true;
+			if ((arg.find("-c") == 0) || (arg.find("--corrupt") == 0))
+				opt_corrupt = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 				std::cout << "dkg-fuzzer v" << version << std::endl;
@@ -369,7 +458,7 @@ int main
 	// do fuzzy things
 	tmcg_openpgp_octets_t pkts;
 	if ((pktcls == "SIGNATURE") || (pktcls == "signature"))
-		fuzzy_signature(pkts);
+		fuzzy_signature(pkts, opt_corrupt);
 
 	if (pkts.size() > 0)
 	{

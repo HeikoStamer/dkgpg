@@ -8,7 +8,7 @@ in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
  - all interactive programs of DKGPG 1.0.8 are incompatible to previous releases
- - S2K computation in LibTMCG < 1.4.0 generates wrong session key for SKESK, if
+ - S2K computation in LibTMCG < 1.3.18 generates wrong session key for SKESK, if
    hash length < symmetric key length (e.g. s2k_hashalgo = 2 and skalgo = 9)
 
 No further bugs are known. Please report!

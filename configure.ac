@@ -18,11 +18,11 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20190531])
+AC_REVISION([20190601])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.1.2], [HeikoStamer@gmx.net], [dkgpg],
-	[https://savannah.nongnu.org/projects/dkgpg/])
+	[https://www.nongnu.org/dkgpg/])
 
 AC_LANG(C++)
 AC_CONFIG_SRCDIR([src/dkg-common.hh])
@@ -59,14 +59,13 @@ AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>],
  [GMP_PREFIX="$with_gmp" LDFLAGS="-L${with_gmp}/lib $backup_LDFLAGS"\
   CPPFLAGS="-I${with_gmp}/include $backup_CPPFLAGS"],
  [AC_CHECK_LIB(gmp, __gmpz_init, [LIBS=""],
-  AC_MSG_ERROR([libgmp is needed; use the --with-gmp=<path> option]))])
+  AC_MSG_ERROR([libgmp is required; use the --with-gmp=<path> option]))])
 AC_CHECK_LIB(gmp, __gmpz_import, [LIBS=""],
- AC_MSG_ERROR([libgmp >= 4.2 is needed]))
+ AC_MSG_ERROR([libgmp >= 4.2 is required]))
 AC_CHECK_LIB(gmp, __gmpz_export, [LIBS=""],
- AC_MSG_ERROR([libgmp >= 4.2 is needed]))
-AC_CHECK_LIB(gmp, __gmpz_powm_sec,
- AC_DEFINE(HAVE_POWMSEC, , [Defined if libgmp have mpz_powm_sec() function]),
- AC_MSG_WARN([libgmp >= 5.0.3 is recommended]))
+ AC_MSG_ERROR([libgmp >= 4.2 is requird]))
+AC_CHECK_LIB(gmp, __gmpz_powm_sec, [LIBS=""],
+ AC_MSG_ERROR([libgmp >= 5.0.3 is required]))
 AC_CHECK_HEADERS([gmp.h], , AC_MSG_ERROR([libgmp headers are missing]))
 if test "x$GMP_PREFIX" != x ; then
 	LIBGMP_LIBS=" -L${GMP_PREFIX}/lib"

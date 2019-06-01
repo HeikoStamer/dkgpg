@@ -7,6 +7,22 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.1.2   This release adds a lot of features to some programs: two new options
+        ("-K" and "-f") allow dkg-keysign to read the certification key from a
+        keyring instead of a single key block file. Moreover, with option "-a"
+        an interactive confirmation by the user is required for each signature.
+        Passive support of V5 keys (cf. draft RFC 4880bis) has been added for
+        all programs, however, dkg-generate still generates V4 keys only,
+        because this new feature of the draft is not widely spread. There is
+        also a new encryption capability: an empty KEYSPEC tells dkg-encrypt to
+        create a symmetric-key encrypted session key, i.e., the user has to
+        supply a passphrase for encryption and decryption without any public-key
+        cryptography involved. Last but not least, two bugs have been fixed:
+        First, dkg-decrypt failed on many ZIP-compressed OpenPGP messages with 
+        "ZLIB ERROR: -3 invalid block type" due to a bug in decompression logic.
+        Second, dkg-decrypt failed in a special case of symmetric-key encrypted
+        session keys. Finally, the non-installing program dkg-fuzzer (generates
+        fuzzy samples of somehow corrupted OpenPGP stuctures) has been added.
 1.1.1   Some small improvements have been applied for dkg-generate: Two new
         options ("-u" and "-N") allow providing the initial user ID and to
         disable the passphrase at command line. Moreover, since this release

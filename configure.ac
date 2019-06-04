@@ -77,6 +77,12 @@ AC_CHECK_LIB(gmp, __gmpz_export, [LIBS=""],
  AC_MSG_ERROR([libgmp >= 4.2 is requird]))
 AC_CHECK_LIB(gmp, __gmpz_powm_sec, [LIBS=""],
  AC_MSG_ERROR([libgmp >= 5.0.3 is required]))
+
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 AC_CHECK_HEADERS([gmp.h], , AC_MSG_ERROR([libgmp headers are missing]))
 if test "x$GMP_PREFIX" != x ; then
 	LIBGMP_LIBS=" -L${GMP_PREFIX}/lib"
@@ -85,9 +91,21 @@ else
 	LIBGMP_LIBS=""
 	LIBGMP_CFLAGS=""
 fi
+
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 LIBGMP_LIBS="${LIBGMP_LIBS} -lgmp"
 AC_SUBST(LIBGMP_LIBS)
 AC_SUBST(LIBGMP_CFLAGS)
+
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 LDFLAGS="$backup_LDFLAGS"
 CPPFLAGS="$backup_CPPFLAGS"
 
@@ -100,7 +118,7 @@ AM_PATH_LIBGCRYPT("1.6.0")
 if test "x$LIBGCRYPT_LIBS" = "x"; then
 	AC_MSG_ERROR([libgcrypt >= 1.6.0 is needed])
 fi
-backup_CPPLAGS="$CPPFLAGS"
+backup_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$LIBGCRYPT_CFLAGS $backup_CPPFLAGS"
 AC_CHECK_HEADERS([gcrypt.h], , AC_MSG_ERROR([libgcrypt headers are missing]))
 CPPFLAGS="$backup_CPPFLAGS"

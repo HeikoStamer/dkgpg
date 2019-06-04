@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20190602])
+AC_REVISION([20190604])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.1.3], [HeikoStamer@gmx.net], [dkgpg],
@@ -101,11 +101,16 @@ fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)
 
+# "It is the user's responsibilty to tell the configure script where the
+#  libraries are. [...] There is absolutely no reason for the maintainer to
+#  modify the build scripts at all to accomodate a user on this point, and
+#  many good reasons for not trying to do anything."
+# cf. https://stackoverflow.com/questions/10199754/adding-a-path-to-ac-check-lib
 AC_CHECK_LIB(z, inflateInit2_, , AC_MSG_ERROR([zlib is required]))
 COMP_LIBS="-lz"
 AC_CHECK_LIB(bz2, BZ2_bzDecompressInit, [libbz=1 COMP_LIBS="$COMP_LIBS -lbz2"
  AC_DEFINE(LIBBZ, 1, [Defined if libbzip2 is available])],
- AC_MSG_WARN([libbzip2 is recommended]))
+ AC_MSG_WARN([libbzip2 is recommended; adjust LDFLAGS to be found by configure]))
 AC_SUBST(COMP_LIBS)
 
 # Checks for required header files

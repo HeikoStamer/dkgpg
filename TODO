@@ -7,7 +7,6 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* configure.ac: add an option "--with-bz2" to look for non-standard paths
 + all: allow different primary key/subkey(s) structures (e.g. two subkeys)
 + dkg-generate: create additional direct-key signature (0x1f) with key flags
                 (use LibTMCG interface PacketSigPrepareDesignatedRevoker())

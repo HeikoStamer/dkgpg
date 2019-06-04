@@ -65,6 +65,12 @@ AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>],
   CPPFLAGS="-I${with_gmp}/include $backup_CPPFLAGS"],
  [AC_CHECK_LIB(gmp, __gmpz_init, [LIBS=""],
   AC_MSG_ERROR([libgmp is required; use the --with-gmp=<path> option]))])
+
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 AC_CHECK_LIB(gmp, __gmpz_import, [LIBS=""],
  AC_MSG_ERROR([libgmp >= 4.2 is required]))
 AC_CHECK_LIB(gmp, __gmpz_export, [LIBS=""],

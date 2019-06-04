@@ -52,6 +52,8 @@ AC_PROG_LN_S
 AC_PROG_MKDIR_P
 
 # Checks for required libraries
+echo "LDFLAGS=$LDFLAGS"
+echo "CPPFLAGS=$CPPFLAG"
 backup_LDFLAGS="$LDFLAGS"
 backup_CPPLAGS="$CPPFLAGS"
 AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>],
@@ -101,6 +103,8 @@ fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)
 
+echo "LDFLAGS=$LDFLAGS"
+echo "CPPFLAGS=$CPPFLAGS"
 # "It is the user's responsibilty to tell the configure script where the
 #  libraries are. [...] There is absolutely no reason for the maintainer to
 #  modify the build scripts at all to accomodate a user on this point, and
@@ -110,7 +114,7 @@ AC_CHECK_LIB(z, inflateInit2_, , AC_MSG_ERROR([zlib is required]))
 COMP_LIBS="-lz"
 AC_CHECK_LIB(bz2, BZ2_bzDecompressInit, [libbz=1 COMP_LIBS="$COMP_LIBS -lbz2"
  AC_DEFINE(LIBBZ, 1, [Defined if libbzip2 is available])],
- AC_MSG_WARN([libbzip2 is recommended; adjust LDFLAGS to be found by configure]))
+ AC_MSG_WARN([libbzip2 is recommended; adjust LDFLAGS to be detected]))
 AC_SUBST(COMP_LIBS)
 
 # Checks for required header files

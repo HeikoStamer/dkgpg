@@ -51,9 +51,12 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
 
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 # Checks for required libraries
-echo "LDFLAGS=$LDFLAGS"
-echo "CPPFLAGS=$CPPFLAG"
 backup_LDFLAGS="$LDFLAGS"
 backup_CPPLAGS="$CPPFLAGS"
 AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>],
@@ -82,6 +85,11 @@ AC_SUBST(LIBGMP_CFLAGS)
 LDFLAGS="$backup_LDFLAGS"
 CPPFLAGS="$backup_CPPFLAGS"
 
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 AM_PATH_LIBGCRYPT("1.6.0")
 if test "x$LIBGCRYPT_LIBS" = "x"; then
 	AC_MSG_ERROR([libgcrypt >= 1.6.0 is needed])
@@ -91,10 +99,20 @@ CPPFLAGS="$LIBGCRYPT_CFLAGS $backup_CPPFLAGS"
 AC_CHECK_HEADERS([gcrypt.h], , AC_MSG_ERROR([libgcrypt headers are missing]))
 CPPFLAGS="$backup_CPPFLAGS"
 
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 AM_PATH_GPG_ERROR("1.12")
 if test "x$GPG_ERROR_LIBS" = "x"; then
 	AC_MSG_ERROR([libgpg-error >= 1.12 is needed])
 fi
+
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
 
 AM_PATH_LIBTMCG("1.3.18")
 if test "x$LIBTMCG_LIBS" = "x"; then
@@ -103,8 +121,11 @@ fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)
 
-echo "LDFLAGS=$LDFLAGS"
-echo "CPPFLAGS=$CPPFLAGS"
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 # "It is the user's responsibilty to tell the configure script where the
 #  libraries are. [...] There is absolutely no reason for the maintainer to
 #  modify the build scripts at all to accomodate a user on this point, and
@@ -117,6 +138,11 @@ AC_CHECK_LIB(bz2, BZ2_bzDecompressInit, [libbz=1 COMP_LIBS="$COMP_LIBS -lbz2"
  AC_MSG_WARN([libbzip2 is recommended; adjust LDFLAGS to be detected]))
 AC_SUBST(COMP_LIBS)
 
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 # Checks for required header files
 AC_HEADER_STDC
 AC_HEADER_TIME
@@ -126,9 +152,13 @@ AC_CHECK_HEADERS([algorithm assert.h cassert cstdarg cstdio cstdlib cstring\
  sys/select.h sys/types.h time.h unistd.h vector], , 
 	AC_MSG_ERROR([some headers are missing]))
 
+echo "(1) $LDFLAGS"
+echo "(2) $CPPFLAGS"
+echo "(3) $CFLAGS"
+echo "(4) $LIBS"
+
 AC_CHECK_HEADERS([zlib.h], , AC_MSG_ERROR([zlib header is missing]))
-if test "x$libbz" = "x1"
-then
+if test "x$libbz" = "x1"; then
 AC_CHECK_HEADERS([bzlib.h], , AC_MSG_ERROR([bzlib header is missing]))
 fi
 
@@ -188,8 +218,7 @@ AC_ARG_WITH(gnunet, [AS_HELP_STRING([--with-gnunet=<path>],
 	esac
 	], [AC_MSG_RESULT([--with-gnunet not specified])])
 
-if test "x$gnunet" = "x0" -a ! "x$lookin" = "x"
-then
+if test "x$gnunet" = "x0" -a ! "x$lookin" = "x"; then
 	GNUNET_LIBS="-L${lookin}/lib"
 	GNUNET_CFLAGS="-I${lookin}/include"
 	LDFLAGS="$GNUNET_LIBS $backup_LDFLAGS"
@@ -208,16 +237,14 @@ then
 	 [#include <gnunet/platform.h>])
 	AC_CHECK_LIB([gnunetcadet], [GNUNET_CADET_connect], [LIBS=""], [gnunet=0])
 fi
-if test "x$gnunet" = "x1"
-then
+if test "x$gnunet" = "x1"; then
 	AC_DEFINE(GNUNET, , [Define to enable GNUnet support])
 	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetutil"
 	GNUNET_LIBS="${GNUNET_LIBS} -lgnunethello"
 	GNUNET_LIBS="${GNUNET_LIBS} -lgnunettransport"
 	GNUNET_LIBS="${GNUNET_LIBS} -lgnunetcadet"
 fi
-if test "x$gnunet" = "x0"
-then
+if test "x$gnunet" = "x0"; then
 	GNUNET_LIBS=""
 	GNUNET_CFLAGS=""
 fi

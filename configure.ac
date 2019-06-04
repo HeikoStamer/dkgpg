@@ -51,38 +51,21 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
 
-echo "(1) $LDFLAGS"
-echo "(2) $CPPFLAGS"
-echo "(3) $CFLAGS"
-echo "(4) $LIBS"
-
 # Checks for required libraries
 backup_LDFLAGS="$LDFLAGS"
-backup_CPPLAGS="$CPPFLAGS"
+backup_CPPFLAGS="$CPPFLAGS"
 AC_ARG_WITH(gmp, [AS_HELP_STRING([--with-gmp=<path>],
  [prefix of libgmp installation e.g. /usr/local])],
  [GMP_PREFIX="$with_gmp" LDFLAGS="-L${with_gmp}/lib $backup_LDFLAGS"\
   CPPFLAGS="-I${with_gmp}/include $backup_CPPFLAGS"],
  [AC_CHECK_LIB(gmp, __gmpz_init, [LIBS=""],
   AC_MSG_ERROR([libgmp is required; use the --with-gmp=<path> option]))])
-
-echo "(1) $LDFLAGS"
-echo "(2) $CPPFLAGS"
-echo "(3) $CFLAGS"
-echo "(4) $LIBS"
-
 AC_CHECK_LIB(gmp, __gmpz_import, [LIBS=""],
  AC_MSG_ERROR([libgmp >= 4.2 is required]))
 AC_CHECK_LIB(gmp, __gmpz_export, [LIBS=""],
  AC_MSG_ERROR([libgmp >= 4.2 is requird]))
 AC_CHECK_LIB(gmp, __gmpz_powm_sec, [LIBS=""],
  AC_MSG_ERROR([libgmp >= 5.0.3 is required]))
-
-echo "(1) $LDFLAGS"
-echo "(2) $CPPFLAGS"
-echo "(3) $CFLAGS"
-echo "(4) $LIBS"
-
 AC_CHECK_HEADERS([gmp.h], , AC_MSG_ERROR([libgmp headers are missing]))
 if test "x$GMP_PREFIX" != x ; then
 	LIBGMP_LIBS=" -L${GMP_PREFIX}/lib"
@@ -91,21 +74,9 @@ else
 	LIBGMP_LIBS=""
 	LIBGMP_CFLAGS=""
 fi
-
-echo "(1) $LDFLAGS"
-echo "(2) $CPPFLAGS"
-echo "(3) $CFLAGS"
-echo "(4) $LIBS"
-
 LIBGMP_LIBS="${LIBGMP_LIBS} -lgmp"
 AC_SUBST(LIBGMP_LIBS)
 AC_SUBST(LIBGMP_CFLAGS)
-
-echo "(1) $LDFLAGS"
-echo "(2) $CPPFLAGS"
-echo "(3) $CFLAGS"
-echo "(4) $LIBS"
-
 LDFLAGS="$backup_LDFLAGS"
 CPPFLAGS="$backup_CPPFLAGS"
 

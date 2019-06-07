@@ -2346,7 +2346,7 @@ int main
 	peers.push_back("Test4");
 	opt_verbose = 2;
 	opt_e = 10800;
-	if (tmcg_mpz_wrandom_ui() % 2)
+	if (tmcg_mpz_wrandom_ui() % 2) // FIXME: libgcrypt is not initialized yet
 	{
 		// sometimes test a non-FIPS CRS
 		crs = "crs|VMyMoPc2vb51ofxb4f2rebOSONnfhitfGcYxdav2D4wqBTeZrC"
@@ -2386,7 +2386,7 @@ int main
 	opt_verbose = 2;
 	opt_e = 10800;
 	opt_timestamping = true;
-	if (tmcg_mpz_wrandom_ui() % 2)
+	if (tmcg_mpz_wrandom_ui() % 2) // FIXME: libgcrypt is not initialized yet
 	{
 		// sometimes test a non-FIPS CRS
 		crs = "crs|VMyMoPc2vb51ofxb4f2rebOSONnfhitfGcYxdav2D4wqBTeZrC"

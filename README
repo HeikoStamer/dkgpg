@@ -143,7 +143,7 @@ Requirements
   The DKGPG package was tested (++ successful, -- erroneous) on the following
   platforms with the given compilers, respectively:
 
-  ++ GNU/Linux (Gentoo Linux)    x86_64    gcc 8.3.0 (details omitted)
+  ++ GNU/Linux (Gentoo Linux)    x86_64    gcc 9.1.0 (details omitted)
   ++ GNU/Linux (Gentoo Linux)    x86_64  clang 8.0.0 (details omitted)
   ++ GNU/Linux (Debian Linux)    x86_64    gcc 6.3.0 (details omitted)
   ++ GNU/Linux (Arch Linux)      x86_64    gcc 7.2.0 (details omitted)

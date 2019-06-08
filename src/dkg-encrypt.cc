@@ -597,7 +597,6 @@ int main
 			std::cerr << "ERROR: bad session key for SKESK" << std::endl;
 		if (opt_a != 0)
 		{
-			tmcg_openpgp_aeadalgo_t aeadalgo = (tmcg_openpgp_aeadalgo_t)opt_a;
 			tmcg_openpgp_octets_t ad;
 			ad.push_back(0xC3);
 			ad.push_back(0x05);

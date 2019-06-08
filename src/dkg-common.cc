@@ -309,19 +309,19 @@ void xtest
 {
 	for (size_t i = 0; i < num_xtests; i++)
 	{
-		mpz_t xtest;
-		mpz_init_set_ui(xtest, i);
-		std::cerr << "INFO: p_" << whoami << ": xtest = " << xtest << " <-> ";
-		rbc->Broadcast(xtest);
+		mpz_t x;
+		mpz_init_set_ui(x, i);
+		std::cerr << "INFO: p_" << whoami << ": x = " << x << " <-> ";
+		rbc->Broadcast(x);
 		for (size_t ii = 0; ii < peers; ii++)
 		{
-			if (!rbc->DeliverFrom(xtest, ii))
+			if (!rbc->DeliverFrom(x, ii))
 				std::cerr << "<X> ";
 			else
-				std::cerr << xtest << " ";
+				std::cerr << x << " ";
 		}
 		std::cerr << std::endl;
-		mpz_clear(xtest);
+		mpz_clear(x);
 	}
 }
 

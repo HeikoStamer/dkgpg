@@ -323,16 +323,12 @@ void run_instance
 		rbc->Sync(synctime);
 		// release RBC
 		delete rbc;
-		// release handles (unicast channel)
+		// release handles (both channels)
 		if (opt_verbose)
 		{
 			std::cerr << "INFO: P_" << whoami << ": unicast channels";
 			aiou->PrintStatistics(std::cerr);
 			std::cerr << std::endl;
-		}
-		// release handles (broadcast channel)
-		if (opt_verbose)
-		{
 			std::cerr << "INFO: P_" << whoami << ": broadcast channel";
 			aiou2->PrintStatistics(std::cerr);
 			std::cerr << std::endl;

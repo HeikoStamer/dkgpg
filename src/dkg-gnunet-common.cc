@@ -561,11 +561,11 @@ void gnunet_connect
 			if (pipe2channel_out.count(i))
 				GNUNET_CADET_channel_destroy(pipe2channel_out[i]);
 			// create new CADET output channels
-			struct GNUNET_PeerIdentity pid;
+			struct GNUNET_PeerIdentity pi;
 			enum GNUNET_CADET_ChannelOption flags = GNUNET_CADET_OPTION_RELIABLE;
 			struct GNUNET_CADET_Channel *ch;
 			if (GNUNET_CRYPTO_eddsa_public_key_from_string(pipe2peer[i].c_str(),
-				pipe2peer[i].length(), &pid.public_key) != GNUNET_OK)
+				pipe2peer[i].length(), &pi.public_key) != GNUNET_OK)
 			{
 				std::cerr << "ERROR: bad public key of peer = " <<
 					pipe2peer[i] << std::endl;
@@ -590,7 +590,7 @@ void gnunet_connect
 					NULL),
 				GNUNET_MQ_handler_end()
 			};
-			ch = GNUNET_CADET_channel_create(mh, (void*)i, &pid, &porthash,
+			ch = GNUNET_CADET_channel_create(mh, (void*)i, &pi, &porthash,
 				flags, NULL, &gnunet_channel_ended, handlers);
 			if (ch == NULL)
 			{
@@ -618,13 +618,14 @@ void gnunet_statistics
 	st = NULL;
 
 	if ((gnunet_opt_verbose) && (opt_verbose > 1))
+	{
 		std::cerr << "INFO: pipe2channel_out.size() = " <<
 			pipe2channel_out.size() << ", pipe2channel_in.size() = " <<
 			pipe2channel_in.size() << std::endl;
-	if ((gnunet_opt_verbose) && (opt_verbose > 1))
 		std::cerr << "INFO: send_queue.size() = " << send_queue.size() <<
 			", send_queue_broadcast.size() = " << send_queue_broadcast.size() <<
 			std::endl;
+	}
 	if (instance_forked)
 	{
 		// shutdown, if forked instance has terminated 

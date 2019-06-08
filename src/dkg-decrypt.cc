@@ -2028,10 +2028,10 @@ int main
 		opt_hostname = gnunet_opt_hostname;
 	if (gnunet_opt_passwords != NULL)
 		opt_passwords = gnunet_opt_passwords;
-	if (gnunet_opt_passwords != NULL)
-		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
+	if (gnunet_opt_passwords != NULL)
+		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_k != NULL)
 		opt_k = gnunet_opt_k;
 	if (gnunet_opt_W != opt_W)
@@ -2567,10 +2567,10 @@ int main
 				if (!std::count(interpol_parties.begin(),
 					interpol_parties.end(), idx))
 				{
-					mpz_ptr tmp1 = new mpz_t();
-					mpz_init_set(tmp1, r_i);
+					mpz_ptr tmp2 = new mpz_t();
+					mpz_init_set(tmp2, r_i);
 					interpol_parties.push_back(idx);
-					interpol_shares.push_back(tmp1);
+					interpol_shares.push_back(tmp2);
 				}
 				else
 					std::cerr << "WARNING: decryption share of P_" << idx <<

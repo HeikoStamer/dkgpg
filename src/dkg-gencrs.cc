@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -142,8 +142,10 @@ int main
 		if (factor > 0)
 		{
 			if (opt_verbose)
+			{
 				std::cerr << "INFO: Generating primes p and q according to" <<
 					" FIPS 186-4 with factor = " << factor << std::endl;
+			}
 			L = TMCG_DDH_SIZE + (factor * 1024);
 			N = TMCG_DLSE_SIZE + ((factor - 1) * 128);
 		}
@@ -299,12 +301,12 @@ int main
 				break;
 		}
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: p = " << p << std::endl;
-		if (opt_verbose)
 			std::cerr << "INFO: counter = " << counter << std::endl;
-		if (opt_verbose)
 			std::cerr << "INFO: Computing generator g according to" <<
 				" FIPS 186-4" << std::endl;
+		}
 		// 1. If ($index$ is incorrect), then return INVALID.
 		mpz_t index;
 		mpz_init_set_ui(index, 108L); // fixed index value for DKG-tools

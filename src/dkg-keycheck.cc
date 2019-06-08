@@ -2390,35 +2390,35 @@ int main
 		}
 		if (sub->revkeys.size() == 0)
 			std::cout << "\t" << "none" << std::endl;
-		size_t allflags = sub->AccumulateFlags();
+		size_t allflags_sub = sub->AccumulateFlags();
 		std::cout << "OpenPGP Key Flags: " << std::endl << "\t";
 		// The key may be used to certify other keys.
-		if ((allflags & 0x01) == 0x01)
+		if ((allflags_sub & 0x01) == 0x01)
 			std::cout << "C";
 		// The key may be used to sign data.
-		if ((allflags & 0x02) == 0x02)
+		if ((allflags_sub & 0x02) == 0x02)
 			std::cout << "S";
 		// The key may be used encrypt communications.
-		if ((allflags & 0x04) == 0x04)
+		if ((allflags_sub & 0x04) == 0x04)
 			std::cout << "E";
 		// The key may be used encrypt storage.
-		if ((allflags & 0x08) == 0x08)
+		if ((allflags_sub & 0x08) == 0x08)
 			std::cout << "e";
 		// The private component of this key may have
 		// been split by a secret-sharing mechanism.
-		if ((allflags & 0x10) == 0x10)
+		if ((allflags_sub & 0x10) == 0x10)
 			std::cout << "D";
 		// The key may be used for authentication.
-		if ((allflags & 0x20) == 0x20)
+		if ((allflags_sub & 0x20) == 0x20)
 			std::cout << "A";
 		// The private component of this key may be
 		// in the possession of more than one person.
-		if ((allflags & 0x80) == 0x80)
+		if ((allflags_sub & 0x80) == 0x80)
 			std::cout << "G";
 		// This key may be used for timestamping. [draft RFC 4880bis]
-		if ((allflags & 0x0800) == 0x0800)
+		if ((allflags_sub & 0x0800) == 0x0800)
 			std::cout << "T";
-		if (allflags == 0x00)
+		if (allflags_sub == 0x00)
 			std::cout << "undefined";
 		std::cout << std::endl;
 		if ((sub->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||

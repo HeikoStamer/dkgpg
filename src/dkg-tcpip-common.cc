@@ -134,10 +134,11 @@ void tcpip_bindports
 	(const uint16_t stpo, const bool broadcast)
 {
 	if (opt_verbose > 2)
+	{
 		std::cerr << "INFO: tcpip_bindports(" << stpo << ", " <<
 			(broadcast ? "true" : "false") << ") called" << std::endl;
-	if (opt_verbose > 2)
 		std::cerr << "INFO: FD_SETSIZE = " << FD_SETSIZE << std::endl;
+	}
 	uint16_t peers_size = 0;
 	if (peers.size() <= DKGPG_MAX_N)
 	{
@@ -338,11 +339,12 @@ size_t tcpip_connect
 						exit(-1);
 					}
 					if (opt_verbose)
+					{
 						std::cerr << "INFO: resolved hostname \"" <<
 							peers[i] << "\" to address " << hbuf << std::endl;
-					if (opt_verbose)
 						std::cerr << "INFO: connected to host \"" <<
 							peers[i] << "\" on port " << port << std::endl;
+					}
 					if (broadcast)
 						tcpip_broadcast_pipe2socket_out[i] = sockfd;
 					else
@@ -363,9 +365,10 @@ void tcpip_accept
 	()
 {
 	if (opt_verbose > 2)
+	{
 		std::cerr << "INFO: tcpip_accept(...) called" << std::endl;
-	if (opt_verbose > 2)
 		std::cerr << "INFO: FD_SETSIZE = " << FD_SETSIZE << std::endl;
+	}
 	while ((tcpip_pipe2socket_in.size() < peers.size()) ||
 		(tcpip_broadcast_pipe2socket_in.size() < peers.size()))
 	{

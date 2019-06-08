@@ -528,10 +528,10 @@ int main
 		opt_hostname = gnunet_opt_hostname;
 	if (gnunet_opt_passwords != NULL)
 		opt_passwords = gnunet_opt_passwords;
-	if (gnunet_opt_passwords != NULL)
-		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
+	if (gnunet_opt_passwords != NULL)
+		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_k != NULL)
 		opt_k = gnunet_opt_k;
 	if (gnunet_opt_W != opt_W)

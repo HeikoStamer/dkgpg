@@ -132,7 +132,7 @@ void run_instance
 		tmcg_mpz_ssrandomm_cache(cache, cache_mod, cache_avail, dsa_x, vtmf->q);
 		tmcg_mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p);
 		// extract parameters for OpenPGP key structures
-		std::string out, crcout, armor;
+		std::string armor;
 		tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
 		tmcg_openpgp_octets_t sub, ssb, subsig, dsaflags, elgflags, issuer;
 		tmcg_openpgp_octets_t pub_hashing, sub_hashing;
@@ -692,7 +692,7 @@ void run_instance
 		tmcg_mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p);
 	}
 	// extract further public parameters for OpenPGP key structures
-	std::string out, crcout, armor;
+	std::string armor;
 	tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
 	tmcg_openpgp_octets_t sub, ssb, subsig, dsaflags, elgflags, issuer;
 	tmcg_openpgp_octets_t pub_hashing, sub_hashing;
@@ -1362,19 +1362,19 @@ void run_instance
 		if (S > 0)
 		{
 			tmcg_openpgp_byte_t buffer[1024];
-			gcry_mpi_t h;
+			gcry_mpi_t ha;
 			size_t buflen = 0;
 			memset(buffer, 0, sizeof(buffer));
-			for (size_t i = 0; i < hash.size(); i++, buflen++)
+			for (size_t j = 0; j < hash.size(); j++, buflen++)
 			{
-				if (i < sizeof(buffer))
-					buffer[i] = hash[i];
+				if (j < sizeof(buffer))
+					buffer[j] = hash[j];
 			}
-			ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
+			ret = gcry_mpi_scan(&ha, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 			if (ret)
 			{
 				std::cerr << "ERROR: P_" << whoami <<
-					": gcry_mpi_scan() failed for h" << std::endl;
+					": gcry_mpi_scan() failed for ha" << std::endl;
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
@@ -1384,11 +1384,11 @@ void run_instance
 				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
-			if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
+			if (!tmcg_mpz_set_gcry_mpi(ha, dsa_m))
 			{
 				std::cerr << "ERROR: P_" << whoami <<
 					": tmcg_mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
-				gcry_mpi_release(h);
+				gcry_mpi_release(ha);
 				mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
 				gcry_mpi_release(p);
 				gcry_mpi_release(q);
@@ -1398,7 +1398,7 @@ void run_instance
 				delete rbc, delete vtmf, delete aiou, delete aiou2;
 				exit(-1);
 			}
-			gcry_mpi_release(h);
+			gcry_mpi_release(ha);
 			std::stringstream err_log_sign;
 			if (opt_verbose)
 				std::cerr << "INFO: P_" << whoami <<

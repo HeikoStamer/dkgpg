@@ -54,14 +54,18 @@ RETSIGTYPE tcpip_sig_handler_quit(int sig)
 	if (instance_forked && (pid[tcpip_peer2pipe[tcpip_thispeer]] == 0))
 	{
 		if (opt_verbose)
+		{
 			std::cerr << "tcpip_sig_handler_quit(): child got signal " <<
 				sig << std::endl;
+		}
 	}
 	else
 	{
 		if (opt_verbose)
+		{
 			std::cerr << "tcpip_sig_handler_quit(): parent got signal " <<
 				sig << std::endl;
+		}
 		// remove our own signal handler and quit
 		signal(SIGINT, SIG_DFL);
 		signal(SIGQUIT, SIG_DFL);
@@ -79,8 +83,10 @@ void tcpip_init
 	tcpip_thispeer = hostname;
 	// initialize peer2pipe and pipe2peer mapping
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using built-in TCP/IP service for message" <<
 			" exchange instead of GNUnet CADET" << std::endl;
+	}
 	if (std::find(peers.begin(), peers.end(), hostname) == peers.end())
 	{
 		std::cerr << "ERROR: cannot find hostname \"" << hostname << "\" of" <<
@@ -213,8 +219,10 @@ void tcpip_bindports
 				exit(-1);
 			}
 			if (opt_verbose)
+			{
 				std::cerr << "INFO: bind TCP/IP port " << port <<
 					" at address " << hbuf << std::endl;
+			}
 			if (bind(sockfd, rp->ai_addr, rp->ai_addrlen) < 0)
 			{
 				perror("WARNING: dkg-tcpip-common (bind)");
@@ -466,8 +474,10 @@ void tcpip_accept
 					exit(-1);
 				}
 				if (opt_verbose)
+				{
 					std::cerr << "INFO: accept connection for p_" <<
 						pi->first << " from address " << ipaddr << std::endl;
+				}
 			}
 		}
 		for (tcpip_mci_t pi = tcpip_broadcast_pipe2socket.begin();
@@ -501,9 +511,11 @@ void tcpip_accept
 					exit(-1);
 				}
 				if (opt_verbose)
+				{
 					std::cerr << "INFO: accept broadcast connection for" <<
 						" p_" << pi->first << " from address " << 
 						ipaddr << std::endl;
+				}
 			}
 		}
 	}
@@ -550,8 +562,10 @@ int tcpip_io
 				{
 					std::cerr << "ERROR: protocol instance ";
 					if (WIFSIGNALED(wstatus))
+					{
 						std::cerr << thispid << " terminated by signal " <<
 							WTERMSIG(wstatus) << std::endl;
+					}
 					if (WCOREDUMP(wstatus))
 						std::cerr << thispid << " dumped core" << std::endl;
 					return -1;
@@ -559,9 +573,11 @@ int tcpip_io
 				else if (WIFEXITED(wstatus))
 				{
 					if (opt_verbose)
+					{
 						std::cerr << "INFO: protocol instance " << thispid <<
 							" terminated with exit status " <<
 							WEXITSTATUS(wstatus) << std::endl;
+					}
 					return WEXITSTATUS(wstatus);
 				}
 				return 0;
@@ -705,8 +721,10 @@ int tcpip_io
 				else
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: received " << len << " bytes on " <<
 							"connection for p_" << pi->first << std::endl;
+					}
 					ssize_t wnum = 0;
 					do
 					{
@@ -717,8 +735,10 @@ int tcpip_io
 							if ((errno == EWOULDBLOCK) || (errno == EINTR))
 							{
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into pipe ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -726,8 +746,10 @@ int tcpip_io
 							{
 								perror("WARNING: dkg-tcpip-common (write)");
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into pipe ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -783,9 +805,11 @@ int tcpip_io
 				else
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: received " << len << " bytes on" <<
 							" broadcast connection for p_" <<
 							pi->first << std::endl;
+					}
 					ssize_t wnum = 0;
 					do
 					{
@@ -797,8 +821,10 @@ int tcpip_io
 							if ((errno == EWOULDBLOCK) || (errno == EINTR))
 							{
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into pipe ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -806,8 +832,10 @@ int tcpip_io
 							{
 								perror("WARNING: dkg-tcpip-common (write)");
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into pipe ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -859,8 +887,10 @@ int tcpip_io
 				else if (tcpip_pipe2socket_out.count(i))
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: sending " << len << " bytes on" <<
 							" connection to p_" << i << std::endl;
+					}
 					ssize_t wnum = 0;
 					do
 					{
@@ -871,8 +901,10 @@ int tcpip_io
 							if ((errno == EWOULDBLOCK) || (errno == EINTR))
 							{
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into socket ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -880,8 +912,10 @@ int tcpip_io
 							{
 								perror("WARNING: dkg-tcpip-common (write)");
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into socket ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -909,8 +943,10 @@ int tcpip_io
 				else
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: discarding " << len << " bytes" <<
 							" for p_" << i << std::endl;
+					}
 				}
 			}
 			if ((i != thisidx) &&
@@ -945,9 +981,10 @@ int tcpip_io
 				else if (tcpip_broadcast_pipe2socket_out.count(i))
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: sending " << len << " bytes on" <<
-							" broadcast connection to p_" << i <<
-							std::endl;
+							" broadcast connection to p_" << i << std::endl;
+					}
 					ssize_t wnum = 0;
 					do
 					{
@@ -958,8 +995,10 @@ int tcpip_io
 							if ((errno == EWOULDBLOCK) || (errno == EINTR))
 							{
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into socket ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -967,8 +1006,10 @@ int tcpip_io
 							{
 								perror("WARNING: dkg-tcpip-common (write)");
 								if (opt_verbose)
+								{
 									std::cerr << "INFO: sleeping for write" <<
 										" into socket ..." << std::endl;
+								}
 								sleep(1);
 								continue;
 							}
@@ -996,8 +1037,10 @@ int tcpip_io
 				else
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: discarding " << len << " bytes" <<
 							" for p_" << i << std::endl;
+					}
 				}
 			}
 		}
@@ -1056,8 +1099,10 @@ void tcpip_done
 		if (kill(thispid, SIGTERM))
 			perror("ERROR: dkg-tcpip-common (kill)");
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: waitpid(" << thispid << ", NULL, 0)" <<
 				std::endl;
+		}
 		if (waitpid(thispid, NULL, 0) != thispid)
 			perror("ERROR: dkg-tcpip-common (waitpid)");
 	}
@@ -1069,7 +1114,9 @@ void tcpip_done
 				perror("ERROR: dkg-tcpip-common (close)");
 			if ((close(broadcast_pipefd[i][j][0]) < 0) ||
 				(close(broadcast_pipefd[i][j][1]) < 0))
+			{
 				perror("ERROR: dkg-tcpip-common (close)");
+			}
 		}
 	}
 }

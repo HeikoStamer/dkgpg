@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "May 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "June 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \-\- message encryption with AES\-256 algorithm according to OpenPGP
@@ -6,7 +6,7 @@ dkg\-encrypt \-\- message encryption with AES\-256 algorithm according to OpenPG
 .SH SYNOPSIS
 .B dkg\-encrypt
 .RI [ options ]
-.IR [ KEYSPEC ]
+.RI [ KEYSPEC ]
 
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN or from a file specified

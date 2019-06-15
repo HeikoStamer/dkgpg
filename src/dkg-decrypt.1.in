@@ -6,7 +6,7 @@ dkg\-decrypt \-\- (threshold) message decryption according to OpenPGP
 .SH SYNOPSIS
 .B dkg\-decrypt
 .RI [ options ]
-.IR [ PEERS ]
+.RI [ PEERS ]
 
 .SH DESCRIPTION
 This program tries to decrypt a message given in ASCII armored or binary OpenPGP

@@ -74,6 +74,7 @@ std::string						passwords, hostname, port, yfilename;
 int 							opt_verbose = 0;
 bool							opt_binary = false, opt_E = false;
 bool							opt_weak = false, opt_s = false;
+bool							opt_nonint = false;
 char							*opt_ifilename = NULL;
 char							*opt_ofilename = NULL;
 char							*opt_passwords = NULL;
@@ -82,8 +83,7 @@ char							*opt_k = NULL;
 char							*opt_y = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
 
-std::string						armored_message;
-
+std::string						armored_message, armored_pubring;
 
 void print_message
 	(const tmcg_openpgp_octets_t &msg)
@@ -671,6 +671,116 @@ gcry_error_t decrypt_kek
 	return ret;
 }
 
+bool decrypt_session_key
+	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_secure_octets_t &seskey)
+{
+	if (msg->SKESKs.size() == 0)
+		return false;
+	if (opt_verbose > 1)
+	{
+		std::cerr << "INFO: every PKESK decryption failed;" <<
+			" now try each SKESK" << std::endl;
+	}
+	tmcg_openpgp_secure_string_t esk_passphrase;
+	if (!get_passphrase("Enter passphrase for this message", opt_E, 
+		esk_passphrase))
+	{
+		std::cerr << "ERROR: cannot read passphrase" << std::endl;
+		return false;
+	}
+	for (size_t i = 0; i < msg->SKESKs.size(); i++)
+	{
+		const TMCG_OpenPGP_SKESK *esk = msg->SKESKs[i];
+		tmcg_openpgp_secure_octets_t kek;
+		size_t klen = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AlgorithmKeyLength(esk->skalgo);
+		if (opt_verbose > 2)
+		{
+			std::cerr << "INFO: s2k_salt = " << std::hex;
+			for (size_t j = 0; j < (esk->s2k_salt).size(); j++)
+				std::cerr << (int)esk->s2k_salt[j] << " ";
+			std::cerr << std::dec << std::endl;
+		}
+		switch (esk->s2k_type)
+		{
+			case TMCG_OPENPGP_STRINGTOKEY_SIMPLE:
+				if (opt_verbose)
+				{
+					std::cerr << "WARNING: S2K specifier not" <<
+						" supported; skip SKESK" << std::endl;
+				}
+				break;
+			case TMCG_OPENPGP_STRINGTOKEY_SALTED:
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					S2KCompute(esk->s2k_hashalgo, klen, esk_passphrase,
+						esk->s2k_salt, false, esk->s2k_count, kek);
+				break;
+			case TMCG_OPENPGP_STRINGTOKEY_ITERATED:
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					S2KCompute(esk->s2k_hashalgo, klen, esk_passphrase,
+						esk->s2k_salt, true, esk->s2k_count, kek);
+				break;
+			default:
+				if (opt_verbose)
+				{
+					std::cerr << "WARNING: S2K specifier not" <<
+						" supported; skip SKESK" << std::endl;
+				}
+				break;
+		}
+		if (opt_verbose > 2)
+		{
+			std::cerr << "INFO: kek.size() = " << kek.size() << std::endl;
+			std::cerr << "INFO: kek = " << std::hex;
+			for (size_t j = 0; j < kek.size(); j++)
+				std::cerr << (int)kek[j] << " ";
+			std::cerr << std::dec << std::endl;
+		}
+		seskey.clear();
+		if (esk->encrypted_key.size() > 0)
+		{
+			gcry_error_t ret = 0;
+			if (esk->aeadalgo == 0)
+			{
+				ret = decrypt_kek(esk->encrypted_key, esk->skalgo, kek, seskey);
+			}
+			else
+			{
+				tmcg_openpgp_octets_t decrypted_key;
+				tmcg_openpgp_octets_t ad; // additional data
+				ad.push_back(0xC3); // packet tag in new format
+				ad.push_back(esk->version); // packet version number
+				ad.push_back(esk->skalgo); // cipher algorithm octet
+				ad.push_back(esk->aeadalgo); // AEAD algorithm octet
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					SymmetricDecryptAEAD(esk->encrypted_key, kek, esk->skalgo,
+						esk->aeadalgo, 0, esk->iv, ad, opt_verbose,
+						decrypted_key);
+				for (size_t j = 0; j < decrypted_key.size(); j++)
+					seskey.push_back(decrypted_key[j]);
+			}
+			if (ret)
+			{
+				std::cerr << "ERROR: SymmetricDecrypt[AEAD]() failed" <<
+					" with rc = " << gcry_err_code(ret) <<
+					" str = " << gcry_strerror(ret) << std::endl;
+				return false;
+			}
+		}
+		else
+		{
+			seskey.push_back(esk->skalgo);
+			for (size_t j = 0; j < kek.size(); j++)
+				seskey.push_back(kek[j]);
+		}
+		// quick check, whether decryption of session key was successful
+		tmcg_openpgp_octets_t tmpmsg;				
+		if (msg->Decrypt(seskey, 0, tmpmsg))
+			return true;
+	}
+	return false;
+}
+
 bool decompress_libz
 	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_octets_t &infmsg)
 {
@@ -983,14 +1093,6 @@ void run_instance
 	}
 	if (!read_key_file(pkfname, armored_seckey))
 		exit(-1);
-
-	// read the keyring
-	std::string armored_pubring;
-	if (opt_k)
-	{
-		if (!read_key_file(opt_k, armored_pubring))
-			exit(-1);
-	}
 
 	// parse the keyring, the private key and corresponding signatures
 	TMCG_OpenPGP_Prvkey *prv = NULL;
@@ -1661,15 +1763,19 @@ void run_instance
 			if (!ssb->Decrypt(esks[j], opt_verbose, seskey))
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: PKESK decryption failed;" <<
 						" PKESK ignored" << std::endl;
+				}
 				continue; // try next PKESK
 			}
 			else
 			{
 				if (opt_verbose > 1)
+				{
 					std::cerr << "INFO: PKESK decryption succeeded" <<
-						std::endl;				
+						std::endl;
+				}		
 				seskey_decrypted = true;
 				break;
 			}
@@ -1677,133 +1783,12 @@ void run_instance
 	}
 
 	// do remaining decryption work
-	if (!seskey_decrypted)
+	if (!seskey_decrypted && !opt_s)
 	{
-		if (msg->SKESKs.size() > 0)
+		if (!decrypt_session_key(msg, seskey))
 		{
-			if (opt_verbose > 1)
-				std::cerr << "INFO: every PKESK decryption failed;" <<
-					" now try each SKESK" << std::endl;
-			tmcg_openpgp_secure_string_t esk_passphrase;
-			if (!get_passphrase("Enter passphrase for this message", opt_E,
-				esk_passphrase))
-			{
-				std::cerr << "ERROR: cannot read passphrase" << std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				exit(-1);
-			}
-			for (size_t i = 0; i < msg->SKESKs.size(); i++)
-			{
-				const TMCG_OpenPGP_SKESK *esk = msg->SKESKs[i];
-				tmcg_openpgp_secure_octets_t kek;
-				size_t klen = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AlgorithmKeyLength(esk->skalgo);
-				if (opt_verbose > 2)
-				{
-					std::cerr << "INFO: s2k_salt = " << std::hex;
-					for (size_t j = 0; j < (esk->s2k_salt).size(); j++)
-						std::cerr << (int)esk->s2k_salt[j] << " ";
-					std::cerr << std::dec << std::endl;
-				}
-				switch (esk->s2k_type)
-				{
-					case TMCG_OPENPGP_STRINGTOKEY_SIMPLE:
-						if (opt_verbose)
-							std::cerr << "WARNING: S2K specifier not" <<
-								" supported; skip SKESK" << std::endl;
-						break;
-					case TMCG_OPENPGP_STRINGTOKEY_SALTED:
-						CallasDonnerhackeFinneyShawThayerRFC4880::
-							S2KCompute(esk->s2k_hashalgo, klen, esk_passphrase,
-								esk->s2k_salt, false, esk->s2k_count, kek);
-						break;
-					case TMCG_OPENPGP_STRINGTOKEY_ITERATED:
-						CallasDonnerhackeFinneyShawThayerRFC4880::
-							S2KCompute(esk->s2k_hashalgo, klen, esk_passphrase,
-								esk->s2k_salt, true, esk->s2k_count, kek);
-						break;
-					default:
-						if (opt_verbose)
-							std::cerr << "WARNING: S2K specifier not" <<
-								" supported; skip SKESK" << std::endl;
-						break;
-				}
-				if (opt_verbose > 2)
-				{
-					std::cerr << "INFO: kek.size() = " << kek.size() <<
-						std::endl;
-					std::cerr << "INFO: kek = " << std::hex;
-					for (size_t j = 0; j < kek.size(); j++)
-						std::cerr << (int)kek[j] << " ";
-					std::cerr << std::dec << std::endl;
-				}
-				seskey.clear();
-				if (esk->encrypted_key.size() > 0)
-				{
-					tmcg_openpgp_octets_t decrypted_key;
-					gcry_error_t ret = 0;
-					if (esk->aeadalgo == 0)
-					{
-						ret = decrypt_kek(esk->encrypted_key, esk->skalgo, kek,
-							seskey);
-					}
-					else
-					{
-						tmcg_openpgp_octets_t ad; // additional data
-						ad.push_back(0xC3); // packet tag in new format
-						ad.push_back(esk->version); // packet version number
-						ad.push_back(esk->skalgo); // cipher algorithm octet
-						ad.push_back(esk->aeadalgo); // AEAD algorithm octet
-						ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-							SymmetricDecryptAEAD(esk->encrypted_key, kek,
-								esk->skalgo, esk->aeadalgo, 0, esk->iv, ad,
-								opt_verbose, decrypted_key);
-					}
-					if (ret)
-					{
-						std::cerr << "ERROR: SymmetricDecrypt[AEAD]() failed" <<
-							" with rc = " << gcry_err_code(ret) <<
-							" str = " << gcry_strerror(ret) << std::endl;
-						delete msg;
-						delete dkg;
-						delete ring;
-						delete prv;
-						exit(-1);
-					}
-					for (size_t j = 0; j < decrypted_key.size(); j++)
-						seskey.push_back(decrypted_key[j]);
-				}
-				else
-				{
-					seskey.push_back(esk->skalgo);
-					for (size_t j = 0; j < kek.size(); j++)
-						seskey.push_back(kek[j]);
-				}
-				// quick check, whether decryption of session key was successful
-				tmcg_openpgp_octets_t tmpmsg;				
-				if (msg->Decrypt(seskey, 0, tmpmsg))
-				{
-					seskey_decrypted = true;
-					break;
-				}
-			}
-			if (!seskey_decrypted)
-			{
-				std::cerr << "ERROR: every SKESK decryption failed" <<
-					std::endl;
-				delete msg;
-				delete dkg;
-				delete ring;
-				delete prv;
-				exit(-1);
-			}
-		}
-		else if (!opt_s)
-		{
-			std::cerr << "ERROR: every PKESK decryption failed" << std::endl;
+			std::cerr << "ERROR: every session key decryption failed" <<
+				std::endl;
 			delete msg;
 			delete dkg;
 			delete ring;
@@ -1906,7 +1891,7 @@ void fork_instance
 int main
 	(int argc, char *const *argv)
 {
-	static const char *usage = "dkg-decrypt [OPTIONS] PEERS";
+	static const char *usage = "dkg-decrypt [OPTIONS] [PEERS]";
 #ifdef GNUNET
 	char *loglev = NULL;
 	char *logfile = NULL;
@@ -2040,7 +2025,6 @@ int main
 		opt_y = gnunet_opt_y;
 #endif
 
-	bool nonint = false;
 	// create peer list from remaining arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
@@ -2168,7 +2152,7 @@ int main
 				return 0; // not continue
 			}
 			if ((arg.find("-n") == 0) || (arg.find("--non-interactive") == 0))
-				nonint = true; // non-interactive mode
+				opt_nonint = true; // non-interactive mode
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increade verbosity
 			continue;
@@ -2215,29 +2199,44 @@ int main
 			" network" << std::endl;
 		return -1;
 	}
-	if ((peers.size() < 1) && (opt_y == NULL))
+	if (opt_nonint && (opt_y != NULL))
 	{
-		std::cerr << "ERROR: no peers given as argument; usage: " << usage <<
+		std::cerr << "ERROR: options \"-n\" and \"-y\" are incompatible" <<
 			std::endl;
 		return -1;
 	}
-	canonicalize(peers);
-	if (!nonint && (opt_y == NULL) && ((peers.size() < 3)  ||
-		(peers.size() > DKGPG_MAX_N)))
+	if ((peers.size() > 0) || opt_nonint)
 	{
-		std::cerr << "ERROR: too few or too many peers given" << std::endl;
-		return -1;
-	}
-	else if (nonint && (peers.size() != 1))
-	{
-		std::cerr << "ERROR: too few or too many peers given" << std::endl;
-		return -1;
-	}
-	if ((opt_verbose) && (opt_y == NULL))
-	{
-		std::cerr << "INFO: canonicalized peer list = " << std::endl;
-		for (size_t i = 0; i < peers.size(); i++)
-			std::cerr << peers[i] << std::endl;
+		canonicalize(peers);
+		if (opt_nonint)
+		{
+			if (peers.size() != 1)
+			{
+				std::cerr << "ERROR: too few or too many peers given for" <<
+					" non-interactive mode" << std::endl;
+				return -1;
+			}
+		}
+		else
+		{
+			if (opt_y != NULL)
+			{
+				std::cerr << "WARNING: list of peers is not required" <<
+					std::endl;
+			}
+			else if (((peers.size() < 3) || (peers.size() > DKGPG_MAX_N)))
+			{
+				std::cerr << "ERROR: too few or too many peers given" <<
+					std::endl;
+				return -1;
+			}
+		}
+		if ((opt_verbose) && (opt_y == NULL))
+		{
+			std::cerr << "INFO: canonicalized peer list = " << std::endl;
+			for (size_t i = 0; i < peers.size(); i++)
+				std::cerr << peers[i] << std::endl;
+		}
 	}
 
 	// lock memory
@@ -2261,8 +2260,10 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+	}
 
 	// read message
 	if (opt_ifilename != NULL)
@@ -2300,8 +2301,94 @@ int main
 		std::cin.clear();
 	}
 
+	// read keyring
+	if (opt_k)
+	{
+		if (!read_key_file(opt_k, armored_pubring))
+		{
+			if (should_unlock)
+				unlock_memory();
+			return -1;
+		}
+	}
+
+	// start symmetric-key decryption
+	if ((peers.size() == 0) && (opt_y == NULL))
+	{
+		// parse the keyring
+		TMCG_OpenPGP_Keyring *ring = NULL;
+		bool parse_ok;
+		if (opt_k)
+		{
+			int opt_verbose_ring = opt_verbose;
+			if (opt_verbose_ring > 0)
+				opt_verbose_ring--;
+			parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+				PublicKeyringParse(armored_pubring, opt_verbose_ring, ring);
+			if (!parse_ok)
+			{
+				std::cerr << "WARNING: cannot use the given keyring" <<
+					std::endl;
+				ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
+			}
+		}
+		else
+			ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
+		// parse OpenPGP message
+		TMCG_OpenPGP_Message *msg = NULL;
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			MessageParse(armored_message, opt_verbose, msg))
+		{
+			delete ring;
+			if (should_unlock)
+				unlock_memory();
+			return -1;
+		}
+		if (!opt_s && (msg->encrypted_message.size() == 0))
+		{
+			std::cerr << "ERROR: no encrypted data found" << std::endl;
+			delete msg;
+			delete ring;
+			if (should_unlock)
+				unlock_memory();
+			return -1;
+		}
+		tmcg_openpgp_secure_octets_t seskey;
+		if (!decrypt_session_key(msg, seskey))
+		{
+			std::cerr << "ERROR: session key decryption failed" << std::endl;
+			delete msg;
+			delete ring;
+			if (should_unlock)
+				unlock_memory();
+			return -1;
+		}
+		tmcg_openpgp_octets_t content;
+		if (!decrypt_message(seskey, ring, msg, content))
+		{
+			delete msg;
+			delete ring;
+			if (should_unlock)
+				unlock_memory();
+			return -1;
+		}
+		// release
+		delete msg;
+		delete ring;
+		if (should_unlock)
+			unlock_memory();
+		if (opt_ofilename != NULL)
+		{
+			if (!write_message(opt_ofilename, content))
+				return -1;
+		}
+		else
+			print_message(content);
+		return 0; // no error
+	}
+
 	// start non-interactive variant
-	if (nonint)
+	if (opt_nonint)
 	{
 		// read the key file
 		std::string armored_seckey, thispeer = peers[0];
@@ -2321,17 +2408,6 @@ int main
 			if (should_unlock)
 				unlock_memory();
 			return -1;
-		}
-		// read the keyring
-		std::string armored_pubring;
-		if (opt_k)
-		{
-			if (!read_key_file(opt_k, armored_pubring))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
 		}
 		// parse the keyring, the private key and corresponding signatures
 		TMCG_OpenPGP_Prvkey *prv = NULL;
@@ -2405,23 +2481,29 @@ int main
 				if (ssb2->pub->valid && !ssb2->Weak(opt_verbose))
 				{
 					if ((ssb != NULL) && (opt_verbose > 1))
+					{
 						std::cerr << "WARNING: more than one valid subkey" <<
 							" found; last subkey selected" << std::endl;
+					}
 					ssb = ssb2;
 				}
 				else
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "WARNING: invalid or weak subkey at" <<
 							" position " << i << " found and ignored" <<
 							std::endl;
+					}
 				}
 			}
 			else
 			{
 				if (opt_verbose > 1)
+				{
 					std::cerr << "WARNING: non-tElG subkey at position " <<
 						i << " found and ignored" << std::endl;
+				}
 			}
 		}
 		if (ssb == NULL)
@@ -2483,8 +2565,10 @@ int main
 					OctetsCompare((msg->PKESKs[i])->keyid, ssb->pub->id))
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: PKESK found with matching " <<
 							"subkey ID" << std::endl;
+					}
 					esk = msg->PKESKs[i];
 					break;
 				}
@@ -2573,12 +2657,16 @@ int main
 					interpol_shares.push_back(tmp2);
 				}
 				else
+				{
 					std::cerr << "WARNING: decryption share of P_" << idx <<
 						" already stored" << std::endl;
+				}
 			}
 			else
+			{
 				std::cerr << "WARNING: verification of decryption share from" <<
 					" P_" << idx << " failed" << std::endl;
+			}
 		}
 		bool res = combine_decryption_shares(esk->gk, dkg, interpol_parties,
 			interpol_shares);

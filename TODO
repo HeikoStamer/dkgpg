@@ -7,8 +7,6 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
-* dkg-generate: create additional direct-key signature (0x1f) with key flags
-                (use LibTMCG interface PacketSigPrepareDesignatedRevoker())
 + all: allow different primary key/subkey(s) structures (e.g. two subkeys)
 + dkg-decrypt: write provided decryption share to file (non-interactive mode)
 + dkg-decrypt: read required decryption shares from file (non-interactive mode)

@@ -35,7 +35,7 @@
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 static const char *about = PACKAGE_STRING " " PACKAGE_URL;
-static const char *protocol = "DKGPG-generate-1.0";
+static const char *protocol = "DKGPG-generate-1.1";
 
 #include <sstream>
 #include <fstream>
@@ -133,9 +133,10 @@ void run_instance
 		tmcg_mpz_spowm(dsa_y, vtmf->g, dsa_x, vtmf->p);
 		// extract parameters for OpenPGP key structures
 		std::string armor;
-		tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
+		tmcg_openpgp_octets_t all, pub, sec, dirsig, uid, uidsig;
 		tmcg_openpgp_octets_t sub, ssb, subsig, dsaflags, elgflags, issuer;
 		tmcg_openpgp_octets_t pub_hashing, sub_hashing;
+		tmcg_openpgp_octets_t dirsig_hashing, dirsig_left;
 		tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
 		tmcg_openpgp_octets_t subsig_hashing, subsig_left;
 		tmcg_openpgp_octets_t hash, empty;
@@ -232,6 +233,35 @@ void run_instance
 			dsaflags.push_back(0x08); // "This key may be used for timestamping"
 		}
 		sigtime = time(NULL); // current time
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareDesignatedRevoker(TMCG_OPENPGP_PKALGO_DSA, hashalgo,
+				sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty,
+				dirsig_hashing);
+		hash.clear();
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyHash(pub_hashing, dirsig_hashing, hashalgo, hash, dirsig_left);
+		r = gcry_mpi_new(2048);
+		s = gcry_mpi_new(2048);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AsymmetricSignDSA(hash, key, r, s);
+		if (ret)
+		{
+			std::cerr << "ERROR: AsymmetricSignDSA() failed" << std::endl;
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_mpi_release(r);
+			gcry_mpi_release(s);
+			gcry_sexp_release(key);
+			delete vtmf;
+			exit(-1);
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigEncode(dirsig_hashing, dirsig_left, r, s, dirsig);
+		gcry_mpi_release(r);
+		gcry_mpi_release(s);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
 				hashalgo, sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
@@ -347,6 +377,7 @@ void run_instance
 		pubfilename << peers[whoami] << "-pub.asc";
 		armor = "", all.clear();
 		all.insert(all.end(), pub.begin(), pub.end());
+		all.insert(all.end(), dirsig.begin(), dirsig.end());
 		all.insert(all.end(), uid.begin(), uid.end());
 		all.insert(all.end(), uidsig.begin(), uidsig.end());
 		all.insert(all.end(), sub.begin(), sub.end());
@@ -373,6 +404,7 @@ void run_instance
 		secfilename << peers[whoami] << "-sec.asc";
 		armor = "", all.clear();
 		all.insert(all.end(), sec.begin(), sec.end());
+		all.insert(all.end(), dirsig.begin(), dirsig.end());
 		all.insert(all.end(), uid.begin(), uid.end());
 		all.insert(all.end(), uidsig.begin(), uidsig.end());
 		all.insert(all.end(), ssb.begin(), ssb.end());
@@ -693,9 +725,10 @@ void run_instance
 	}
 	// extract further public parameters for OpenPGP key structures
 	std::string armor;
-	tmcg_openpgp_octets_t all, pub, sec, uid, uidsig;
+	tmcg_openpgp_octets_t all, pub, sec, dirsig, uid, uidsig;
 	tmcg_openpgp_octets_t sub, ssb, subsig, dsaflags, elgflags, issuer;
 	tmcg_openpgp_octets_t pub_hashing, sub_hashing;
+	tmcg_openpgp_octets_t dirsig_hashing, dirsig_left;
 	tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
 	tmcg_openpgp_octets_t subsig_hashing, subsig_left;
 	tmcg_openpgp_octets_t hash, empty;
@@ -966,7 +999,8 @@ void run_instance
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketBodyExtract(pub, 0, pub_hashing);
-	CallasDonnerhackeFinneyShawThayerRFC4880::FingerprintCompute(pub_hashing, issuer);
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		FingerprintCompute(pub_hashing, issuer);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketUidEncode(userid, uid);
 	// "In a V4 key, the primary key MUST be a key capable of certification."
 	if (S > 0)
@@ -994,11 +1028,151 @@ void run_instance
 		// for a non-shared DSA primary key no common timestamp required 
 		sigtime = time(NULL); // current time
 	}
-	// create an additional (!) direct-key signature (0x1f) with above key flags
-// TODO: "The split key (0x10) [...] flags are placed on a self-signature only; they
-//        are meaningless on a certification signature. They SHOULD be placed only
-//        on a direct-key signature (type 0x1f) or a subkey signature (type 0x18),
-//        one that refers to the key the flag applies to." [RFC 4880]
+	// create an additional direct-key signature (0x1f) with above key flags
+	// "The split key (0x10) [...] flags are placed on a self-signature only;
+	//  they are meaningless on a certification signature. They SHOULD be
+	//  placed only on a direct-key signature (type 0x1f) or a subkey signature
+	//  (type 0x18), one that refers to the key the flag applies to." [RFC 4880]
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigPrepareDesignatedRevoker(TMCG_OPENPGP_PKALGO_DSA, hashalgo,
+			sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty,
+			dirsig_hashing);
+	hash.clear();
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		KeyHash(pub_hashing, dirsig_hashing, hashalgo, hash, dirsig_left);
+	if (S > 0)
+	{
+		tmcg_openpgp_byte_t buffer[1024];
+		gcry_mpi_t h;
+		size_t buflen = 0;
+		memset(buffer, 0, sizeof(buffer));
+		for (size_t i = 0; i < hash.size(); i++, buflen++)
+		{
+			if (i < sizeof(buffer))
+				buffer[i] = hash[i];
+		}
+		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
+		if (ret)
+		{
+			std::cerr << "ERROR: P_" << whoami <<
+				": gcry_mpi_scan() failed for h" << std::endl;
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_sexp_release(key);
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
+			exit(-1);
+		}
+		if (!tmcg_mpz_set_gcry_mpi(h, dsa_m))
+		{
+			std::cerr << "ERROR: P_" << whoami <<
+				": tmcg_mpz_set_gcry_mpi() failed for dsa_m" << std::endl;
+			gcry_mpi_release(h);
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_sexp_release(key);
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
+			exit(-1);
+		}
+		gcry_mpi_release(h);
+		std::stringstream err_log_sign;
+		if (opt_verbose)
+			std::cerr << "INFO: P_" << whoami <<
+				": dss.Sign() for direct-key signature (0x1f)" << std::endl;
+		if (!dss->Sign(peers.size(), whoami, dsa_m, dsa_r, dsa_s, aiou, rbc,
+			err_log_sign))
+		{
+			std::cerr << "ERROR: P_" << whoami << ": tDSS Sign() failed" <<
+				std::endl;
+			std::cerr << "ERROR: P_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_sexp_release(key);
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
+			exit(-1);
+		}
+		if (opt_verbose > 1)
+			std::cerr << "INFO: P_" << whoami << ": log follows " <<
+				std::endl << err_log_sign.str();
+		r = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(r, dsa_r))
+		{
+			std::cerr << "ERROR: P_" << whoami <<
+				": tmcg_mpz_get_gcry_mpi() failed for dsa_r" << std::endl;
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_mpi_release(r);
+			gcry_sexp_release(key);
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
+			exit(-1);
+		}
+		s = gcry_mpi_new(2048);
+		if (!tmcg_mpz_get_gcry_mpi(s, dsa_s))
+		{
+			std::cerr << "ERROR: P_" << whoami <<
+				": tmcg_mpz_get_gcry_mpi() failed for dsa_s" << std::endl;
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_mpi_release(r);
+			gcry_mpi_release(s);
+			gcry_sexp_release(key);
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
+			exit(-1);
+		}
+	}
+	else
+	{
+		r = gcry_mpi_new(2048);
+		s = gcry_mpi_new(2048);
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AsymmetricSignDSA(hash, key, r, s);
+		if (ret)
+		{
+			std::cerr << "ERROR: P_" << whoami <<
+				": AsymmetricSignDSA() failed" << std::endl;
+			mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+			gcry_mpi_release(p);
+			gcry_mpi_release(q);
+			gcry_mpi_release(g);
+			gcry_mpi_release(y);
+			gcry_mpi_release(x);
+			gcry_mpi_release(r);
+			gcry_mpi_release(s);
+			gcry_sexp_release(key);
+			delete dkg, delete dss;
+			delete rbc, delete vtmf, delete aiou, delete aiou2;
+			exit(-1);
+		}
+	}
+	CallasDonnerhackeFinneyShawThayerRFC4880::
+		PacketSigEncode(dirsig_hashing, dirsig_left, r, s, dirsig);
+	gcry_mpi_release(r);
+	gcry_mpi_release(s);
 	// create a positive certification (0x13) of the included user ID
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
@@ -1533,6 +1707,7 @@ void run_instance
 	pubfilename << peers[whoami] << "_dkg-pub.asc";
 	armor = "", all.clear();
 	all.insert(all.end(), pub.begin(), pub.end());
+	all.insert(all.end(), dirsig.begin(), dirsig.end());
 	all.insert(all.end(), uid.begin(), uid.end());
 	all.insert(all.end(), uidsig.begin(), uidsig.end());
 	all.insert(all.end(), sub.begin(), sub.end());
@@ -1550,6 +1725,7 @@ void run_instance
 	std::string sfilename = secfilename.str();
 	armor = "", all.clear();
 	all.insert(all.end(), sec.begin(), sec.end());
+	all.insert(all.end(), dirsig.begin(), dirsig.end());
 	all.insert(all.end(), uid.begin(), uid.end());
 	all.insert(all.end(), uidsig.begin(), uidsig.end());
 	all.insert(all.end(), ssb.begin(), ssb.end());

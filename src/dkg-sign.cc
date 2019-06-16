@@ -310,9 +310,9 @@ void run_instance
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT, prv->pkalgo,
-					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
-					trailer);
+					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+					prv->pub->pkalgo, hashalgo, csigtime, sigexptime, URI,
+					prv->pub->fingerprint, trailer);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
 				TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left);
 		}
@@ -338,7 +338,7 @@ void run_instance
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pkalgo,
+					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pub->pkalgo,
 					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
 					trailer);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::

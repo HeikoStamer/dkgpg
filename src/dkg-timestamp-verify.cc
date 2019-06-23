@@ -152,7 +152,7 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing (external revocation) keys" << std::endl;
-				std::cout << "  -o FILENAME    write the embedded target" <<
+				std::cout << "  -o FILENAME    write embedded target" <<
 					" signature to FILENAME instead of STDOUT" << std::endl;
 				std::cout << "  -s FILENAME    read timestamp signature from" <<
 					" FILENAME instead of STDIN" << std::endl; 

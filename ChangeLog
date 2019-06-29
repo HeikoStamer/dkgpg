@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-06-29] dkg-tcpip-common: 
 * [2019-06-16] dkg-generate: added direct-key signature (0x1f) by default for
                generated keys and bump internal protocol version to 1.1
 * [2019-06-16] dkg-sign: added option "-5" (generate v5 signature format) 

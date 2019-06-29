@@ -42,8 +42,6 @@
 	#include <netinet/in.h>
 	#include <sys/socket.h>
 
-	RETSIGTYPE tcpip_sig_handler_quit
-		(int sig);
 	void tcpip_init
 		(const std::string &hostname);
 	void tcpip_bindports

@@ -150,8 +150,10 @@ void handle_gnunet_data_callback
 	GNUNET_assert(ntohs(message->size) >= sizeof(*message));
 	uint16_t len = ntohs(message->size) - sizeof(*message);
 	if ((gnunet_opt_verbose) && (opt_verbose > 1))
+	{
 		GNUNET_log(GNUNET_ERROR_TYPE_MESSAGE, "Got message of type %u from %s"
 			" with %u bytes\n", ntohs(message->type), peer.c_str(), len);
+	}
 	const char *buf = (const char *)&message[1];
 	int fd;
 	if (ntohs(message->type) == GNUNET_MESSAGE_TYPE_TMCG_DKG_PIPE_UNICAST)
@@ -300,16 +302,20 @@ void gnunet_channel_ended
 		if (pipe2channel_out.count(i) && (pipe2channel_out[i] == channel))
 		{
 			if (gnunet_opt_verbose)
+			{
 				std::cerr << "WARNING: output channel ended for peer = " <<
 					pipe2peer[i] << std::endl;
+			}
 			pipe2channel_out.erase(i);
 			return;
 		}
 		if (pipe2channel_in.count(i) && (pipe2channel_in[i] == channel))
 		{
 			if (gnunet_opt_verbose)
+			{
 				std::cerr << "WARNING: input channel ended for peer = " <<
 					pipe2peer[i] << std::endl;
+			}
 			pipe2channel_in.erase(i);
 			return;
 		}
@@ -324,8 +330,10 @@ void* gnunet_channel_incoming
 	if (cls == NULL)
 		cls = NULL; // dummy code to supress compiler warning
 	if (gnunet_opt_verbose)
+	{
 		std::cerr << "INFO: incoming channel from " <<
 			GNUNET_i2s_full(initiator) << std::endl;
+	}
 	// check whether peer identity is included in peer list
 	std::string peer = GNUNET_i2s_full(initiator);
 	if (peer2pipe.count(peer) == 0)
@@ -485,9 +493,11 @@ void gnunet_io
 			struct GNUNET_MessageHeader *msg;
 			// send message on input channel
 			if ((gnunet_opt_verbose) && (opt_verbose > 1))
+			{
 				std::cerr << "INFO: try to send " << buf.first <<
 					" bytes on input channel to " << pipe2peer[ble.first] <<
 					std::endl;
+			}
 			env = GNUNET_MQ_msg_extra(msg, buf.first,
 				GNUNET_MESSAGE_TYPE_TMCG_DKG_PIPE_UNICAST);
 			GNUNET_memcpy(&msg[1], buf.second, buf.first);
@@ -509,9 +519,11 @@ void gnunet_io
 			struct GNUNET_MessageHeader *msg;
 			// send message on input channel
 			if ((gnunet_opt_verbose) && (opt_verbose > 1))
+			{
 				std::cerr << "INFO: try to broadcast " << buf.first <<
 					" bytes on input channel to " << pipe2peer[ble.first] <<
 					std::endl;
+			}
 			env = GNUNET_MQ_msg_extra(msg, buf.first,
 				GNUNET_MESSAGE_TYPE_TMCG_DKG_PIPE_BROADCAST);
 			GNUNET_memcpy(&msg[1], buf.second, buf.first);
@@ -640,17 +652,21 @@ void gnunet_statistics
 			{
 				std::cerr << "ERROR: protocol instance ";
 				if (WIFSIGNALED(wstatus))
+				{
 					std::cerr << thispid << " terminated by signal " <<
 						WTERMSIG(wstatus) << std::endl;
+				}
 				if (WCOREDUMP(wstatus))
 					std::cerr << thispid << " dumped core" << std::endl;
 			}
 			else if (WIFEXITED(wstatus))
 			{
 				if (gnunet_opt_verbose)
+				{
 					std::cerr << "INFO: protocol instance " << thispid <<
 						" terminated with exit status " <<
 						WEXITSTATUS(wstatus) << std::endl;
+				}
 			}
 			instance_forked = false;
 			GNUNET_SCHEDULER_shutdown();
@@ -792,8 +808,10 @@ void gnunet_run(void *cls, char *const *args, const char *cfgfile,
 	else
 		GNUNET_CRYPTO_hash(port.c_str(), port.length(), &porthash);
 	if (gnunet_opt_verbose)
+	{
 		std::cerr << "INFO: my CADET listen port hash = " <<
 			GNUNET_h2s_full(&porthash) << std::endl;
+	}
 	static const struct GNUNET_MQ_MessageHandler handlers[] = {
 		GNUNET_MQ_handler_end()
 	};

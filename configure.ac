@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20190604])
+AC_REVISION([20190630])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.1.3], [HeikoStamer@gmx.net], [dkgpg],
@@ -37,6 +37,8 @@ AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION", [Version of this package])
 
 # Define some parameters and helping macros
 AC_DEFINE(DKGPG_MAX_N, 32, [Define the maximum number of parties/peers])
+AC_DEFINE(DKGPG_TCPIP_BIND_TIMEOUT, 32, [Define the number of seconds waiting\
+ to bind the required TCP port])
 
 # Checks for Libtool
 LT_PREREQ([2.4.2])

@@ -235,7 +235,15 @@ void tcpip_bindports
 				std::cerr << "INFO: bind TCP/IP port " << port <<
 					" at address " << hbuf << std::endl;
 			}
-			if (bind(sockfd, rp->ai_addr, rp->ai_addrlen) < 0)
+			time_t btime = time(NULL), bto = DKGPG_TCPIP_BIND_TIMEOUT;
+			int bret;
+			do
+			{
+				sleep(1);
+				bret = bind(sockfd, rp->ai_addr, rp->ai_addrlen);
+			}
+			while ((bret == EADDRINUSE) && (time(NULL) < (btime + bto))); 
+			if (bret < 0)
 			{
 				perror("WARNING: dkg-tcpip-common (bind)");
 				if (close(sockfd) < 0)

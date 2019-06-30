@@ -31,6 +31,7 @@
 	#include <cassert>
 	#include <cstring>
 	#include <cstdio>
+	#include <ctime>
 	#include <unistd.h>
 	#include <errno.h>
 	#include <fcntl.h>

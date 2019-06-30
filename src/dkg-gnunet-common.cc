@@ -34,7 +34,9 @@
 #include "dkg-gnunet-common.hh"
 
 extern int				pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+extern int				self_pipefd[2];
 extern int				broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+extern int				broadcast_self_pipefd[2];
 extern pid_t			pid[DKGPG_MAX_N];
 extern std::vector<std::string>		peers;
 extern bool				instance_forked;
@@ -207,36 +209,68 @@ void gnunet_pipe_ready
 	pt = NULL;
 	for (size_t i = 0; i < peers.size(); i++)
 	{
-		if (i != peer2pipe[thispeer])
+		char *th_buf = new char[pipe_buffer_size];
+		ssize_t num = read(pipefd[peer2pipe[thispeer]][i][0], th_buf,
+			pipe_buffer_size);
+		if (num < 0)
 		{
-			char *th_buf = new char[pipe_buffer_size];
-			ssize_t num = read(pipefd[peer2pipe[thispeer]][i][0], th_buf,
-				pipe_buffer_size);
-			if (num < 0)
+			delete [] th_buf;
+			if ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINTR))
 			{
-				delete [] th_buf;
-				if ((errno == EAGAIN) || (errno == EWOULDBLOCK) ||
-					(errno == EINTR))
-				{
-					continue;
-				}
-				else
-				{
-					perror("ERROR: dkg-gnunet-common (read)");
-					GNUNET_SCHEDULER_shutdown();
-					return;
-				}
-			}
-			else if (num == 0)
-			{
-				delete [] th_buf;
 				continue;
 			}
 			else
 			{
+				perror("ERROR: dkg-gnunet-common (read)");
+				GNUNET_SCHEDULER_shutdown();
+				return;
+			}
+		}
+		else if (num == 0)
+		{
+			delete [] th_buf;
+			continue;
+		}
+		else
+		{
+			if (i != peer2pipe[thispeer])
+			{
 				DKG_BufferListEntry ble = DKG_BufferListEntry(i,
 					DKG_Buffer(num, th_buf));
 				send_queue.push_back(ble);
+			}
+			else
+			{
+				ssize_t wlen = 0;
+				do
+				{
+					ssize_t wnum = write(self_pipefd[1],
+						th_buf + wlen, num - wlen);
+					if (wnum < 0)
+					{
+						if ((errno == EWOULDBLOCK) || (errno == EINTR))
+						{
+							sleep(1);
+							continue;
+						}
+						else if (errno == EAGAIN)
+						{
+							perror("WARNING: dkg-gnunet-common (write)");
+							sleep(1);
+							continue;
+						}
+						else
+						{
+							perror("ERROR: dkg-gnunet-common (write)");
+							GNUNET_SCHEDULER_shutdown();
+							return;
+						}
+					}
+					else
+						wlen += wnum;
+				}
+				while (wlen < num);
+				delete [] th_buf;
 			}
 		}
 	}
@@ -253,36 +287,68 @@ void gnunet_broadcast_pipe_ready
 	pt_broadcast = NULL;
 	for (size_t i = 0; i < peers.size(); i++)
 	{
-		if (i != peer2pipe[thispeer])
+		char *th_buf = new char[pipe_buffer_size];
+		ssize_t num = read(broadcast_pipefd[peer2pipe[thispeer]][i][0],
+			th_buf, pipe_buffer_size);
+		if (num < 0)
 		{
-			char *th_buf = new char[pipe_buffer_size];
-			ssize_t num = read(broadcast_pipefd[peer2pipe[thispeer]][i][0],
-				th_buf, pipe_buffer_size);
-			if (num < 0)
+			delete [] th_buf;
+			if ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == EINTR))
 			{
-				delete [] th_buf;
-				if ((errno == EAGAIN) || (errno == EWOULDBLOCK) ||
-					(errno == EINTR))
-				{
-					continue;
-				}
-				else
-				{
-					perror("ERROR: dkg-gnunet-common (read)");
-					GNUNET_SCHEDULER_shutdown();
-					return;
-				}
-			}
-			else if (num == 0)
-			{
-				delete [] th_buf;
 				continue;
 			}
 			else
 			{
+				perror("ERROR: dkg-gnunet-common (read)");
+				GNUNET_SCHEDULER_shutdown();
+				return;
+			}
+		}
+		else if (num == 0)
+		{
+			delete [] th_buf;
+			continue;
+		}
+		else
+		{
+			if (i != peer2pipe[thispeer])
+			{
 				DKG_BufferListEntry ble = DKG_BufferListEntry(i,
 					DKG_Buffer(num, th_buf));
 				send_queue_broadcast.push_back(ble);
+			}
+			else
+			{
+				ssize_t wlen = 0;
+				do
+				{
+					ssize_t wnum = write(broadcast_self_pipefd[1],
+						th_buf + wlen, num - wlen);
+					if (wnum < 0)
+					{
+						if ((errno == EWOULDBLOCK) || (errno == EINTR))
+						{
+							sleep(1);
+							continue;
+						}
+						else if (errno == EAGAIN)
+						{
+							perror("WARNING: dkg-gnunet-common (write)");
+							sleep(1);
+							continue;
+						}
+						else
+						{
+							perror("ERROR: dkg-gnunet-common (write)");
+							GNUNET_SCHEDULER_shutdown();
+							return;
+						}
+					}
+					else
+						wlen += wnum;
+				}
+				while (wlen < num);
+				delete [] th_buf;
 			}
 		}
 	}
@@ -739,6 +805,8 @@ void gnunet_init
 				perror("ERROR: dkg-gnunet-common (pipe)");
 		}
 	}
+	self_pipefd[0] = -1, self_pipefd[1] = -1;
+	broadcast_self_pipefd[0] = -1, broadcast_self_pipefd[1] = -1;
 	pipes_created = true;
 
 	// next: schedule connect, fork and statistics tasks

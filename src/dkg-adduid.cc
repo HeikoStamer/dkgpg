@@ -427,6 +427,21 @@ void fork_instance
 		if (pid[whoami] == 0)
 		{
 			/* BEGIN child code: participant P_i */
+			if ((self_pipefd[0] == -1) && (self_pipefd[1] == -1))
+			{
+				// duplication of file descriptors for run_localtest()
+				self_pipefd[0] = dup(pipefd[whoami][whoami][0]);
+				self_pipefd[1] = dup(pipefd[whoami][whoami][1]);
+			}
+			if ((broadcast_self_pipefd[0] == -1) &&
+				(broadcast_self_pipefd[1] == -1))
+			{
+				// duplication of file descriptors for run_localtest()
+				broadcast_self_pipefd[0] =
+					dup(broadcast_pipefd[whoami][whoami][0]);
+				broadcast_self_pipefd[1] =
+					dup(broadcast_pipefd[whoami][whoami][1]);
+			}
 			time_t sigtime = time(NULL);
 #ifdef GNUNET
 			run_instance(whoami, sigtime, gnunet_opt_xtests);

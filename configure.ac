@@ -37,7 +37,7 @@ AC_DEFINE_UNQUOTED(VERSION, "$PACKAGE_VERSION", [Version of this package])
 
 # Define some parameters and helping macros
 AC_DEFINE(DKGPG_MAX_N, 32, [Define the maximum number of parties/peers])
-AC_DEFINE(DKGPG_TCPIP_BIND_TIMEOUT, 32, [Define the number of seconds waiting\
+AC_DEFINE(DKGPG_TCPIP_BIND_TIMEOUT, 60, [Define the number of seconds waiting\
  to bind the required TCP port])
 
 # Checks for Libtool
@@ -151,7 +151,7 @@ AC_FUNC_FORK
 AC_CHECK_HEADERS([unistd.h sys/types.h sys/wait.h signal.h netdb.h\
  netinet/in.h sys/socket.h termios.h], ,
 	AC_MSG_ERROR([some further headers are missing]))
-AC_CHECK_FUNCS([fork kill pipe pipe2 waitpid getaddrinfo getnameinfo\
+AC_CHECK_FUNCS([dup fork kill pipe pipe2 waitpid getaddrinfo getnameinfo\
  htons htonl socket setsockopt connect bind listen accept signal sigaction\
  gai_strerror freeaddrinfo tcgetattr tcsetattr], , 
 	AC_MSG_ERROR([some further functions are missing]))

@@ -625,11 +625,11 @@ int run_localtest
 				perror("ERROR: dkg-common:run_localtest (pipe)");
 		}
 	}
-	if (pipe(self_pipefd) < 0)
-		perror("ERROR: dkg-common:run_localtest (pipe)");
-	if (pipe(bself_pipefd) < 0)
-		perror("ERROR: dkg-common:run_localtest (pipe)");
-	
+
+	// initialize self-pipes
+	self_pipefd[0] = -1, self_pipefd[1] = -1;
+	bself_pipefd[0] = -1, bself_pipefd[1] = -1;
+
 	// start childs
 	for (size_t i = 0; i < peers; i++)
 		fork_instance(i);
@@ -651,10 +651,6 @@ int run_localtest
 				perror("WARNING: dkg-common:run_localtest (close)");
 		}
 	}
-	if ((close(self_pipefd[0]) < 0) || (close(self_pipefd[1]) < 0))
-		perror("WARNING: dkg-common:run_localtest (close)");
-	if ((close(bself_pipefd[0]) < 0) || (close(bself_pipefd[1]) < 0))
-		perror("WARNING: dkg-common:run_localtest (close)");
 	return ret;
 }
 

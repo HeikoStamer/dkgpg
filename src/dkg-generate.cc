@@ -2185,12 +2185,27 @@ void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("ERROR: dkg-generate (fork)");
+		perror("ERROR: dkg-generate:fork_instance (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
 		{
 			/* BEGIN child code: participant P_i */
+			if ((self_pipefd[0] == -1) && (self_pipefd[1] == -1))
+			{
+				// duplication of file descriptors for run_localtest()
+				self_pipefd[0] = dup(pipefd[whoami][whoami][0]);
+				self_pipefd[1] = dup(pipefd[whoami][whoami][1]);
+			}
+			if ((broadcast_self_pipefd[0] == -1) &&
+				(broadcast_self_pipefd[1] == -1))
+			{
+				// duplication of file descriptors for run_localtest()
+				broadcast_self_pipefd[0] =
+					dup(broadcast_pipefd[whoami][whoami][0]);
+				broadcast_self_pipefd[1] =
+					dup(broadcast_pipefd[whoami][whoami][1]);
+			}
 			time_t keytime = time(NULL);
 #ifdef GNUNET
 			run_instance(whoami, keytime, gnunet_opt_keyexptime,

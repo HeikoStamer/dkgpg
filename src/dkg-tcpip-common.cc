@@ -210,6 +210,12 @@ void tcpip_bindports
 				perror("WARNING: dkg-tcpip-common (socket)");
 				continue; // try next address
 			}
+			int sockopt = 1;
+			if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &sockopt,
+				sizeof(sockopt)) < 0)
+			{
+				perror("WARNING: dkg-tcpip-common (setsockopt)");
+			}
 			char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
 			memset(hbuf, 0, sizeof(hbuf));
 			memset(sbuf, 0, sizeof(sbuf));

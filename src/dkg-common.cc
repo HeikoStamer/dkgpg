@@ -605,7 +605,9 @@ int run_localtest
 	 const int opt_verbose,
 	 pid_t pid[DKGPG_MAX_N],
 	 int pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+	 int self_pipefd[2],
 	 int bpipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+	 int bself_pipefd[2],
 	 void (*fork_instance)(const size_t))
 {
 	assert(peers <= DKGPG_MAX_N);
@@ -623,6 +625,10 @@ int run_localtest
 				perror("ERROR: dkg-common:run_localtest (pipe)");
 		}
 	}
+	if (pipe(self_pipefd) < 0)
+		perror("ERROR: dkg-common:run_localtest (pipe)");
+	if (pipe(bself_pipefd) < 0)
+		perror("ERROR: dkg-common:run_localtest (pipe)");
 	
 	// start childs
 	for (size_t i = 0; i < peers; i++)
@@ -640,11 +646,15 @@ int run_localtest
 		for (size_t j = 0; j < peers; j++)
 		{
 			if ((close(pipefd[i][j][0]) < 0) || (close(pipefd[i][j][1]) < 0))
-				perror("ERROR: dkg-common:run_localtest (close)");
+				perror("WARNING: dkg-common:run_localtest (close)");
 			if ((close(bpipefd[i][j][0]) < 0) || (close(bpipefd[i][j][1]) < 0))
-				perror("ERROR: dkg-common:run_localtest (close)");
+				perror("WARNING: dkg-common:run_localtest (close)");
 		}
 	}
+	if ((close(self_pipefd[0]) < 0) || (close(self_pipefd[1]) < 0))
+		perror("WARNING: dkg-common:run_localtest (close)");
+	if ((close(bself_pipefd[0]) < 0) || (close(bself_pipefd[1]) < 0))
+		perror("WARNING: dkg-common:run_localtest (close)");
 	return ret;
 }
 

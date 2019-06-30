@@ -841,8 +841,8 @@ int main
 		if (ret != GNUNET_OK)
 			ret = -1;
 #else
-		ret = run_localtest(peers.size(), opt_verbose, pid, pipefd,
-			broadcast_pipefd, &fork_instance);
+		ret = run_localtest(peers.size(), opt_verbose, pid, pipefd, self_pipefd,
+			broadcast_pipefd, broadcast_self_pipefd, &fork_instance);
 #endif
 	}
 	// release cache

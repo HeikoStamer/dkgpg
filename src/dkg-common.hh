@@ -92,7 +92,9 @@
 		 const int opt_verbose,
 		 pid_t pid[DKGPG_MAX_N],
 		 int pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+		 int self_pipefd[2],
 		 int bpipefd[DKGPG_MAX_N][DKGPG_MAX_N][2],
+		 int bself_pipefd[2],
 		 void (*fork_instance)(const size_t));
 
 #endif

@@ -25,7 +25,9 @@
 #include "dkg-tcpip-common.hh"
 
 extern int						pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+extern int						self_pipefd[2];
 extern int						broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+extern int						broadcast_self_pipefd[2];
 extern pid_t					pid[DKGPG_MAX_N];
 extern std::vector<std::string>	peers;
 extern bool						instance_forked;
@@ -105,16 +107,26 @@ void tcpip_init
 		{
 			if (pipe2(pipefd[i][j], O_NONBLOCK) < 0)
 			{
-				perror("ERROR: dkg-tcpip-common (pipe)");
+				perror("ERROR: dkg-tcpip-common (pipe2)");
 				exit(-1);
 			}
 			if (pipe2(broadcast_pipefd[i][j], O_NONBLOCK) < 0)
 			{
-				perror("ERROR: dkg-tcpip-common (pipe)");
+				perror("ERROR: dkg-tcpip-common (pipe2)");
 				exit(-1);
 			}
 		}
 	}
+	if (pipe2(self_pipefd, O_NONBLOCK) < 0)
+	{
+		perror("ERROR: dots-tcpip-common (pipe2)");
+		exit(-1);
+	}
+	if (pipe2(broadcast_self_pipefd, O_NONBLOCK) < 0)
+	{
+		perror("ERROR: dots-tcpip-common (pipe2)");
+		exit(-1);
+	}	
 	// install our own signal handler
 	struct sigaction act;
 	memset(&act, 0, sizeof(act));
@@ -262,8 +274,10 @@ size_t tcpip_connect
 	(const uint16_t stpo, const bool broadcast)
 {
 	if (opt_verbose > 2)
+	{
 		std::cerr << "INFO: tcpip_connect(" << stpo << ", " <<
 			(broadcast ? "true" : "false") << ") called" << std::endl;
+	}
 	for (size_t i = 0; i < peers.size(); i++)
 	{
 		if ((broadcast && (tcpip_broadcast_pipe2socket_out.count(i) == 0)) ||
@@ -590,77 +604,68 @@ int tcpip_io
 		for (tcpip_mci_t pi = tcpip_pipe2socket_in.begin();
 			pi != tcpip_pipe2socket_in.end(); ++pi)
 		{
-			if (pi->first != thisidx)
+			if (pi->second < FD_SETSIZE)
 			{
-				if (pi->second < FD_SETSIZE)
-				{
-					FD_SET(pi->second, &rfds);
-					if (pi->second > maxfd)
-						maxfd = pi->second;
-				}
-				else
-				{
-					std::cerr << "ERROR: file descriptor value of internal" <<
-						" pipe exceeds FD_SETSIZE" << std::endl;
-					tcpip_close();
-					tcpip_done();
-					exit(-1);
-				}
+				FD_SET(pi->second, &rfds);
+				if (pi->second > maxfd)
+					maxfd = pi->second;
+			}
+			else
+			{
+				std::cerr << "ERROR: file descriptor value of internal" <<
+					" pipe exceeds FD_SETSIZE" << std::endl;
+				tcpip_close();
+				tcpip_done();
+				exit(-1);
 			}
 		}
 		for (tcpip_mci_t pi = tcpip_broadcast_pipe2socket_in.begin();
 			pi != tcpip_broadcast_pipe2socket_in.end(); ++pi)
 		{
-			if (pi->first != thisidx)
+			if (pi->second < FD_SETSIZE)
 			{
-				if (pi->second < FD_SETSIZE)
-				{
-					FD_SET(pi->second, &rfds);
-					if (pi->second > maxfd)
-						maxfd = pi->second;
-				}
-				else
-				{
-					std::cerr << "ERROR: file descriptor value of internal" <<
-						" pipe exceeds FD_SETSIZE" << std::endl;
-					tcpip_close();
-					tcpip_done();
-					exit(-1);
-				}
+				FD_SET(pi->second, &rfds);
+				if (pi->second > maxfd)
+					maxfd = pi->second;
+			}
+			else
+			{
+				std::cerr << "ERROR: file descriptor value of internal" <<
+					" pipe exceeds FD_SETSIZE" << std::endl;
+				tcpip_close();
+				tcpip_done();
+				exit(-1);
 			}
 		}
 		for (size_t i = 0; i < peers.size(); i++)
 		{
-			if (i != thisidx)
+			if (pipefd[thisidx][i][0] < FD_SETSIZE)
 			{
-				if (pipefd[thisidx][i][0] < FD_SETSIZE)
-				{
-					FD_SET(pipefd[thisidx][i][0], &rfds);
-					if (pipefd[thisidx][i][0] > maxfd)
-						maxfd = pipefd[thisidx][i][0];
-				}
-				else
-				{
-					std::cerr << "ERROR: file descriptor value of internal" <<
-						" pipe exceeds FD_SETSIZE" << std::endl;
-					tcpip_close();
-					tcpip_done();
-					exit(-1);
-				}
-				if (broadcast_pipefd[thisidx][i][0] < FD_SETSIZE)
-				{
-					FD_SET(broadcast_pipefd[thisidx][i][0], &rfds);
-					if (broadcast_pipefd[thisidx][i][0] > maxfd)
-						maxfd = broadcast_pipefd[thisidx][i][0];
-				}
-				else
-				{
-					std::cerr << "ERROR: file descriptor value of internal" <<
-						" pipe exceeds FD_SETSIZE" << std::endl;
-					tcpip_close();
-					tcpip_done();
-					exit(-1);
-				}
+				FD_SET(pipefd[thisidx][i][0], &rfds);
+				if (pipefd[thisidx][i][0] > maxfd)
+					maxfd = pipefd[thisidx][i][0];
+			}
+			else
+			{
+				std::cerr << "ERROR: file descriptor value of internal" <<
+					" pipe exceeds FD_SETSIZE" << std::endl;
+				tcpip_close();
+				tcpip_done();
+				exit(-1);
+			}
+			if (broadcast_pipefd[thisidx][i][0] < FD_SETSIZE)
+			{
+				FD_SET(broadcast_pipefd[thisidx][i][0], &rfds);
+				if (broadcast_pipefd[thisidx][i][0] > maxfd)
+					maxfd = broadcast_pipefd[thisidx][i][0];
+			}
+			else
+			{
+				std::cerr << "ERROR: file descriptor value of internal" <<
+					" pipe exceeds FD_SETSIZE" << std::endl;
+				tcpip_close();
+				tcpip_done();
+				exit(-1);
 			}
 		}
 		tv.tv_sec = 1;
@@ -687,7 +692,7 @@ int tcpip_io
 		for (tcpip_mci_t pi = tcpip_pipe2socket_in.begin();
 			pi != tcpip_pipe2socket_in.end(); ++pi)
 		{
-			if ((pi->first != thisidx) && FD_ISSET(pi->second, &rfds))
+			if (FD_ISSET(pi->second, &rfds))
 			{
 				char buf[tcpip_pipe_buffer_size];
 				ssize_t len = read(pi->second, buf, sizeof(buf));
@@ -728,8 +733,17 @@ int tcpip_io
 					ssize_t wnum = 0;
 					do
 					{
-						ssize_t num = write(pipefd[pi->first][thisidx][1],
+						ssize_t num = 0;
+						if (pi->first == thisidx)
+						{
+							num = write(self_pipefd[1],
 								buf + wnum, len - wnum);
+						}
+						else
+						{
+							num = write(pipefd[pi->first][thisidx][1],
+								buf + wnum, len - wnum);
+						}
 						if (num < 0)
 						{
 							if ((errno == EWOULDBLOCK) || (errno == EINTR))
@@ -771,7 +785,7 @@ int tcpip_io
 		for (tcpip_mci_t pi = tcpip_broadcast_pipe2socket_in.begin();
 			pi != tcpip_broadcast_pipe2socket_in.end(); ++pi)
 		{
-			if ((pi->first != thisidx) && FD_ISSET(pi->second, &rfds))
+			if (FD_ISSET(pi->second, &rfds))
 			{
 				char buf[tcpip_pipe_buffer_size];
 				ssize_t len = read(pi->second, buf, sizeof(buf));
@@ -813,9 +827,17 @@ int tcpip_io
 					ssize_t wnum = 0;
 					do
 					{
-						ssize_t num = write(
-							broadcast_pipefd[pi->first][thisidx][1], buf + wnum,
-							len - wnum);
+						ssize_t num = 0;
+						if (pi->first == thisidx)
+						{
+							num = write(broadcast_self_pipefd[1],
+								buf + wnum, len - wnum);
+						}
+						else
+						{
+							num = write(broadcast_pipefd[pi->first][thisidx][1],
+								buf + wnum, len - wnum);
+						}
 						if (num < 0)
 						{
 							if ((errno == EWOULDBLOCK) || (errno == EINTR))
@@ -856,7 +878,7 @@ int tcpip_io
 		}
 		for (size_t i = 0; i < peers.size(); i++)
 		{
-			if ((i != thisidx) && FD_ISSET(pipefd[thisidx][i][0], &rfds))
+			if (FD_ISSET(pipefd[thisidx][i][0], &rfds))
 			{
 				char buf[tcpip_pipe_buffer_size];
 				ssize_t len = read(pipefd[thisidx][i][0], buf, sizeof(buf));
@@ -949,8 +971,7 @@ int tcpip_io
 					}
 				}
 			}
-			if ((i != thisidx) &&
-				FD_ISSET(broadcast_pipefd[thisidx][i][0], &rfds))
+			if (FD_ISSET(broadcast_pipefd[thisidx][i][0], &rfds))
 			{
 				char buf[tcpip_pipe_buffer_size];
 				ssize_t len = read(broadcast_pipefd[thisidx][i][0], buf,
@@ -1118,6 +1139,13 @@ void tcpip_done
 				perror("WARNING: dkg-tcpip-common (close)");
 			}
 		}
+	}
+	if ((close(self_pipefd[0]) < 0) || (close(self_pipefd[1]) < 0))
+		perror("WARNING: dots-tcpip-common (close)");
+	if ((close(broadcast_self_pipefd[0]) < 0) ||
+		(close(broadcast_self_pipefd[1]) < 0))
+	{
+		perror("WARNING: dots-tcpip-common (close)");
 	}
 }
 

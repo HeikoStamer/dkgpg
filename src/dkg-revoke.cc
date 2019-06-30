@@ -53,7 +53,9 @@ static const char *protocol = "DKGPG-revoke-1.0";
 #include "dkg-common.hh"
 
 int 						pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+int							self_pipefd[2];
 int							broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+int							broadcast_self_pipefd[2];
 pid_t 						pid[DKGPG_MAX_N];
 std::vector<std::string>	peers;
 bool						instance_forked = false;
@@ -208,10 +210,16 @@ void run_instance
 			// use simple key -- we assume that GNUnet provides secure channels
 			key << "dkg-revoke::p_" << (i + whoami);
 		}
-		uP_in.push_back(pipefd[i][whoami][0]);
+		if (i == whoami)
+			uP_in.push_back(self_pipefd[0]);
+		else
+			uP_in.push_back(pipefd[i][whoami][0]);
 		uP_out.push_back(pipefd[whoami][i][1]);
 		uP_key.push_back(key.str());
-		bP_in.push_back(broadcast_pipefd[i][whoami][0]);
+		if (i == whoami)
+			bP_in.push_back(broadcast_self_pipefd[0]);
+		else
+			bP_in.push_back(broadcast_pipefd[i][whoami][0]);
 		bP_out.push_back(broadcast_pipefd[whoami][i][1]);
 		bP_key.push_back(key.str());
 	}

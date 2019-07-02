@@ -341,19 +341,17 @@ time_t agree_time
 	tvs.push_back(mytime);
 	for (size_t i = 0; i < peers; i++)
 	{
-		if (i != whoami)
+		if (rbc->DeliverFrom(mtv, i))
 		{
-			if (rbc->DeliverFrom(mtv, i))
-			{
-				time_t utv;
-				utv = (time_t)mpz_get_ui(mtv);
+			time_t utv;
+			utv = (time_t)mpz_get_ui(mtv);
+			if (i != whoami)
 				tvs.push_back(utv);
-			}
-			else
-			{
-				std::cerr << "WARNING: p_" << whoami << ": no creation" <<
-					" timestamp received from p_" << i << std::endl;
-			}
+		}
+		else
+		{
+			std::cerr << "WARNING: p_" << whoami << ": no creation" <<
+				" timestamp received from p_" << i << std::endl;
 		}
 	}
 	mpz_clear(mtv);

@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20190630])
+AC_REVISION([20190709])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.1.3], [HeikoStamer@gmx.net], [dkgpg],
@@ -138,9 +138,9 @@ AC_TYPE_SSIZE_T
 # Checks for required basic library functions
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
-AC_CHECK_FUNCS([abs chmod clock close ctime fcntl fileno fprintf memcmp\
- memcpy memmove memset mktime open perror read sscanf select sleep snprintf\
- stat strptime strrchr strtoul time write], ,
+AC_CHECK_FUNCS([abs chmod clearerr clock close ctime fcntl feof ferror fileno\
+ fprintf memcmp memcpy memmove memset mktime open perror read sscanf select\
+ sleep snprintf stat strptime strrchr strtoul time write], ,
 	AC_MSG_ERROR([some basic functions are missing]))
 
 # Checks for required process and network library functions

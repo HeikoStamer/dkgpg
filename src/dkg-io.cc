@@ -30,7 +30,6 @@ bool get_passphrase
 	 tmcg_openpgp_secure_string_t &passphrase)
 {
 	struct termios old_term, new_term;
-	
 	if (!echo)
 	{
 		// disable echo on stdin
@@ -50,6 +49,11 @@ bool get_passphrase
 	}
 	// read the passphrase
 	std::cerr << prompt.c_str() << ": ";
+	if (feof(stdin) || ferror(stdin))
+	{
+		std::cin.clear();
+		clearerr(stdin); // reset end-of-file and error status of stdin
+	}
 	std::getline(std::cin, passphrase);
 	std::cin.clear();
 	if (!echo)
@@ -68,7 +72,7 @@ bool check_confirmation
 	(const std::string &prompt)
 {
 	std::string input, confirm;
-	// create a random confirmation challenge of 2^24 bit
+	// create a random confirmation challenge of 2^24 bit entropy
 	tmcg_openpgp_octets_t c;
 	unsigned char buf[3];
 	gcry_randomize(buf, sizeof(buf), GCRY_STRONG_RANDOM);

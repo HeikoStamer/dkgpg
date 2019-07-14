@@ -7,7 +7,9 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
- - dkg-generate >= 1.1.3 is incompatible to previous releases (additional 0x1f)
+ - dkg-generate >= 1.1.3 is incompatible to previous releases (additional 0x1f-
+   signature on primary key that contains the same properties (e.g. expiration)
+   as the somehow obligatory self-signature on the initial user ID)
  - interactive programs of DKGPG >= 1.0.8 are incompatible to previous releases
  - dkg-decrypt of DKGPG < 1.1.2 fails on many ZIP-compressed OpenPGP messages
    with "ZLIB ERROR: -3 invalid block type" due to a bug in decompression logic

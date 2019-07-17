@@ -24,51 +24,45 @@
 #endif
 #include "dkg-tcpip-common.hh"
 
-extern int						pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
-extern int						self_pipefd[2];
-extern int						broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
-extern int						broadcast_self_pipefd[2];
-extern pid_t					pid[DKGPG_MAX_N];
-extern std::vector<std::string>	peers;
-extern bool						instance_forked;
-extern int						opt_verbose;
-extern void						fork_instance(const size_t whoami);
+extern int pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+extern int self_pipefd[2];
+extern int broadcast_pipefd[DKGPG_MAX_N][DKGPG_MAX_N][2];
+extern int broadcast_self_pipefd[2];
+extern pid_t pid[DKGPG_MAX_N];
+extern std::vector<std::string> peers;
+extern bool instance_forked;
+extern int opt_verbose;
+extern void fork_instance(const size_t whoami);
 
-static const size_t				tcpip_pipe_buffer_size = 4096;
+static const size_t tcpip_pipe_buffer_size = 4096;
+bool tcpip_signal_caught = false;
 
-std::string 					tcpip_thispeer;
-std::map<std::string, size_t> 	tcpip_peer2pipe;
-std::map<size_t, std::string> 	tcpip_pipe2peer;
-std::map<size_t, int>	 		tcpip_pipe2socket;
-std::map<size_t, int>			tcpip_broadcast_pipe2socket;
-std::map<size_t, int>	 		tcpip_pipe2socket_out;
-std::map<size_t, int>			tcpip_broadcast_pipe2socket_out;
-std::map<size_t, int>	 		tcpip_pipe2socket_in;
-std::map<size_t, int>			tcpip_broadcast_pipe2socket_in;
+std::string tcpip_thispeer;
+std::map<std::string, size_t> tcpip_peer2pipe;
+std::map<size_t, std::string> tcpip_pipe2peer;
+std::map<size_t, int> tcpip_pipe2socket;
+std::map<size_t, int> tcpip_broadcast_pipe2socket;
+std::map<size_t, int> tcpip_pipe2socket_out;
+std::map<size_t, int> tcpip_broadcast_pipe2socket_out;
+std::map<size_t, int> tcpip_pipe2socket_in;
+std::map<size_t, int> tcpip_broadcast_pipe2socket_in;
 
 typedef std::map<size_t, int>::const_iterator tcpip_mci_t;
 
-// This is the signal handler called when receiving SIGINT, SIGQUIT,
-// and SIGTERM, respectively.
-RETSIGTYPE tcpip_sig_handler_quit(int sig)
+// This signal handler is called when receiving SIGINT, SIGQUIT, and
+// SIGTERM, respectively.
+RETSIGTYPE tcpip_sig_handler_quit
+	(int sig)
 {
-	// child process?
-	if (instance_forked && (pid[tcpip_peer2pipe[tcpip_thispeer]] == 0))
+	tcpip_signal_caught = true;
+	if (opt_verbose)
 	{
-		if (opt_verbose)
-		{
-			std::cerr << "tcpip_sig_handler_quit(): child got signal " <<
-				sig << std::endl;
-		}
+		std::cerr << "tcpip_sig_handler_quit(): got signal " <<
+			sig << std::endl;
 	}
-	else
+	if (!instance_forked)
 	{
-		if (opt_verbose)
-		{
-			std::cerr << "tcpip_sig_handler_quit(): parent got signal " <<
-				sig << std::endl;
-		}
-		// remove our own signal handler and quit
+		// remove signal handlers and quit directly
 		signal(SIGINT, SIG_DFL);
 		signal(SIGQUIT, SIG_DFL);
 		signal(SIGTERM, SIG_DFL);
@@ -127,7 +121,7 @@ void tcpip_init
 		perror("ERROR: dots-tcpip-common (pipe2)");
 		exit(-1);
 	}	
-	// install our own signal handler
+	// install signal handlers
 	struct sigaction act;
 	memset(&act, 0, sizeof(act));
 	act.sa_handler = &tcpip_sig_handler_quit;
@@ -549,7 +543,7 @@ void tcpip_accept
 	}
 }
 
-void tcpip_fork
+bool tcpip_fork
 	()
 {
 	if ((tcpip_pipe2socket_in.size() == peers.size()) &&
@@ -563,26 +557,27 @@ void tcpip_fork
 	else
 	{
 		std::cerr << "ERROR: not enough connections established" << std::endl;
-		tcpip_close();
-		tcpip_done();
-		exit(-1);
+		return false;
 	}
+	return true;
 }
 
 int tcpip_io
 	()
 {
 	size_t thisidx = tcpip_peer2pipe[tcpip_thispeer]; // index of this peer
-	while (1)
+	while (!tcpip_signal_caught)
 	{
 		if (instance_forked)
 		{
-			// exit, if forked instance has terminated 
+			// quit, if forked instance has terminated 
 			int wstatus = 0;
 			int thispid = pid[thisidx];
 			int ret = waitpid(thispid, &wstatus, WNOHANG);
 			if (ret < 0)
+			{
 				perror("WARNING: dkg-tcpip-common (waitpid)");
+			}
 			else if (ret == thispid)
 			{
 				instance_forked = false;
@@ -596,9 +591,9 @@ int tcpip_io
 					}
 					if (WCOREDUMP(wstatus))
 						std::cerr << thispid << " dumped core" << std::endl;
-					return -1;
+					return -200;
 				}
-				else if (WIFEXITED(wstatus))
+				else
 				{
 					if (opt_verbose)
 					{
@@ -608,7 +603,6 @@ int tcpip_io
 					}
 					return WEXITSTATUS(wstatus);
 				}
-				return 0;
 			}
 		}
 		fd_set rfds;
@@ -628,9 +622,7 @@ int tcpip_io
 			{
 				std::cerr << "ERROR: file descriptor value of internal" <<
 					" pipe exceeds FD_SETSIZE" << std::endl;
-				tcpip_close();
-				tcpip_done();
-				exit(-1);
+				return -201;
 			}
 		}
 		for (tcpip_mci_t pi = tcpip_broadcast_pipe2socket_in.begin();
@@ -646,9 +638,7 @@ int tcpip_io
 			{
 				std::cerr << "ERROR: file descriptor value of internal" <<
 					" pipe exceeds FD_SETSIZE" << std::endl;
-				tcpip_close();
-				tcpip_done();
-				exit(-1);
+				return -201;
 			}
 		}
 		for (size_t i = 0; i < peers.size(); i++)
@@ -663,9 +653,7 @@ int tcpip_io
 			{
 				std::cerr << "ERROR: file descriptor value of internal" <<
 					" pipe exceeds FD_SETSIZE" << std::endl;
-				tcpip_close();
-				tcpip_done();
-				exit(-1);
+				return -201;
 			}
 			if (broadcast_pipefd[thisidx][i][0] < FD_SETSIZE)
 			{
@@ -677,9 +665,7 @@ int tcpip_io
 			{
 				std::cerr << "ERROR: file descriptor value of internal" <<
 					" pipe exceeds FD_SETSIZE" << std::endl;
-				tcpip_close();
-				tcpip_done();
-				exit(-1);
+				return -201;
 			}
 		}
 		tv.tv_sec = 1;
@@ -696,9 +682,7 @@ int tcpip_io
 			else
 			{
 				perror("ERROR: dkg-tcpip-common (select)");
-				tcpip_close();
-				tcpip_done();
-				exit(-1);
+				return -202;
 			}
 		}
 		if (retval == 0)
@@ -724,9 +708,7 @@ int tcpip_io
 					else
 					{
 						perror("ERROR: dkg-tcpip-common (read)");
-						tcpip_close();
-						tcpip_done();
-						exit(-1);
+						return -203;
 					}
 				}
 				else if (len == 0)
@@ -784,9 +766,7 @@ int tcpip_io
 							else
 							{
 								perror("ERROR: dkg-tcpip-common (write)");
-								tcpip_close();
-								tcpip_done();
-								exit(-1);
+								return -204;
 							}
 						}
 						else
@@ -817,9 +797,7 @@ int tcpip_io
 					else
 					{
 						perror("ERROR: dkg-tcpip-common (read)");
-						tcpip_close();
-						tcpip_done();
-						exit(-1);
+						return -203;
 					}
 				}
 				else if (len == 0)
@@ -878,9 +856,7 @@ int tcpip_io
 							else
 							{
 								perror("ERROR: dkg-tcpip-common (write)");
-								tcpip_close();
-								tcpip_done();
-								exit(-1);
+								return -204;
 							}
 						}
 						else
@@ -910,9 +886,7 @@ int tcpip_io
 					else
 					{
 						perror("ERROR: dkg-tcpip-common (read)");
-						tcpip_close();
-						tcpip_done();
-						exit(-1);
+						return -203;
 					}
 				}
 				else if (len == 0)
@@ -966,9 +940,7 @@ int tcpip_io
 							else
 							{
 								perror("ERROR: dkg-tcpip-common (write)");
-								tcpip_close();
-								tcpip_done();
-								exit(-1);
+								return -204;
 							}
 						}
 						else
@@ -1004,9 +976,7 @@ int tcpip_io
 					else
 					{
 						perror("ERROR: dkg-tcpip-common (read)");
-						tcpip_close();
-						tcpip_done();
-						exit(-1);
+						return -203;
 					}
 				}
 				else if (len == 0)
@@ -1059,9 +1029,7 @@ int tcpip_io
 							else
 							{
 								perror("ERROR: dkg-tcpip-common (write)");
-								tcpip_close();
-								tcpip_done();
-								exit(-1);
+								return -204;
 							}
 						}
 						else
@@ -1080,6 +1048,7 @@ int tcpip_io
 			}
 		}
 	}
+	return -205;
 }
 
 void tcpip_close
@@ -1173,7 +1142,7 @@ int run_tcpip
 	int ret = 0;
 	if (port.length())
 		stpo = strtoul(port.c_str(), NULL, 10); // get start port from options
-	if ((stpo < 1) || (stpo > 65535))
+	if ((stpo < 1024) || (stpo > 65535))
 	{
 		std::cerr << "ERROR: no valid TCP start port given" << std::endl;
 		return -1;
@@ -1186,8 +1155,10 @@ int run_tcpip
 	while (tcpip_connect((uint16_t)stpo, true) < peers)
 		sleep(1);
 	tcpip_accept();
-	tcpip_fork();
-	ret = tcpip_io();
+	if (tcpip_fork())
+		ret = tcpip_io();
+	else
+		ret = -100; // fork to protocol instance failed
 	tcpip_close();
 	tcpip_done();
 	return ret;

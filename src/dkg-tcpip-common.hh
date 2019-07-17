@@ -38,7 +38,7 @@
 
 	#include <sys/types.h>
 	#include <sys/wait.h>
-	#include <signal.h>
+	#include <csignal>
 	#include <netdb.h>
 	#include <netinet/in.h>
 	#include <sys/socket.h>
@@ -51,7 +51,7 @@
 		(const uint16_t stpo, const bool broadcast);
 	void tcpip_accept
 		();
-	void tcpip_fork
+	bool tcpip_fork
 		();
 	int tcpip_io
 		();

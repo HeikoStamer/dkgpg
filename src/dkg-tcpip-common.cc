@@ -929,12 +929,12 @@ int tcpip_io
 								sleep(1);
 								continue;
 							}
-							else if (errno == ECONNRESET)
+							else if ((errno == ECONNRESET) || (errno == EPIPE))
 							{
 								std::cerr << "WARNING: connection collapsed" <<
 									" for p_" << i << std::endl;
-								tcpip_broadcast_pipe2socket_out.erase(i);
-								tcpip_broadcast_pipe2socket_in.erase(i);
+								tcpip_pipe2socket_out.erase(i);
+								tcpip_pipe2socket_in.erase(i);
 								break;
 							}
 							else
@@ -1018,7 +1018,7 @@ int tcpip_io
 								sleep(1);
 								continue;
 							}
-							else if (errno == ECONNRESET)
+							else if ((errno == ECONNRESET) || (errno == EPIPE))
 							{
 								std::cerr << "WARNING: broadcast connection" <<
 									" collapsed for p_" << i << std::endl;

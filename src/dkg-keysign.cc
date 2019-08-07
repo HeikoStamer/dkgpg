@@ -772,6 +772,18 @@ int main
 //			std::endl;
 //		return -1;
 //	}
+	static const struct GNUNET_OS_ProjectData gnunet_dkgpg_pd = {
+		.libname = "none",
+		.project_dirname = "dkgpg",
+		.binary_name = "dkg-",
+		.env_varname = "none",
+		.base_config_varname = "none",
+		.bug_email = "heikostamer@gmx.net",
+		.homepage = "https://www.nongnu.org/dkgpg/",
+		.config_file = "dkgpg.conf",
+		.user_config_file = "~/.config/dkgpg.conf",
+	};
+	GNUNET_OS_init(&gnunet_dkgpg_pd);
 	if (GNUNET_GETOPT_run(usage, options, argc, argv) == GNUNET_SYSERR)
 	{
 		std::cerr << "ERROR: GNUNET_GETOPT_run() failed" << std::endl;

@@ -640,7 +640,6 @@ void gnunet_connect
 				GNUNET_CADET_channel_destroy(pipe2channel_out[i]);
 			// create new CADET output channels
 			struct GNUNET_PeerIdentity pi;
-			enum GNUNET_CADET_ChannelOption flags = GNUNET_CADET_OPTION_RELIABLE;
 			struct GNUNET_CADET_Channel *ch;
 			if (GNUNET_CRYPTO_eddsa_public_key_from_string(pipe2peer[i].c_str(),
 				pipe2peer[i].length(), &pi.public_key) != GNUNET_OK)
@@ -669,7 +668,7 @@ void gnunet_connect
 				GNUNET_MQ_handler_end()
 			};
 			ch = GNUNET_CADET_channel_create(mh, (void*)i, &pi, &porthash,
-				flags, NULL, &gnunet_channel_ended, handlers);
+				NULL, &gnunet_channel_ended, handlers);
 			if (ch == NULL)
 			{
 				std::cerr << "ERROR: cannot create channel to peer = " <<

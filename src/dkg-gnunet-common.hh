@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,7 +40,6 @@
 	#undef NDEBUG
 
 #ifdef GNUNET
-
 	#undef HAVE_CONFIG_H
 	#undef PACKAGE
 	#undef PACKAGE_BUGREPORT
@@ -72,9 +71,7 @@
 		void *channel_ctx);
 	void* gnunet_channel_incoming
 		(void *cls, struct GNUNET_CADET_Channel *channel,
-		const struct GNUNET_PeerIdentity *initiator,
-		const struct GNUNET_HashCode *port,
-		enum GNUNET_CADET_ChannelOption options);
+		const struct GNUNET_PeerIdentity *initiator);
 	void gnunet_shutdown_task
 		(void *cls);
 	void gnunet_io

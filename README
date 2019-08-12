@@ -181,6 +181,8 @@ Bugs, Contribution, GIT
 Example: working configuration in .muttrc (replacement of classic pgp)
 ----------------------------------------------------------------------
 [...]
+  unset crypt_use_gpgme
+  unset pgp_use_gpg_agent
   set pgp_list_pubring_command="~/bin/dkg-keycheck -y -k ~/keyring.asc %r"
   set pgp_self_encrypt=yes
   set pgp_default_key="0x76F73011329D27DB8D7C3F974F584EB8FB2BE14F"

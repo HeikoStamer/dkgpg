@@ -92,7 +92,12 @@ void print_message
 {
 	// print out the decrypted message
 	if (opt_verbose)
-		std::cerr << "INFO: decrypted message:" << std::endl;
+	{
+		if (opt_s)
+			std::cerr << "INFO: included message:" << std::endl;
+		else
+			std::cerr << "INFO: decrypted message:" << std::endl;
+	}
 	for (size_t i = 0; i < msg.size(); i++)
 		std::cout << msg[i];
 }
@@ -2352,7 +2357,7 @@ int main
 		}
 	}
 
-	// start symmetric-key decryption
+	// start symmetric-key decryption or signature verification
 	if ((peers.size() == 0) && (opt_y == NULL))
 	{
 		// parse the keyring
@@ -2394,7 +2399,7 @@ int main
 			return -1;
 		}
 		tmcg_openpgp_secure_octets_t seskey;
-		if (!decrypt_session_key(msg, seskey))
+		if (!opt_s && !decrypt_session_key(msg, seskey))
 		{
 			std::cerr << "ERROR: session key decryption failed" << std::endl;
 			delete msg;

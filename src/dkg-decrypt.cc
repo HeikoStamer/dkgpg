@@ -960,40 +960,41 @@ bool decrypt_message
 	(const tmcg_openpgp_secure_octets_t key, const TMCG_OpenPGP_Keyring *ring,
 	 TMCG_OpenPGP_Message *msg, tmcg_openpgp_octets_t &content)
 {
-	tmcg_openpgp_octets_t decmsg;
+	// decrypt a single OpenPGP message
 	if (!opt_s)
 	{
-		if (!msg->Decrypt(key, opt_verbose, decmsg))
+		tmcg_openpgp_octets_t data;
+		if (!msg->Decrypt(key, opt_verbose, data))
 		{
 			std::cerr << "ERROR: message decryption failed" << std::endl;
 			return false;
 		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(decmsg,
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(data,
 			opt_verbose, msg))
 		{
 			std::cerr << "ERROR: message parsing failed" << std::endl;
 			return false;
 		}
 	}
-	// handle compressed message
-	tmcg_openpgp_octets_t infmsg;
+	// handle a single compressed OpenPGP message
 	if ((msg->compressed_data).size() != 0)
 	{
+		tmcg_openpgp_octets_t data;
 		bool decompress_ok = false;
 		switch (msg->compalgo)
 		{
 			case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
 				for (size_t i = 0; i < (msg->compressed_data).size(); i++)
-					infmsg.push_back(msg->compressed_data[i]);
+					data.push_back(msg->compressed_data[i]);
 				decompress_ok = true; // no compression
 				break;
 			case TMCG_OPENPGP_COMPALGO_ZIP:
 			case TMCG_OPENPGP_COMPALGO_ZLIB:
-				decompress_ok = decompress_libz(msg, infmsg);
+				decompress_ok = decompress_libz(msg, data);
 				break;
 #ifdef LIBBZ
 			case TMCG_OPENPGP_COMPALGO_BZIP2:
-				decompress_ok = decompress_libbz(msg, infmsg);
+				decompress_ok = decompress_libbz(msg, data);
 				break;
 #endif
 			default:
@@ -1003,74 +1004,78 @@ bool decrypt_message
 						(int)msg->compalgo << " is not supported" <<
 						std::endl;
 				}
+				break;
 		}
 		if (!decompress_ok)
 		{
-			std::cerr << "ERROR: decompression failed" << std::endl;
+			std::cerr << "ERROR: decompress failed" << std::endl;
 			return false;
 		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(infmsg,
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(data,
 			opt_verbose, msg))
 		{
-			std::cerr << "ERROR: message parsing failed" << std::endl;
+			std::cerr << "ERROR: message parsing (2) failed" << std::endl;
 			return false;
 		}
 	}
 	// handle decompressed message
 	if ((msg->literal_data).size() == 0)
 	{
-		std::cerr << "ERROR: no literal data in decrypted message" <<
-			std::endl;
+		std::cerr << "ERROR: no literal data found" << std::endl;
 		return false;
 	}
-	else
+	// verify included signatures based on keys from keyring
+	if ((opt_k != NULL) && ((msg->signatures).size() > 0))
 	{
-		// verify included signatures based on keys from keyring
-		if ((opt_k != NULL) && ((msg->signatures).size() > 0))
+		bool vf = true, vf_one = false;
+		for (size_t i = 0; i < (msg->signatures).size(); i++)
 		{
-			bool vf = true, vf_one = false;
-			for (size_t i = 0; i < (msg->signatures).size(); i++)
+			const TMCG_OpenPGP_Signature *sig = msg->signatures[i];
+			std::string ak;
+			if (get_key_by_signature(ring, sig, opt_verbose, ak))
 			{
-				const TMCG_OpenPGP_Signature *sig = msg->signatures[i];
-				std::string ak;
-				if (get_key_by_signature(ring, sig, opt_verbose, ak))
+				if (!verify_signature(msg->literal_data, ak, sig, ring,
+					opt_verbose, opt_weak))
 				{
-					if (!verify_signature(msg->literal_data, ak, sig, ring,
-						opt_verbose, opt_weak))
-					{
-						vf = false;
-						std::cerr << "WARNING: verification of included" <<
-							" signature #" << i << " failed" << std::endl;
-					}
-					else
-						vf_one = true;
+					vf = false;
+					std::cerr << "WARNING: verification of included" <<
+						" signature #" << i << " failed" << std::endl;
 				}
 				else
-				{
-					std::cerr << "WARNING: cannot verify included signature" <<
-						" #" << i << " due to missing public key" << std::endl;
-				}
+					vf_one = true;
 			}
-			if (!vf)
+			else
 			{
-				std::cerr << "ERROR: verification of included signature(s)" <<
-					" failed" << std::endl;
-				return false;
-			}
-			if (opt_s && !vf_one)
-			{
-				std::cerr << "ERROR: none of the included signature(s)" <<
-					" is valid" << std::endl;
-				return false;
+				std::cerr << "WARNING: cannot verify included signature" <<
+					" #" << i << " due to missing public key" << std::endl;
 			}
 		}
-		// copy the content of literal data packet
-		content.insert(content.end(), (msg->literal_data).begin(),
-			(msg->literal_data).end());
+		if (!vf)
+		{
+			std::cerr << "ERROR: verification of included signature(s)" <<
+				" failed" << std::endl;
+			return false;
+		}
+		if (opt_s && !vf_one)
+		{
+			std::cerr << "ERROR: none of the included signature(s)" <<
+				" is valid" << std::endl;
+			return false;
+		}
 	}
+	else if ((msg->signatures).size() > 0)
+	{
+		std::cerr << "WARNING: can't verify included signatures due to" <<
+			" missing keyring" << std::endl;
+	}
+	// copy the content of literal data packet
+	content.insert(content.end(),
+		(msg->literal_data).begin(), (msg->literal_data).end());
 	if (msg->filename == "_CONSOLE")
+	{
 		std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
 			std::endl;
+	}
 	return true;
 }
 

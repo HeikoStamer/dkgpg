@@ -417,8 +417,8 @@ void tcpip_accept
 			}
 			else
 			{
-				std::cerr << "ERROR: file descriptor value of internal pipe" <<
-					" exceeds FD_SETSIZE" << std::endl;
+				std::cerr << "ERROR: file descriptor value of listening" <<
+					" socket exceeds FD_SETSIZE" << std::endl;
 				tcpip_close();
 				tcpip_done();
 				exit(-1);
@@ -435,8 +435,8 @@ void tcpip_accept
 			}
 			else
 			{
-				std::cerr << "ERROR: file descriptor value of internal pipe" <<
-					" exceeds FD_SETSIZE" << std::endl;
+				std::cerr << "ERROR: file descriptor value of listening" <<
+					" socket exceeds FD_SETSIZE" << std::endl;
 				tcpip_close();
 				tcpip_done();
 				exit(-1);
@@ -620,8 +620,8 @@ int tcpip_io
 			}
 			else
 			{
-				std::cerr << "ERROR: file descriptor value of internal" <<
-					" pipe exceeds FD_SETSIZE" << std::endl;
+				std::cerr << "ERROR: file descriptor value of incoming" <<
+					" socket exceeds FD_SETSIZE" << std::endl;
 				return -201;
 			}
 		}
@@ -636,8 +636,8 @@ int tcpip_io
 			}
 			else
 			{
-				std::cerr << "ERROR: file descriptor value of internal" <<
-					" pipe exceeds FD_SETSIZE" << std::endl;
+				std::cerr << "ERROR: file descriptor value of incoming" <<
+					" socket exceeds FD_SETSIZE" << std::endl;
 				return -201;
 			}
 		}

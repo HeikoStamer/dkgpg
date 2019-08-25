@@ -356,7 +356,7 @@ int main
 
 	// parse the keyring, the public key block and corresponding signatures
 	TMCG_OpenPGP_Keyring *ring = NULL;
-	if (opt_k)
+	if (opt_k != NULL)
 	{
 		int opt_verbose_ring = opt_verbose;
 		if (opt_verbose_ring > 0)

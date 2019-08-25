@@ -305,8 +305,7 @@ int main
 		SignatureParse(armored_signature, opt_verbose, signature);
 	if (parse_ok)
 	{
-		if ((signature->type != TMCG_OPENPGP_SIGNATURE_TIMESTAMP) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_STANDALONE))
+		if (signature->type != TMCG_OPENPGP_SIGNATURE_TIMESTAMP)
 		{
 			std::cerr << "ERROR: wrong signature type " <<
 				(int)signature->type << " found" << std::endl;
@@ -314,12 +313,26 @@ int main
 			return -1;
 		}
 		// extract and parse the embedded target signature
+		if (signature->embeddedsigs.size() < 1)
+		{
+			std::cerr << "ERROR: no embedded target signature found" <<
+				std::endl;
+			delete signature;
+			return -1;
+		}
+		else if (signature->embeddedsigs.size() > 1)
+		{
+			std::cerr << "ERROR: more than one embedded target signature" <<
+				" found" << std::endl;
+			delete signature;
+			return -1;
+		}
 		tmcg_openpgp_octets_t embsig;
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTagEncode(2, embsig);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketLengthEncode(signature->embeddedsig.size(), embsig);
-		embsig.insert(embsig.end(),
-			signature->embeddedsig.begin(), signature->embeddedsig.end());
+			PacketLengthEncode(signature->embeddedsigs[0].size(), embsig);
+		embsig.insert(embsig.end(), signature->embeddedsigs[0].begin(),
+			signature->embeddedsigs[0].end());
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			SignatureParse(embsig, opt_verbose, target_signature);
 		if (!parse_ok)

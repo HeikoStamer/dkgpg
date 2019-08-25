@@ -59,15 +59,15 @@ Overview
   mechanism to achieve some validity, consistency, and totality in a most
   likely asynchronous communication environment. However, there are limitations
   (termination is not guaranteed) and predefined timeout values. Timing problems
-  may be recognized by looking for error messages with prefix "rbc" on STDERR
-  output of the interactive programs. In such a case the predefined timeout
+  may be recognized by looking for error messages with prefix "RBC" on STDERR
+  output of the interactive programs. In such cases the predefined timeout
   value (default: five minutes) can be adjusted by using option "-W".
 
   The program dkg-encrypt encrypts a text message for a given public key in
-  OpenPGP format. It uses AES256 as fixed symmetric cipher, most of the
-  public-key algorithms defined by OpenPGP, and even AEAD algorithms from draft
+  OpenPGP format. It uses AES256 as fixed symmetric cipher and most of the
+  public-key algorithms defined by OpenPGP, even AEAD algorithms from draft
   RFC 4880bis, if they are supported by libgcrypt. Of course, a similar result
-  can be achieved by any OpenPGP-compatible implementation --- this program is
+  can be achieved by any OpenPGP-compatible implementation --- the program is
   only included for completeness. Conversely, a corresponding threshold
   decryption protocol (see Ronald Cramer, Rosario Gennaro, and Berry
   Schoenmakers: A Secure and Optimally Efficient Multi-Authority Election
@@ -75,18 +75,25 @@ Overview
   has been implemented by the program dkg-decrypt. It provides an interactive
   version and a non-interactive version for computing, verifying, and combining
   the required decryption shares from participating players. Finally, if
-  everything is sane, it outputs the decrypted message. Included OpenPGP
-  signatures can be verified by using the option "-k" and a keyring that
-  contains the required public keys. Since DKGPG 1.0.8 the program dkg-decrypt
-  supports an option "-y" that turns it into a regular OpenPGP implementation
-  operating with any given private key. This option is also available for other
-  programs like dkg-sign, dkg-keysign, and dkg-timestamp. 
+  everything is sane, it outputs the decrypted message. The included OpenPGP
+  signatures can be verified by using the option "-k" with a keyring that
+  contains the required public keys.
 
-  The programs dkg-keycheck and dkg-keyinfo provide basic information on given
-  OpenPGP public and private keys, respectively. By option "-m" of dkg-keyinfo
-  the migration of a peer identity is achieved. Note that only the stored name
-  of the peer is migrated, other parts of the private key material are not
-  changed. Afterwards all parties should refresh their shares by dkg-refresh.
+  Since version 1.0.8 most DKGPG programs support a new option "-y" that turns
+  them into a regular OpenPGP implementation operating with any transferable
+  private key (ASCII-armored format). For example, this option is available for
+  dkg-generate, dkg-decrypt, dkg-sign, dkg-keysign, and dkg-timestamp.
+
+  The programs dkg-keycheck and dkg-keyinfo print some basic information for any
+  given OpenPGP public and private key, respectively. However, there is one
+  special use case for DKGPG: The option "-m" of dkg-keyinfo migrates a changed
+  peer identity, if the new name meets some requirements. Note that only the
+  name of the peer is migrated, other parts of the private key material are not
+  changed.
+  
+  The private key shares of all active parties should be changed regularly by
+  program dkg-refresh. Each player who does not join this refresh process is
+  excluded from any further operation with the shared private key.
 
   The program dkg-sign creates a detached signature on a binary or a text file,
   if a sufficient threshold of the parties work together in the interactive
@@ -110,14 +117,14 @@ Overview
   and the interactive version of dkg-decrypt the development files and a working
   environment of a very recent version (at least 0.11.x series) must be present.
 
-  However, as workaround for systems without GNUnet a simple TCP/IP-based
-  service for the message exchange is included (option "-H <hostname>") in each
+  However, as simple workaround for systems without GNUnet a TCP/IP-based
+  mechanism for message exchange is included (option "-H <hostname>") in each
   program that needs network interaction. To keep confidentiality and integrity
-  of the established point-to-point channels in this service some mutually
-  chosen and manually distributed passwords (option "-P <password list>") are
-  required. The format of such a password list is explained in the corresponding
-  manual pages. Moreover, with torsocks and some port forwarding rules for a
-  hidden service (see manual page of dkg-generarte for the details) this service
+  of the established point-to-point channels some mutually chosen and (manually)
+  distributed passwords (option "-P <password list>") are required. The format
+  of such a password list is explained in the corresponding manual pages.
+  Moreover, with torsocks and some obvious port forwarding rules for a hidden
+  service (see manual page of dkg-generarte for the details) this mechanism
   allows running the interactive DKGPG programs over Tor.
 
 Requirements
@@ -125,7 +132,7 @@ Requirements
   You need the following programs, libraries and appropriate header files to
   build (GNU gcc/g++ >= 5.4.x or higher is recommended) DKGPG successfully:
 
-  * Toolbox for Mental Card Games (LibTMCG), version >= 1.3.18
+  * Toolbox for Mental Card Games (LibTMCG), version >= 1.4.0
     https://savannah.nongnu.org/projects/libtmcg
   * GNU Multiple Precision Arithmetic Library (libgmp), version >= 5.0.3,
     https://gmplib.org/
@@ -137,7 +144,7 @@ Requirements
     https://zlib.net/
   * [OPTIONAL] Library for data compression (libbzip2), version >= 1.0.6,
     http://www.bzip.org/
-  * [OPTIONAL] GNUnet, version >= 0.11.6
+  * [OPTIONAL] GNUnet, version >= 0.11.7
     https://gnunet.org/
 
   The DKGPG package was tested (++ successful, -- erroneous) on the following

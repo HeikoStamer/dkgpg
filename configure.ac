@@ -18,10 +18,10 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20190716])
+AC_REVISION([20190825])
 AC_PREREQ(2.61)
 
-AC_INIT([Distributed Privacy Guard], [1.1.4], [HeikoStamer@gmx.net], [dkgpg],
+AC_INIT([Distributed Privacy Guard], [1.2.0], [HeikoStamer@gmx.net], [dkgpg],
 	[https://www.nongnu.org/dkgpg/])
 
 AC_LANG(C++)
@@ -84,7 +84,7 @@ CPPFLAGS="$backup_CPPFLAGS"
 
 AM_PATH_LIBGCRYPT("1.6.0")
 if test "x$LIBGCRYPT_LIBS" = "x"; then
-	AC_MSG_ERROR([libgcrypt >= 1.6.0 is needed])
+	AC_MSG_ERROR([libgcrypt >= 1.6.0 is required])
 fi
 backup_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$LIBGCRYPT_CFLAGS $backup_CPPFLAGS"
@@ -93,12 +93,12 @@ CPPFLAGS="$backup_CPPFLAGS"
 
 AM_PATH_GPG_ERROR("1.12")
 if test "x$GPG_ERROR_LIBS" = "x"; then
-	AC_MSG_ERROR([libgpg-error >= 1.12 is needed])
+	AC_MSG_ERROR([libgpg-error >= 1.12 is required])
 fi
 
-AM_PATH_LIBTMCG("1.3.18")
+AM_PATH_LIBTMCG("1.4.0")
 if test "x$LIBTMCG_LIBS" = "x"; then
-        AC_MSG_ERROR([libTMCG >= 1.3.18 is needed])
+        AC_MSG_ERROR([libTMCG >= 1.4.0 is required])
 fi
 AC_SUBST(LIBTMCG_LIBS)
 AC_SUBST(LIBTMCG_CFLAGS)

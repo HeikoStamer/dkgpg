@@ -233,7 +233,7 @@ void run_instance
 			exit(-1);
 		}
 		if (CallasDonnerhackeFinneyShawThayerRFC4880::PacketBodyExtract(
-				signature->packet, opt_verbose, signature_body) != 0x02)
+				signature->packet, opt_verbose, signature_body) != 2)
 		{
 			std::cerr << "ERROR: cannot extract signature body" << std::endl;
 			delete signature;

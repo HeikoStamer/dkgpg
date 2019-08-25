@@ -370,7 +370,11 @@ int main
 		}
 	}
 	else
+	{
 		ring = new TMCG_OpenPGP_Keyring(); // create an empty keyring
+		std::cerr << "WARNING: no keyring specified (missing option \"-k\")" <<
+			std::endl;
+	}
 	if (filename.length() == 0)
 	{
 		// extract public key from keyring
@@ -579,6 +583,8 @@ int main
 		verify_ok = signature->Verify(primary->key, opt_verbose);
 
 	// check validity of the embedded target signature, cf. [RFC 3628]
+	if (opt_verbose)
+		std::cerr << "INFO: check the embedded target signature" << std::endl;
 	time_t tsc = target_signature->creationtime;
 	time_t tse = target_signature->expirationtime;
 	if ((sc < tsc) || (tse && (sc > (tsc + tse))))

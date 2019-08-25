@@ -7,6 +7,8 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is
 included in the sources of this package and additionally can be obtained from
 the Internet <https://www.gnu.org/licenses>.
 
+1.2.0
+
 1.1.3   This is a bugfix release that includes only three minor improvements: a
         direct-key signature (0x1f) for the primary key is added by default such
         that restricting key servers (e.g. keys.openpgp.org) can deliver a

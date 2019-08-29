@@ -545,7 +545,7 @@ int main
 	static const struct GNUNET_OS_ProjectData gnunet_dkgpg_pd = {
 		.libname = "none",
 		.project_dirname = "dkgpg",
-		.binary_name = "dkg-",
+		.binary_name = "dkg-refresh",
 		.env_varname = "none",
 		.base_config_varname = "none",
 		.bug_email = "heikostamer@gmx.net",

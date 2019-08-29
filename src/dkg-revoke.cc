@@ -61,7 +61,7 @@ std::vector<std::string>	peers;
 bool						instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
-std::string						kfilename, reason;
+std::string						kfilename, reason, ifilename, ofilename, s;
 std::string						passwords, hostname, port;
 
 int 							opt_verbose = 0;
@@ -69,6 +69,9 @@ char							*opt_passwords = NULL;
 char							*opt_hostname = NULL;
 char							*opt_k = NULL;
 char							*opt_R = NULL;
+char							*opt_i = NULL;
+char							*opt_o = NULL;
+char							*opt_s = NULL;
 unsigned long int				opt_r = 0, opt_p = 55000, opt_W = 5;
 
 void run_instance
@@ -155,15 +158,80 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	TMCG_OpenPGP_PrivateSubkey *sub = NULL;
-	if (prv->private_subkeys.size())
-		sub = prv->private_subkeys[0]; // FIXME: only the first subkey is used
+
+	// read or export the input (i.e. public key to revoke)
+	std::string armored_pubkey;
+	if (opt_i)
+	{
+		if (!read_key_file(ifilename, armored_pubkey))
+		{
+			delete prv;
+			exit(-1);
+		}
+	}
+	else
+	{
+		tmcg_openpgp_octets_t p;
+		prv->RelinkPublicSubkeys(); // relink the contained subkeys
+		prv->pub->Export(p);
+		prv->RelinkPrivateSubkeys(); // undo the relinking
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, p, armored_pubkey);
+	}
+
+	// parse the public key
+	TMCG_OpenPGP_Pubkey *pub = NULL;
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		PublicKeyBlockParse(armored_pubkey, opt_verbose, pub);
+	if (!parse_ok)
+	{
+		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+		delete prv;
+		exit(-1);
+	}
+
+	// select subkey to revoke, if option "-s" given
+	TMCG_OpenPGP_Subkey *sub = NULL;
+	if (opt_s)
+	{
+		for (size_t i = 0; i < pub->subkeys.size(); i++)
+		{
+			std::string kid, fpr;
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				KeyidConvert(pub->subkeys[i]->id, kid);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				FingerprintConvertPlain(pub->subkeys[i]->fingerprint, fpr);
+			if ((kid == s) || (fpr == s))
+			{
+				sub = pub->subkeys[i];
+				if (opt_verbose)
+				{
+					std::cerr << "INFO: subkey #" << i << " selected" <<
+						" for revocation" << std::endl;
+				}
+				break;
+			}
+		}
+		if (sub == NULL)
+		{
+			std::cerr << "ERROR: no subkey found with fingerprint \"" << s <<
+				"\"" << std::endl;
+			delete pub;
+			delete prv;
+			exit(-1);
+		}
+	}
+	else if (opt_verbose)
+	{
+		std::cerr << "INFO: primary key selected for revocation" << std::endl;
+	}
 
 	// create an instance of tDSS by stored parameters from private key
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
 	if (!init_tDSS(prv, opt_verbose, dss))
 	{
 		delete dss;
+		delete pub;
 		delete prv;
 		exit(-1);
 	}
@@ -172,6 +240,7 @@ void run_instance
 	{
 		std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" << std::endl;
 		delete dss;
+		delete pub;
 		delete prv;
 		exit(-1);
 	}
@@ -190,6 +259,7 @@ void run_instance
 				std::cerr << "ERROR: p_" << whoami << ": " << "cannot read" <<
 					" password for protecting channel to p_" << i << std::endl;
 				delete dss;
+				delete pub;
 				delete prv;
 				exit(-1);
 			}
@@ -201,6 +271,7 @@ void run_instance
 					" to next password for protecting channel to p_" <<
 					(i + 1) << std::endl;
 				delete dss;
+				delete pub;
 				delete prv;
 				exit(-1);
 			}
@@ -259,6 +330,7 @@ void run_instance
 			" failed for |q| = " << mpz_sizeinbase(dss->q, 2L) << std::endl;
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
+		delete pub;
 		delete prv;
 		exit(-1);
 	}
@@ -315,41 +387,34 @@ void run_instance
 	// Primary key revocation signatures (type 0x20) hash only the key being
 	// revoked. Subkey revocation signature (type 0x28) hash first the primary
 	// key and then the subkey being revoked.
-	tmcg_openpgp_octets_t trailer_pub, pub_hashing, hash_pub, left_pub,
-		trailer_sub, sub_hashing, hash_sub, left_sub;
-	tmcg_openpgp_octets_t revsig_pub, revsig_sub;
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION,
-			hashalgo, csigtime, revcode, reason, prv->pub->fingerprint,
-			trailer_pub);
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		KeyHash(prv->pub->pub_hashing, trailer_pub, hashalgo, hash_pub,
-			left_pub);
-	if (!sign_hash(hash_pub, trailer_pub, left_pub, whoami, peers.size(),
-		prv, hashalgo, revsig_pub, opt_verbose, NULL, dss, aiou, rbc))
-	{
-		delete rbc, delete aiou, delete aiou2;
-		delete dss;
-		delete prv;
-		exit(-1);
-	}
+	tmcg_openpgp_octets_t trailer, hashing, hash, left, revsig;
 	if (sub != NULL)
 	{
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareRevocationSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION,
-				hashalgo, csigtime, revcode, reason, prv->pub->fingerprint,
-				trailer_sub);
+			PacketSigPrepareRevocationSignature(
+				TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION, hashalgo, csigtime,
+				revcode, reason, prv->pub->fingerprint, trailer);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			KeyHash(prv->pub->pub_hashing, sub->pub->sub_hashing, trailer_sub,
-				hashalgo, hash_sub, left_sub);
-		if (!sign_hash(hash_sub, trailer_sub, left_sub, whoami, peers.size(),
-			prv, hashalgo, revsig_sub, opt_verbose, NULL, dss, aiou, rbc))
-		{
-			delete rbc, delete aiou, delete aiou2;
-			delete dss;
-			delete prv;
-			exit(-1);
-		}
+			KeyHash(pub->pub_hashing, sub->sub_hashing, trailer, hashalgo,
+				hash, left);
+	}
+	else
+	{
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigPrepareRevocationSignature(
+				TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION, hashalgo, csigtime,
+				revcode, reason, prv->pub->fingerprint, trailer);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			KeyHash(pub->pub_hashing, trailer, hashalgo, hash, left);
+	}
+	if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
+		revsig, opt_verbose, NULL, dss, aiou, rbc))
+	{
+		delete rbc, delete aiou, delete aiou2;
+		delete dss;
+		delete pub;
+		delete prv;
+		exit(-2);
 	}
 
 	// at the end: deliver some more rounds for still waiting parties
@@ -386,67 +451,20 @@ void run_instance
 
 	// release
 	delete dss;
+	delete pub;
+	delete prv;
 
-	// convert and append the created signature packets (revsig_pub, revsig_sub)
-	// to existing OpenPGP structures of this key
-	TMCG_OpenPGP_Signature *si_pub = NULL, *si_sub = NULL;
-	bool parse_ok_pub = CallasDonnerhackeFinneyShawThayerRFC4880::
-		SignatureParse(revsig_pub, opt_verbose, si_pub);
-	if (!parse_ok_pub)
-	{
-		std::cerr << "ERROR: cannot use the created signature" << std::endl;
-		delete prv;
-		exit(-1);
-	}
-	if (opt_verbose)
-		si_pub->PrintInfo();
-	prv->pub->keyrevsigs.push_back(si_pub); // append to private/public key
-	if (sub != NULL)
-	{
-		bool parse_ok_sub = CallasDonnerhackeFinneyShawThayerRFC4880::
-			SignatureParse(revsig_sub, opt_verbose, si_sub);
-		if (!parse_ok_sub)
-		{
-			std::cerr << "ERROR: cannot use the created signature" << std::endl;
-			delete prv;
-			exit(-1);
-		}
-		if (opt_verbose)
-			si_sub->PrintInfo();
-		sub->pub->keyrevsigs.push_back(si_sub); // append to private/public key
-	}
-
-	// export and write updated private key in OpenPGP armor format
-	std::stringstream secfilename;
-	secfilename << peers[whoami] << "_dkg-sec.asc";
-	tmcg_openpgp_octets_t sec;
-	prv->Export(sec);
-	if (!write_key_file(secfilename.str(),
-		TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, sec))
-	{
-		delete prv;
-		exit(-1);
-	}
-
-	// export and write updated public key in OpenPGP armor format
-	std::stringstream pubfilename;
-	pubfilename << peers[whoami] << "_dkg-pub.asc";
-	tmcg_openpgp_octets_t pub;
-	prv->RelinkPublicSubkeys(); // relink the contained subkeys
-	prv->pub->Export(pub);
-	prv->RelinkPrivateSubkeys(); // undo the relinking
+	// output the generated revocation certificate
 	std::string armor;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pub, armor);
-	std::cout << armor << std::endl;
-	if (!write_key_file(pubfilename.str(), armor))
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, revsig, armor);
+	if (opt_o)
 	{
-		delete prv;
-		exit(-1);
+		if (!write_key_file(ofilename, armor))
+			exit(-1);
 	}
-
-	// release
-	delete prv;
+	else
+		std::cout << armor << std::endl;
 }
 
 #ifdef GNUNET
@@ -455,6 +473,9 @@ char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_R = NULL;
+char *gnunet_opt_i = NULL;
+char *gnunet_opt_o = NULL;
+char *gnunet_opt_s = NULL;
 unsigned int gnunet_opt_r = 0;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
@@ -524,6 +545,12 @@ int main
 			"hostname (e.g. onion address) of this peer within PEERS",
 			&gnunet_opt_hostname
 		),
+		GNUNET_GETOPT_option_string('i',
+			"input",
+			"FILENAME",
+			"create revocation certificate for public key in FILENAME",
+			&gnunet_opt_i
+		),
 		GNUNET_GETOPT_option_string('k',
 			"keyring",
 			"FILENAME",
@@ -532,6 +559,12 @@ int main
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
 		GNUNET_GETOPT_option_loglevel(&loglev),
+		GNUNET_GETOPT_option_string('o',
+			"output",
+			"FILENAME",
+			"write revocation certificate to FILENAME",
+			&gnunet_opt_o
+		),
 		GNUNET_GETOPT_option_string('p',
 			"port",
 			"STRING",
@@ -555,6 +588,12 @@ int main
 			"STRING",
 			"reason for revocation (human-readable form)",
 			&gnunet_opt_R
+		),
+		GNUNET_GETOPT_option_string('s',
+			"subkey",
+			"STRING",
+			"select subkey to revoke with fingerprint equals STRING",
+			&gnunet_opt_s
 		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
@@ -590,7 +629,7 @@ int main
 	static const struct GNUNET_OS_ProjectData gnunet_dkgpg_pd = {
 		.libname = "none",
 		.project_dirname = "dkgpg",
-		.binary_name = "dkg-",
+		.binary_name = "dkg-revoke",
 		.env_varname = "none",
 		.base_config_varname = "none",
 		.bug_email = "heikostamer@gmx.net",
@@ -619,6 +658,21 @@ int main
 		reason = gnunet_opt_R; // get reason string from GNUnet options
 		opt_R = gnunet_opt_R;
 	}
+	if (gnunet_opt_i != NULL)
+	{
+		ifilename = gnunet_opt_i; // get input filename from GNUnet options
+		opt_i = gnunet_opt_i;
+	}
+	if (gnunet_opt_o != NULL)
+	{
+		ofilename = gnunet_opt_o; // get output filename from GNUnet options
+		opt_o = gnunet_opt_o;
+	}
+	if (gnunet_opt_s != NULL)
+	{
+		s = gnunet_opt_s; // get subkey fingerprint from GNUnet options
+		opt_s = gnunet_opt_s;
+	}
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
@@ -633,7 +687,9 @@ int main
 			(arg.find("-W") == 0) || (arg.find("-L") == 0) ||
 			(arg.find("-l") == 0) || (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
-			(arg.find("-k") == 0) || (arg.find("-R") == 0))
+			(arg.find("-k") == 0) || (arg.find("-R") == 0) ||
+			(arg.find("-i") == 0) || (arg.find("-o") == 0) ||
+			(arg.find("-s") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -642,11 +698,23 @@ int main
 				hostname = argv[i+1];
 				opt_hostname = (char*)hostname.c_str();
 			}
+			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_i == NULL))
+			{
+				ifilename = argv[i+1];
+				opt_i = (char*)ifilename.c_str();
+			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_k == NULL))
 			{
 				kfilename = argv[i+1];
 				opt_k = (char*)kfilename.c_str();
+			}
+			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_o == NULL))
+			{
+				ofilename = argv[i+1];
+				opt_o = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_passwords == NULL))
@@ -670,6 +738,12 @@ int main
 			{
 				opt_r = strtoul(argv[i+1], NULL, 10);
 			}
+			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_s == NULL))
+			{
+				s = argv[i+1];
+				opt_s = (char*)s.c_str();
+			}
 			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_W == 5))
 			{
@@ -690,8 +764,12 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
+				std::cout << "  -i FILENAME    create revocation certificate" <<
+					" for public key in FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
+				std::cout << "  -o FILENAME    write revocation certificate" <<
+					" to FILENAME" << std::endl;
 				std::cout << "  -p INTEGER     start port for built-in" <<
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
@@ -700,6 +778,8 @@ int main
 					" (OpenPGP machine-readable code)" << std::endl;
 				std::cout << "  -R STRING      reason for revocation" <<
 					" (human-readable form)" << std::endl;
+				std::cout << "  -s STRING      select subkey to revoke with" <<
+					" fingerprint equals STRING" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -742,6 +822,16 @@ int main
 	peers.push_back("Test1");
 	peers.push_back("Test3");
 	peers.push_back("Test4");
+	if (tmcg_mpz_wrandom_ui() % 2)
+	{
+		ifilename = "TestY-pub.asc";
+		opt_i = (char*)ifilename.c_str();
+	}
+	if (tmcg_mpz_wrandom_ui() % 2)
+	{
+		ofilename = "Test-revcert.asc";
+		opt_o = (char*)ofilename.c_str();
+	}
 	opt_r = 3;
 	reason = "PGP is dead";
 	opt_R = (char*)reason.c_str();
@@ -795,8 +885,10 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+	}
 	
 	// initialize return code and do the main work
 	int ret = 0;
@@ -816,11 +908,23 @@ int main
 				"hostname (e.g. onion address) of this peer within PEERS",
 				&gnunet_opt_hostname
 			),
+			GNUNET_GETOPT_option_string('i',
+				"input",
+				"FILENAME",
+				"create revocation certificate for public key in FILENAME",
+				&gnunet_opt_i
+			),
 			GNUNET_GETOPT_option_string('k',
 				"keyring",
 				"FILENAME",
 				"use keyring FILENAME containing external revocation keys",
 				&gnunet_opt_k
+			),
+			GNUNET_GETOPT_option_string('o',
+				"output",
+				"FILENAME",
+				"write revocation certificate to FILENAME",
+				&gnunet_opt_o
 			),
 			GNUNET_GETOPT_option_string('p',
 				"port",
@@ -845,6 +949,12 @@ int main
 				"STRING",
 				"reason for revocation (human-readable form)",
 				&gnunet_opt_R
+			),
+			GNUNET_GETOPT_option_string('s',
+				"subkey",
+				"STRING",
+				"select subkey to revoke with fingerprint equals STRING",
+				&gnunet_opt_s
 			),
 			GNUNET_GETOPT_option_flag('V',
 				"verbose",

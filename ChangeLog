@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-08-29] dkg-revoke: changed semantics and added options "-i", "-o", "-s"
 * [2019-08-07] dkg-gnunet-common: fixed CADET interfaces changed by GNUnet crew
 * [2019-07-18] dkg-tcpip-common: added EPIPE handling and fixed a minor bug
 * [2019-07-16] dkg-tcpip-common: don't allow TCP ports < 1024

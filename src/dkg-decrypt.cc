@@ -69,7 +69,7 @@ pid_t 							pid[DKGPG_MAX_N];
 std::vector<std::string>		peers;
 bool							instance_forked = false;
 
-tmcg_openpgp_secure_string_t	passphrase;
+tmcg_openpgp_secure_string_t	passphrase, sessionkey;
 std::string						ifilename, ofilename, kfilename;
 std::string						passwords, hostname, port, yfilename;
 
@@ -83,6 +83,7 @@ char							*opt_passwords = NULL;
 char							*opt_hostname = NULL;
 char							*opt_k = NULL;
 char							*opt_y = NULL;
+char							*opt_S = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
 
 std::string						armored_message, armored_pubring;
@@ -1866,6 +1867,7 @@ char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
+char *gnunet_opt_S = NULL;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
@@ -1995,6 +1997,12 @@ int main
 			"allow signed-only message",
 			&gnunet_opt_s
 		),
+		GNUNET_GETOPT_option_string('S',
+			"sessionkey",
+			"STRING",
+			"decrypt message with session key STRING",
+			&gnunet_opt_S
+		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
 			"verbose",
@@ -2068,6 +2076,11 @@ int main
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 	if (gnunet_opt_y != NULL)
 		opt_y = gnunet_opt_y;
+	if (gnunet_opt_S != NULL)
+	{
+		opt_S = gnunet_opt_S;
+		sessionkey = gnunet_opt_S; // get session key from GNUnet options
+	}
 #endif
 
 	// create peer list from remaining arguments
@@ -2081,7 +2094,7 @@ int main
 			(arg.find("-o") == 0) || (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
 			(arg.find("-W") == 0) || (arg.find("-k") == 0) ||
-			(arg.find("-y") == 0))
+			(arg.find("-y") == 0) || (arg.find("-S") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -2118,6 +2131,12 @@ int main
 				(port.length() == 0))
 			{
 				port = argv[i+1];
+			}
+			if ((arg.find("-S") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_S == NULL))
+			{
+				sessionkey = argv[i+1];
+				opt_S = (char*)sessionkey.c_str();
 			}
 			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_W == 5))
@@ -2169,6 +2188,8 @@ int main
 					" to protect private and broadcast channels" << std::endl;
 				std::cout << "  -s, --signed-only      allow signed-only" <<
 					" message" << std::endl;
+				std::cout << "  -S STRING              decrypt message with" <<
+					" session key STRING" << std::endl;
 				std::cout << "  -v, --version          print the version" <<
 					" number" << std::endl;
 				std::cout << "  -V, --verbose          turn on verbose" <<
@@ -2399,7 +2420,46 @@ int main
 			return -1;
 		}
 		tmcg_openpgp_secure_octets_t seskey;
-		if (!opt_s && !decrypt_session_key(msg, seskey))
+		if (opt_S)
+		{
+			size_t col = sessionkey.find(":");
+			size_t kst = 0;
+			tmcg_openpgp_skalgo_t algo = TMCG_OPENPGP_SKALGO_PLAINTEXT;
+			if ((col != sessionkey.npos) && (col > 0))
+			{
+				tmcg_openpgp_secure_string_t tmp = sessionkey.substr(0, col);
+				algo = (tmcg_openpgp_skalgo_t)strtoul(tmp.c_str(), NULL, 10);
+				seskey.push_back(algo);
+				kst = col + 1;
+			}
+			else if ((col != sessionkey.npos) && (col == 0))
+			{
+				kst = 1;
+			}
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: use algorithm " << (int)algo << " and" <<
+					" session key provided by user" << std::endl;
+			}
+			bool first = true;
+			tmcg_openpgp_secure_string_t hex;
+			for (size_t i = kst; i < sessionkey.length(); i++)
+			{
+				if (first)
+				{
+					hex = sessionkey[i];
+					first = false;
+				}
+				else
+				{
+					hex += sessionkey[i];
+					hex = strtoul(hex.c_str(), NULL, 16);
+					seskey.push_back(hex[0]);
+					first = true;
+				}
+			}
+		}
+		else if (!opt_s && !decrypt_session_key(msg, seskey))
 		{
 			std::cerr << "ERROR: session key decryption failed" << std::endl;
 			delete msg;
@@ -2832,6 +2892,12 @@ int main
 				"signed-only",
 				"allow signed-only message",
 				&gnunet_opt_s
+			),
+			GNUNET_GETOPT_option_string('S',
+				"sessionkey",
+				"STRING",
+				"decrypt message with session key STRING",
+				&gnunet_opt_S
 			),
 			GNUNET_GETOPT_option_flag('V',
 				"verbose",

@@ -382,7 +382,7 @@ void run_instance
 			break;
 	}
 
-	// compute a hash of pub and sub, respectively, and finally sign it
+	// compute a hash of pub or sub, and finally sign it
 	// RFC 4880 ERRATA:
 	// Primary key revocation signatures (type 0x20) hash only the key being
 	// revoked. Subkey revocation signature (type 0x28) hash first the primary
@@ -451,20 +451,63 @@ void run_instance
 
 	// release
 	delete dss;
-	delete pub;
 	delete prv;
 
-	// output the generated revocation certificate
-	std::string armor;
+	// convert key revocation signature and append it to the public key
+	TMCG_OpenPGP_Signature *sig = NULL;
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		SignatureParse(revsig, opt_verbose, sig);
+	if (!parse_ok)
+	{
+		std::cerr << "ERROR: cannot use the created" <<
+			" revocation signature" << std::endl;
+		delete pub;
+		exit(-1);
+	}
+	if (opt_verbose)
+		sig->PrintInfo();
+	if (sub != NULL)
+		sub->keyrevsigs.push_back(sig);
+	else
+		pub->keyrevsigs.push_back(sig);
+
+	// export the "revocation certificate"
+	tmcg_openpgp_octets_t data;
+	if (opt_i || (sub != NULL))
+		pub->Export(data, TMCG_OPENPGP_EXPORT_REVCERT);
+	else
+		data.insert(data.end(), revsig.begin(), revsig.end());
+
+	// output the "revocation certificate" with annotation
+	std::stringstream comment;
+	std::string fpr, armor;
+	if (sub != NULL)
+	{
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintConvertPlain(sub->fingerprint, fpr);
+	}
+	else
+	{
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			FingerprintConvertPlain(pub->fingerprint, fpr);
+	}
+	comment << "revocation certificate for " << fpr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, revsig, armor);
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			comment.str(), data, armor);
 	if (opt_o)
 	{
 		if (!write_key_file(ofilename, armor))
+		{
+			delete pub;
 			exit(-1);
+		}
 	}
 	else
 		std::cout << armor << std::endl;
+
+	// release
+	delete pub;
 }
 
 #ifdef GNUNET
@@ -833,7 +876,7 @@ int main
 		opt_o = (char*)ofilename.c_str();
 	}
 	opt_r = 3;
-	reason = "PGP is dead";
+	reason = "PGP is (not) dead";
 	opt_R = (char*)reason.c_str();
 	opt_verbose = 2;
 #endif

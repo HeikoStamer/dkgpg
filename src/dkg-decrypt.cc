@@ -962,7 +962,7 @@ bool decompress_libbz
 }
 #endif
 
-bool decrypt_message
+bool decrypt_and_check_message
 	(const tmcg_openpgp_secure_octets_t key, const TMCG_OpenPGP_Keyring *ring,
 	 TMCG_OpenPGP_Message *msg, tmcg_openpgp_octets_t &content)
 {
@@ -1037,6 +1037,11 @@ bool decrypt_message
 		for (size_t i = 0; i < (msg->signatures).size(); i++)
 		{
 			const TMCG_OpenPGP_Signature *sig = msg->signatures[i];
+			if (opt_verbose > 2)
+			{
+				std::cerr << "INFO: included signature #" << i << std::endl;
+				sig->PrintInfo();
+			}
 			std::string ak;
 			if (get_key_by_signature(ring, sig, opt_verbose, ak))
 			{
@@ -1048,7 +1053,38 @@ bool decrypt_message
 						" signature #" << i << " failed" << std::endl;
 				}
 				else
+				{
 					vf_one = true;
+					if (sig->recipientfprs.size() > 0)
+					{
+						bool rf = false;
+						for (size_t j = 0; j < sig->recipientfprs.size(); j++)
+						{
+							if (opt_verbose > 1)
+							{
+								std::string fpr;
+								CallasDonnerhackeFinneyShawThayerRFC4880::
+									FingerprintConvertPlain(
+										sig->recipientfprs[j], fpr);
+								std::cerr << "INFO: Intended Recipient" <<
+								" Fingerprint \"" << fpr << "\"" << std::endl;
+							}
+							if (CallasDonnerhackeFinneyShawThayerRFC4880::
+								OctetsCompare(msg->decryptionfpr,
+									sig->recipientfprs[j]))
+							{
+								rf = true;
+							}
+						}
+						if (!rf)
+						{
+							std::cerr << "ERROR: no Intended Recipient" <<
+								" Fingerprint matches decryption context" <<
+								std::endl;
+							return false;
+						}
+					}
+				}
 			}
 			else
 			{
@@ -1739,6 +1775,9 @@ void run_instance
 					std::cerr << "INFO: PKESK decryption succeeded" <<
 						std::endl;				
 				seskey_decrypted = true;
+				msg->decryptionfpr.clear();
+				msg->decryptionfpr.insert(msg->decryptionfpr.end(),
+					prv->pub->fingerprint.begin(), prv->pub->fingerprint.end());
 				break;
 			}
 		}			
@@ -1796,6 +1835,9 @@ void run_instance
 						std::endl;
 				}		
 				seskey_decrypted = true;
+				msg->decryptionfpr.clear();
+				msg->decryptionfpr.insert(msg->decryptionfpr.end(),
+					prv->pub->fingerprint.begin(), prv->pub->fingerprint.end());
 				break;
 			}
 		}
@@ -1816,7 +1858,7 @@ void run_instance
 		}
 	}
 	tmcg_openpgp_octets_t content;
-	if (!decrypt_message(seskey, ring, msg, content))
+	if (!decrypt_and_check_message(seskey, ring, msg, content))
 	{
 		delete msg;
 		delete dkg;
@@ -2469,7 +2511,7 @@ int main
 			return -1;
 		}
 		tmcg_openpgp_octets_t content;
-		if (!decrypt_message(seskey, ring, msg, content))
+		if (!decrypt_and_check_message(seskey, ring, msg, content))
 		{
 			delete msg;
 			delete ring;
@@ -2790,7 +2832,12 @@ int main
 				ssb->pub->elg_y, esk->gk, esk->myk, seskey);
 		}
 		if (res)
-			res = decrypt_message(seskey, ring, msg, content);
+		{
+			msg->decryptionfpr.clear();
+			msg->decryptionfpr.insert(msg->decryptionfpr.end(),
+				prv->pub->fingerprint.begin(), prv->pub->fingerprint.end());
+			res = decrypt_and_check_message(seskey, ring, msg, content);
+		}
 
 		// release
 		delete msg;

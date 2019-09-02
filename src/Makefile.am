@@ -24,7 +24,8 @@ LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@\
 
 bin_PROGRAMS = dkg-gencrs dkg-generate dkg-encrypt dkg-decrypt dkg-sign\
  dkg-revoke dkg-keyinfo dkg-refresh dkg-verify dkg-keycheck dkg-keysign\
- dkg-timestamp dkg-timestamp-verify dkg-adduid dkg-revuid dkg-addrevoker
+ dkg-timestamp dkg-timestamp-verify dkg-adduid dkg-revuid dkg-addrevoker\
+ dkg-attest
 
 dist_man_MANS = dkg-generate.1 dkg-encrypt.1 dkg-decrypt.1 dkg-sign.1\
  dkg-revoke.1 dkg-verify.1 dkg-keysign.1
@@ -80,4 +81,7 @@ dkg_revuid_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
 dkg_addrevoker_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
  dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
  dkg-io.hh dkg-io.cc dkg-addrevoker.cc
+dkg_attest_SOURCES = dkg-tcpip-common.hh dkg-tcpip-common.cc\
+ dkg-gnunet-common.hh dkg-gnunet-common.cc dkg-common.hh dkg-common.cc\
+ dkg-io.hh dkg-io.cc dkg-attest.cc
 

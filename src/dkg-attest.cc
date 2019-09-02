@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2019  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 // copy infos from DKGPG package before overwritten by GNUnet headers
 static const char *version = PACKAGE_VERSION " (" PACKAGE_NAME ")";
 static const char *about = PACKAGE_STRING " " PACKAGE_URL;
-static const char *protocol = "DKGPG-timestamp-1.0";
+static const char *protocol = "DKGPG-attest-1.0";
 
 #include <sstream>
 #include <fstream>
@@ -66,8 +66,7 @@ bool						instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
 std::string						ifilename, ofilename, kfilename;
-std::string						passwords, hostname, port, URI, yfilename, sn;
-time_t							acc = 0;
+std::string						passwords, hostname, port, URI, yfilename;
 
 int 							opt_verbose = 0;
 char							*opt_i = NULL;
@@ -77,7 +76,6 @@ char							*opt_hostname = NULL;
 char							*opt_URI = NULL;
 char							*opt_k = NULL;
 char							*opt_y = NULL;
-char							*opt_s = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
 bool							opt_a = false;
 
@@ -178,19 +176,12 @@ void run_instance
 		delete prv;
 		exit(-1);
 	}
-	if ((prv->pub->AccumulateFlags() & 0x0800) != 0x0800)
-	{
-		std::cerr << "ERROR: primary key is not intented for timestamping" <<
-			std::endl;
-		delete prv;
-		exit(-1);
-	}
 
-	// read the target signature from stdin or from file
-	std::string armored_signature;
+	// read target fingerprints from stdin or from file
+	std::string fingerprints;
 	if (opt_i != NULL)
 	{
-		if (!read_message(opt_i, armored_signature))
+		if (!read_message(opt_i, fingerprints))
 		{
 			delete prv;
 			exit(-1);
@@ -200,56 +191,9 @@ void run_instance
 	{
 		char c;
 		while (std::cin.get(c))
-			armored_signature += c;
+			fingerprints += c;
 		std::cin.clear();
 	}
-
-	// parse the target signature
-	tmcg_openpgp_octets_t signature_body;
-	TMCG_OpenPGP_Signature *signature = NULL;
-	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-		SignatureParse(armored_signature, opt_verbose, signature);
-	if (parse_ok)
-	{
-		if ((signature->type != TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_STANDALONE) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_GENERIC_CERTIFICATION) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_PERSONA_CERTIFICATION) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_CASUAL_CERTIFICATION) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_PRIMARY_KEY_BINDING) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_DIRECTLY_ON_A_KEY) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_KEY_REVOCATION) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_SUBKEY_REVOCATION) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_CERTIFICATION_REVOCATION) &&
-			(signature->type != TMCG_OPENPGP_SIGNATURE_THIRD_PARTY_CONFIRMATION))
-		{
-			std::cerr << "ERROR: wrong signature type " <<
-				(int)signature->type << " found" << std::endl;
-			delete signature;
-			delete prv;
-			exit(-1);
-		}
-		if (CallasDonnerhackeFinneyShawThayerRFC4880::PacketBodyExtract(
-				signature->packet, opt_verbose, signature_body) != 2)
-		{
-			std::cerr << "ERROR: cannot extract signature body" << std::endl;
-			delete signature;
-			delete prv;
-			exit(-1);
-		}
-	}
-	else
-	{
-		std::cerr << "ERROR: cannot parse resp. use the provided signature" <<
-			std::endl;
-		delete prv;
-		exit(-1);
-	}
-	if (opt_verbose)
-		signature->PrintInfo();
 
 	// initialize signature scheme
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
@@ -264,7 +208,6 @@ void run_instance
 		if (!init_tDSS(prv, opt_verbose, dss))
 		{
 			delete dss;
-			delete signature;
 			delete prv;
 			exit(-1);
 		}
@@ -274,7 +217,6 @@ void run_instance
 			std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" <<
 				std::endl;
 			delete dss;
-			delete signature;
 			delete prv;
 			exit(-1);
 		}
@@ -293,7 +235,6 @@ void run_instance
 						"cannot read" << " password for protecting channel" <<
 						" to p_" << i << std::endl;
 					delete dss;
-					delete signature;
 					delete prv;
 					exit(-1);
 				}
@@ -305,7 +246,6 @@ void run_instance
 						" skip to next password for protecting channel to p_" <<
 						(i + 1) << std::endl;
 					delete dss;
-					delete signature;
 					delete prv;
 					exit(-1);
 				}
@@ -313,7 +253,7 @@ void run_instance
 			else
 			{
 				// simple key -- we assume that GNUnet provides secure channels
-				key << "dkg-timestamp::p_" << (i + whoami);
+				key << "dkg-attest::p_" << (i + whoami);
 			}
 			if (i == whoami)
 				uP_in.push_back(self_pipefd[0]);
@@ -335,7 +275,7 @@ void run_instance
 		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
 			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		// create an instance of a reliable broadcast protocol (RBC)
-		std::string myID = "dkg-timestamp|" + std::string(protocol) + "|";
+		std::string myID = "dkg-attest|" + std::string(protocol) + "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		if (opt_verbose)
@@ -350,7 +290,7 @@ void run_instance
 		// participants must agree on a common signature creation time (OpenPGP)
 		if (opt_verbose)
 			std::cerr << "INFO: agree on a signature creation time for" <<
-				" OpenPGP (used as timestamp)" << std::endl;
+				" OpenPGP" << std::endl;
 		std::vector<time_t> tvs;
 		mpz_t mtv;
 		mpz_init_set_ui(mtv, sigtime);
@@ -369,7 +309,7 @@ void run_instance
 				else
 				{
 					std::cerr << "WARNING: p_" << whoami << ": no signature" <<
-						" creation timestamp received from p_" << i << std::endl;
+						" creation time received from p_" << i << std::endl;
 				}
 			}
 		}
@@ -381,7 +321,6 @@ void run_instance
 				" received" << std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete signature;
 			delete prv;
 			exit(-1);
 		}
@@ -389,18 +328,7 @@ void run_instance
 		csigtime = tvs[tvs.size()/2];
 		if (opt_verbose)
 			std::cerr << "INFO: p_" << whoami << ": canonicalized signature" <<
-				" creation time (timestamp) = " << csigtime << std::endl;
-		if (opt_a)
-		{
-			time_t lst = tvs[0], hst = tvs[tvs.size()-1];
-			if ((csigtime - lst) > (hst - csigtime))
-				acc = (csigtime - lst); // set timestamp accuracy
-			else
-				acc = (hst - csigtime); // set timestamp accuracy
-			if (opt_verbose)
-				std::cerr << "INFO: p_" << whoami << ": set accuracy = " <<
-					(unsigned long int)acc << std::endl;
-		}
+				" creation time = " << csigtime << std::endl;
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
 		if (!select_hashalgo(dss, hashalgo))
 		{
@@ -409,7 +337,6 @@ void run_instance
 				std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
-			delete signature;
 			delete prv;
 			exit(-1);
 		}
@@ -422,66 +349,25 @@ void run_instance
 
 	// compute the trailer and the hash of the signature
 	if (opt_verbose)
-		std::cerr << "INFO: constructing the timestamp signature" << std::endl;
+		std::cerr << "INFO: build the attestation signature" << std::endl;
 	tmcg_openpgp_octets_t trailer, hash, left;
-	tmcg_openpgp_notations_t notations;
-	tmcg_openpgp_notation_t accuracy, serialnumber;
-	if (opt_a)
-	{
-		if (opt_verbose)
-		{
-			std::cerr << "INFO: include an OpenPGP notation on accuracy" <<
-				std::endl;
-		}
-		std::string accuracy_name = "accuracy@dkg-timestamp";
-		std::stringstream avs;
-		avs << (unsigned long int)acc;
-		std::string accuracy_value = avs.str();
-		for (size_t i = 0; i < accuracy_name.length(); i++)
-			accuracy.first.push_back(accuracy_name[i]);
-		for (size_t i = 0; i < accuracy_value.length(); i++)
-			accuracy.second.push_back(accuracy_value[i]);
-		notations.push_back(accuracy);
-	}
-	if (sn.length() != 0)
-	{
-		size_t dpos = sn.find(":");
-		if ((dpos != sn.npos) && (dpos > 0) && ((sn.length() - dpos) > 1))
-		{
-			if (opt_verbose)
-			{
-				std::cerr << "INFO: include an OpenPGP notation on S/N" <<
-					std::endl;
-			}
-			std::string serialnumber_name = sn.substr(0, dpos);
-			std::string serialnumber_value = sn.substr(dpos + 1,
-				sn.length() - dpos - 1);
-			for (size_t i = 0; i < serialnumber_name.length(); i++)
-				serialnumber.first.push_back(serialnumber_name[i]);
-			for (size_t i = 0; i < serialnumber_value.length(); i++)
-				serialnumber.second.push_back(serialnumber_value[i]);
-			notations.push_back(serialnumber);
-		}
-		else
-		{
-			std::cerr << "WARNING: wrong delimiter position for given" <<
-				" OpenPGP notation; ignored" << std::endl;
-		}
-	} // TODO: option -t --target => use other variant of TimestampSignature
-	  //       with hash value supplied by caller, cf. [RFC 3161]
 	if (opt_y == NULL)
 	{
+/** FIXME
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
 				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
 				notations, trailer);
+**/
 	}
 	else
 	{
+/** FIXME
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareTimestampSignature(prv->pkalgo,
 				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
 				notations, trailer);
+**/
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		StandaloneHash(trailer, hashalgo, hash, left);
@@ -496,7 +382,6 @@ void run_instance
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
 		}
-		delete signature;
 		delete prv;
 		exit(-1);
 	}
@@ -528,7 +413,6 @@ void run_instance
 		// release threshold signature scheme
 		delete dss;
 	}
-	delete signature;
 	delete prv;
 
 	// output the result
@@ -565,7 +449,7 @@ void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
-		perror("ERROR: dkg-timestamp (fork)");
+		perror("ERROR: dkg-attest (fork)");
 	else
 	{
 		if (pid[whoami] == 0)
@@ -609,17 +493,12 @@ void fork_instance
 int main
 	(int argc, char *const *argv)
 {
-	static const char *usage = "dkg-timestamp [OPTIONS] PEERS";
+	static const char *usage = "dkg-attest [OPTIONS] PEERS";
 #ifdef GNUNET
 	char *loglev = NULL;
 	char *logfile = NULL;
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
-		GNUNET_GETOPT_option_flag('a',
-			"accuracy",
-			"include OpenPGP notation that represents time deviation",
-			&gnunet_opt_a
-		),
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_help(about),
 		GNUNET_GETOPT_option_string('H',
@@ -631,7 +510,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"read target signature from FILENAME",
+			"read target fingerprints from FILENAME",
 			&gnunet_opt_i
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -645,7 +524,7 @@ int main
 		GNUNET_GETOPT_option_string('o',
 			"output",
 			"FILENAME",
-			"write generated timestamp signature to FILENAME",
+			"write generated attestation signature to FILENAME",
 			&gnunet_opt_o
 		),
 		GNUNET_GETOPT_option_string('p',
@@ -660,16 +539,10 @@ int main
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
 		),
-		GNUNET_GETOPT_option_string('s',
-			"sn",
-			"KEY:VALUE",
-			"embed this OpenPGP notation (e.g. serial number)",
-			&gnunet_opt_s
-		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
 			"STRING",
-			"policy URI tied to timestamp signature",
+			"policy URI tied to attestation signature",
 			&gnunet_opt_URI
 		),
 		GNUNET_GETOPT_option_version(version),
@@ -713,7 +586,7 @@ int main
 	static const struct GNUNET_OS_ProjectData gnunet_dkgpg_pd = {
 		.libname = "none",
 		.project_dirname = "dkgpg",
-		.binary_name = "dkg-timestamp",
+		.binary_name = "dkg-attest",
 		.env_varname = "none",
 		.base_config_varname = "none",
 		.bug_email = "heikostamer@gmx.net",
@@ -749,8 +622,6 @@ int main
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 	if (gnunet_opt_y != NULL)
 		opt_y = gnunet_opt_y; // get yaot filename from GNUnet options
-	if (gnunet_opt_s != NULL)
-		sn = gnunet_opt_s; // get OpenPGP notation from GNUnet options
 #endif
 
 	// create peer list from remaining arguments
@@ -765,7 +636,7 @@ int main
 		    (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
 		    (arg.find("-U") == 0) || (arg.find("-k") == 0) ||
-			(arg.find("-y") == 0) || (arg.find("-s") == 0))
+			(arg.find("-y") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -820,17 +691,10 @@ int main
 				yfilename = argv[i+1];
 				opt_y = (char*)yfilename.c_str();
 			}
-			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_s == NULL))
-			{
-				sn = argv[i+1];
-				opt_s = (char*)sn.c_str();
-			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
-			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-a") == 0))
+			(arg.find("-h") == 0) || (arg.find("-V") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -839,25 +703,21 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
-				std::cout << "  -a, --accuracy include OpenPGP notation that" <<
-					" represents time deviation" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME    read target signature from" <<
+				std::cout << "  -i FILENAME    read target fingerprints from" <<
 					" FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME    write generated timestamp" <<
+				std::cout << "  -o FILENAME    write generated attestation" <<
 					" signature to FILENAME" << std::endl;
 				std::cout << "  -p INTEGER     start port for built-in" <<
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
-				std::cout << "  -s KEY:VALUE   embed this OpenPGP notation" <<
-					" (e.g. serial number)" << std::endl;
 				std::cout << "  -U STRING      policy URI tied to generated" <<
-					" timestamp signature" << std::endl;
+					" attestation signature" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -872,7 +732,7 @@ int main
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 #ifndef GNUNET
-				std::cout << "dkg-timestamp v" << version <<
+				std::cout << "dkg-attest v" << version <<
 					" without GNUNET support" << std::endl;
 #endif
 				return 0; // not continue
@@ -906,22 +766,19 @@ int main
 	peers.push_back("TestTS4");
 	ifilename = "Test1_output.sig";
 	opt_i = (char*)ifilename.c_str();
-	ofilename = "Test1_output_timestamp.sig";
+	ofilename = "Test1_output_attestation.sig";
 	opt_o = (char*)ofilename.c_str();
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
-	sn = "serialnumber@dkg-timestamp.cc:00001";
 	opt_verbose = 2;
-	opt_a = true;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
 	opt_y = (char*)yfilename.c_str();
 	ifilename = "TestY_output.sig";
 	opt_i = (char*)ifilename.c_str();
-	ofilename = "TestY_output_timestamp.sig";
+	ofilename = "TestY_output_attestation.sig";
 	opt_o = (char*)ofilename.c_str();
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
-	sn = "serialnumber@dkg-timestamp.cc:00002";
 	opt_verbose = 2;
 #endif
 #endif
@@ -994,11 +851,6 @@ int main
 		// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 		static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
-			GNUNET_GETOPT_option_flag('a',
-				"accuracy",
-				"include OpenPGP notation that represents time deviation",
-				&gnunet_opt_a
-			),
 			GNUNET_GETOPT_option_string('H',
 				"hostname",
 				"STRING",
@@ -1008,7 +860,7 @@ int main
 			GNUNET_GETOPT_option_string('i',
 				"input",
 				"FILENAME",
-				"read target signature from FILENAME",
+				"read target fingerprints from FILENAME",
 				&gnunet_opt_i
 			),
 			GNUNET_GETOPT_option_string('k',
@@ -1020,7 +872,7 @@ int main
 			GNUNET_GETOPT_option_string('o',
 				"output",
 				"FILENAME",
-				"write generated timestamp signature to FILENAME",
+				"write generated attestation signature to FILENAME",
 				&gnunet_opt_o
 			),
 			GNUNET_GETOPT_option_string('p',
@@ -1035,16 +887,10 @@ int main
 				"exchanged passwords to protect private and broadcast channels",
 				&gnunet_opt_passwords
 			),
-			GNUNET_GETOPT_option_string('s',
-				"sn",
-				"KEY:VALUE",
-				"embed this OpenPGP notation (e.g. serial number)",
-				&gnunet_opt_s
-			),
 			GNUNET_GETOPT_option_string('U',
 				"URI",
 				"STRING",
-				"policy URI tied to timestamp signature",
+				"policy URI tied to attestation signature",
 				&gnunet_opt_URI
 			),
 			GNUNET_GETOPT_option_flag('V',

@@ -3,6 +3,7 @@
 .dirstamp
 dkg-addrevoker
 dkg-adduid
+dkg-attest
 dkg-decrypt
 dkg-encrypt
 dkg-gencrs

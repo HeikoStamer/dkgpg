@@ -408,7 +408,7 @@ void run_instance
 			KeyHash(pub->pub_hashing, trailer, hashalgo, hash, left);
 	}
 	if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
-		revsig, opt_verbose, NULL, dss, aiou, rbc))
+		revsig, opt_verbose, false, dss, aiou, rbc))
 	{
 		delete rbc, delete aiou, delete aiou2;
 		delete dss;
@@ -895,7 +895,7 @@ int main
 		return -1;
 	}
 	canonicalize(peers);
-	if ((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N))
+	if ((peers.size() < 3) || (peers.size() > DKGPG_MAX_N))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;

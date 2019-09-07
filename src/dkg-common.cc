@@ -405,7 +405,7 @@ bool sign_hash
 	 const tmcg_openpgp_hashalgo_t hashalgo,
 	 tmcg_openpgp_octets_t &sig,
 	 const int opt_verbose,
-	 const char *opt_y,
+	 const bool opt_y,
 	 CanettiGennaroJareckiKrawczykRabinDSS *dss,
 	 aiounicast_select *aiou,
 	 CachinKursawePetzoldShoupRBC *rbc)
@@ -431,7 +431,7 @@ bool sign_hash
 	gcry_mpi_t r, s;
 	r = gcry_mpi_new(2048);
 	s = gcry_mpi_new(2048);
-	if (opt_y == NULL)
+	if (opt_y == false)
 	{
 		gcry_mpi_t h;
 		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);

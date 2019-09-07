@@ -341,7 +341,7 @@ void run_instance
 	// sign the hash value
 	tmcg_openpgp_octets_t drksig;
 	if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
-		drksig, opt_verbose, opt_y, dss, aiou, rbc))
+		drksig, opt_verbose, (opt_y != NULL), dss, aiou, rbc))
 	{
 		if (opt_y == NULL)
 		{
@@ -759,7 +759,7 @@ int main
 		return -1;
 	}
 	canonicalize(peers);
-	if (((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)) && (opt_y == NULL))
+	if (((peers.size() < 3) || (peers.size() > DKGPG_MAX_N)) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;

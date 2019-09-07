@@ -77,7 +77,7 @@
 		 const tmcg_openpgp_hashalgo_t hashalgo,
 		 tmcg_openpgp_octets_t &sig,
 		 const int opt_verbose,
-		 const char *opt_y = NULL,
+		 const bool opt_y = true,
 		 CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL,
 		 aiounicast_select *aiou = NULL,
 		 CachinKursawePetzoldShoupRBC *rbc = NULL);

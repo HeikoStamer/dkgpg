@@ -308,7 +308,7 @@ void run_instance
 
 	// sign the hash value
 	if (!sign_hash(hash, uidsig_hashing, uidsig_left, whoami, peers.size(), prv,
-		hashalgo, uidsig, opt_verbose, opt_y, dss, aiou, rbc))
+		hashalgo, uidsig, opt_verbose, (opt_y != NULL), dss, aiou, rbc))
 	{
 		if (opt_y == NULL)
 		{
@@ -738,7 +738,7 @@ int main
 		return -1;
 	}
 	canonicalize(peers);
-	if (((peers.size() < 3)  || (peers.size() > DKGPG_MAX_N)) && (opt_y == NULL))
+	if (((peers.size() < 3) || (peers.size() > DKGPG_MAX_N)) && (opt_y == NULL))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;

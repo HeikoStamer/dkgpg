@@ -206,6 +206,7 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
+		pub->CheckSubkeys(ring, opt_verbose);
 		pub->Reduce(); // keep only valid user IDs and user attributes
 	}
 	else
@@ -381,6 +382,7 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 	}
 
+	// iterate through all valid user IDs
 	for (size_t i = 0; i < pub->userids.size(); i++)
 	{
 		// user ID selected?
@@ -402,6 +404,14 @@ void run_instance
 				break;
 			attestedcerts.insert(attestedcerts.end(), hash.begin(), hash.end());
 		}
+		if (attestedcerts.size() == 0)
+		{
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: nothing to attest for user ID" << std::endl;
+			}
+			continue;
+		}
 		// compute the trailer and the hash of the attestation signature
 		if (opt_verbose)
 		{
@@ -420,7 +430,7 @@ void run_instance
 		else
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareTimestampSignature(prv->pkalgo,
+				PacketSigPrepareAttestationSignature(prv->pkalgo,
 					hashalgo, csigtime, URI, prv->pub->fingerprint,
 					attestedcerts, notations, trailer);
 		}
@@ -473,9 +483,11 @@ void run_instance
 		// at the end: deliver some more rounds for still waiting parties
 		time_t synctime = (opt_W * 6);
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: p_" << whoami << ": waiting approximately " <<
 				(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 				std::endl;
+		}
 		rbc->Sync(synctime);
 		// release RBC
 		delete rbc;
@@ -532,7 +544,9 @@ void fork_instance
 	(const size_t whoami)
 {
 	if ((pid[whoami] = fork()) < 0)
+	{
 		perror("ERROR: dkg-attest (fork)");
+	}
 	else
 	{
 		if (pid[whoami] == 0)
@@ -912,8 +926,10 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+	}
 	
 	// initialize return code and do the main work
 	int ret = 0;

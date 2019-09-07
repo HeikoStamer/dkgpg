@@ -2396,18 +2396,7 @@ int main
 		}
 	}
 	else
-	{
-		std::cerr << "Enter encrypted message (ending with a single line" <<
-			" \"-----END PGP MESSAGE-----\"):" << std::endl;
-		std::string line;
-		while (std::getline(std::cin, line))
-		{
-			armored_message += line + "\r\n";
-			if (line.find("-----END PGP MESSAGE-----") != std::string::npos)
-				break;
-		}	
-		std::cin.clear();
-	}
+		read_stdin("-----END PGP MESSAGE-----", armored_message);
 
 	// read keyring
 	if (opt_k)

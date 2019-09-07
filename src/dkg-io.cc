@@ -273,6 +273,22 @@ bool read_binary_signature
 	return true;
 }
 
+void read_stdin
+	(const std::string &end_marker,
+	 std::string &result)
+{
+	std::cerr << "Enter data (ending with a single line" <<
+		" \"" << end_marker << "\"):" << std::endl;
+	std::string line;
+	while (std::getline(std::cin, line))
+	{
+		result += line + "\r\n";
+		if (line.find(end_marker) != std::string::npos)
+			break;
+	}	
+	std::cin.clear();
+}
+
 bool read_message
 	(const std::string &filename,
 	 std::string &result)

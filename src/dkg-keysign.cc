@@ -452,10 +452,12 @@ void run_instance
 	bool anything_signed = false;
 	for (size_t j = 0; j < primary->userids.size(); j++)
 	{
-		// user ID not selected?
+		// user ID selected?
 		if (opt_u && (primary->userids[j]->userid.find(u) ==
 			primary->userids[j]->userid.npos))
-				continue; // skip this user ID
+		{
+			continue; // skip this user ID
+		}
 		// compute the hash of the certified key resp. user ID
 		tmcg_openpgp_octets_t hash, left, empty;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -569,11 +571,11 @@ char *gnunet_opt_ifilename = NULL;
 char *gnunet_opt_ofilename = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
-char *gnunet_opt_u = NULL;
 char *gnunet_opt_URI = NULL;
+char *gnunet_opt_u = NULL;
 char *gnunet_opt_K = NULL;
-char *gnunet_opt_fingerprint = NULL;
 char *gnunet_opt_k = NULL;
+char *gnunet_opt_fingerprint = NULL;
 char *gnunet_opt_y = NULL;
 unsigned int gnunet_opt_sigexptime = 0;
 unsigned int gnunet_opt_xtests = 0;
@@ -685,17 +687,17 @@ int main
 			"create certification signature on key resp. user ID from FILENAME",
 			&gnunet_opt_ifilename
 		),
-		GNUNET_GETOPT_option_string('K',
-			"keys",
-			"FILENAME",
-			"select public key for certification from keyring FILENAME",
-			&gnunet_opt_K
-		),
 		GNUNET_GETOPT_option_string('k',
 			"keyring",
 			"FILENAME",
 			"use keyring FILENAME containing external revocation keys",
 			&gnunet_opt_k
+		),
+		GNUNET_GETOPT_option_string('K',
+			"keys",
+			"FILENAME",
+			"select public key for certification from keyring FILENAME",
+			&gnunet_opt_K
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
 		GNUNET_GETOPT_option_loglevel(&loglev),
@@ -816,7 +818,7 @@ int main
 	if (gnunet_opt_URI != NULL)
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 	if (gnunet_opt_u != NULL)
-		u = gnunet_opt_u; // get policy URI from GNUnet options
+		u = gnunet_opt_u; // get user ID from GNUnet options
 	if (gnunet_opt_K != NULL)
 		Kfilename = gnunet_opt_K; // get keyring from GNUnet options
 	if (gnunet_opt_fingerprint != NULL)

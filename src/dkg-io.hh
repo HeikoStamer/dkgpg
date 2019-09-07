@@ -71,6 +71,9 @@
 	bool read_binary_signature
 		(const std::string &filename,
 		 std::string &result);
+	void read_stdin
+		(const std::string &end_marker,
+		 std::string &result);
 	bool read_message
 		(const std::string &filename,
 		 std::string &result);

@@ -66,7 +66,7 @@ bool						instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
 std::string						ifilename, ofilename, kfilename;
-std::string						passwords, hostname, port, URI, yfilename;
+std::string						passwords, hostname, port, URI, u, yfilename;
 
 int 							opt_verbose = 0;
 char							*opt_i = NULL;
@@ -74,6 +74,7 @@ char							*opt_o = NULL;
 char							*opt_passwords = NULL;
 char							*opt_hostname = NULL;
 char							*opt_URI = NULL;
+char							*opt_u = NULL;
 char							*opt_k = NULL;
 char							*opt_y = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
@@ -103,11 +104,21 @@ void run_instance
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		if (!read_key_file(kfilename, armored_pubring))
 			exit(-1);
 	}
+
+	// read the certification signatures (i.e. public key block)
+	std::string armored_pubkey;
+	if (ifilename.length() > 0)
+	{
+		if (!read_key_file(ifilename, armored_pubkey))
+			exit(-1);
+	}
+	else
+		read_stdin("-----END PGP PUBLIC KEY BLOCK-----", armored_pubkey);
 
 	// parse the keyring, the private key and corresponding signatures
 	TMCG_OpenPGP_Prvkey *prv = NULL;
@@ -163,37 +174,56 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
-	delete ring;
 	if (!prv->pub->valid || ((opt_y == NULL) && prv->Weak(opt_verbose)))
 	{
-		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
+		std::cerr << "ERROR: private key is invalid or weak" << std::endl;
+		delete ring;
 		delete prv;
 		exit(-1);
 	}
 	if ((prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) && (opt_y == NULL))
 	{
-		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
+		std::cerr << "ERROR: private key is not a tDSS/DSA key" << std::endl;
+		delete ring;
 		delete prv;
 		exit(-1);
 	}
 
-	// read target fingerprints from stdin or from file
-	std::string fingerprints;
-	if (opt_i != NULL)
+	// parse the public key block and corresponding signatures
+	TMCG_OpenPGP_Pubkey *pub = NULL;
+	parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		PublicKeyBlockParse(armored_pubkey, opt_verbose, pub);
+	if (parse_ok)
 	{
-		if (!read_message(opt_i, fingerprints))
+		pub->CheckSelfSignatures(ring, opt_verbose);
+		if (!pub->valid)
 		{
+			std::cerr << "ERROR: public key is not valid" << std::endl;
+			delete pub;
+			delete ring;
 			delete prv;
 			exit(-1);
 		}
+		if (pub->Weak(opt_verbose))
+		{
+			std::cerr << "ERROR: public key is weak" << std::endl;
+			delete pub;
+			delete ring;
+			delete prv;
+			exit(-1);
+		}
+		pub->Reduce(); // keep only valid user IDs and user attributes
 	}
 	else
 	{
-		char c;
-		while (std::cin.get(c))
-			fingerprints += c;
-		std::cin.clear();
+		std::cerr << "ERROR: cannot use the provided public key" << std::endl;
+		delete ring;
+		delete prv;
+		exit(-1);
 	}
+
+	// release keyring
+	delete ring;
 
 	// initialize signature scheme
 	CanettiGennaroJareckiKrawczykRabinDSS *dss = NULL;
@@ -208,6 +238,7 @@ void run_instance
 		if (!init_tDSS(prv, opt_verbose, dss))
 		{
 			delete dss;
+			delete pub;
 			delete prv;
 			exit(-1);
 		}
@@ -217,6 +248,7 @@ void run_instance
 			std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" <<
 				std::endl;
 			delete dss;
+			delete pub;
 			delete prv;
 			exit(-1);
 		}
@@ -235,6 +267,7 @@ void run_instance
 						"cannot read" << " password for protecting channel" <<
 						" to p_" << i << std::endl;
 					delete dss;
+					delete pub;
 					delete prv;
 					exit(-1);
 				}
@@ -246,6 +279,7 @@ void run_instance
 						" skip to next password for protecting channel to p_" <<
 						(i + 1) << std::endl;
 					delete dss;
+					delete pub;
 					delete prv;
 					exit(-1);
 				}
@@ -289,8 +323,10 @@ void run_instance
 		xtest(num_xtests, whoami, peers.size(), rbc);
 		// participants must agree on a common signature creation time (OpenPGP)
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: agree on a signature creation time for" <<
 				" OpenPGP" << std::endl;
+		}
 		std::vector<time_t> tvs;
 		mpz_t mtv;
 		mpz_init_set_ui(mtv, sigtime);
@@ -321,14 +357,17 @@ void run_instance
 				" received" << std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete pub;
 			delete prv;
 			exit(-1);
 		}
 		// use a median value as some kind of gentle agreement
 		csigtime = tvs[tvs.size()/2];
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: p_" << whoami << ": canonicalized signature" <<
 				" creation time = " << csigtime << std::endl;
+		}
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
 		if (!select_hashalgo(dss, hashalgo))
 		{
@@ -337,6 +376,7 @@ void run_instance
 				std::endl;
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
+			delete pub;
 			delete prv;
 			exit(-1);
 		}
@@ -347,44 +387,91 @@ void run_instance
 		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 	}
 
-	// compute the trailer and the hash of the signature
-	if (opt_verbose)
-		std::cerr << "INFO: build the attestation signature" << std::endl;
-	tmcg_openpgp_octets_t trailer, hash, left;
-	if (opt_y == NULL)
+	for (size_t i = 0; i < pub->userids.size(); i++)
 	{
-/** FIXME
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
-				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
-				notations, trailer);
-**/
-	}
-	else
-	{
-/** FIXME
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareTimestampSignature(prv->pkalgo,
-				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
-				notations, trailer);
-**/
-	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		StandaloneHash(trailer, hashalgo, hash, left);
-
-	// sign the hash value
-	tmcg_openpgp_octets_t sig;
-	if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
-		sig, opt_verbose, opt_y, dss, aiou, rbc))
-	{
+		// user ID selected?
+		if (opt_u && (pub->userids[i]->userid.find(u) ==
+			pub->userids[i]->userid.npos))
+		{
+			continue; // skip this user ID
+		}
+		// attest all included certification signatures
+		tmcg_openpgp_octets_t attestedcerts;
+		for (size_t j = 0; j < pub->userids[i]->certsigs.size(); j++)
+		{
+			tmcg_openpgp_octets_t hash_input, hash;
+			// compute hash value
+// TODO
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				HashCompute(hashalgo, hash_input, hash);
+			if (attestedcerts.size() > 60000)
+				break;
+			attestedcerts.insert(attestedcerts.end(), hash.begin(), hash.end());
+		}
+		// compute the trailer and the hash of the attestation signature
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: build attestation signature for user ID = \"" <<
+				pub->userids[i]->userid_sanitized << "\"" << std::endl;
+		}
+		tmcg_openpgp_octets_t trailer, empty, hash, left;
+		tmcg_openpgp_notations_t notations;
 		if (opt_y == NULL)
 		{
-			delete rbc, delete aiou, delete aiou2;
-			delete dss;
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareAttestationSignature(TMCG_OPENPGP_PKALGO_DSA,
+					hashalgo, csigtime, URI, prv->pub->fingerprint,
+					attestedcerts, notations, trailer);
 		}
-		delete prv;
-		exit(-1);
+		else
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareTimestampSignature(prv->pkalgo,
+					hashalgo, csigtime, URI, prv->pub->fingerprint,
+					attestedcerts, notations, trailer);
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			CertificationHash(pub->pub_hashing, pub->userids[i]->userid, empty,
+				trailer, hashalgo, hash, left);
+		// sign the hash value
+		tmcg_openpgp_octets_t attsig;
+		if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
+			attsig, opt_verbose, opt_y, dss, aiou, rbc))
+		{
+			if (opt_y == NULL)
+			{
+				delete rbc, delete aiou, delete aiou2;
+				delete dss;
+			}
+			delete pub;
+			delete prv;
+			exit(-1);
+		}
+		// convert attestation signature and append it to the public key
+		TMCG_OpenPGP_Signature *sig = NULL;
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			SignatureParse(attsig, opt_verbose, sig);
+		if (!parse_ok)
+		{
+			std::cerr << "ERROR: cannot use the created attestation" <<
+				" signature" << std::endl;
+			if (opt_y == NULL)
+			{
+				delete rbc, delete aiou, delete aiou2;
+				delete dss;
+			}
+			delete pub;
+			delete prv;
+			exit(-1);
+		}
+		if (opt_verbose)
+			sig->PrintInfo();
+		pub->userids[i]->attestsigs.push_back(sig);
 	}
+
+	// export the modified public key including attached attestation signatures
+	tmcg_openpgp_octets_t data;
+	pub->Export(data);
 
 	// release allocated ressources
 	if (opt_y == NULL)
@@ -413,19 +500,20 @@ void run_instance
 		// release threshold signature scheme
 		delete dss;
 	}
+	delete pub;
 	delete prv;
 
 	// output the result
-	std::string sigstr;
+	std::string datastr;
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, sigstr);
+		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, data, datastr);
 	if (opt_o != NULL)
 	{
-		if (!write_message(opt_o, sigstr))
+		if (!write_message(opt_o, datastr))
 			exit(-1);
 	}
 	else
-		std::cout << sigstr << std::endl;
+		std::cout << datastr << std::endl;
 }
 
 #ifdef GNUNET
@@ -435,6 +523,7 @@ char *gnunet_opt_o = NULL;
 char *gnunet_opt_passwords = NULL;
 char *gnunet_opt_port = NULL;
 char *gnunet_opt_URI = NULL;
+char *gnunet_opt_u = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
 char *gnunet_opt_s = NULL;
@@ -510,7 +599,7 @@ int main
 		GNUNET_GETOPT_option_string('i',
 			"input",
 			"FILENAME",
-			"read target fingerprints from FILENAME",
+			"read certification signatures from FILENAME",
 			&gnunet_opt_i
 		),
 		GNUNET_GETOPT_option_string('k',
@@ -524,7 +613,7 @@ int main
 		GNUNET_GETOPT_option_string('o',
 			"output",
 			"FILENAME",
-			"write generated attestation signature to FILENAME",
+			"write generated attestation signatures to FILENAME",
 			&gnunet_opt_o
 		),
 		GNUNET_GETOPT_option_string('p',
@@ -539,10 +628,16 @@ int main
 			"exchanged passwords to protect private and broadcast channels",
 			&gnunet_opt_passwords
 		),
+		GNUNET_GETOPT_option_string('u',
+			"userid",
+			"STRING",
+			"attest only valid user IDs containing STRING",
+			&gnunet_opt_u
+		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
 			"STRING",
-			"policy URI tied to attestation signature",
+			"policy URI tied to attestation signatures",
 			&gnunet_opt_URI
 		),
 		GNUNET_GETOPT_option_version(version),
@@ -610,6 +705,8 @@ int main
 		opt_passwords = gnunet_opt_passwords;
 	if (gnunet_opt_URI != NULL)
 		opt_URI = gnunet_opt_URI;
+	if (gnunet_opt_u != NULL)
+		opt_u = gnunet_opt_u;
 	if (gnunet_opt_passwords != NULL)
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
@@ -620,6 +717,8 @@ int main
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 	if (gnunet_opt_URI != NULL)
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
+	if (gnunet_opt_u != NULL)
+		u = gnunet_opt_u; // get user ID from GNUnet options
 	if (gnunet_opt_y != NULL)
 		opt_y = gnunet_opt_y; // get yaot filename from GNUnet options
 #endif
@@ -633,7 +732,7 @@ int main
 			(arg.find("-w") == 0) || (arg.find("-W") == 0) || 
 		    (arg.find("-L") == 0) || (arg.find("-l") == 0) ||
 			(arg.find("-i") == 0) || (arg.find("-o") == 0) || 
-		    (arg.find("-x") == 0) ||
+		    (arg.find("-x") == 0) || (arg.find("-u") == 0) || 
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
 		    (arg.find("-U") == 0) || (arg.find("-k") == 0) ||
 			(arg.find("-y") == 0))
@@ -675,6 +774,12 @@ int main
 				URI = argv[i+1];
 				opt_URI = (char*)URI.c_str();
 			}
+			if ((arg.find("-u") == 0) && (idx < (size_t)(argc - 1)) &&
+				(opt_u == NULL))
+			{
+				u = argv[i+1];
+				opt_u = (char*)u.c_str();
+			}
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
 				(port.length() == 0))
 			{
@@ -706,18 +811,20 @@ int main
 				std::cout << "  -h, --help     print this help" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
-				std::cout << "  -i FILENAME    read target fingerprints from" <<
-					" FILENAME" << std::endl;
+				std::cout << "  -i FILENAME    read certification signatures" <<
+					" from FILENAME" << std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
 				std::cout << "  -o FILENAME    write generated attestation" <<
-					" signature to FILENAME" << std::endl;
+					" signatures to FILENAME" << std::endl;
 				std::cout << "  -p INTEGER     start port for built-in" <<
 					" TCP/IP message exchange service" << std::endl;
 				std::cout << "  -P STRING      exchanged passwords to" <<
 					" protect private and broadcast channels" << std::endl;
+				std::cout << "  -u STRING      attest only valid user IDs" <<
+					" containing STRING" << std::endl;
 				std::cout << "  -U STRING      policy URI tied to generated" <<
-					" attestation signature" << std::endl;
+					" attestation signatures" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -860,7 +967,7 @@ int main
 			GNUNET_GETOPT_option_string('i',
 				"input",
 				"FILENAME",
-				"read target fingerprints from FILENAME",
+				"read certification signatures from FILENAME",
 				&gnunet_opt_i
 			),
 			GNUNET_GETOPT_option_string('k',
@@ -872,7 +979,7 @@ int main
 			GNUNET_GETOPT_option_string('o',
 				"output",
 				"FILENAME",
-				"write generated attestation signature to FILENAME",
+				"write generated attestation signatures to FILENAME",
 				&gnunet_opt_o
 			),
 			GNUNET_GETOPT_option_string('p',
@@ -887,10 +994,16 @@ int main
 				"exchanged passwords to protect private and broadcast channels",
 				&gnunet_opt_passwords
 			),
+			GNUNET_GETOPT_option_string('u',
+				"userid",
+				"STRING",
+				"attest only valid user IDs containing STRING",
+				&gnunet_opt_u
+			),
 			GNUNET_GETOPT_option_string('U',
 				"URI",
 				"STRING",
-				"policy URI tied to attestation signature",
+				"policy URI tied to attestation signatures",
 				&gnunet_opt_URI
 			),
 			GNUNET_GETOPT_option_flag('V',

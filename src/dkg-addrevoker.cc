@@ -574,11 +574,16 @@ int main
 		.project_dirname = "dkgpg",
 		.binary_name = "dkg-addrevoker",
 		.env_varname = "none",
+		.env_varname_alt = "none",
 		.base_config_varname = "none",
 		.bug_email = "heikostamer@gmx.net",
 		.homepage = "https://www.nongnu.org/dkgpg/",
 		.config_file = "dkgpg.conf",
 		.user_config_file = "~/.config/dkgpg.conf",
+		.version = PACKAGE_VERSION,
+		.is_gnu = 0,
+		.gettext_domain = NULL,
+		.gettext_path = NULL
 	};
 	GNUNET_OS_init(&gnunet_dkgpg_pd);
 	if (GNUNET_GETOPT_run(usage, options, argc, argv) == GNUNET_SYSERR)

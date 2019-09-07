@@ -72,6 +72,22 @@ int 							opt_verbose = 0;
 unsigned long int				opt_p = 55000, opt_W = 5;
 bool							opt_a = false;
 
+bool compare_octests
+	(const tmcg_openpgp_octets_t a, const tmcg_openpgp_octets_t b)
+{
+	if (a.size() == b.size())
+	{
+		for (size_t i = 0; i < a.size(); i++)
+		{
+			if (a[i] != b[i])
+				return (a[i] < b[i]);
+		}
+		return false;
+	}
+	else
+		return (a.size() < b.size());
+}
+
 void run_instance
 	(size_t whoami, const time_t sigtime, const size_t num_xtests)
 {
@@ -391,32 +407,70 @@ void run_instance
 		{
 			continue; // skip this user ID
 		}
-		// attest all included certification signatures
-		tmcg_openpgp_octets_t attestedcerts;
+		// attest to all attached certification signatures
+		tmcg_openpgp_multiple_octets_t certhashes;
 		for (size_t j = 0; j < pub->userids[i]->certsigs.size(); j++)
 		{
-			tmcg_openpgp_octets_t hash_input, hash;
-			// compute hash value
-// TODO
+			TMCG_OpenPGP_Signature *sig = pub->userids[i]->certsigs[j];
+			tmcg_openpgp_octets_t sigpkt, hash_input, hash;
+			// The listed digests MUST be calculated over the third-party
+			// certification's Signature packet as described in the "Computing
+			// Signatures" section, but without a trailer: the hash data starts
+			// with the octet 0x88, followed by the four-octet length of the
+			// Signature, and then the body of the Signature packet. (Note that
+			// this is an old-style packet header for a Signature packet with
+			// the length-of-length field set to zero.) The unhashed subpacket
+			// data of the Signature packet being hashed is not included in the
+			// hash, and the unhashed subpacket data length value is set to
+			// zero.
+			sigpkt.push_back(sig->version);
+			sigpkt.push_back(sig->type);
+			sigpkt.push_back(sig->pkalgo);
+			sigpkt.push_back(sig->hashalgo);
+			sigpkt.push_back((sig->hspd.size() >> 8) & 0xFF);
+			sigpkt.push_back(sig->hspd.size() & 0xFF);
+			sigpkt.insert(sigpkt.end(), sig->hspd.begin(), sig->hspd.end());
+			sigpkt.push_back(0x00);
+			sigpkt.push_back(0x00);
+			hash_input.push_back(0x88);
+			hash_input.push_back((sigpkt.size() >> 24) & 0xFF);
+			hash_input.push_back((sigpkt.size() >> 16) & 0xFF);
+			hash_input.push_back((sigpkt.size() >> 8) & 0xFF);
+			hash_input.push_back(sigpkt.size() & 0xFF);
+			hash_input.insert(hash_input.end(), sigpkt.begin(), sigpkt.end());
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				HashCompute(hashalgo, hash_input, hash);
-			if (attestedcerts.size() > 60000)
-				break;
-			attestedcerts.insert(attestedcerts.end(), hash.begin(), hash.end());
+			certhashes.push_back(hash);
 		}
-		if (attestedcerts.size() == 0)
+		if (certhashes.size() == 0)
 		{
 			if (opt_verbose)
 			{
-				std::cerr << "INFO: nothing to attest for user ID" << std::endl;
+				std::cerr << "INFO: nothing to attest for user ID #" << i <<
+					std::endl;
 			}
-			continue;
+			continue; // skip this user ID
+		}
+		std::sort(certhashes.begin(), certhashes.end(), compare_octests);
+		tmcg_openpgp_octets_t attestedcerts;
+		for (size_t j = 0; j < certhashes.size(); j++)
+		{ 
+			if (attestedcerts.size() > 60000)
+			{
+				std::cerr << "WARNING: too many certifications to attest;" <<
+					" skipped remaining certs where j >= " << j << std::endl;
+				break; // TODO: create a second attestation signature
+			}
+			attestedcerts.insert(attestedcerts.end(),
+				certhashes[j].begin(), certhashes[j].end());
 		}
 		// compute the trailer and the hash of the attestation signature
 		if (opt_verbose)
 		{
 			std::cerr << "INFO: build attestation signature for user ID = \"" <<
 				pub->userids[i]->userid_sanitized << "\"" << std::endl;
+			std::cerr << "INFO: attestedcerts.size() = " <<
+				attestedcerts.size() << std::endl;
 		}
 		tmcg_openpgp_octets_t trailer, empty, hash, left;
 		tmcg_openpgp_notations_t notations;
@@ -860,18 +914,18 @@ int main
 		}
 	}
 #ifdef DKGPG_TESTSUITE
-	peers.push_back("TestTS2");
-	peers.push_back("TestTS3");
-	peers.push_back("TestTS4");
-	ifilename = "Test1_output.sig";
-	ofilename = "Test1_output_attestation.sig";
+	peers.push_back("Test2");
+	peers.push_back("Test3");
+	peers.push_back("Test4");
+	ifilename = "Test1_dkg-pub_signed.asc";
+	ofilename = "Test1_output_attestation.asc";
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
-	ifilename = "TestY_output.sig";
-	ofilename = "TestY_output_attestation.sig";
+	ifilename = "TestY-pub_signed.asc";
+	ofilename = "TestY_output_attestation.asc";
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
 #endif

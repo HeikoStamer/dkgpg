@@ -69,10 +69,6 @@ std::string						ifilename, ofilename, kfilename, yfilename;
 std::string						passwords, hostname, port, URI, u;
 
 int 							opt_verbose = 0;
-char							*opt_passwords = NULL;
-char							*opt_hostname = NULL;
-char							*opt_URI = NULL;
-char							*opt_u = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
 bool							opt_a = false;
 
@@ -256,7 +252,7 @@ void run_instance
 		for (size_t i = 0; i < peers.size(); i++)
 		{
 			std::stringstream key;
-			if (opt_passwords != NULL)
+			if (passwords.length() > 0)
 			{
 				std::string pwd;
 				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
@@ -388,7 +384,7 @@ void run_instance
 	for (size_t i = 0; i < pub->userids.size(); i++)
 	{
 		// user ID selected?
-		if (opt_u && (pub->userids[i]->userid.find(u) ==
+		if ((u.length() > 0) && (pub->userids[i]->userid.find(u) ==
 			pub->userids[i]->userid.npos))
 		{
 			continue; // skip this user ID
@@ -515,12 +511,12 @@ void run_instance
 }
 
 #ifdef GNUNET
-char *gnunet_opt_hostname = NULL;
+char *gnunet_opt_H = NULL;
 char *gnunet_opt_i = NULL;
 char *gnunet_opt_o = NULL;
-char *gnunet_opt_passwords = NULL;
+char *gnunet_opt_P = NULL;
 char *gnunet_opt_port = NULL;
-char *gnunet_opt_URI = NULL;
+char *gnunet_opt_U = NULL;
 char *gnunet_opt_u = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
@@ -592,7 +588,7 @@ int main
 			"hostname",
 			"STRING",
 			"hostname (e.g. onion address) of this peer within PEERS",
-			&gnunet_opt_hostname
+			&gnunet_opt_H
 		),
 		GNUNET_GETOPT_option_string('i',
 			"input",
@@ -624,7 +620,7 @@ int main
 			"passwords",
 			"STRING",
 			"exchanged passwords to protect private and broadcast channels",
-			&gnunet_opt_passwords
+			&gnunet_opt_P
 		),
 		GNUNET_GETOPT_option_string('u',
 			"userid",
@@ -636,7 +632,7 @@ int main
 			"URI",
 			"STRING",
 			"policy URI tied to attestation signatures",
-			&gnunet_opt_URI
+			&gnunet_opt_U
 		),
 		GNUNET_GETOPT_option_version(version),
 		GNUNET_GETOPT_option_flag('V',
@@ -701,22 +697,14 @@ int main
 		kfilename = gnunet_opt_k;
 	if (gnunet_opt_y != NULL)
 		yfilename = gnunet_opt_y;
-	if (gnunet_opt_hostname != NULL)
-		opt_hostname = gnunet_opt_hostname;
-	if (gnunet_opt_passwords != NULL)
-		opt_passwords = gnunet_opt_passwords;
-	if (gnunet_opt_URI != NULL)
-		opt_URI = gnunet_opt_URI;
-	if (gnunet_opt_u != NULL)
-		opt_u = gnunet_opt_u;
-	if (gnunet_opt_passwords != NULL)
-		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
-	if (gnunet_opt_hostname != NULL)
-		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
+	if (gnunet_opt_P != NULL)
+		passwords = gnunet_opt_P; // get passwords from GNUnet options
+	if (gnunet_opt_H != NULL)
+		hostname = gnunet_opt_H; // get hostname from GNUnet options
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
-	if (gnunet_opt_URI != NULL)
-		URI = gnunet_opt_URI; // get policy URI from GNUnet options
+	if (gnunet_opt_U != NULL)
+		URI = gnunet_opt_U; // get policy URI from GNUnet options
 	if (gnunet_opt_u != NULL)
 		u = gnunet_opt_u; // get user ID from GNUnet options
 #endif
@@ -752,28 +740,24 @@ int main
 				kfilename = argv[i+1];
 			}
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_hostname == NULL))
+				(hostname.length() == 0))
 			{
 				hostname = argv[i+1];
-				opt_hostname = (char*)hostname.c_str();
 			}
 			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_passwords == NULL))
+				(passwords.length() == 0))
 			{
 				passwords = argv[i+1];
-				opt_passwords = (char*)passwords.c_str();
 			}
 			if ((arg.find("-U") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_URI == NULL))
+				(URI.length() == 0))
 			{
 				URI = argv[i+1];
-				opt_URI = (char*)URI.c_str();
 			}
 			if ((arg.find("-u") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_u == NULL))
+				(u.length() == 0))
 			{
 				u = argv[i+1];
-				opt_u = (char*)u.c_str();
 			}
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
 				(port.length() == 0))
@@ -880,7 +864,7 @@ int main
 #endif
 
 	// check command line arguments
-	if ((opt_hostname != NULL) && (opt_passwords == NULL) &&
+	if ((hostname.length() > 0) && (passwords.length() == 0) &&
 		(yfilename.length() == 0))
 	{
 		std::cerr << "ERROR: option \"-P\" required due to insecure network" <<
@@ -933,7 +917,7 @@ int main
 	
 	// initialize return code and do the main work
 	int ret = 0;
-	if ((opt_hostname != NULL) && (yfilename.length() == 0))
+	if ((hostname.length() > 0) && (yfilename.length() == 0))
 	{
 		// start interactive variant, if built-in TCP/IP requested
 		ret = run_tcpip(peers.size(), opt_p, hostname, port);
@@ -953,7 +937,7 @@ int main
 				"hostname",
 				"STRING",
 				"hostname (e.g. onion address) of this peer within PEERS",
-				&gnunet_opt_hostname
+				&gnunet_opt_H
 			),
 			GNUNET_GETOPT_option_string('i',
 				"input",
@@ -983,7 +967,7 @@ int main
 				"passwords",
 				"STRING",
 				"exchanged passwords to protect private and broadcast channels",
-				&gnunet_opt_passwords
+				&gnunet_opt_P
 			),
 			GNUNET_GETOPT_option_string('u',
 				"userid",
@@ -995,7 +979,7 @@ int main
 				"URI",
 				"STRING",
 				"policy URI tied to attestation signatures",
-				&gnunet_opt_URI
+				&gnunet_opt_U
 			),
 			GNUNET_GETOPT_option_flag('V',
 				"verbose",

@@ -34,7 +34,7 @@ extern bool instance_forked;
 extern int opt_verbose;
 extern void fork_instance(const size_t whoami);
 
-static const size_t tcpip_pipe_buffer_size = 4096;
+static const size_t tcpip_pipe_buffer_size = 64096;
 bool tcpip_signal_caught = false;
 
 std::string tcpip_thispeer;

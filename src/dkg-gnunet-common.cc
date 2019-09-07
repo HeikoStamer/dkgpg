@@ -49,7 +49,7 @@ typedef std::pair<size_t, char*>		DKG_Buffer;
 typedef std::pair<size_t, DKG_Buffer>	DKG_BufferListEntry;
 typedef std::list<DKG_BufferListEntry>	DKG_BufferList;
 DKG_BufferList							send_queue, send_queue_broadcast;
-static const size_t						pipe_buffer_size = 4096;
+static const size_t						pipe_buffer_size = 64096;
 
 extern char				*gnunet_opt_port;
 extern unsigned int		gnunet_opt_wait;

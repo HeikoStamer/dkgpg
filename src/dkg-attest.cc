@@ -452,79 +452,85 @@ void run_instance
 			continue; // skip this user ID
 		}
 		std::sort(certhashes.begin(), certhashes.end(), compare_octests);
-		tmcg_openpgp_octets_t attestedcerts;
-		for (size_t j = 0; j < certhashes.size(); j++)
-		{ 
-			if (attestedcerts.size() > 60000)
-			{
-				std::cerr << "WARNING: too many certifications to attest;" <<
-					" skipped remaining certs where j >= " << j << std::endl;
-				break; // TODO: create a second attestation signature
+		size_t jj = 0;
+
+		while (jj < certhashes.size())
+		{
+			tmcg_openpgp_octets_t attestedcerts;
+			for (size_t j = jj; j < certhashes.size(); j++)
+			{ 
+				if (attestedcerts.size() > 60000)
+				{
+					jj = j;
+					break; // create more attestation signatures later
+				}
+				attestedcerts.insert(attestedcerts.end(),
+					certhashes[j].begin(), certhashes[j].end());
 			}
-			attestedcerts.insert(attestedcerts.end(),
-				certhashes[j].begin(), certhashes[j].end());
-		}
-		// compute the trailer and the hash of the attestation signature
-		if (opt_verbose)
-		{
-			std::cerr << "INFO: build attestation signature for user ID = \"" <<
-				pub->userids[i]->userid_sanitized << "\"" << std::endl;
-			std::cerr << "INFO: attestedcerts.size() = " <<
-				attestedcerts.size() << std::endl;
-		}
-		tmcg_openpgp_octets_t trailer, empty, hash, left;
-		tmcg_openpgp_notations_t notations;
-		if (yfilename.length() == 0)
-		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareAttestationSignature(TMCG_OPENPGP_PKALGO_DSA,
-					hashalgo, csigtime, URI, prv->pub->fingerprint,
-					attestedcerts, notations, trailer);
-		}
-		else
-		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareAttestationSignature(prv->pkalgo,
-					hashalgo, csigtime, URI, prv->pub->fingerprint,
-					attestedcerts, notations, trailer);
-		}
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			CertificationHash(pub->pub_hashing, pub->userids[i]->userid, empty,
-				trailer, hashalgo, hash, left);
-		// sign the hash value
-		tmcg_openpgp_octets_t attsig;
-		if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
-			attsig, opt_verbose, (yfilename.length() > 0), dss, aiou, rbc))
-		{
+			// compute the trailer and the hash of the attestation signature
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: build attestation signature for user" <<
+					" ID = \"" << pub->userids[i]->userid_sanitized << "\"" <<
+					std::endl;
+				std::cerr << "INFO: attestedcerts.size() = " <<
+					attestedcerts.size() << std::endl;
+			}
+			tmcg_openpgp_octets_t trailer, empty, hash, left;
+			tmcg_openpgp_notations_t notations;
 			if (yfilename.length() == 0)
 			{
-				delete rbc, delete aiou, delete aiou2;
-				delete dss;
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigPrepareAttestationSignature(TMCG_OPENPGP_PKALGO_DSA,
+						hashalgo, csigtime, URI, prv->pub->fingerprint,
+						attestedcerts, notations, trailer);
 			}
-			delete pub;
-			delete prv;
-			exit(-1);
-		}
-		// convert attestation signature and append it to the public key
-		TMCG_OpenPGP_Signature *sig = NULL;
-		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-			SignatureParse(attsig, opt_verbose, sig);
-		if (!parse_ok)
-		{
-			std::cerr << "ERROR: cannot use the created attestation" <<
-				" signature" << std::endl;
-			if (yfilename.length() == 0)
+			else
 			{
-				delete rbc, delete aiou, delete aiou2;
-				delete dss;
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigPrepareAttestationSignature(prv->pkalgo,
+						hashalgo, csigtime, URI, prv->pub->fingerprint,
+						attestedcerts, notations, trailer);
 			}
-			delete pub;
-			delete prv;
-			exit(-1);
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				CertificationHash(pub->pub_hashing, pub->userids[i]->userid,
+					empty, trailer, hashalgo, hash, left);
+			// sign the hash value
+			tmcg_openpgp_octets_t attsig;
+			if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv,
+				hashalgo, attsig, opt_verbose, (yfilename.length() > 0), dss,
+				aiou, rbc))
+			{
+				if (yfilename.length() == 0)
+				{
+					delete rbc, delete aiou, delete aiou2;
+					delete dss;
+				}
+				delete pub;
+				delete prv;
+				exit(-1);
+			}
+			// convert attestation signature and append it to the public key
+			TMCG_OpenPGP_Signature *sig = NULL;
+			parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+				SignatureParse(attsig, opt_verbose, sig);
+			if (!parse_ok)
+			{
+				std::cerr << "ERROR: cannot use the created attestation" <<
+					" signature" << std::endl;
+				if (yfilename.length() == 0)
+				{
+					delete rbc, delete aiou, delete aiou2;
+					delete dss;
+				}
+				delete pub;
+				delete prv;
+				exit(-1);
+			}
+			if (opt_verbose)
+				sig->PrintInfo();
+			pub->userids[i]->attestsigs.push_back(sig);
 		}
-		if (opt_verbose)
-			sig->PrintInfo();
-		pub->userids[i]->attestsigs.push_back(sig);
 	}
 
 	// export the modified public key including attached attestation signatures

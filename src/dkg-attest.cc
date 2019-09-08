@@ -458,14 +458,13 @@ void run_instance
 		{
 			tmcg_openpgp_octets_t attestedcerts;
 			for (size_t j = jj; j < certhashes.size(); j++)
-			{ 
+			{
+				jj = j;
 				if (attestedcerts.size() > 60000)
-				{
-					jj = j;
 					break; // create more attestation signatures later
-				}
 				attestedcerts.insert(attestedcerts.end(),
 					certhashes[j].begin(), certhashes[j].end());
+				jj++;
 			}
 			// compute the trailer and the hash of the attestation signature
 			if (opt_verbose)
@@ -480,8 +479,9 @@ void run_instance
 			tmcg_openpgp_notations_t notations;
 			if (yfilename.length() == 0)
 			{
+				tmcg_openpgp_pkalgo_t pkalgo = TMCG_OPENPGP_PKALGO_DSA;
 				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigPrepareAttestationSignature(TMCG_OPENPGP_PKALGO_DSA,
+					PacketSigPrepareAttestationSignature(pkalgo,
 						hashalgo, csigtime, URI, prv->pub->fingerprint,
 						attestedcerts, notations, trailer);
 			}

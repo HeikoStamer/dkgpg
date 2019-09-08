@@ -997,7 +997,7 @@ int main
 	peers.push_back("Test1");
 	peers.push_back("Test2");
 	peers.push_back("Test4");
-	ifilename = "Test1_dkg-pub.asc";
+	ifilename = "TestY-pub.asc";
 	ofilename = "Test1_dkg-pub_signed.asc";
 	opt_e = 44203;
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
@@ -1005,7 +1005,7 @@ int main
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
-	ifilename = "TestY-pub.asc";
+	ifilename = "Test1_dkg-pub.asc";
 	ofilename = "TestY-pub_signed.asc";
 	opt_e = 44203;
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";

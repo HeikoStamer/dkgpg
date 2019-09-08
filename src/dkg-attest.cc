@@ -925,17 +925,17 @@ int main
 		}
 	}
 #ifdef DKGPG_TESTSUITE
-	peers.push_back("Test2");
+	peers.push_back("Test1");
 	peers.push_back("Test3");
 	peers.push_back("Test4");
-	ifilename = "Test1_dkg-pub_signed.asc";
+	ifilename = "TestY-pub_signed.asc";
 	ofilename = "Test1_output_attestation.asc";
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
-	ifilename = "TestY-pub_signed.asc";
+	ifilename = "Test1_dkg-pub_signed.asc";
 	ofilename = "TestY_output_attestation.asc";
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;

@@ -17,11 +17,11 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo t-dkg-keysign t-dkg-encrypt\
- t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-adduid t-dkg-refresh t-dkg-revuid\
- t-dkg-addrevoker t-dkg-attest\
- y-dkg-generate y-dkg-keycheck y-dkg-keysign y-dkg-encrypt y-dkg-decrypt\
- y-dkg-sign y-dkg-verify y-dkg-timestamp y-dkg-timestamp-verify\
+TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo y-dkg-generate y-dkg-keycheck\
+ t-dkg-keysign t-dkg-encrypt t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-adduid\
+ t-dkg-refresh t-dkg-revuid t-dkg-addrevoker y-dkg-keysign t-dkg-attest\
+ y-dkg-encrypt y-dkg-decrypt y-dkg-sign y-dkg-verify\
+ y-dkg-timestamp y-dkg-timestamp-verify\
  y-dkg-adduid y-dkg-revuid y-dkg-addrevoker y-dkg-attest\
  ts-dkg-generate ts-dkg-timestamp ts-dkg-timestamp-verify t-dkg-revoke
 

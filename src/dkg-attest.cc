@@ -70,7 +70,7 @@ std::string						passwords, hostname, port, URI, u;
 
 int 							opt_verbose = 0;
 unsigned long int				opt_p = 55000, opt_W = 5;
-bool							opt_a = false;
+bool							opt_w = false;
 
 bool compare_octests
 	(const tmcg_openpgp_octets_t a, const tmcg_openpgp_octets_t b)
@@ -214,7 +214,7 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-		if (pub->Weak(opt_verbose))
+		if (!opt_w && pub->Weak(opt_verbose))
 		{
 			std::cerr << "ERROR: public key is weak" << std::endl;
 			delete pub;
@@ -597,7 +597,7 @@ unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_verbose = 0;
-int gnunet_opt_a = 0;
+int gnunet_opt_w = 0;
 #endif
 
 void fork_instance
@@ -714,11 +714,10 @@ int main
 			"turn on verbose output",
 			&gnunet_opt_verbose
 		),
-		GNUNET_GETOPT_option_uint('w',
-			"wait",
-			"INTEGER",
-			"minutes to wait until start of signing protocol",
-			&gnunet_opt_wait
+		GNUNET_GETOPT_option_flag('w',
+			"weak",
+			"allow weak public keys",
+			&gnunet_opt_w
 		),
 		GNUNET_GETOPT_option_uint('W',
 			"aiou-timeout",
@@ -856,7 +855,8 @@ int main
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
-			(arg.find("-h") == 0) || (arg.find("-V") == 0))
+			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
+			(arg.find("-w") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -886,6 +886,8 @@ int main
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
 					std::endl;
+				std::cout << "  -w, --weak     allow weak public keys" <<
+					std::endl;
 				std::cout << "  -W INTEGER     timeout for point-to-point" <<
 					" messages in minutes" << std::endl;
 				std::cout << "  -y FILENAME    yet another OpenPGP tool with" <<
@@ -903,8 +905,8 @@ int main
 			}
 			if ((arg.find("-V") == 0) || (arg.find("--verbose") == 0))
 				opt_verbose++; // increase verbosity
-			if ((arg.find("-a") == 0) || (arg.find("--accuracy") == 0))
-				opt_a = true;
+			if ((arg.find("-w") == 0) || (arg.find("--weak") == 0))
+				opt_w = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -1067,11 +1069,10 @@ int main
 				"turn on verbose output",
 				&gnunet_opt_verbose
 			),
-			GNUNET_GETOPT_option_uint('w',
-				"wait",
-				"INTEGER",
-				"minutes to wait until start of signing protocol",
-				&gnunet_opt_wait
+			GNUNET_GETOPT_option_flag('w',
+				"weak",
+				"allow weak public keys",
+				&gnunet_opt_w
 			),
 			GNUNET_GETOPT_option_uint('W',
 				"aiou-timeout",

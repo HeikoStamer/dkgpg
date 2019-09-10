@@ -447,7 +447,8 @@ void run_instance
 			if (opt_verbose)
 			{
 				std::cerr << "INFO: nothing to attest for user ID #" << i <<
-					std::endl;
+					" (" << pub->userids[i]->certsigs.size() <<
+					" 3rd-party certs)" << std::endl;
 			}
 			continue; // skip this user ID
 		}

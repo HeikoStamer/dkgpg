@@ -1705,9 +1705,8 @@ int main
 
 	std::string	kfilename, filename, ofilename;
 	int			opt_verbose = 0;
+	bool		opt_a = false;
 	bool		opt_b = false, opt_r = false, opt_p = false, opt_y = false;
-	char		*opt_k = NULL;
-	char		*opt_o = NULL;
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -1717,27 +1716,26 @@ int main
 		if ((arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			if ((idx < (size_t)(argc - 1)) && (kfilename.length() == 0))
 			{
 				kfilename = argv[i+1];
-				opt_k = (char*)kfilename.c_str();
 			}
 			continue;
 		}
 		else if ((arg.find("-o") == 0))
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_o == NULL))
+			if ((idx < (size_t)(argc - 1)) && (ofilename.length() == 0))
 			{
 				ofilename = argv[i+1];
-				opt_o = (char*)ofilename.c_str();
 			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || 
 		    (arg.find("-r") == 0) || (arg.find("-v") == 0) ||
 		    (arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-p") == 0) || (arg.find("-y") == 0))
+			(arg.find("-p") == 0) || (arg.find("-y") == 0) ||
+			(arg.find("-a") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -1745,15 +1743,18 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary   consider KEYFILE and FILENAME" <<
-					" as binary input" << std::endl;
-				std::cout << "  -h, --help     print this help" << std::endl;
+				std::cout << "  -a, --attest   check attestations and" <<
+					" print attested 3rd-party certifications" << std::endl;
+				std::cout << "  -b, --binary   consider KEYFILE and" <<
+					" FILENAME as binary input" << std::endl;
+				std::cout << "  -h, --help     print this help" <<
+					std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
 					" containing external revocation keys" << std::endl;
-				std::cout << "  -o FILENAME    export (reduced) public key" << 
-					" to FILENAME" << std::endl;
-				std::cout << "  -p, --private  read from private key block" <<
-					std::endl;
+				std::cout << "  -o FILENAME    export (reduced) public" <<
+					" key to FILENAME" << std::endl;
+				std::cout << "  -p, --private  read from private key" <<
+					" block" << std::endl;
 				std::cout << "  -r, --reduce   check only valid subkeys" <<
 					std::endl;
 				std::cout << "  -v, --version  print the version number" <<
@@ -1764,6 +1765,8 @@ int main
 					" FILENAME with user ID containing KEYFILE" << std::endl;
 				return 0; // not continue
 			}
+			if ((arg.find("-a") == 0) || (arg.find("--attest") == 0))
+				opt_a = true;
 			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
 				opt_b = true;
 			if ((arg.find("-p") == 0) || (arg.find("--private") == 0))
@@ -1786,7 +1789,13 @@ int main
 			std::cerr << "ERROR: unknown option \"" << arg << "\"" << std::endl;
 			return -1;
 		}
-		filename = arg;
+		if (filename.length() == 0)
+			filename = arg;
+		else
+		{
+			std::cerr << "ERROR: too many arguments" << std::endl;
+			return -1;
+		}
 	}
 
 	// lock memory
@@ -1822,6 +1831,7 @@ int main
 	if (tmcg_mpz_wrandom_ui() % 2)
 	{
 		filename = "TestY-pub.asc";
+		opt_a = true;
 	}
 	else
 	{
@@ -1832,7 +1842,7 @@ int main
 #endif
 
 	// check command line arguments
-	if (!opt_y && filename.length() == 0)
+	if (!opt_y && (filename.length() == 0))
 	{
 		std::cerr << "ERROR: argument KEYFILE is missing; usage: " <<
 			usage << std::endl;
@@ -1840,7 +1850,7 @@ int main
 			unlock_memory();
 		return -1;
 	}
-	if (opt_y && (opt_k == NULL))
+	if (opt_y && (kfilename.length() == 0))
 	{
 		std::cerr << "ERROR: no keyring specified (option -k missing)" <<
 			std::endl;
@@ -1881,7 +1891,7 @@ int main
 	// read the keyring
 	tmcg_openpgp_armor_t kformat = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK;
 	std::string armored_pubring;
-	if (opt_k != NULL)
+	if (kfilename.length() > 0)
 	{
 		if (opt_b)
 		{
@@ -1908,7 +1918,7 @@ int main
 	TMCG_OpenPGP_Pubkey *primary = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k != NULL)
+	if (kfilename.length() > 0)
 	{
 		int opt_verbose_ring = opt_verbose;
 		if (opt_verbose_ring > 0)
@@ -1974,7 +1984,7 @@ int main
 			primary->Reduce();
 		if (primary->Weak(opt_verbose) && opt_verbose)
 			std::cerr << "WARNING: weak primary key detected" << std::endl;
-		if (opt_o != NULL)
+		if (ofilename.length() > 0)
 		{
 			tmcg_openpgp_octets_t pub;
 			std::string armor;
@@ -2006,7 +2016,7 @@ int main
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyidConvert(primary->id, kid);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
-		FingerprintConvertPretty(primary->fingerprint, fpr);
+		FingerprintConvertPlain(primary->fingerprint, fpr);
 	std::cout << "OpenPGP Key ID of primary key: " << std::endl << "\t";
 	std::cout << kid << std::endl;
 	std::cout << "OpenPGP Fingerprint of primary key: " << std::endl << "\t";
@@ -2034,7 +2044,7 @@ int main
 		tmcg_openpgp_octets_t f(rk.key_fingerprint,
 			 rk.key_fingerprint+sizeof(rk.key_fingerprint));
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintConvertPretty(f, fpr);
+			FingerprintConvertPlain(f, fpr);
 		std::cout << "\t" << fpr << std::endl;
 	}
 	if (primary->revkeys.size() == 0)
@@ -2350,6 +2360,33 @@ int main
 		if (!primary->userids[j]->valid)
 			std::cout << " [INVALID]";
 		std::cout << std::endl;
+		if (opt_a)
+		{
+			if (primary->userids[j]->CheckAttestations(primary, opt_verbose))
+			{
+				std::vector<TMCG_OpenPGP_Signature*> certsigs =
+					primary->userids[j]->certsigs;
+				for (size_t i = 0; i < certsigs.size(); i++)
+				{
+					std::string f;
+					if (certsigs[i]->issuerfpr.size() > 0)
+					{
+						CallasDonnerhackeFinneyShawThayerRFC4880::
+							FingerprintConvertPlain(certsigs[i]->issuerfpr, f);
+					}
+					else
+					{
+						CallasDonnerhackeFinneyShawThayerRFC4880::
+							FingerprintConvertPlain(certsigs[i]->issuer, f);
+					}
+					if (certsigs[i]->attested)
+					{
+						std::cout << "\t0x" << std::hex << certsigs[i]->type <<
+							std::dec << "-3PC " << f << std::endl;
+					}
+				}
+			}
+		}
 	}
 	// show information w.r.t. (valid) subkeys
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
@@ -2360,7 +2397,7 @@ int main
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyidConvert(sub->id, kid);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			FingerprintConvertPretty(sub->fingerprint, fpr);
+			FingerprintConvertPlain(sub->fingerprint, fpr);
 		std::cout << "OpenPGP Key ID of subkey: " << std::endl << "\t";
 		std::cout << kid << std::endl;
 		std::cout << "OpenPGP Fingerprint of subkey: " << std::endl << "\t";
@@ -2385,7 +2422,7 @@ int main
 			tmcg_openpgp_octets_t f(rk.key_fingerprint,
 				 rk.key_fingerprint+sizeof(rk.key_fingerprint));
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				FingerprintConvertPretty(f, fpr);
+				FingerprintConvertPlain(f, fpr);
 			std::cout << "\t" << fpr << std::endl;
 		}
 		if (sub->revkeys.size() == 0)

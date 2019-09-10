@@ -793,13 +793,12 @@ int main
 		std::string arg = argv[i+1];
 		// ignore options
 		if ((arg.find("-c") == 0) || (arg.find("-p") == 0) ||
-			(arg.find("-w") == 0) || (arg.find("-W") == 0) || 
+			(arg.find("-y") == 0) || (arg.find("-W") == 0) || 
 		    (arg.find("-L") == 0) || (arg.find("-l") == 0) ||
 			(arg.find("-i") == 0) || (arg.find("-o") == 0) || 
 		    (arg.find("-x") == 0) || (arg.find("-u") == 0) || 
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
-		    (arg.find("-U") == 0) || (arg.find("-k") == 0) ||
-			(arg.find("-y") == 0))
+		    (arg.find("-U") == 0) || (arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&

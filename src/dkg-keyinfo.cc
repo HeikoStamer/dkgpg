@@ -48,7 +48,6 @@ int main
 	std::string						kfilename;
 	std::string						migrate_peer_from, migrate_peer_to;
 	int 							opt_verbose = 0;
-	char							*opt_k = NULL;
 
 	// parse argument list
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -88,10 +87,9 @@ int main
 		else if ((arg.find("-k") == 0))
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			if ((idx < (size_t)(argc - 1)) && (kfilename.length() == 0))
 			{
 				kfilename = argv[i+1];
-				opt_k = (char*)kfilename.c_str();
 			}
 			continue;
 		}
@@ -208,7 +206,7 @@ int main
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		if (!read_key_file(kfilename, armored_pubring))
 		{
@@ -222,7 +220,7 @@ int main
 	TMCG_OpenPGP_Prvkey *prv = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PublicKeyringParse(armored_pubring, opt_verbose, ring);

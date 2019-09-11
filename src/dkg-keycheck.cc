@@ -2018,7 +2018,14 @@ int main
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		FingerprintConvertPlain(primary->fingerprint, fpr);
 	std::cout << "OpenPGP Key ID of primary key: " << std::endl << "\t";
-	std::cout << kid << std::endl;
+	std::cout << kid;
+	if (primary->revoked)
+		std::cout << " [REVOKED]";
+	else if (primary->expired)
+		std::cout << " [EXPIRED]";
+	else if (!primary->valid)
+		std::cout << " [INVALID]";
+	std::cout << std::endl;
 	std::cout << "OpenPGP Fingerprint of primary key: " << std::endl << "\t";
 	std::cout << fpr << std::endl;
 	std::cout << "OpenPGP Key Creation Time: " <<
@@ -2150,7 +2157,8 @@ int main
 		{
 			if (primary->keyrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
-				if (!tmcg_mpz_set_gcry_mpi(primary->keyrevsigs[i]->dsa_r, dsa_r))
+				if (!tmcg_mpz_set_gcry_mpi(primary->keyrevsigs[i]->dsa_r,
+					dsa_r))
 				{
 					std::cerr << "WARNING: bad signature (cannot convert" <<
 						" dsa_r)" << std::endl << "\t";
@@ -2169,7 +2177,8 @@ int main
 		{
 			if (primary->certrevsigs[i]->pkalgo == TMCG_OPENPGP_PKALGO_DSA)
 			{
-				if (!tmcg_mpz_set_gcry_mpi(primary->certrevsigs[i]->dsa_r, dsa_r))
+				if (!tmcg_mpz_set_gcry_mpi(primary->certrevsigs[i]->dsa_r,
+					dsa_r))
 				{
 					std::cerr << "WARNING: bad signature (cannot convert" <<
 						" dsa_r)" << std::endl << "\t";
@@ -2357,7 +2366,9 @@ int main
 	{
 		std::cout << "OpenPGP User ID: " << std::endl << "\t";
 		std::cout << primary->userids[j]->userid_sanitized;
-		if (!primary->userids[j]->valid)
+		if (primary->userids[j]->revoked)
+			std::cout << " [REVOKED]";
+		else if (!primary->userids[j]->valid)
 			std::cout << " [INVALID]";
 		std::cout << std::endl;
 		if (opt_a)
@@ -2366,6 +2377,46 @@ int main
 			{
 				std::vector<TMCG_OpenPGP_Signature*> certsigs =
 					primary->userids[j]->certsigs;
+				for (size_t i = 0; i < certsigs.size(); i++)
+				{
+					std::string f;
+					if (certsigs[i]->issuerfpr.size() > 0)
+					{
+						CallasDonnerhackeFinneyShawThayerRFC4880::
+							FingerprintConvertPlain(certsigs[i]->issuerfpr, f);
+					}
+					else
+					{
+						CallasDonnerhackeFinneyShawThayerRFC4880::
+							FingerprintConvertPlain(certsigs[i]->issuer, f);
+					}
+					if (certsigs[i]->attested)
+					{
+						std::cout << "\t0x" << std::hex << certsigs[i]->type <<
+							std::dec << "-3PC " << f << std::endl;
+					}
+				}
+			}
+		}
+	}
+	// show information w.r.t. (valid) user attributes
+	for (size_t j = 0; j < primary->userattributes.size(); j++)
+	{
+		std::cout << "OpenPGP User Attribute: " << std::endl << "\t";
+		std::cout << primary->userattributes[j]->userattribute.size() <<
+			" octets";
+		if (primary->userattributes[j]->revoked)
+			std::cout << " [REVOKED]";
+		else if (!primary->userattributes[j]->valid)
+			std::cout << " [INVALID]";
+		std::cout << std::endl;
+		if (opt_a)
+		{
+			if (primary->userattributes[j]->CheckAttestations(primary,
+				opt_verbose))
+			{
+				std::vector<TMCG_OpenPGP_Signature*> certsigs =
+					primary->userattributes[j]->certsigs;
 				for (size_t i = 0; i < certsigs.size(); i++)
 				{
 					std::string f;
@@ -2399,7 +2450,14 @@ int main
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			FingerprintConvertPlain(sub->fingerprint, fpr);
 		std::cout << "OpenPGP Key ID of subkey: " << std::endl << "\t";
-		std::cout << kid << std::endl;
+		std::cout << kid;
+		if (sub->revoked)
+			std::cout << " [REVOKED]";
+		else if (sub->expired)
+			std::cout << " [EXPIRED]";
+		else if (!sub->valid)
+			std::cout << " [INVALID]";
+		std::cout << std::endl;
 		std::cout << "OpenPGP Fingerprint of subkey: " << std::endl << "\t";
 		std::cout << fpr << std::endl;
 		std::cout << "OpenPGP Subkey Creation Time: " << std::endl << "\t" <<

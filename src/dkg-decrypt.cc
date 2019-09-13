@@ -77,13 +77,6 @@ int 							opt_verbose = 0;
 bool							opt_binary = false, opt_E = false;
 bool							opt_weak = false, opt_s = false;
 bool							opt_nonint = false;
-char							*opt_ifilename = NULL;
-char							*opt_ofilename = NULL;
-char							*opt_passwords = NULL;
-char							*opt_hostname = NULL;
-char							*opt_k = NULL;
-char							*opt_y = NULL;
-char							*opt_S = NULL;
 unsigned long int				opt_p = 55000, opt_W = 5;
 
 std::string						armored_message, armored_pubring;
@@ -581,8 +574,10 @@ bool check_esk
 		if (gcry_mpi_cmp_ui(tmp, 1L))
 		{
 			if (opt_verbose > 1)
+			{
 				std::cerr << "ERROR: (g^k)^q equiv 1 mod p not satisfied" <<
 					std::endl;
+			}
 			gcry_mpi_release(tmp);
 			return false;
 		}
@@ -823,8 +818,10 @@ bool decompress_libz
 			break;
 		default:
 			if (opt_verbose)
+			{
 				std::cerr << "ERROR: compression algorithm " <<
 					(int)msg->compalgo << " is not supported" << std::endl;
+			}
 			return false;
 	}
 	if (rc != Z_OK)
@@ -1031,7 +1028,7 @@ bool decrypt_and_check_message
 		return false;
 	}
 	// verify included signatures based on keys from keyring
-	if ((opt_k != NULL) && ((msg->signatures).size() > 0))
+	if ((kfilename.length() > 0) && ((msg->signatures).size() > 0))
 	{
 		bool vf = true, vf_one = false;
 		for (size_t i = 0; i < (msg->signatures).size(); i++)
@@ -1126,13 +1123,15 @@ void run_instance
 {
 	// read the key file
 	std::string armored_seckey, pkfname;
-	if (opt_y == NULL)
-		pkfname = peers[whoami] + "_dkg-sec.asc";
+	if (yfilename.length() > 0)
+		pkfname = yfilename;
 	else
-		pkfname = opt_y;
+		pkfname = peers[whoami] + "_dkg-sec.asc";
 	if (opt_verbose > 1)
+	{
 		std::cerr << "INFO: private key expected in file \"" << pkfname <<
 			"\"" << std::endl;
+	}
 	if (!check_strict_permissions(pkfname))
 	{
 		std::cerr << "WARNING: weak permissions of private key file" <<
@@ -1147,7 +1146,7 @@ void run_instance
 	TMCG_OpenPGP_Prvkey *prv = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		int opt_verbose_ring = opt_verbose;
 		if (opt_verbose_ring > 0)
@@ -1197,7 +1196,8 @@ void run_instance
 		delete ring;
 		exit(-1);
 	}
-	if (!prv->pub->valid || ((opt_y == NULL) && prv->Weak(opt_verbose)))
+	if (!prv->pub->valid ||
+		((yfilename.length() == 0) && prv->Weak(opt_verbose)))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete ring;
@@ -1209,7 +1209,7 @@ void run_instance
 	// TODO: currently always the last valid non-weak subkey is selected
 	GennaroJareckiKrawczykRabinDKG *dkg = NULL;
 	TMCG_OpenPGP_PrivateSubkey *ssb = NULL;
-	if (opt_y == NULL)
+	if (yfilename.length() == 0)
 	{
 		for (size_t i = 0; i < prv->private_subkeys.size(); i++)
 		{
@@ -1219,23 +1219,29 @@ void run_instance
 				if (ssb2->pub->valid && !ssb2->Weak(opt_verbose))
 				{
 					if ((ssb != NULL) && (opt_verbose > 1))
+					{
 						std::cerr << "WARNING: more than one valid subkey" <<
 							" found; last subkey selected" << std::endl;
+					}
 					ssb = ssb2;
 				}
 				else
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "WARNING: invalid or weak subkey at" <<
 							" position " << i << " found and ignored" <<
 							std::endl;
+					}
 				}
 			}
 			else
 			{
 				if (opt_verbose > 1)
+				{
 					std::cerr << "WARNING: non-tElG subkey at position " <<
 						i << " found and ignored" << std::endl;
+				}
 			}
 		}
 		if (ssb == NULL)
@@ -1275,15 +1281,19 @@ void run_instance
 				if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL9)
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "WARNING: tElG subkey at position " <<
 							i << " found and ignored" << std::endl;
+					}
 					continue;
 				}
 				if (ssb2->pkalgo == TMCG_OPENPGP_PKALGO_EXPERIMENTAL7)
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "WARNING: tDSS subkey at position " <<
 							i << " found and ignored" << std::endl;
+					}
 					continue;
 				}
 				if (ssb2->pub->AccumulateFlags() &&
@@ -1291,9 +1301,11 @@ void run_instance
 					((ssb2->pub->AccumulateFlags() & 0x08) != 0x08))
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "WARNING: non encryption-capable subkey" <<
 							" at position " << i << " found and ignored" <<
 							std::endl;
+					}
 					continue;
 				}
 				if ((ssb2->pkalgo == TMCG_OPENPGP_PKALGO_RSA) ||
@@ -1304,17 +1316,21 @@ void run_instance
 					if (ssb2->pub->valid && !ssb2->Weak(opt_verbose))
 					{
 						if ((ssb != NULL) && (opt_verbose > 1))
+						{
 							std::cerr << "WARNING: more than one valid" <<
 								" subkey found; last subkey selected" <<
 								std::endl;
+						}
 						ssb = ssb2;
 					}
 					else
 					{
 						if (opt_verbose > 1)
+						{
 							std::cerr << "WARNING: invalid or weak subkey at" <<
 								" position " << i << " found and ignored" <<
 								std::endl;
+						}
 					}
 				}
 			}
@@ -1359,7 +1375,7 @@ void run_instance
 		exit(-1);
 	}
 	std::vector<const TMCG_OpenPGP_PKESK*> esks;
-	if (opt_y == NULL)
+	if (yfilename.length() == 0)
 	{
 		for (size_t i = 0; i < (msg->PKESKs).size(); i++)
 		{
@@ -1376,8 +1392,10 @@ void run_instance
 					OctetsCompare((msg->PKESKs[i])->keyid, ssb->pub->id))
 				{
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: PKESK found with matching " <<
 							"subkey ID" << std::endl;
+					}
 					esks.clear();
 					esks.push_back(msg->PKESKs[i]);
 					break; // admissible PKESK found
@@ -1400,8 +1418,10 @@ void run_instance
 				OctetsCompare((msg->PKESKs[i])->keyid, ssb->pub->id))
 			{
 				if (opt_verbose > 1)
+				{
 					std::cerr << "INFO: PKESK found with matching " <<
 						"subkey ID" << std::endl;
+				}
 				esks.clear();
 				esks.push_back(msg->PKESKs[i]);
 				break; // admissible PKESK found
@@ -1422,7 +1442,7 @@ void run_instance
 	// decrypt session key from PKESK
 	bool seskey_decrypted = false;
 	tmcg_openpgp_secure_octets_t seskey;
-	if (opt_y == NULL)
+	if (yfilename.length() == 0)
 	{
 		// create communication handles between all players
 		std::vector<int> uP_in, uP_out, bP_in, bP_out;
@@ -1430,14 +1450,14 @@ void run_instance
 		for (size_t i = 0; i < peers.size(); i++)
 		{
 			std::stringstream key;
-			if (opt_passwords != NULL)
+			if (passwords.length() > 0)
 			{
 				std::string pwd;
 				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 				{
 					std::cerr << "ERROR: p_" << whoami << ": " <<
-						"cannot read password for protecting channel to p_" <<
-						i << std::endl;
+						"cannot read password for protecting channel" <<
+						" to p_" << i << std::endl;
 					delete msg;
 					delete dkg;
 					delete ring;
@@ -1629,8 +1649,10 @@ void run_instance
 		// assume maximum synchronous t-resilience for EDCF
 		size_t T_EDCF = (peers.size() - 1) / 2;
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: JareckiLysyanskayaEDCF(" << peers.size() <<
 				", " << T_EDCF << ", ...)" << std::endl;
+		}
 		JareckiLysyanskayaEDCF *edcf = new JareckiLysyanskayaEDCF(peers.size(),
 			T_EDCF, vtmf->p, vtmf->q, vtmf->g, vtmf->h);
 		for (size_t j = 0; j < esks.size(); j++)
@@ -1638,8 +1660,10 @@ void run_instance
 			if (!check_esk(esks[j], ssb))
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: bad PKESK detected and ignored" <<
 						std::endl;
+				}
 				continue; // try next PKESK
 			}
 			// initialize shares
@@ -1668,8 +1692,10 @@ void run_instance
 			}
 			// collect other decryption shares
 			if (opt_verbose)
+			{
 				std::cerr << "INFO: start collecting other decryption shares" <<
 					std::endl;
+			}
 			std::vector<size_t> complaints;
 			for (size_t i = 0; i < peers.size(); i++)
 			{
@@ -1707,9 +1733,11 @@ void run_instance
 						complaints.end())
 					{
 						if (opt_verbose)
+						{
 							std::cerr << "INFO: p_" << whoami << ": good" <<
 								" decryption share of P_" << idx_dkg <<
 								" received from p_" << i << std::endl;
+						}
 						if (opt_verbose > 1)
 							std::cerr << err_log.str() << std::endl;
 						// collect only verified decryption shares
@@ -1736,11 +1764,15 @@ void run_instance
 					prove_decryption_share_interactive_publiccoin(esks[j]->gk,
 						dkg, r_i, aiou, rbc, edcf, err_log);
 					if (opt_verbose)
+					{
 						std::cerr << "INFO: prove_decryption_share_" <<
 							"interactive_publiccoin() finished" << std::endl;
+					}
 					if (opt_verbose > 1)
+					{
 						std::cerr << "INFO: p_" << whoami << ": log follows" <<
 							std::endl << err_log.str();
+					}
 				}
 			}
 			// Lagrange interpolation
@@ -1759,8 +1791,10 @@ void run_instance
 			if (!res)
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: recombination of shares failed;" <<
 						" PKESK ignored" << std::endl;
+				}
 				continue; // try next PKESK
 			}
 			// decrypt the session key
@@ -1772,8 +1806,10 @@ void run_instance
 			else
 			{
 				if (opt_verbose > 1)
+				{
 					std::cerr << "INFO: PKESK decryption succeeded" <<
-						std::endl;				
+						std::endl;
+				}
 				seskey_decrypted = true;
 				msg->decryptionfpr.clear();
 				msg->decryptionfpr.insert(msg->decryptionfpr.end(),
@@ -1784,9 +1820,11 @@ void run_instance
 		// at the end: deliver some more rounds for waiting parties
 		time_t synctime = (opt_W * 6);
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: p_" << whoami << ": waiting approximately " <<
 				(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 				std::endl;
+		}
 		rbc->Sync(synctime);
 		// release EDCF
 		delete edcf;
@@ -1874,9 +1912,9 @@ void run_instance
 	delete prv;
 
 	// output result
-	if (opt_ofilename != NULL)
+	if (ofilename.length() > 0)
 	{
-		if (!write_message(opt_ofilename, content))
+		if (!write_message(ofilename, content))
 			exit(-1);
 	}
 	else
@@ -2106,28 +2144,21 @@ int main
 		return -1;
 	}
 	if (gnunet_opt_ifilename != NULL)
-		opt_ifilename = gnunet_opt_ifilename;
+		ifilename = gnunet_opt_ifilename;
 	if (gnunet_opt_ofilename != NULL)
-		opt_ofilename = gnunet_opt_ofilename;
-	if (gnunet_opt_hostname != NULL)
-		opt_hostname = gnunet_opt_hostname;
-	if (gnunet_opt_passwords != NULL)
-		opt_passwords = gnunet_opt_passwords;
+		ofilename = gnunet_opt_ofilename;
 	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 	if (gnunet_opt_passwords != NULL)
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_k != NULL)
-		opt_k = gnunet_opt_k;
+		kfilename = gnunet_opt_k;
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 	if (gnunet_opt_y != NULL)
-		opt_y = gnunet_opt_y;
+		yfilename = gnunet_opt_y;
 	if (gnunet_opt_S != NULL)
-	{
-		opt_S = gnunet_opt_S;
 		sessionkey = gnunet_opt_S; // get session key from GNUnet options
-	}
 #endif
 
 	// create peer list from remaining arguments
@@ -2145,34 +2176,29 @@ int main
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ifilename == NULL))
+				(ifilename.length() == 0))
 			{
 				ifilename = argv[i+1];
-				opt_ifilename = (char*)ifilename.c_str();
 			}
 			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ofilename == NULL))
+				(ofilename.length() == 0))
 			{
 				ofilename = argv[i+1];
-				opt_ofilename = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_k == NULL))
+				(kfilename.length() == 0))
 			{
 				kfilename = argv[i+1];
-				opt_k = (char*)kfilename.c_str();
 			}
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_hostname == NULL))
+				(hostname.length() == 0))
 			{
 				hostname = argv[i+1];
-				opt_hostname = (char*)hostname.c_str();
 			}
 			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_passwords == NULL))
+				(passwords.length() == 0))
 			{
 				passwords = argv[i+1];
-				opt_passwords = (char*)passwords.c_str();
 			}
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
 				(port.length() == 0))
@@ -2180,10 +2206,9 @@ int main
 				port = argv[i+1];
 			}
 			if ((arg.find("-S") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_S == NULL))
+				(sessionkey.length() == 0))
 			{
 				sessionkey = argv[i+1];
-				opt_S = (char*)sessionkey.c_str();
 			}
 			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_W == 5))
@@ -2191,10 +2216,9 @@ int main
 				opt_W = strtoul(argv[i+1], NULL, 10);
 			}
 			if ((arg.find("-y") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_y == NULL))
+				(yfilename.length() == 0))
 			{
 				yfilename = argv[i+1];
-				opt_y = (char*)yfilename.c_str();
 			}
 			continue;
 		}
@@ -2292,27 +2316,25 @@ int main
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	ifilename = "Test1_output.bin";
-	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 2;
 	opt_binary = true;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
-	opt_y = (char*)yfilename.c_str();
 	ifilename = "TestY_output.asc";
-	opt_ifilename = (char*)ifilename.c_str();
 	opt_verbose = 2;
 #endif
 #endif
 
 	// check command line arguments
-	if ((opt_hostname != NULL) && (opt_passwords == NULL) && (opt_y == NULL))
+	if ((hostname.length() > 0) && (passwords.length() == 0) &&
+		(yfilename.length() == 0))
 	{
 		std::cerr << "ERROR: option \"-P\" is necessary due to insecure" <<
 			" network" << std::endl;
 		return -1;
 	}
-	if (opt_nonint && (opt_y != NULL))
+	if (opt_nonint && (yfilename.length() > 0))
 	{
 		std::cerr << "ERROR: options \"-n\" and \"-y\" are incompatible" <<
 			std::endl;
@@ -2332,7 +2354,7 @@ int main
 		}
 		else
 		{
-			if (opt_y != NULL)
+			if (yfilename.length() > 0)
 			{
 				std::cerr << "WARNING: list of peers is not required" <<
 					std::endl;
@@ -2344,7 +2366,7 @@ int main
 				return -1;
 			}
 		}
-		if ((opt_verbose) && (opt_y == NULL))
+		if ((opt_verbose) && (yfilename.length() == 0))
 		{
 			std::cerr << "INFO: canonicalized peer list = " << std::endl;
 			for (size_t i = 0; i < peers.size(); i++)
@@ -2379,11 +2401,11 @@ int main
 	}
 
 	// read message
-	if (opt_ifilename != NULL)
+	if (ifilename.length() > 0)
 	{
 		if (opt_binary)
 		{
-			if (!read_binary_message(opt_ifilename, armored_message))
+			if (!read_binary_message(ifilename, armored_message))
 			{
 				if (should_unlock)
 					unlock_memory();
@@ -2392,7 +2414,7 @@ int main
 		}
 		else
 		{
-			if (!read_message(opt_ifilename, armored_message))
+			if (!read_message(ifilename, armored_message))
 			{
 				if (should_unlock)
 					unlock_memory();
@@ -2404,9 +2426,9 @@ int main
 		read_stdin("-----END PGP MESSAGE-----", armored_message);
 
 	// read keyring
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
-		if (!read_key_file(opt_k, armored_pubring))
+		if (!read_key_file(kfilename, armored_pubring))
 		{
 			if (should_unlock)
 				unlock_memory();
@@ -2415,12 +2437,12 @@ int main
 	}
 
 	// start symmetric-key decryption or signature verification
-	if ((peers.size() == 0) && (opt_y == NULL))
+	if ((peers.size() == 0) && (yfilename.length() == 0))
 	{
 		// parse the keyring
 		TMCG_OpenPGP_Keyring *ring = NULL;
 		bool parse_ok;
-		if (opt_k)
+		if (kfilename.length() > 0)
 		{
 			int opt_verbose_ring = opt_verbose;
 			if (opt_verbose_ring > 0)
@@ -2456,7 +2478,7 @@ int main
 			return -1;
 		}
 		tmcg_openpgp_secure_octets_t seskey;
-		if (opt_S)
+		if (sessionkey.length() > 0)
 		{
 			size_t col = sessionkey.find(":");
 			size_t kst = 0;
@@ -2518,9 +2540,9 @@ int main
 		delete ring;
 		if (should_unlock)
 			unlock_memory();
-		if (opt_ofilename != NULL)
+		if (ofilename.length() > 0)
 		{
-			if (!write_message(opt_ofilename, content))
+			if (!write_message(ofilename, content))
 				return -1;
 		}
 		else
@@ -2554,7 +2576,7 @@ int main
 		TMCG_OpenPGP_Prvkey *prv = NULL;
 		TMCG_OpenPGP_Keyring *ring = NULL;
 		bool parse_ok;
-		if (opt_k)
+		if (kfilename.length() > 0)
 		{
 			int opt_verbose_ring = opt_verbose;
 			if (opt_verbose_ring > 0)
@@ -2843,9 +2865,9 @@ int main
 		// output decrypted content
 		if (res)
 		{
-			if (opt_ofilename != NULL)
+			if (ofilename.length() > 0)
 			{
-				if (!write_message(opt_ofilename, content))
+				if (!write_message(ofilename, content))
 					return -1;
 			}
 			else
@@ -2857,12 +2879,12 @@ int main
 	}
 	// initialize return code and do the main work
 	int ret = 0;
-	if ((opt_hostname != NULL) && (opt_y == NULL))
+	if ((hostname.length() > 0) && (yfilename.length() == 0))
 	{
 		// start interactive variant, if built-in TCP/IP requested
 		ret = run_tcpip(peers.size(), opt_p, hostname, port);
 	}
-	else if (opt_y != NULL)
+	else if (yfilename.length() > 0)
 	{
 		// start a single instance as replacement for GnuPG et al.
 		fork_instance(0);

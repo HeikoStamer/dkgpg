@@ -42,10 +42,6 @@ int main
 	std::string	filename, ifilename, kfilename, sfilename;
 	int 		opt_verbose = 0;
 	bool		opt_binary = false, opt_weak = false;
-	char		*opt_i = NULL;
-	char		*opt_sigfrom = NULL, *opt_sigto = NULL;
-	char		*opt_k = NULL;
-	char		*opt_s = NULL;
 	std::string	sigfrom_str, sigto_str;
 	struct tm	sigfrom_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	struct tm	sigto_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 , 0};
@@ -58,10 +54,9 @@ int main
 		if (arg.find("-i") == 0)
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_i == NULL))
+			if ((idx < (size_t)(argc - 1)) && (ifilename.length() == 0))
 			{
 				ifilename = argv[i+1];
-				opt_i = (char*)ifilename.c_str();
 			}
 			else
 			{
@@ -74,10 +69,9 @@ int main
 		else if (arg.find("-f") == 0)
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_sigfrom == NULL))
+			if ((idx < (size_t)(argc - 1)) && (sigfrom_str.length() == 0))
 			{
 				sigfrom_str = argv[i+1];
-				opt_sigfrom = (char*)sigfrom_str.c_str();
 			}
 			else
 			{
@@ -90,10 +84,9 @@ int main
 		else if (arg.find("-t") == 0)
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_sigto == NULL))
+			if ((idx < (size_t)(argc - 1)) && (sigto_str.length() == 0))
 			{
 				sigto_str = argv[i+1];
-				opt_sigto = (char*)sigto_str.c_str();
 			}
 			else
 			{
@@ -106,10 +99,9 @@ int main
 		else if (arg.find("-k") == 0)
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_k == NULL))
+			if ((idx < (size_t)(argc - 1)) && (kfilename.length() == 0))
 			{
 				kfilename = argv[i+1];
-				opt_k = (char*)kfilename.c_str();
 			}
 			else
 			{
@@ -122,10 +114,9 @@ int main
 		else if (arg.find("-s") == 0)
 		{
 			size_t idx = ++i;
-			if ((idx < (size_t)(argc - 1)) && (opt_s == NULL))
+			if ((idx < (size_t)(argc - 1)) && (sfilename.length() == 0))
 			{
 				sfilename = argv[i+1];
-				opt_s = (char*)sfilename.c_str();
 			}
 			else
 			{
@@ -189,36 +180,32 @@ int main
 #ifdef DKGPG_TESTSUITE
 	filename = "Test1_dkg-pub.asc";
 	ifilename = "Test1_output.bin";
-	opt_i = (char*)ifilename.c_str();
 	sfilename = "Test1_output.sig";
-	opt_s = (char*)sfilename.c_str();
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	filename = "TestY-pub.asc";
 	ifilename = "TestY_output.asc";
-	opt_i = (char*)ifilename.c_str();
 	sfilename = "TestY_output.sig";
-	opt_s = (char*)sfilename.c_str();
 	opt_verbose = 2;
 #endif
 #endif
 	// check command line arguments
-	if ((opt_k == NULL) && (filename.length() == 0))
+	if ((kfilename.length() == 0) && (filename.length() == 0))
 	{
 		std::cerr << "ERROR: argument KEYFILE missing; usage: " <<
 			usage << std::endl;
 		return -1;
 	}
-	if (opt_i == NULL)
+	if (ifilename.length() == 0)
 	{
 		std::cerr << "ERROR: mandatory option \"-i\" missing; usage: " <<
 			usage << std::endl;
 		return -1;
 	}
-	if (opt_sigfrom)
+	if (sigfrom_str.length() > 0)
 	{
-		strptime(opt_sigfrom, "%Y-%m-%d_%H:%M:%S", &sigfrom_tm);
+		strptime(sigfrom_str.c_str(), "%Y-%m-%d_%H:%M:%S", &sigfrom_tm);
 		sigfrom = mktime(&sigfrom_tm);
 		if (sigfrom == ((time_t) -1))
 		{
@@ -228,9 +215,9 @@ int main
 			return -1;
 		}
 	}
-	if (opt_sigto)
+	if (sigto_str.length() > 0)
 	{
-		strptime(opt_sigto, "%Y-%m-%d_%H:%M:%S", &sigto_tm);
+		strptime(sigto_str.c_str(), "%Y-%m-%d_%H:%M:%S", &sigto_tm);
 		sigto = mktime(&sigto_tm);
 		if (sigto == ((time_t) -1))
 		{
@@ -248,8 +235,10 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+	}
 
 	// read the public key from KEYFILE
 	std::string armored_pubkey;
@@ -270,7 +259,7 @@ int main
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k != NULL)
+	if (kfilename.length() > 0)
 	{
 		if (opt_binary)
 		{
@@ -287,7 +276,7 @@ int main
 
 	// read the signature from stdin or from file
 	std::string armored_signature;
-	if (opt_s != NULL)
+	if (sfilename.length() > 0)
 	{
 		if (!opt_binary && !read_message(sfilename, armored_signature))
 			return -1;
@@ -328,7 +317,7 @@ int main
 
 	// parse the keyring, the public key block and corresponding signatures
 	TMCG_OpenPGP_Keyring *ring = NULL;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		int opt_verbose_ring = opt_verbose;
 		if (opt_verbose_ring > 0)
@@ -528,8 +517,10 @@ int main
 	// verify signature cryptographically
 	bool verify_ok = false;
 	if (subkey_selected)
+	{
 		verify_ok = signature->Verify(primary->subkeys[subkey_idx]->key,
 			ifilename, opt_verbose);
+	}
 	else
 		verify_ok = signature->Verify(primary->key, ifilename, opt_verbose);
 
@@ -543,15 +534,19 @@ int main
 	if (!verify_ok)
 	{
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: Bad signature for input file \"" <<
 				ifilename << "\"" << std::endl;
+		}
 		return -3;
 	}
 	else
 	{
 		if (opt_verbose)
+		{
 			std::cerr << "INFO: Good signature for input file \"" <<
 				ifilename << "\"" << std::endl;
+		}
 	}
 	return 0;
 }

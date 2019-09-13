@@ -65,13 +65,6 @@ std::string						kfilename, reason, ifilename, ofilename, s;
 std::string						passwords, hostname, port;
 
 int 							opt_verbose = 0;
-char							*opt_passwords = NULL;
-char							*opt_hostname = NULL;
-char							*opt_k = NULL;
-char							*opt_R = NULL;
-char							*opt_i = NULL;
-char							*opt_o = NULL;
-char							*opt_s = NULL;
 unsigned long int				opt_r = 0, opt_p = 55000, opt_W = 5;
 
 void run_instance
@@ -92,7 +85,7 @@ void run_instance
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		if (!read_key_file(kfilename, armored_pubring))
 			exit(-1);
@@ -102,7 +95,7 @@ void run_instance
 	TMCG_OpenPGP_Prvkey *prv = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
 			PublicKeyringParse(armored_pubring, opt_verbose, ring);
@@ -161,7 +154,7 @@ void run_instance
 
 	// read or export the input (i.e. public key to revoke)
 	std::string armored_pubkey;
-	if (opt_i)
+	if (ifilename.length() > 0)
 	{
 		if (!read_key_file(ifilename, armored_pubkey))
 		{
@@ -192,7 +185,7 @@ void run_instance
 
 	// select subkey to revoke, if option "-s" given
 	TMCG_OpenPGP_Subkey *sub = NULL;
-	if (opt_s)
+	if (s.length() > 0)
 	{
 		for (size_t i = 0; i < pub->subkeys.size(); i++)
 		{
@@ -251,7 +244,7 @@ void run_instance
 	for (size_t i = 0; i < peers.size(); i++)
 	{
 		std::stringstream key;
-		if (opt_passwords != NULL)
+		if (passwords.length() > 0)
 		{
 			std::string pwd;
 			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
@@ -420,9 +413,11 @@ void run_instance
 	// at the end: deliver some more rounds for still waiting parties
 	time_t synctime = (opt_W * 6);
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: p_" << whoami << ": waiting approximately " <<
 			(synctime * (T_RBC + 1)) << " seconds for stalled parties" <<
 			std::endl;
+	}
 	rbc->Sync(synctime);
 
 	// release RBC
@@ -473,7 +468,7 @@ void run_instance
 
 	// export the "revocation certificate"
 	tmcg_openpgp_octets_t data;
-	if (opt_i || (sub != NULL))
+	if ((ifilename.length() > 0) || (sub != NULL))
 		pub->Export(data, TMCG_OPENPGP_EXPORT_REVCERT);
 	else
 		data.insert(data.end(), revsig.begin(), revsig.end());
@@ -495,7 +490,7 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
 			comment.str(), data, armor);
-	if (opt_o)
+	if (ofilename.length() > 0)
 	{
 		if (!write_key_file(ofilename, armor))
 		{
@@ -692,35 +687,19 @@ int main
 		return -1;
 	}
 	if (gnunet_opt_hostname != NULL)
-		opt_hostname = gnunet_opt_hostname;
-	if (gnunet_opt_passwords != NULL)
-		opt_passwords = gnunet_opt_passwords;
-	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 	if (gnunet_opt_passwords != NULL)
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_k != NULL)
-		opt_k = gnunet_opt_k;
+		kfilename = gnunet_opt_k;
 	if (gnunet_opt_R != NULL)
-	{
 		reason = gnunet_opt_R; // get reason string from GNUnet options
-		opt_R = gnunet_opt_R;
-	}
 	if (gnunet_opt_i != NULL)
-	{
 		ifilename = gnunet_opt_i; // get input filename from GNUnet options
-		opt_i = gnunet_opt_i;
-	}
 	if (gnunet_opt_o != NULL)
-	{
 		ofilename = gnunet_opt_o; // get output filename from GNUnet options
-		opt_o = gnunet_opt_o;
-	}
 	if (gnunet_opt_s != NULL)
-	{
 		s = gnunet_opt_s; // get subkey fingerprint from GNUnet options
-		opt_s = gnunet_opt_s;
-	}
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 #endif
@@ -741,34 +720,29 @@ int main
 		{
 			size_t idx = ++i;
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_hostname == NULL))
+				(hostname.length() == 0))
 			{
 				hostname = argv[i+1];
-				opt_hostname = (char*)hostname.c_str();
 			}
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_i == NULL))
+				(ifilename.length() == 0))
 			{
 				ifilename = argv[i+1];
-				opt_i = (char*)ifilename.c_str();
 			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_k == NULL))
+				(kfilename.length() == 0))
 			{
 				kfilename = argv[i+1];
-				opt_k = (char*)kfilename.c_str();
 			}
 			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_o == NULL))
+				(ofilename.length() == 0))
 			{
 				ofilename = argv[i+1];
-				opt_o = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_passwords == NULL))
+				(passwords.length() == 0))
 			{
 				passwords = argv[i+1];
-				opt_passwords = (char*)passwords.c_str();
 			}
 			if ((arg.find("-p") == 0) && (idx < (size_t)(argc - 1)) &&
 				(port.length() == 0))
@@ -776,10 +750,9 @@ int main
 				port = argv[i+1];
 			}
 			if ((arg.find("-R") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_R == NULL))
+				(reason.length() == 0))
 			{
 				reason = argv[i+1];
-				opt_R = (char*)reason.c_str();
 			}
 			if ((arg.find("-r") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_r == 0))
@@ -787,10 +760,9 @@ int main
 				opt_r = strtoul(argv[i+1], NULL, 10);
 			}
 			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_s == NULL))
+				(s.length() == 0))
 			{
 				s = argv[i+1];
-				opt_s = (char*)s.c_str();
 			}
 			if ((arg.find("-W") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_W == 5))
@@ -871,23 +843,16 @@ int main
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	if (tmcg_mpz_wrandom_ui() % 2)
-	{
 		ifilename = "TestY-pub.asc";
-		opt_i = (char*)ifilename.c_str();
-	}
 	if (tmcg_mpz_wrandom_ui() % 2)
-	{
 		ofilename = "Test-revcert.asc";
-		opt_o = (char*)ofilename.c_str();
-	}
 	opt_r = 3;
 	reason = "PGP is (not) dead";
-	opt_R = (char*)reason.c_str();
 	opt_verbose = 2;
 #endif
 
 	// check command line arguments
-	if ((opt_hostname != NULL) && (opt_passwords == NULL))
+	if ((hostname.length() > 0) && (passwords.length() == 0))
 	{
 		std::cerr << "ERROR: option \"-P\" is necessary due to insecure" <<
 			" network" << std::endl;
@@ -940,7 +905,7 @@ int main
 	
 	// initialize return code and do the main work
 	int ret = 0;
-	if (opt_hostname != NULL)
+	if (hostname.length() > 0)
 	{
 		// start interactive variant, if built-in TCP/IP requested
 		ret = run_tcpip(peers.size(), opt_p, hostname, port);

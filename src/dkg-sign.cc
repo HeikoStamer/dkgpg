@@ -69,13 +69,6 @@ std::string						ifilename, ofilename, kfilename;
 std::string						passwords, hostname, port, URI, yfilename;
 
 int 							opt_verbose = 0;
-char							*opt_ifilename = NULL;
-char							*opt_ofilename = NULL;
-char							*opt_passwords = NULL;
-char							*opt_hostname = NULL;
-char							*opt_URI = NULL;
-char							*opt_k = NULL;
-char							*opt_y = NULL;
 unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
 bool							opt_t = false, opt_E = false, opt_C = false;
 bool							opt_v5 = false;
@@ -86,13 +79,15 @@ void run_instance
 {
 	// read the key file
 	std::string armored_seckey, pkfname;
-	if (opt_y == NULL)
-		pkfname = peers[whoami] + "_dkg-sec.asc";
+	if (yfilename.length() > 0)
+		pkfname = yfilename;
 	else
-		pkfname = opt_y;
+		pkfname = peers[whoami] + "_dkg-sec.asc";
 	if (opt_verbose > 1)
+	{
 		std::cerr << "INFO: private key expected in file \"" << pkfname <<
 			"\"" << std::endl;
+	}
 	if (!check_strict_permissions(pkfname))
 	{
 		std::cerr << "WARNING: weak permissions of private key file" <<
@@ -105,9 +100,9 @@ void run_instance
 
 	// read the keyring
 	std::string armored_pubring;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
-		if (!read_key_file(opt_k, armored_pubring))
+		if (!read_key_file(kfilename, armored_pubring))
 			exit(-1);
 	}
 
@@ -115,7 +110,7 @@ void run_instance
 	TMCG_OpenPGP_Prvkey *prv = NULL;
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k)
+	if (kfilename.length() > 0)
 	{
 		int opt_verbose_ring = opt_verbose;
 		if (opt_verbose_ring > 0)
@@ -166,13 +161,15 @@ void run_instance
 		exit(-1);
 	}
 	delete ring;
-	if (!prv->pub->valid || ((opt_y == NULL) && prv->Weak(opt_verbose)))
+	if (!prv->pub->valid ||
+		((yfilename.length() == 0) && prv->Weak(opt_verbose)))
 	{
 		std::cerr << "ERROR: primary key is invalid or weak" << std::endl;
 		delete prv;
 		exit(-1);
 	}
-	if ((prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) && (opt_y == NULL))
+	if ((prv->pkalgo != TMCG_OPENPGP_PKALGO_EXPERIMENTAL7) &&
+		(yfilename.length() == 0))
 	{
 		std::cerr << "ERROR: primary key is not a tDSS/DSA key" << std::endl;
 		delete prv;
@@ -186,7 +183,7 @@ void run_instance
 	size_t T_RBC = 0;
 	time_t csigtime = 0;
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
-	if (opt_y == NULL)
+	if (yfilename.length() == 0)
 	{
 		// create an instance of tDSS by stored parameters from private key
 		if (!init_tDSS(prv, opt_verbose, dss))
@@ -210,7 +207,7 @@ void run_instance
 		for (size_t i = 0; i < peers.size(); i++)
 		{
 			std::stringstream key;
-			if (opt_passwords != NULL)
+			if (passwords.length() > 0)
 			{
 				std::string pwd;
 				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
@@ -293,8 +290,10 @@ void run_instance
 
 	// prepare signature and compute the hash of the input file
 	if (opt_verbose)
-		std::cerr << "INFO: hashing the input file \"" << opt_ifilename <<
-			"\"" << std::endl;
+	{
+		std::cerr << "INFO: hashing the input file \"" << ifilename << "\"" <<
+			std::endl;
+	}
 	tmcg_openpgp_octets_t trailer, hash, left;
 	bool hret = false;
 	if (opt_t || opt_C)
@@ -311,8 +310,7 @@ void run_instance
 			for (size_t i = 0; i < 6; i++)
 				htrailer.push_back(0);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				TextDocumentHashV5(opt_ifilename, htrailer, hashalgo, hash,
-				left);
+				TextDocumentHashV5(ifilename, htrailer, hashalgo, hash, left);
 		}
 		else
 		{
@@ -322,7 +320,7 @@ void run_instance
 					prv->pub->pkalgo, hashalgo, csigtime, sigexptime, URI,
 					prv->pub->fingerprint, trailer);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				TextDocumentHash(opt_ifilename, trailer, hashalgo, hash, left);
+				TextDocumentHash(ifilename, trailer, hashalgo, hash, left);
 		}
 	}
 	else
@@ -339,8 +337,7 @@ void run_instance
 			for (size_t i = 0; i < 6; i++)
 				htrailer.push_back(0);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				BinaryDocumentHashV5(opt_ifilename, htrailer, hashalgo, hash,
-				left);
+				BinaryDocumentHashV5(ifilename, htrailer, hashalgo, hash, left);
 		}
 		else
 		{
@@ -350,16 +347,15 @@ void run_instance
 					hashalgo, csigtime, sigexptime, URI, prv->pub->fingerprint,
 					trailer);
 			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				BinaryDocumentHash(opt_ifilename, trailer, hashalgo, hash,
-					left);
+				BinaryDocumentHash(ifilename, trailer, hashalgo, hash, left);
 		}
 	}
 	if (!hret)
 	{
 		std::cerr << "ERROR: p_" << whoami << ": [Text|Binary]DocumentHash" <<
-			"[V5]() failed; cannot process input file \"" << opt_ifilename <<
+			"[V5]() failed; cannot process input file \"" << ifilename <<
 			"\"" << std::endl;
-		if (opt_y == NULL)
+		if (yfilename.length() == 0)
 		{
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
@@ -371,9 +367,9 @@ void run_instance
 	// sign the hash value
 	tmcg_openpgp_octets_t sig;
 	if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
-		sig, opt_verbose, (opt_y != NULL), dss, aiou, rbc))
+		sig, opt_verbose, (yfilename.length() > 0), dss, aiou, rbc))
 	{
-		if (opt_y == NULL)
+		if (yfilename.length() == 0)
 		{
 			delete rbc, delete aiou, delete aiou2;
 			delete dss;
@@ -383,7 +379,7 @@ void run_instance
 	}
 
 	// release allocated ressources
-	if ((opt_y == NULL) && (rbc != NULL))
+	if ((yfilename.length() == 0) && (rbc != NULL))
 	{
 		// at the end: deliver some more rounds for still waiting parties
 		time_t synctime = (opt_W * 6);
@@ -427,18 +423,18 @@ void run_instance
 		ct_hash = "Hash: " + ct_hash + "\r\n\r\n";
 		std::string ct_body;
 		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-			DashEscapeFile(opt_ifilename, ct_body))
+			DashEscapeFile(ifilename, ct_body))
 		{
 			std::cerr << "ERROR: p_" << whoami << ": DashEscapeFile()" <<
-				" failed; cannot process input file \"" << opt_ifilename <<
-				"\"" << std::endl;
+				" failed; cannot process input file \"" << ifilename << "\"" <<
+				std::endl;
 			exit(-1);
 		}
 		sigstr = ct_head + ct_hash + ct_body + "\r\n" + sigstr;
 	}
-	if (opt_ofilename != NULL)
+	if (ofilename.length() > 0)
 	{
-		if (!write_message(opt_ofilename, sigstr))
+		if (!write_message(ofilename, sigstr))
 			exit(-1);
 	}
 	else
@@ -653,27 +649,21 @@ int main
 		return -1;
 	}
 	if (gnunet_opt_ifilename != NULL)
-		opt_ifilename = gnunet_opt_ifilename;
+		ifilename = gnunet_opt_ifilename;
 	if (gnunet_opt_ofilename != NULL)
-		opt_ofilename = gnunet_opt_ofilename;
-	if (gnunet_opt_hostname != NULL)
-		opt_hostname = gnunet_opt_hostname;
-	if (gnunet_opt_passwords != NULL)
-		opt_passwords = gnunet_opt_passwords;
-	if (gnunet_opt_URI != NULL)
-		opt_URI = gnunet_opt_URI;
+		ofilename = gnunet_opt_ofilename;
 	if (gnunet_opt_passwords != NULL)
 		passwords = gnunet_opt_passwords; // get passwords from GNUnet options
 	if (gnunet_opt_hostname != NULL)
 		hostname = gnunet_opt_hostname; // get hostname from GNUnet options
 	if (gnunet_opt_k != NULL)
-		opt_k = gnunet_opt_k;
+		kfilename = gnunet_opt_k;
 	if (gnunet_opt_W != opt_W)
 		opt_W = gnunet_opt_W; // get aiou message timeout from GNUnet options
 	if (gnunet_opt_URI != NULL)
 		URI = gnunet_opt_URI; // get policy URI from GNUnet options
 	if (gnunet_opt_y != NULL)
-		opt_y = gnunet_opt_y;
+		yfilename = gnunet_opt_y;
 #endif
 
 	// create peer list from remaining arguments
@@ -692,40 +682,34 @@ int main
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ifilename == NULL))
+				(ifilename.length() == 0))
 			{
 				ifilename = argv[i+1];
-				opt_ifilename = (char*)ifilename.c_str();
 			}
 			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_ofilename == NULL))
+				(ofilename.length() == 0))
 			{
 				ofilename = argv[i+1];
-				opt_ofilename = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_k == NULL))
+				(kfilename.length() == 0))
 			{
 				kfilename = argv[i+1];
-				opt_k = (char*)kfilename.c_str();
 			}
 			if ((arg.find("-H") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_hostname == NULL))
+				(hostname.length() == 0))
 			{
 				hostname = argv[i+1];
-				opt_hostname = (char*)hostname.c_str();
 			}
 			if ((arg.find("-P") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_passwords == NULL))
+				(passwords.length() == 0))
 			{
 				passwords = argv[i+1];
-				opt_passwords = (char*)passwords.c_str();
 			}
 			if ((arg.find("-U") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_URI == NULL))
+				(URI.length() == 0))
 			{
 				URI = argv[i+1];
-				opt_URI = (char*)URI.c_str();
 			}
 			if ((arg.find("-e") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_e == 0))
@@ -743,10 +727,9 @@ int main
 				opt_W = strtoul(argv[i+1], NULL, 10);
 			}
 			if ((arg.find("-y") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_y == NULL))
+				(yfilename.length() == 0))
 			{
 				yfilename = argv[i+1];
-				opt_y = (char*)yfilename.c_str();
 			}
 			continue;
 		}
@@ -840,19 +823,14 @@ int main
 	peers.push_back("Test3");
 	peers.push_back("Test4");
 	ifilename = "Test1_output.bin";
-	opt_ifilename = (char*)ifilename.c_str();
 	ofilename = "Test1_output.sig";
-	opt_ofilename = (char*)ofilename.c_str();
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
-	opt_y = (char*)yfilename.c_str();
 	ifilename = "TestY_output.asc";
-	opt_ifilename = (char*)ifilename.c_str();
 	ofilename = "TestY_output.sig";
-	opt_ofilename = (char*)ofilename.c_str();
 	opt_e = 4242;
 	URI = "https://savannah.nongnu.org/projects/dkgpg/";
 	opt_verbose = 2;
@@ -860,31 +838,33 @@ int main
 #endif
 
 	// check command line arguments
-	if (opt_ifilename == NULL)
+	if (ifilename.length() == 0)
 	{
 		std::cerr << "ERROR: option \"-i\" required to specify an input file" <<
 			std::endl;
 		return -1;
 	}
-	if ((opt_hostname != NULL) && (opt_passwords == NULL) && (opt_y == NULL))
+	if ((hostname.length() > 0) && (passwords.length() == 0) &&
+		(yfilename.length() == 0))
 	{
 		std::cerr << "ERROR: option \"-P\" required due to insecure network" <<
 			std::endl;
 		return -1;
 	}
-	if ((peers.size() < 1) && (opt_y == NULL))
+	if ((peers.size() < 1) && (yfilename.length() == 0))
 	{
 		std::cerr << "ERROR: no peers given as argument; usage: " <<
 			usage << std::endl;
 		return -1;
 	}
 	canonicalize(peers);
-	if (((peers.size() < 3) || (peers.size() > DKGPG_MAX_N)) && (opt_y == NULL))
+	if (((peers.size() < 3) || (peers.size() > DKGPG_MAX_N)) &&
+		(yfilename.length() == 0))
 	{
 		std::cerr << "ERROR: too few or too many peers given" << std::endl;
 		return -1;
 	}
-	if (opt_verbose && (opt_y == NULL))
+	if (opt_verbose && (yfilename.length() == 0))
 	{
 		std::cerr << "INFO: canonicalized peer list = " << std::endl;
 		for (size_t i = 0; i < peers.size(); i++)
@@ -912,17 +892,19 @@ int main
 		return -1;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: using LibTMCG version " << version_libTMCG() <<
 			std::endl;
+	}
 	
 	// initialize return code and do the main work
 	int ret = 0;
-	if ((opt_hostname != NULL) && (opt_y == NULL))
+	if ((hostname.length() > 0) && (yfilename.length() == 0))
 	{
 		// start interactive variant, if built-in TCP/IP requested
 		ret = run_tcpip(peers.size(), opt_p, hostname, port);
 	}
-	else if (opt_y != NULL)
+	else if (yfilename.length() > 0)
 	{
 		// start a single instance as replacement for GnuPG et al.
 		fork_instance(0);

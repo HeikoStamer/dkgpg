@@ -85,8 +85,10 @@ void run_instance
 	else
 		pkfname = peers[whoami] + "_dkg-sec.asc";
 	if (opt_verbose > 1)
+	{
 		std::cerr << "INFO: private key expected in file \"" << pkfname <<
 			"\"" << std::endl;
+	}
 	if (!check_strict_permissions(pkfname))
 	{
 		std::cerr << "WARNING: weak permissions of private key file" <<
@@ -455,13 +457,17 @@ void run_instance
 			CertificationHash(primary->pub_hashing, primary->userids[j]->userid,
 				empty, trailer, hashalgo, hash, left);
 		if (opt_r)
+		{
 			std::cerr << "INFO: going to revoke signature on user ID \"" <<
 				primary->userids[j]->userid_sanitized << "\" of key with" <<
 				" fingerprint [ " << fpr << " ]" << std::endl;
+		}
 		else
+		{
 			std::cerr << "INFO: going to sign user ID \"" <<
 				primary->userids[j]->userid_sanitized << "\" of key with" <<
 				" fingerprint [ " << fpr << "]" << std::endl;
+		}
 		if (opt_a)
 		{
 			std::string p = "Please confirm operation by entering the string";

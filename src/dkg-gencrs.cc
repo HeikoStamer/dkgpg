@@ -48,7 +48,9 @@ int main
 		{
 			size_t idx = ++i;
 			if ((idx < (size_t)(argc - 1)) && (!fips.length()))
+			{
 				fips = argv[i+1];
+			}
 			else
 			{
 				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<
@@ -61,7 +63,9 @@ int main
 		{
 			size_t idx = ++i;
 			if ((idx < (size_t)(argc - 1)) && (!prefix.length()))
+			{
 				prefix = argv[i+1];
+			}
 			else
 			{
 				std::cerr << "ERROR: bad option \"" << arg << "\" found" <<

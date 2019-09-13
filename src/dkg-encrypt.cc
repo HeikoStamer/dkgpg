@@ -196,10 +196,6 @@ int main
 	std::string	ifilename, ofilename, s, kfilename;
 	int		opt_verbose = 0;
 	bool	opt_binary = false, opt_weak = false, opt_t = false, opt_r = false;
-	char	*opt_i = NULL;
-	char	*opt_o = NULL;
-	char	*opt_s = NULL;
-	char	*opt_k = NULL;
 	unsigned long int opt_a = 0;
 
 	// parse argument list
@@ -213,28 +209,24 @@ int main
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_i == NULL))
+				(ifilename.length() == 0))
 			{
 				ifilename = argv[i+1];
-				opt_i = (char*)ifilename.c_str();
 			}
 			if ((arg.find("-o") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_o == NULL))
+				(ofilename.length() == 0))
 			{
 				ofilename = argv[i+1];
-				opt_o = (char*)ofilename.c_str();
 			}
 			if ((arg.find("-s") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_s == NULL))
+				(s.length() == 0))
 			{
 				s = argv[i+1];
-				opt_s = (char*)s.c_str();
 			}
 			if ((arg.find("-k") == 0) && (idx < (size_t)(argc - 1)) &&
-				(opt_k == NULL))
+				(kfilename.length() == 0))
 			{
 				kfilename = argv[i+1];
-				opt_k = (char*)kfilename.c_str();
 			}
 			if ((arg.find("-a") == 0) && (idx < (size_t)(argc - 1)) &&
 				(opt_a == 0))
@@ -337,7 +329,6 @@ int main
 	if (!opt_binary)
 		opt_binary = true;
 	ofilename = "Test1_output.bin";
-	opt_o = (char*)ofilename.c_str();
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
@@ -351,7 +342,6 @@ int main
 #ifdef DKGPG_TESTSUITE_Y
 	keyspec.push_back("TestY-pub.asc");
 	ofilename = "TestY_output.asc";
-	opt_o = (char*)ofilename.c_str();
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
@@ -388,7 +378,7 @@ int main
 
 	// read the keyring
 	std::string armored_pubring;
-	if ((opt_k != NULL) && !read_key_file(kfilename, armored_pubring))
+	if ((kfilename.length() > 0) && !read_key_file(kfilename, armored_pubring))
 	{
 		if (should_unlock)
 			unlock_memory();
@@ -398,7 +388,7 @@ int main
 	// parse the keyring
 	TMCG_OpenPGP_Keyring *ring = NULL;
 	bool parse_ok;
-	if (opt_k != NULL)
+	if (kfilename.length() > 0)
 	{
 		int opt_verbose_ring = opt_verbose;
 		if (opt_verbose_ring > 0)
@@ -426,7 +416,7 @@ int main
 	for (size_t i = 0; i < test_msg.length(); i++)
 		msg.push_back(test_msg[i]);
 #else
-	if (opt_i != NULL)
+	if (ifilename.length() > 0)
 	{
 		std::string input_msg;
 		if (!read_message(ifilename, input_msg))
@@ -659,8 +649,10 @@ int main
 		{
 			// try to extract the public key from keyring by keyspec
 			if (opt_verbose > 1)
+			{
 				std::cerr << "INFO: lookup for encryption key with" <<
 					" fingerprint " << keyspec[k] << std::endl;
+			}
 			const TMCG_OpenPGP_Pubkey *key = ring->FindByKeyid(keyspec[k]);
 			if (key == NULL)
 			{
@@ -735,7 +727,7 @@ int main
 				KeyidConvert(primary->subkeys[j]->id, kid);
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				FingerprintConvertPlain(primary->subkeys[j]->fingerprint, fpr);
-			if (opt_s && (kid != s) && (fpr != s))
+			if ((s.length() > 0) && (kid != s) && (fpr != s))
 				continue;
 			// encryption-capable subkey?
 			if (((primary->subkeys[j]->AccumulateFlags() & 0x04) == 0x04) ||
@@ -750,8 +742,10 @@ int main
 				if (primary->subkeys[j]->Weak(opt_verbose) && !opt_weak)
 				{
 					if (opt_verbose)
+					{
 						std::cerr << "WARNING: weak subkey for encryption" <<
 							" ignored" << std::endl;
+					}
 				}
 				else if ((primary->subkeys[j]->pkalgo != 
 							TMCG_OPENPGP_PKALGO_RSA) &&
@@ -763,9 +757,11 @@ int main
 							TMCG_OPENPGP_PKALGO_ECDH))
 				{
 					if (opt_verbose)
+					{
 						std::cerr << "WARNING: subkey with unsupported" <<
 							" public-key algorithm for encryption ignored" <<
 							std::endl;
+					}
 				}
 				else
 				{
@@ -779,33 +775,41 @@ int main
 							skalgo) == primary->psa.end()))
 					{
 						if (opt_verbose)
+						{
 							std::cerr << "WARNING: AES-256 is none of the" <<
 								" preferred symmetric algorithms;" <<
 								" use AES-256 anyway" << std::endl;
+						}
 					}
 					if (((skf & 0x01) != 0x01) && !opt_a &&
 					    ((primary->AccumulateFeatures() & 0x01) != 0x01))
 					{
 						if (opt_verbose)
+						{
 							std::cerr << "WARNING: recipient does not state" <<
 								" support for modification detection (MDC);" <<
 								"use MDC anyway" << std::endl;
+						}
 					}
 					if (((skf & 0x02) != 0x02) && !opt_a &&
 					    ((primary->AccumulateFeatures() & 0x02) != 0x02))
 					{
 						if (opt_verbose)
+						{
 							std::cerr << "WARNING: recipient does not state" <<
 								" support for AEAD Encrypted Data Packet;" <<
 								" AEAD disabled" << std::endl;
+						}
 					}
 					if (((skf & 0x02) != 0x02) && opt_a &&
 					    ((primary->AccumulateFeatures() & 0x02) != 0x02))
 					{
 						if (opt_verbose)
+						{
 							std::cerr << "WARNING: recipient does not state" <<
 								" support for AEAD Encrypted Data Packet;" <<
 								" AEAD enforced by option -a" << std::endl;
+						}
 					}
 					if ((std::find(primary->subkeys[j]->paa.begin(),
 						primary->subkeys[j]->paa.end(), aeadalgo)
@@ -814,8 +818,11 @@ int main
 							aeadalgo) == primary->paa.end()))
 					{
 						if (opt_verbose)
-							std::cerr << "WARNING: selected algorithm is none" <<
-								" of the preferred AEAD algorithms" << std::endl;
+						{
+							std::cerr << "WARNING: selected algorithm is" <<
+								" none of the preferred AEAD algorithms" <<
+								std::endl;
+						}
 					}
 				}
 			}
@@ -860,36 +867,47 @@ int main
 				skalgo) == primary->psa.end())
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: AES-256 is none of the preferred" <<
-						" symmetric algorithms; use AES-256 anyway" << std::endl;
+						" symmetric algorithms; use AES-256 anyway" <<
+						std::endl;
+				}
 			}
 			if (((primary->AccumulateFeatures() & 0x01) != 0x01) && !opt_a)
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: recipient does not state support" <<
 						" for modification detection (MDC);" <<
 						"use MDC protection anyway" << std::endl;
+				}
 			}
 			if (((primary->AccumulateFeatures() & 0x02) != 0x02) && !opt_a)
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: recipient does not state support" <<
 						" for AEAD Encrypted Data Packet; AEAD disabled" <<
 						std::endl;
+				}
 			}
 			if (((primary->AccumulateFeatures() & 0x02) != 0x02) && opt_a)
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: recipient does not state support" <<
 						" for AEAD Encrypted Data Packet; AEAD enforced by" <<
 						" option -a" << std::endl;
+				}
 			}
 			if (std::find(primary->paa.begin(), primary->paa.end(), aeadalgo) ==
 				primary->paa.end())
 			{
 				if (opt_verbose)
+				{
 					std::cerr << "WARNING: selected algorithm is none of the" <<
 						" preferred AEAD algorithms" << std::endl;
+				}
 			}
 		}
 		else if ((selected.size() == 0) && !primary->valid)
@@ -905,8 +923,10 @@ int main
 
 		// encrypt the session key (create PKESK packet)
 		if (opt_verbose > 1)
+		{
 			std::cerr << "INFO: " << selected.size() << " subkeys selected" <<
 				" for encryption of session key" << std::endl;
+		}
 		for (size_t j = 0; j < selected.size(); j++)
 		{
 			tmcg_openpgp_octets_t pkesk, subkeyid;
@@ -914,9 +934,9 @@ int main
 			{
 				// An implementation MAY accept or use a Key ID of zero as a
 				// "wild card" or "speculative" Key ID. In this case, the
-				// receiving implementation would try all available private keys,
-				// checking for a valid decrypted session key. This format helps
-				// reduce traffic analysis of messages. [RFC4880]
+				// receiving implementation would try all available private
+				// keys, checking for a valid decrypted session key. This
+				// format helps reduce traffic analysis of messages. [RFC4880]
 				for (size_t i = 0; i < 8; i++)
 					subkeyid.push_back(0x00);
 			}
@@ -942,9 +962,9 @@ int main
 			{
 				// An implementation MAY accept or use a Key ID of zero as a
 				// "wild card" or "speculative" Key ID. In this case, the
-				// receiving implementation would try all available private keys,
-				// checking for a valid decrypted session key. This format helps
-				// reduce traffic analysis of messages. [RFC4880]
+				// receiving implementation would try all available private
+				// keys, checking for a valid decrypted session key. This
+				// format helps reduce traffic analysis of messages. [RFC4880]
 				for (size_t i = 0; i < 8; i++)
 					keyid.push_back(0x00);
 			}
@@ -974,7 +994,8 @@ int main
 		unlock_memory();
 
 	// append the encrypted data packet(s) according to supported features
-	if (((features & 0x02) == 0x02) && (aead.size() > 0) && (keyspec.size() > 0))
+	if (((features & 0x02) == 0x02) && (aead.size() > 0) &&
+		(keyspec.size() > 0))
 	{
 		// append AEAD, because all selected recipients/keys have support
 		all.insert(all.end(), aead.begin(), aead.end());
@@ -996,7 +1017,7 @@ int main
 		ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armored_message);
 
 	// write out the result
-	if (opt_o != NULL)
+	if (ofilename.length() > 0)
 	{
 		if (opt_binary)
 		{

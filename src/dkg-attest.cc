@@ -311,19 +311,36 @@ void run_instance
 		bP_out.push_back(broadcast_pipefd[whoami][i][1]);
 		bP_key.push_back(key.str());
 	}
-	// create asynchronous authenticated unicast channels
-	aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out,
-		uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
-	// create asynchronous authenticated unicast channels for broadcast
-	aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
-		bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
-	// create an instance of a reliable broadcast protocol (RBC)
-	// assume maximum asynchronous t-resilience for RBC
-	T_RBC = (peers.size() - 1) / 3;
-	rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami,
-			aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
-	if (yfilename.length() == 0)
+	if (yfilename.length() > 0)
 	{
+		// create dummy instances
+		for (size_t i = 0; i < 3; i++)
+		{
+			uP_in.push_back(0), uP_out.push_back(0), uP_key.push_back("");
+			bP_in.push_back(0), bP_out.push_back(0), bP_key.push_back("");
+		}
+		aiou = new aiounicast_select(3, 0, uP_in, uP_out,
+			uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		aiou2 = new aiounicast_select(3, 0, bP_in, bP_out,
+			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		rbc = new CachinKursawePetzoldShoupRBC(3, 0, 0,
+				aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		csigtime = sigtime;
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+	}
+	else
+	{
+		// create asynchronous authenticated unicast channels
+		aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out,
+			uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		// create asynchronous authenticated unicast channels for broadcast
+		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
+			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		// create an instance of a reliable broadcast protocol (RBC)
+		// assume maximum asynchronous t-resilience for RBC
+		T_RBC = (peers.size() - 1) / 3;
+		rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami,
+				aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		std::string myID = "dkg-attest|" + std::string(protocol) + "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
@@ -391,11 +408,6 @@ void run_instance
 			delete prv;
 			exit(-1);
 		}
-	}
-	else
-	{
-		csigtime = sigtime;
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 	}
 
 	// iterate through all valid user IDs

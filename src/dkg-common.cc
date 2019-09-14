@@ -480,7 +480,7 @@ bool init_tDSS
 				"(1, 0, 0, ...) dummy instance" << std::endl;
 		}
 		// check magic bytes of CRS (common reference string)
-		bool fips = false, rfc = false;
+		bool fips = false;
 		if (TMCG_ParseHelper::cm(crs, "crs", '|'))
 		{
 			if (opt_verbose)
@@ -497,15 +497,6 @@ bool init_tDSS
 					" to FIPS 186-4 section A.1.1.2)" << std::endl;
 			}
 			fips = true;
-		}
-		else if (TMCG_ParseHelper::cm(crs, "rfc-crs", '|'))
-		{
-			if (opt_verbose)
-			{
-				std::cerr << "INFO: verifying domain parameters (fixed by" <<
-					" RFC 7919)" << std::endl;
-			}
-			rfc = true;
 		}
 		else
 		{

@@ -243,92 +243,92 @@ void run_instance
 	size_t T_RBC = 0;
 	time_t csigtime = 0;
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+
+	// create an instance of tDSS by stored parameters from private key
+	if (!init_tDSS(prv, opt_verbose, dss))
+	{
+		delete dss;
+		delete pub;
+		delete prv;
+		exit(-1);
+	}
+	// create one-to-one mapping based on the stored canonicalized peer list
+	if (!prv->tDSS_CreateMapping(peers, opt_verbose))
+	{
+		std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" << std::endl;
+		delete dss;
+		delete pub;
+		delete prv;
+		exit(-1);
+	}
+	// create communication handles between all players
+	std::vector<int> uP_in, uP_out, bP_in, bP_out;
+	std::vector<std::string> uP_key, bP_key;
+	for (size_t i = 0; i < peers.size(); i++)
+	{
+		std::stringstream key;
+		if (passwords.length() > 0)
+		{
+			std::string pwd;
+			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
+			{
+				std::cerr << "ERROR: p_" << whoami << ": " <<
+					"cannot read" << " password for protecting channel" <<
+					" to p_" << i << std::endl;
+				delete dss;
+				delete pub;
+				delete prv;
+				exit(-1);
+			}
+			key << pwd;
+			if (((i + 1) < peers.size()) &&
+				!TMCG_ParseHelper::nx(passwords, '/'))
+			{
+				std::cerr << "ERROR: p_" << whoami << ": " << "cannot" <<
+					" skip to next password for protecting channel to p_" <<
+					(i + 1) << std::endl;
+				delete dss;
+				delete pub;
+				delete prv;
+				exit(-1);
+			}
+		}
+		else
+		{
+			// simple key -- we assume that GNUnet provides secure channels
+			key << "dkg-attest::p_" << (i + whoami);
+		}
+		if (i == whoami)
+			uP_in.push_back(self_pipefd[0]);
+		else
+			uP_in.push_back(pipefd[i][whoami][0]);
+		uP_out.push_back(pipefd[whoami][i][1]);
+		uP_key.push_back(key.str());
+		if (i == whoami)
+			bP_in.push_back(broadcast_self_pipefd[0]);
+		else
+			bP_in.push_back(broadcast_pipefd[i][whoami][0]);
+		bP_out.push_back(broadcast_pipefd[whoami][i][1]);
+		bP_key.push_back(key.str());
+	}
+	// create asynchronous authenticated unicast channels
+	aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out,
+		uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	// create asynchronous authenticated unicast channels for broadcast
+	aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
+		bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+	// create an instance of a reliable broadcast protocol (RBC)
+	// assume maximum asynchronous t-resilience for RBC
+	T_RBC = (peers.size() - 1) / 3;
+	rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami,
+			aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 	if (yfilename.length() == 0)
 	{
-		// create an instance of tDSS by stored parameters from private key
-		if (!init_tDSS(prv, opt_verbose, dss))
-		{
-			delete dss;
-			delete pub;
-			delete prv;
-			exit(-1);
-		}
-		// create one-to-one mapping based on the stored canonicalized peer list
-		if (!prv->tDSS_CreateMapping(peers, opt_verbose))
-		{
-			std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" <<
-				std::endl;
-			delete dss;
-			delete pub;
-			delete prv;
-			exit(-1);
-		}
-		// create communication handles between all players
-		std::vector<int> uP_in, uP_out, bP_in, bP_out;
-		std::vector<std::string> uP_key, bP_key;
-		for (size_t i = 0; i < peers.size(); i++)
-		{
-			std::stringstream key;
-			if (passwords.length() > 0)
-			{
-				std::string pwd;
-				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
-				{
-					std::cerr << "ERROR: p_" << whoami << ": " <<
-						"cannot read" << " password for protecting channel" <<
-						" to p_" << i << std::endl;
-					delete dss;
-					delete pub;
-					delete prv;
-					exit(-1);
-				}
-				key << pwd;
-				if (((i + 1) < peers.size()) &&
-					!TMCG_ParseHelper::nx(passwords, '/'))
-				{
-					std::cerr << "ERROR: p_" << whoami << ": " << "cannot" <<
-						" skip to next password for protecting channel to p_" <<
-						(i + 1) << std::endl;
-					delete dss;
-					delete pub;
-					delete prv;
-					exit(-1);
-				}
-			}
-			else
-			{
-				// simple key -- we assume that GNUnet provides secure channels
-				key << "dkg-attest::p_" << (i + whoami);
-			}
-			if (i == whoami)
-				uP_in.push_back(self_pipefd[0]);
-			else
-				uP_in.push_back(pipefd[i][whoami][0]);
-			uP_out.push_back(pipefd[whoami][i][1]);
-			uP_key.push_back(key.str());
-			if (i == whoami)
-				bP_in.push_back(broadcast_self_pipefd[0]);
-			else
-				bP_in.push_back(broadcast_pipefd[i][whoami][0]);
-			bP_out.push_back(broadcast_pipefd[whoami][i][1]);
-			bP_key.push_back(key.str());
-		}
-		// create asynchronous authenticated unicast channels
-		aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out,
-			uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
-		// create asynchronous authenticated unicast channels for broadcast
-		aiou2 = new aiounicast_select(peers.size(), whoami, bP_in, bP_out,
-			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
-		// create an instance of a reliable broadcast protocol (RBC)
 		std::string myID = "dkg-attest|" + std::string(protocol) + "|";
 		for (size_t i = 0; i < peers.size(); i++)
 			myID += peers[i] + "|";
 		if (opt_verbose)
 			std::cerr << "RBC: myID = " << myID << std::endl;
-		// assume maximum asynchronous t-resilience for RBC
-		T_RBC = (peers.size() - 1) / 3;
-		rbc = new CachinKursawePetzoldShoupRBC(peers.size(), T_RBC, whoami,
-				aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		rbc->setID(myID);
 		// perform a simple exchange test with debug output
 		xtest(num_xtests, whoami, peers.size(), rbc);
@@ -502,11 +502,8 @@ void run_instance
 				hashalgo, attsig, opt_verbose, (yfilename.length() > 0), dss,
 				aiou, rbc))
 			{
-				if (yfilename.length() == 0)
-				{
-					delete rbc, delete aiou, delete aiou2;
-					delete dss;
-				}
+				delete rbc, delete aiou, delete aiou2;
+				delete dss;
 				delete pub;
 				delete prv;
 				exit(-1);
@@ -519,11 +516,8 @@ void run_instance
 			{
 				std::cerr << "ERROR: cannot use the created attestation" <<
 					" signature" << std::endl;
-				if (yfilename.length() == 0)
-				{
-					delete rbc, delete aiou, delete aiou2;
-					delete dss;
-				}
+				delete rbc, delete aiou, delete aiou2;
+				delete dss;
 				delete pub;
 				delete prv;
 				exit(-1);
@@ -538,8 +532,7 @@ void run_instance
 	tmcg_openpgp_octets_t data;
 	pub->Export(data);
 
-	// release allocated ressources
-	if ((yfilename.length() == 0) && (rbc != NULL))
+	if (yfilename.length() == 0)
 	{
 		// at the end: deliver some more rounds for still waiting parties
 		time_t synctime = (opt_W * 6);
@@ -550,9 +543,7 @@ void run_instance
 				std::endl;
 		}
 		rbc->Sync(synctime);
-		// release RBC
-		delete rbc;
-		// release handles (both channels)
+		// print statictics
 		if (opt_verbose)
 		{
 			std::cerr << "INFO: p_" << whoami << ": unicast channels";
@@ -562,11 +553,11 @@ void run_instance
 			aiou2->PrintStatistics(std::cerr);
 			std::cerr << std::endl;
 		}
-		// release asynchronous unicast and broadcast
-		delete aiou, delete aiou2;
-		// release threshold signature scheme
-		delete dss;
 	}
+
+	// release allocated ressources
+	delete rbc, delete aiou, delete aiou2;
+	delete dss;
 	delete pub;
 	delete prv;
 

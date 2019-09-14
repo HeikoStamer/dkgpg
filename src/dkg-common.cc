@@ -69,13 +69,19 @@ bool init_tDSS
 			dss_in << prv->tdss_c_ik[i][k] << std::endl;
 	}
 	if (opt_verbose)
+	{
 		std::cerr << "INFO: CanettiGennaroJareckiKrawczykRabinDSS(in, ...)" <<
 			std::endl;
+	}
 	dss = new CanettiGennaroJareckiKrawczykRabinDSS(dss_in);
-	if (!dss->CheckGroup())
+	// check group only, if dss input is valid
+	if (prv->tdss_n > 0)
 	{
-		std::cerr << "ERROR: bad tDSS domain parameters" << std::endl;
-		return false;
+	 	if (!dss->CheckGroup())
+		{
+			std::cerr << "ERROR: bad tDSS domain parameters" << std::endl;
+			return false;
+		}
 	}
 	return true;
 }

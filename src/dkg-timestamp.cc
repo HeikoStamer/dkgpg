@@ -65,8 +65,8 @@ std::vector<std::string>	peers;
 bool						instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
-std::string						ifilename, ofilename, kfilename;
-std::string						passwords, hostname, port, URI, yfilename, sn;
+std::string						ifilename, ofilename, kfilename, yfilename;
+std::string						passwords, hostname, port, URI, sn, target;
 time_t							acc = 0;
 
 int 							opt_verbose = 0;
@@ -182,7 +182,7 @@ void run_instance
 		exit(-1);
 	}
 
-	// read the target signature from stdin or from file
+	// read the target signature from file or stdin
 	std::string armored_signature;
 	if (ifilename.length() > 0)
 	{
@@ -192,7 +192,7 @@ void run_instance
 			exit(-1);
 		}
 	}
-	else
+	else if (target.length() == 0)
 	{
 		char c;
 		while (std::cin.get(c))
@@ -237,7 +237,7 @@ void run_instance
 			exit(-1);
 		}
 	}
-	else
+	else if (target.length() == 0)
 	{
 		std::cerr << "ERROR: cannot parse resp. use the provided signature" <<
 			std::endl;
@@ -254,76 +254,92 @@ void run_instance
 	size_t T_RBC = 0;
 	time_t csigtime = 0;
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
-	if (yfilename.length() == 0)
+	// create an instance of tDSS by stored parameters from private key
+	if (!init_tDSS(prv, opt_verbose, dss))
 	{
-		// create an instance of tDSS by stored parameters from private key
-		if (!init_tDSS(prv, opt_verbose, dss))
+		delete dss;
+		delete signature;
+		delete prv;
+		exit(-1);
+	}
+	// create one-to-one mapping based on the stored canonicalized peer list
+	if (!prv->tDSS_CreateMapping(peers, opt_verbose))
+	{
+		std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" << std::endl;
+		delete dss;
+		delete signature;
+		delete prv;
+		exit(-1);
+	}
+	// create communication handles between all players
+	std::vector<int> uP_in, uP_out, bP_in, bP_out;
+	std::vector<std::string> uP_key, bP_key;
+	for (size_t i = 0; i < peers.size(); i++)
+	{
+		std::stringstream key;
+		if (passwords.length() > 0)
 		{
-			delete dss;
-			delete signature;
-			delete prv;
-			exit(-1);
-		}
-		// create one-to-one mapping based on the stored canonicalized peer list
-		if (!prv->tDSS_CreateMapping(peers, opt_verbose))
-		{
-			std::cerr << "ERROR: creating 1-to-1 CAPL mapping failed" <<
-				std::endl;
-			delete dss;
-			delete signature;
-			delete prv;
-			exit(-1);
-		}
-		// create communication handles between all players
-		std::vector<int> uP_in, uP_out, bP_in, bP_out;
-		std::vector<std::string> uP_key, bP_key;
-		for (size_t i = 0; i < peers.size(); i++)
-		{
-			std::stringstream key;
-			if (passwords.length() > 0)
+			std::string pwd;
+			if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
 			{
-				std::string pwd;
-				if (!TMCG_ParseHelper::gs(passwords, '/', pwd))
-				{
-					std::cerr << "ERROR: p_" << whoami << ": " <<
-						"cannot read" << " password for protecting channel" <<
-						" to p_" << i << std::endl;
-					delete dss;
-					delete signature;
-					delete prv;
-					exit(-1);
-				}
-				key << pwd;
-				if (((i + 1) < peers.size()) &&
-					!TMCG_ParseHelper::nx(passwords, '/'))
-				{
-					std::cerr << "ERROR: p_" << whoami << ": " << "cannot" <<
-						" skip to next password for protecting channel" <<
-						" to p_" << (i + 1) << std::endl;
-					delete dss;
-					delete signature;
-					delete prv;
-					exit(-1);
-				}
+				std::cerr << "ERROR: p_" << whoami << ": " <<
+					"cannot read" << " password for protecting channel" <<
+					" to p_" << i << std::endl;
+				delete dss;
+				delete signature;
+				delete prv;
+				exit(-1);
 			}
-			else
+			key << pwd;
+			if (((i + 1) < peers.size()) &&
+				!TMCG_ParseHelper::nx(passwords, '/'))
 			{
-				// simple key -- we assume that GNUnet provides secure channels
-				key << "dkg-timestamp::p_" << (i + whoami);
+				std::cerr << "ERROR: p_" << whoami << ": " << "cannot" <<
+					" skip to next password for protecting channel" <<
+					" to p_" << (i + 1) << std::endl;
+				delete dss;
+				delete signature;
+				delete prv;
+				exit(-1);
 			}
-			if (i == whoami)
-				uP_in.push_back(self_pipefd[0]);
-			else
-				uP_in.push_back(pipefd[i][whoami][0]);
-			uP_out.push_back(pipefd[whoami][i][1]);
-			uP_key.push_back(key.str());
-			if (i == whoami)
-				bP_in.push_back(broadcast_self_pipefd[0]);
-			else
-				bP_in.push_back(broadcast_pipefd[i][whoami][0]);
-			bP_out.push_back(broadcast_pipefd[whoami][i][1]);
-			bP_key.push_back(key.str());
 		}
+		else
+		{
+			// simple key -- we assume that GNUnet provides secure channels
+			key << "dkg-timestamp::p_" << (i + whoami);
+		}
+		if (i == whoami)
+			uP_in.push_back(self_pipefd[0]);
+		else
+			uP_in.push_back(pipefd[i][whoami][0]);
+		uP_out.push_back(pipefd[whoami][i][1]);
+		uP_key.push_back(key.str());
+		if (i == whoami)
+			bP_in.push_back(broadcast_self_pipefd[0]);
+		else
+			bP_in.push_back(broadcast_pipefd[i][whoami][0]);
+		bP_out.push_back(broadcast_pipefd[whoami][i][1]);
+		bP_key.push_back(key.str());
+	}
+	if (yfilename.length() > 0)
+	{
+		// create dummy instances of RBC and asynchronous channels
+		for (size_t i = 0; i < 3; i++)
+		{
+			uP_in.push_back(0), uP_out.push_back(0), uP_key.push_back("");
+			bP_in.push_back(0), bP_out.push_back(0), bP_key.push_back("");
+		}
+		aiou = new aiounicast_select(3, 0, uP_in, uP_out,
+			uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		aiou2 = new aiounicast_select(3, 0, bP_in, bP_out,
+			bP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		rbc = new CachinKursawePetzoldShoupRBC(3, 0, 0,
+				aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
+		csigtime = sigtime;
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // fixed hash algorithm
+	}
+	else
+	{
 		// create asynchronous authenticated unicast channels
 		aiou = new aiounicast_select(peers.size(), whoami, uP_in, uP_out,
 			uP_key, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
@@ -416,11 +432,6 @@ void run_instance
 			exit(-1);
 		}
 	}
-	else
-	{
-		csigtime = sigtime;
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
-	}
 
 	// compute the trailer and the hash of the signature
 	if (opt_verbose)
@@ -469,21 +480,96 @@ void run_instance
 			std::cerr << "WARNING: wrong delimiter position for given" <<
 				" OpenPGP notation; ignored" << std::endl;
 		}
-	} // TODO: option -t --target => use other variant of TimestampSignature
-	  //       with hash value supplied by caller, cf. [RFC 3161]
-	if (yfilename.length() == 0)
+	}
+	if (target.length() == 0)
 	{
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
-				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
-				notations, trailer);
+		if (yfilename.length() == 0)
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
+					hashalgo, csigtime, URI, prv->pub->fingerprint,
+					signature_body, notations, trailer);
+		}
+		else
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareTimestampSignature(prv->pkalgo,
+					hashalgo, csigtime, URI, prv->pub->fingerprint,
+					signature_body, notations, trailer);
+		}
 	}
 	else
 	{
-		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketSigPrepareTimestampSignature(prv->pkalgo,
-				hashalgo, csigtime, URI, prv->pub->fingerprint, signature_body,
-				notations, trailer);
+		tmcg_openpgp_pkalgo_t target_pkalgo = TMCG_OPENPGP_PKALGO_EXPERIMENTAL0;
+		size_t col1 = target.find(":");
+		size_t kst = 0;
+		if ((col1 != target.npos) && (col1 > 0))
+		{
+			std::string tmp = target.substr(0, col1);
+			target_pkalgo =
+				(tmcg_openpgp_pkalgo_t)strtoul(tmp.c_str(), NULL, 10);
+			kst = col1 + 1;
+		}
+		tmcg_openpgp_hashalgo_t target_hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
+		size_t col2 = target.find(":", kst);
+		if ((col2 != target.npos) && (col2 > kst))
+		{
+			std::string tmp = target.substr(kst, col2 - kst);
+			target_hashalgo =
+				(tmcg_openpgp_hashalgo_t)strtoul(tmp.c_str(), NULL, 10);
+			kst = col2 + 1;
+		}
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: target_pkalgo = " << (int)target_pkalgo <<
+				" target_hashalgo = " << (int)target_hashalgo << std::endl;
+		}
+		tmcg_openpgp_octets_t target_hash;
+		bool first = true;
+		std::string hex;
+		for (size_t i = kst; i < target.length(); i++)
+		{
+			if (first)
+			{
+				hex = target[i];
+				first = false;
+			}
+			else
+			{
+				hex += target[i];
+				hex = strtoul(hex.c_str(), NULL, 16);
+				target_hash.push_back(hex[0]);
+				first = true;
+			}
+		}
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: target_hash.size() = " << target_hash.size() <<
+				std::endl;
+		}
+		size_t thl = CallasDonnerhackeFinneyShawThayerRFC4880::
+			AlgorithmHashLength(target_hashalgo);
+		if (target_hash.size() != thl)
+		{
+			std::cerr << "WARNING: provided target hash algorithm and length" <<
+				" of hash does not match" << std::endl;
+		}
+		if (yfilename.length() == 0)
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareTimestampSignature(TMCG_OPENPGP_PKALGO_DSA,
+					hashalgo, csigtime, URI, prv->pub->fingerprint,
+					target_pkalgo, target_hashalgo, target_hash,
+					notations, trailer);
+		}
+		else
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareTimestampSignature(prv->pkalgo,
+					hashalgo, csigtime, URI, prv->pub->fingerprint,
+					target_pkalgo, target_hashalgo, target_hash,
+					notations, trailer);
+		}
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		StandaloneHash(trailer, hashalgo, hash, left);
@@ -493,18 +579,14 @@ void run_instance
 	if (!sign_hash(hash, trailer, left, whoami, peers.size(), prv, hashalgo,
 		sig, opt_verbose, (yfilename.length() > 0), dss, aiou, rbc))
 	{
-		if (yfilename.length() == 0)
-		{
-			delete rbc, delete aiou, delete aiou2;
-			delete dss;
-		}
+		delete rbc, delete aiou, delete aiou2;
+		delete dss;
 		delete signature;
 		delete prv;
 		exit(-1);
 	}
 
-	// release allocated ressources
-	if ((yfilename.length() == 0) && (rbc != NULL))
+	if (yfilename.length() == 0)
 	{
 		// at the end: deliver some more rounds for still waiting parties
 		time_t synctime = (opt_W * 6);
@@ -515,9 +597,7 @@ void run_instance
 				std::endl;
 		}
 		rbc->Sync(synctime);
-		// release RBC
-		delete rbc;
-		// release handles (both channels)
+		// print statictics
 		if (opt_verbose)
 		{
 			std::cerr << "INFO: p_" << whoami << ": unicast channels";
@@ -527,11 +607,11 @@ void run_instance
 			aiou2->PrintStatistics(std::cerr);
 			std::cerr << std::endl;
 		}
-		// release asynchronous unicast and broadcast
-		delete aiou, delete aiou2;
-		// release threshold signature scheme
-		delete dss;
 	}
+
+	// release allocated ressources
+	delete rbc, delete aiou, delete aiou2;
+	delete dss;
 	delete signature;
 	delete prv;
 
@@ -558,6 +638,7 @@ char *gnunet_opt_URI = NULL;
 char *gnunet_opt_k = NULL;
 char *gnunet_opt_y = NULL;
 char *gnunet_opt_s = NULL;
+char *gnunet_opt_t = NULL;
 unsigned int gnunet_opt_xtests = 0;
 unsigned int gnunet_opt_wait = 5;
 unsigned int gnunet_opt_W = opt_W;
@@ -670,6 +751,12 @@ int main
 			"embed this OpenPGP notation (e.g. serial number)",
 			&gnunet_opt_s
 		),
+		GNUNET_GETOPT_option_string('t',
+			"target",
+			"STRING",
+			"use values from STRING as timestamp target",
+			&gnunet_opt_t
+		),
 		GNUNET_GETOPT_option_string('U',
 			"URI",
 			"STRING",
@@ -754,6 +841,8 @@ int main
 		yfilename = gnunet_opt_y; // get yaot filename from GNUnet options
 	if (gnunet_opt_s != NULL)
 		sn = gnunet_opt_s; // get OpenPGP notation from GNUnet options
+	if (gnunet_opt_t != NULL)
+		target = gnunet_opt_t; // get timestamp target from GNUnet options 
 #endif
 
 	// create peer list from remaining arguments
@@ -768,7 +857,8 @@ int main
 		    (arg.find("-x") == 0) ||
 			(arg.find("-P") == 0) || (arg.find("-H") == 0) ||
 		    (arg.find("-U") == 0) || (arg.find("-k") == 0) ||
-			(arg.find("-y") == 0) || (arg.find("-s") == 0))
+			(arg.find("-y") == 0) || (arg.find("-s") == 0) ||
+			(arg.find("-t") == 0))
 		{
 			size_t idx = ++i;
 			if ((arg.find("-i") == 0) && (idx < (size_t)(argc - 1)) &&
@@ -821,6 +911,11 @@ int main
 			{
 				sn = argv[i+1];
 			}
+			if ((arg.find("-t") == 0) && (idx < (size_t)(argc - 1)) &&
+				(target.length() == 0))
+			{
+				target = argv[i+1];
+			}
 			continue;
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
@@ -851,6 +946,8 @@ int main
 					" protect private and broadcast channels" << std::endl;
 				std::cout << "  -s KEY:VALUE   embed this OpenPGP notation" <<
 					" (e.g. serial number)" << std::endl;
+				std::cout << "  -t STRING      use values from STRING as" <<
+					" timestamp target" << std::endl;
 				std::cout << "  -U STRING      policy URI tied to generated" <<
 					" timestamp signature" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
@@ -1034,6 +1131,12 @@ int main
 				"KEY:VALUE",
 				"embed this OpenPGP notation (e.g. serial number)",
 				&gnunet_opt_s
+			),
+			GNUNET_GETOPT_option_string('t',
+				"target",
+				"STRING",
+				"use values from STRING as timestamp target",
+				&gnunet_opt_t
 			),
 			GNUNET_GETOPT_option_string('U',
 				"URI",

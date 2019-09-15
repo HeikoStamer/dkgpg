@@ -243,7 +243,6 @@ void run_instance
 	size_t T_RBC = 0;
 	time_t csigtime = 0;
 	tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_UNKNOWN;
-
 	// create an instance of tDSS by stored parameters from private key
 	if (!init_tDSS(prv, opt_verbose, dss))
 	{

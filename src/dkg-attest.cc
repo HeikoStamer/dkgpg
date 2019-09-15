@@ -313,7 +313,7 @@ void run_instance
 	}
 	if (yfilename.length() > 0)
 	{
-		// create dummy instances
+		// create dummy instances of RBC and asynchronous channels
 		for (size_t i = 0; i < 3; i++)
 		{
 			uP_in.push_back(0), uP_out.push_back(0), uP_key.push_back("");
@@ -326,7 +326,7 @@ void run_instance
 		rbc = new CachinKursawePetzoldShoupRBC(3, 0, 0,
 				aiou2, aiounicast::aio_scheduler_roundrobin, (opt_W * 60));
 		csigtime = sigtime;
-		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+		hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // fixed hash algorithm
 	}
 	else
 	{
@@ -350,52 +350,7 @@ void run_instance
 		// perform a simple exchange test with debug output
 		xtest(num_xtests, whoami, peers.size(), rbc);
 		// participants must agree on a common signature creation time (OpenPGP)
-		if (opt_verbose)
-		{
-			std::cerr << "INFO: agree on a signature creation time for" <<
-				" OpenPGP" << std::endl;
-		}
-		std::vector<time_t> tvs;
-		mpz_t mtv;
-		mpz_init_set_ui(mtv, sigtime);
-		rbc->Broadcast(mtv);
-		tvs.push_back(sigtime);
-		for (size_t i = 0; i < peers.size(); i++)
-		{
-			if (i != whoami)
-			{
-				if (rbc->DeliverFrom(mtv, i))
-				{
-					time_t utv;
-					utv = (time_t)mpz_get_ui(mtv);
-					tvs.push_back(utv);
-				}
-				else
-				{
-					std::cerr << "WARNING: p_" << whoami << ": no signature" <<
-						" creation time received from p_" << i << std::endl;
-				}
-			}
-		}
-		mpz_clear(mtv);
-		std::sort(tvs.begin(), tvs.end());
-		if (tvs.size() < (peers.size() - T_RBC))
-		{
-			std::cerr << "ERROR: p_" << whoami << ": not enough timestamps" <<
-				" received" << std::endl;
-			delete rbc, delete aiou, delete aiou2;
-			delete dss;
-			delete pub;
-			delete prv;
-			exit(-1);
-		}
-		// use a median value as some kind of gentle agreement
-		csigtime = tvs[tvs.size()/2];
-		if (opt_verbose)
-		{
-			std::cerr << "INFO: p_" << whoami << ": canonicalized signature" <<
-				" creation time = " << csigtime << std::endl;
-		}
+		csigtime = agree_time(sigtime, whoami, peers.size(), opt_verbose, rbc);
 		// select hash algorithm for OpenPGP based on |q| (size in bit)
 		if (!select_hashalgo(dss, hashalgo))
 		{
@@ -474,7 +429,7 @@ void run_instance
 			{
 				jj = j;
 				if (attestedcerts.size() > 60000)
-					break; // create more attestation signatures later
+					break; // attest remaining certhashes later
 				attestedcerts.insert(attestedcerts.end(),
 					certhashes[j].begin(), certhashes[j].end());
 				jj++;

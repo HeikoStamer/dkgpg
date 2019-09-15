@@ -823,6 +823,7 @@ bool decompress_libz
 					(int)msg->compalgo << " is not supported" << std::endl;
 			}
 			return false;
+			break;
 	}
 	if (rc != Z_OK)
 	{
@@ -871,22 +872,17 @@ bool decompress_libz
 		zs.avail_out = sizeof(zout);
 		zs.next_out = zout;
 		rc = inflate(&zs, Z_SYNC_FLUSH);
-		switch (rc)
+		if (rc < 0)
 		{
-			case Z_NEED_DICT:
-			case Z_DATA_ERROR:
-			case Z_MEM_ERROR:
-			case Z_STREAM_ERROR:
-				if (opt_verbose)
-				{
-					std::cerr << "ZLIB ERROR: " << (int)rc;
-					if (zs.msg != NULL)
-						std::cerr << " " << zs.msg;
-					std::cerr << std::endl;
-				}
-				(void)inflateEnd(&zs);
-				return false;
-				break;
+			if (opt_verbose)
+			{
+				std::cerr << "ZLIB ERROR: " << rc;
+				if (zs.msg != NULL)
+					std::cerr << " " << zs.msg;
+				std::cerr << std::endl;
+			}
+			(void)inflateEnd(&zs);
+			return false;
 		}
 		for (size_t i = 0; i < (sizeof(zout) - zs.avail_out); i++)
 			infmsg.push_back(zout[i]);
@@ -937,18 +933,13 @@ bool decompress_libbz
 		zs.avail_out = sizeof(zout);
 		zs.next_out = zout;
 		rc = BZ2_bzDecompress(&zs);
-		switch (rc)
+		if ((rc == BZ_DATA_ERROR) || (rc == BZ_DATA_ERROR_MAGIC) ||
+			(rc == BZ_MEM_ERROR))
 		{
-			case BZ_DATA_ERROR:
-			case BZ_DATA_ERROR_MAGIC:
-			case BZ_MEM_ERROR:
-				if (opt_verbose)
-				{
-					std::cerr << "BZLIB ERROR: " << (int)rc << std::endl;
-				}
-				BZ2_bzDecompressEnd(&zs);
-				return false;
-				break;
+			if (opt_verbose)
+				std::cerr << "BZLIB ERROR: " << rc << std::endl;
+			BZ2_bzDecompressEnd(&zs);
+			return false;
 		}
 		for (size_t i = 0; i < (sizeof(zout) - zs.avail_out); i++)
 			infmsg.push_back(zout[i]);

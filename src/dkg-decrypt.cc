@@ -872,7 +872,8 @@ bool decompress_libz
 		zs.avail_out = sizeof(zout);
 		zs.next_out = zout;
 		rc = inflate(&zs, Z_SYNC_FLUSH);
-		if (rc < 0)
+		if ((rc == Z_NEED_DICT) || (rc == Z_DATA_ERROR) ||
+			(rc == Z_MEM_ERROR) || (rc == Z_STREAM_ERROR))
 		{
 			if (opt_verbose)
 			{

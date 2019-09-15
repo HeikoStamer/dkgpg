@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-09-15] raised requirements of libgmp, libgcrypt, and libgpg-error
 * [2019-09-10] added program dkg-attest for creating 3rd-party cert attestations
 * [2019-09-10] dkg-keycheck: added option "-a" (print attested 3rd-party certs)
 * [2019-09-01] dkg-decrypt: added check for Intended Recipient Fingerprint

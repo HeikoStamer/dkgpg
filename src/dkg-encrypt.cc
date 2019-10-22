@@ -332,12 +332,8 @@ int main
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
-#if GCRYPT_VERSION_NUMBER < 0x010700
-	// FIXME: remove, if libgcrypt >= 1.7.0 required by configure.ac
-#else
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_a = 2; // sometimes test AEAD with OCB
-#endif
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	keyspec.push_back("TestY-pub.asc");
@@ -345,12 +341,8 @@ int main
 	opt_verbose = 2;
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_t = true;
-#if GCRYPT_VERSION_NUMBER < 0x010700
-	// FIXME: remove, if libgcrypt >= 1.7.0 required by configure.ac
-#else
 	if (tmcg_mpz_wrandom_ui() % 2)
 		opt_a = 2; // sometimes test AEAD with OCB
-#endif
 #endif
 #endif
 
@@ -490,9 +482,6 @@ int main
 #else
 	aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
 #endif
-#if GCRYPT_VERSION_NUMBER < 0x010700
-	// FIXME: remove, if libgcrypt >= 1.7.0 required by configure.ac
-#else
 	// additionally, encrypt the message with appropriate AEAD algorithm
 	if (opt_a != 0)
 		aeadalgo = (tmcg_openpgp_aeadalgo_t)opt_a; // enforce given algorithm
@@ -520,7 +509,6 @@ int main
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketAeadEncode(skalgo,
 		aeadalgo, cs, iv, enc, aead);
-#endif
 
 	// perform a password-based symmetric encryption, if no keyspec given
 	tmcg_openpgp_octets_t all;

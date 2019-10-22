@@ -418,16 +418,13 @@ int main
 #else
 	if (ifilename.length() > 0)
 	{
-		std::string input_msg;
-		if (!read_message(ifilename, input_msg))
+		if (!read_data(ifilename, msg))
 		{
 			delete ring;
 			if (should_unlock)
 				unlock_memory();
 			return -1;
 		}
-		for (size_t i = 0; i < input_msg.length(); i++)
-			msg.push_back(input_msg[i]);
 	}
 	else
 	{

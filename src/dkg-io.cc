@@ -289,6 +289,30 @@ void read_stdin
 	std::cin.clear();
 }
 
+bool read_data
+	(const std::string &filename,
+	 tmcg_openpgp_octets_t &result)
+{
+	std::ifstream ifs(filename.c_str(), std::ifstream::in);
+	if (!ifs.is_open())
+	{
+		std::cerr << "ERROR: cannot open the input file" << std::endl;
+		return false;
+	}
+	char c;
+	while (ifs.get(c))
+		result.push_back(c);
+	if (!ifs.eof())
+	{
+		ifs.close();
+		std::cerr << "ERROR: reading from input file until EOF failed" <<
+			std::endl;
+		return false;
+	}
+	ifs.close();
+	return true;
+}
+
 bool read_message
 	(const std::string &filename,
 	 std::string &result)

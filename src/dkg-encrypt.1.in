@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "June 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "October 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \-\- message encryption with AES\-256 algorithm according to OpenPGP
@@ -19,12 +19,14 @@ resort). If more than one valid admissible encryption subkey is found in a key
 block specified in this way, than the generated session key is encrypted for
 each of these subkeys. This behaviour can be tweaked by the option "\-s", which
 limits the selected subkey based on its key ID or fingerprint. If KEYSPEC is
-empty then only a Symmetric\-Key Encrypted Session Key (SKESK) packet is built.  
+empty, then only a Symmetric\-Key Encrypted Session Key (SKESK) packet is built
+and the user must type in a passphrase to protect the message.  
 .PP
-Note that RSA, ElGamal, and ECDH are the current supported public\-key encryption
-algorithms, and that AES\-256 is fixed as the symmetric cipher. With the
+Note that RSA, ElGamal, and ECDH are currently supported as public\-key
+encryption algorithms, and that AES\-256 is fixed as the symmetric cipher. With
 option "\-a" the use of a specified AEAD algorithm can be enforced. This
-choice of the user overrides the stated OpenPGP feature set of the public key. 
+overrides the stated OpenPGP feature set (prefered AEAD algorithms) of the
+corresponding public key. 
 .PP
 First, the symmetric cipher with a randomly chosen 256\-bit session key is
 applied to the (text) message. An integrity protection packet (MDC) is always
@@ -44,7 +46,7 @@ and can later be processed e.g. with
 .BR dkg\-decrypt (1).
 There exists also an option to write out the encrypted message in binary
 OpenPGP format. However, in that case for obvious reason an output file must
-be specified with option "\-o". 
+be specified by option "\-o". 
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.

@@ -356,7 +356,7 @@ int main
 		return -1;
 	}
 
-	// read the public key from file
+	// read the ASCII-armored public key from file
 	std::string armored_pubkey;
 	if (!opt_r && (keyspec.size() == 1))
 	{
@@ -370,11 +370,27 @@ int main
 
 	// read the keyring
 	std::string armored_pubring;
-	if ((kfilename.length() > 0) && !read_key_file(kfilename, armored_pubring))
+	if (kfilename.length() > 0)
 	{
-		if (should_unlock)
-			unlock_memory();
-		return -1;
+		if (opt_binary)
+		{
+ 			if (!read_binary_key_file(kfilename,
+				TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
+			{
+				if (should_unlock)
+					unlock_memory();
+				return -1;
+			}
+		}
+		else
+		{
+ 			if (!read_key_file(kfilename, armored_pubring))
+			{
+				if (should_unlock)
+					unlock_memory();
+				return -1;
+			}
+		}
 	}
 
 	// parse the keyring

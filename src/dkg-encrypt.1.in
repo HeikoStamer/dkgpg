@@ -44,9 +44,10 @@ format helps to reduce traffic analysis of messages.
 The encrypted message is written in ASCII\-armor to STDOUT or to an output file
 and can later be processed e.g. with
 .BR dkg\-decrypt (1).
-There exists also an option to write out the encrypted message in binary
+There exists also an option ("\-b") to write out the encrypted message in binary
 OpenPGP format. However, in that case for obvious reason an output file must
-be specified by option "\-o". 
+be specified by option "\-o". Please note that this switch affects the format
+of the keyring too, i.e., the keyring must be given in binary OpenPGP format. 
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
@@ -55,7 +56,7 @@ Arguments mandatory for long options are also mandatory for short options.
 enforce use of AEAD algorithm INTEGER (cf. RFC 4880bis)
 .TP
 \fB\-b\fR, \fB\-\-binary\fR
-write encrypted message in binary format (only if option \-i given)
+write encrypted message in binary format (only if option \-o given)
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 print this list of options

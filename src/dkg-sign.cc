@@ -438,7 +438,7 @@ void run_instance
 			exit(-1);
 	}
 	else
-		std::cout << sigstr << std::endl;
+		std::cout << sigstr;
 }
 
 #ifdef GNUNET

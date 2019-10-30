@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-10-30] dkg-encrypt: fixed bug #57131 (use of non-prefered AEAD mode)
 * [2019-10-28] dkg-sign: fixed bug #57134 (spurious newline on STDOUT)
 * [2019-10-26] dkg-encrypt: fixed bug #57098 (accept non-armored keyring)
 * [2019-10-25] dkg-generate: fixed bug #57111 (allow more than one user ID)

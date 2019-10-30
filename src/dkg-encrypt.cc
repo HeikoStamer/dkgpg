@@ -491,6 +491,7 @@ int main
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSeipdEncode(enc, seipd);
 
+	// additionally, encrypt the message with appropriate AEAD algorithm
 	tmcg_openpgp_octets_t aead;
 	tmcg_openpgp_aeadalgo_t aeadalgo = TMCG_OPENPGP_AEADALGO_OCB; // default
 #if GCRYPT_VERSION_NUMBER < 0x010900
@@ -498,7 +499,6 @@ int main
 #else
 	aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
 #endif
-	// additionally, encrypt the message with appropriate AEAD algorithm
 	if (opt_a != 0)
 		aeadalgo = (tmcg_openpgp_aeadalgo_t)opt_a; // enforce given algorithm
 	lit.clear(), enc.clear();
@@ -822,8 +822,21 @@ int main
 						if (opt_verbose)
 						{
 							std::cerr << "WARNING: selected algorithm is" <<
-								" none of the preferred AEAD algorithms" <<
-								std::endl;
+								" none of the preferred AEAD algorithms;";
+						}
+						if (!opt_a)
+						{
+							if (opt_verbose)
+								std::cerr << " AEAD disabled" << std::endl;
+							aead.clear(); // fallback to SEIPD packet
+						}
+						else
+						{
+							if (opt_verbose)
+							{
+								std::cerr << "AEAD mode enforced by option" <<
+									" -a" << std::endl;
+							}
 						}
 					}
 				}
@@ -909,7 +922,21 @@ int main
 				if (opt_verbose)
 				{
 					std::cerr << "WARNING: selected algorithm is none of the" <<
-						" preferred AEAD algorithms" << std::endl;
+						" preferred AEAD algorithms;";
+				}
+				if (!opt_a)
+				{
+					if (opt_verbose)
+						std::cerr << " AEAD disabled" << std::endl;
+					aead.clear(); // fallback to SEIPD packet
+				}
+				else
+				{
+					if (opt_verbose)
+					{
+						std::cerr << "AEAD mode enforced by option -a" <<
+							std::endl;
+					}
 				}
 			}
 		}

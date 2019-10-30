@@ -767,11 +767,12 @@ int main
 				else
 				{
 					selected.push_back(primary->subkeys[j]);
-					size_t skf = primary->subkeys[j]->AccumulateFeatures(); 
-					features &= (skf | primary->AccumulateFeatures());
+					size_t skf = primary->subkeys[j]->AccumulateFeatures();
+					size_t pkf = primary->AccumulateFeatures();
+					features &= (skf | pkf);
 					if ((std::find(primary->subkeys[j]->psa.begin(),
-						primary->subkeys[j]->psa.end(), skalgo)
-							== primary->subkeys[j]->psa.end()) &&
+						primary->subkeys[j]->psa.end(),
+						skalgo) == primary->subkeys[j]->psa.end()) &&
 					    (std::find(primary->psa.begin(), primary->psa.end(),
 							skalgo) == primary->psa.end()))
 					{
@@ -783,7 +784,7 @@ int main
 						}
 					}
 					if (((skf & 0x01) != 0x01) && !opt_a &&
-					    ((primary->AccumulateFeatures() & 0x01) != 0x01))
+					    ((pkf & 0x01) != 0x01))
 					{
 						if (opt_verbose)
 						{
@@ -793,7 +794,7 @@ int main
 						}
 					}
 					if (((skf & 0x02) != 0x02) && !opt_a &&
-					    ((primary->AccumulateFeatures() & 0x02) != 0x02))
+					    ((pkf & 0x02) != 0x02))
 					{
 						if (opt_verbose)
 						{
@@ -803,7 +804,7 @@ int main
 						}
 					}
 					if (((skf & 0x02) != 0x02) && opt_a &&
-					    ((primary->AccumulateFeatures() & 0x02) != 0x02))
+					    ((pkf & 0x02) != 0x02))
 					{
 						if (opt_verbose)
 						{
@@ -813,8 +814,8 @@ int main
 						}
 					}
 					if ((std::find(primary->subkeys[j]->paa.begin(),
-						primary->subkeys[j]->paa.end(), aeadalgo)
-							== primary->subkeys[j]->paa.end()) &&
+						primary->subkeys[j]->paa.end(),
+						aeadalgo) == primary->subkeys[j]->paa.end()) &&
 					    (std::find(primary->paa.begin(), primary->paa.end(),
 							aeadalgo) == primary->paa.end()))
 					{
@@ -863,7 +864,8 @@ int main
 					unlock_memory();
 				return -1;
 			}
-			features &= primary->AccumulateFeatures();
+			size_t pkf = primary->AccumulateFeatures();
+			features &= pkf;
 			if (std::find(primary->psa.begin(), primary->psa.end(),
 				skalgo) == primary->psa.end())
 			{
@@ -874,7 +876,7 @@ int main
 						std::endl;
 				}
 			}
-			if (((primary->AccumulateFeatures() & 0x01) != 0x01) && !opt_a)
+			if (((pkf & 0x01) != 0x01) && !opt_a)
 			{
 				if (opt_verbose)
 				{
@@ -883,7 +885,7 @@ int main
 						"use MDC protection anyway" << std::endl;
 				}
 			}
-			if (((primary->AccumulateFeatures() & 0x02) != 0x02) && !opt_a)
+			if (((pkf & 0x02) != 0x02) && !opt_a)
 			{
 				if (opt_verbose)
 				{
@@ -892,7 +894,7 @@ int main
 						std::endl;
 				}
 			}
-			if (((primary->AccumulateFeatures() & 0x02) != 0x02) && opt_a)
+			if (((pkf & 0x02) != 0x02) && opt_a)
 			{
 				if (opt_verbose)
 				{
@@ -901,8 +903,8 @@ int main
 						" option -a" << std::endl;
 				}
 			}
-			if (std::find(primary->paa.begin(), primary->paa.end(), aeadalgo) ==
-				primary->paa.end())
+			if (std::find(primary->paa.begin(), primary->paa.end(),
+				aeadalgo) == primary->paa.end())
 			{
 				if (opt_verbose)
 				{
@@ -1032,7 +1034,7 @@ int main
 		}
 	}
 	else
-		std::cout << armored_message << std::endl;
+		std::cout << armored_message;
 
 	return 0;
 }

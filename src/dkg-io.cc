@@ -277,8 +277,8 @@ void read_stdin
 	(const std::string &end_marker,
 	 std::string &result)
 {
-	std::cerr << "Enter data (ending with a single line" <<
-		" \"" << end_marker << "\"):" << std::endl;
+	std::cerr << "Enter data (quit with a single line" <<
+		" containing \"" << end_marker << "\"):" << std::endl;
 	std::string line;
 	while (std::getline(std::cin, line))
 	{

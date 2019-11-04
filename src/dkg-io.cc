@@ -416,6 +416,51 @@ bool write_message
 	return true;
 }
 
+bool autodetect_file
+	(const std::string &filename,
+	 const tmcg_openpgp_armor_t type,
+	 std::string &result)
+{
+	std::ifstream ifs(filename.c_str(), std::ifstream::in);
+	if (!ifs.is_open())
+	{
+		std::cerr << "ERROR: cannot open file \"" << filename << "\"" <<
+			std::endl;
+		return false;
+	}
+	char c;
+	bool first_line = true;
+	tmcg_openpgp_octets_t input;
+	std::string input_str;
+	while (ifs.get(c))
+	{
+		input.push_back(c);
+		if ((c == '\n') || (c == '\r'))
+			first_line = false;
+		if (first_line)
+			input_str += c;
+	}
+	if (!ifs.eof())
+	{
+		ifs.close();
+		std::cerr << "ERROR: reading from file \"" << filename << "\"" <<
+			"until EOF failed" << std::endl;
+		return false;
+	}
+	ifs.close();
+	if (input_str.find("-----BEGIN PGP") == 0)
+	{
+		for (size_t i = 0; i < input.size(); i++)
+			result += input[i];
+	}
+	else
+	{
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(type, input, result);
+	}
+	return true;
+}
+
 bool lock_memory
 	()
 {

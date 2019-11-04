@@ -1,4 +1,4 @@
-.TH DKG\-ENCRYPT "1" "October 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-ENCRYPT "1" "November 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-encrypt \-\- message encryption with AES\-256 algorithm according to OpenPGP
@@ -11,49 +11,48 @@ dkg\-encrypt \-\- message encryption with AES\-256 algorithm according to OpenPG
 .SH DESCRIPTION
 This program encrypts a (text) message read from STDIN or from a file specified
 by its path (if option "\-i" is used) according to the OpenPGP standard (RFC
-4880). KEYSPEC is a list of fingerprints for keys from a keyring (if options
-"\-r" and "\-k" are given) or a single argument representing a path to a file
-that contains an ASCII\-armored public key block with any encryption\-capable
-subkey (recommended) or an encryption\-capable primary key (used to last
-resort). If more than one valid admissible encryption subkey is found in a key
-block specified in this way, than the generated session key is encrypted for
-each of these subkeys. This behaviour can be tweaked by the option "\-s", which
-limits the selected subkey based on its key ID or fingerprint. If KEYSPEC is
-empty, then only a Symmetric\-Key Encrypted Session Key (SKESK) packet is built
-and the user must type in a passphrase to protect the message.  
+4880). KEYSPEC is a list of fingerprints for selecting a key from a keyring (if
+options "\-r" and "\-k" are given) or a list of files containing a public key
+block with an encryption\-capable subkey (recommended) or an encryption\-capable
+primary key (used to last resort). If more than one valid admissible encryption
+subkey is found in a key block specified in this way, than the generated session
+key is encrypted for each of these subkeys. This behaviour can be tweaked by the
+option "\-s", which limits the selected subkey based on key ID or fingerprint.
+If KEYSPEC is empty, then only a Symmetric\-Key Encrypted Session Key (SKESK)
+packet is built and the user must enter a passphrase to protect the message.  
 .PP
-Note that RSA, ElGamal, and ECDH are currently supported as public\-key
-encryption algorithms, and that AES\-256 is fixed as the symmetric cipher. With
-option "\-a" the use of a specified AEAD algorithm can be enforced. This
-overrides the stated OpenPGP feature set (prefered AEAD algorithms) of the
-corresponding public key. 
+Note that only RSA, ElGamal, and ECDH are supported as public\-key encryption
+algorithms, and that AES\-256 is fixed as the symmetric cipher. With option
+"\-a" the use of a specified AEAD mode of AES can be enforced. This overrides
+the stated OpenPGP feature set (prefered AEAD algorithms) of the corresponding
+public key. 
 .PP
 First, the symmetric cipher with a randomly chosen 256\-bit session key is
 applied to the (text) message. An integrity protection packet (MDC) is always
-appended, if no AEAD algorithm is used. Next the session key is transformed by
+appended, if no AEAD mode is used. Next the session key is transformed by
 PKCS#1 v1.5 block encoding and encrypted with the corresponding public\-key
-algorithm for each selected public key. For ECDH encoding scheme and encryption
-rules from RFC 6637 are employed. However, if KEYSPEC is empty, then by a S2K
-mechanism (iterated and salted SHA512) a Key-Encryption-Key (KEK) is derived
-from a passphrase. This KEK is used to symmetrically encrypt the session key.
+algorithm for each of the selected public keys. For ECDH the encoding scheme and
+encryption rules from RFC 6637 are employed. However, if KEYSPEC is empty, then
+by a S2K mechanism (iterated and salted SHA512) a Key-Encryption-Key (KEK) is
+derived from the given passphrase. This KEK is used to symmetrically encrypt the
+session key. Only one passphrase resp. SKESK is currently supported.
 .PP
 With the option "\-t" the included key ID of each public key is thrown away,
 i.e., instead a so\-called "wild card" or speculative key ID is used. This
 format helps to reduce traffic analysis of messages.
 .PP
-The encrypted message is written in ASCII\-armor to STDOUT or to an output file
-and can later be processed e.g. with
+The encrypted message is written in ASCII\-armor to STDOUT or to an output
+file (option "\-o") and can later be processed e.g. with
 .BR dkg\-decrypt (1).
-There exists also an option ("\-b") to write out the encrypted message in binary
+There exists an option ("\-b") to write out the encrypted message in binary
 OpenPGP format. However, in that case for obvious reason an output file must
-be specified by option "\-o". Please note that this switch affects the format
-of the keyring too, i.e., the keyring must be given in binary OpenPGP format. 
+be specified by option "\-o".
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
 .TP
 \fB\-a\fR \fI\,INTEGER\/\fR
-enforce use of AEAD algorithm INTEGER (cf. RFC 4880bis)
+enforce use of AEAD mode INTEGER (cf. RFC 4880bis)
 .TP
 \fB\-b\fR, \fB\-\-binary\fR
 write encrypted message in binary format (only if option \-o given)
@@ -93,12 +92,12 @@ The current implementation is in experimental state and should NOT
 be used in production environments.
 
 .SH "REPORTING BUGS"
-Security vulnerabilities or cryptographic flaws should be reported by an email
-directly to
+Security vulnerabilities or cryptographic flaws should be reported by an
+encrypted email directly to
 <HeikoStamer@gmx.net>.
-In that way reported problems will be published after they've been fixed.
+In that way reported issues will be published after they've been fixed.
 .PP
-Please report all other bugs via public bug tracker <https://savannah.nongnu.org/bugs/?func=additem&group=dkgpg>
+Please report all other bugs by the public bug tracker <https://savannah.nongnu.org/bugs/?func=additem&group=dkgpg>
 .PP
 Home page of Distributed Privacy Guard (DKGPG): <https://savannah.nongnu.org/projects/dkgpg/>
 

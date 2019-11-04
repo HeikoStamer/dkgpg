@@ -89,6 +89,10 @@
 	bool write_message
 		(const std::string &filename,
 		 const std::string &msg);
+	bool autodetect_file
+		(const std::string &filename,
+		 const tmcg_openpgp_armor_t type,
+		 std::string &result);
 	bool lock_memory
 		();
 	bool unlock_memory

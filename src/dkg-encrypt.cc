@@ -346,50 +346,16 @@ int main
 #endif
 #endif
 
-	// check command line arguments
-	if (!opt_r && (keyspec.size() > 1))
+	// read the (ASCII-armored) public keyring from file
+	std::string armored_pubring;
+	if (kfilename.length() > 0)
 	{
-		std::cerr << "ERROR: wrong KEYSPEC; more than one file" <<
-			"is not supported" << std::endl;
-		if (should_unlock)
-			unlock_memory();
-		return -1;
-	}
-
-	// read the ASCII-armored public key from file
-	std::string armored_pubkey;
-	if (!opt_r && (keyspec.size() == 1))
-	{
-		if (!read_key_file(keyspec[0], armored_pubkey))
+		if (!autodetect_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubring))
 		{
 			if (should_unlock)
 				unlock_memory();
 			return -1;
-		}
-	}
-
-	// read the keyring
-	std::string armored_pubring;
-	if (kfilename.length() > 0)
-	{
-		if (opt_binary)
-		{
- 			if (!read_binary_key_file(kfilename,
-				TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubring))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
-		}
-		else
-		{
- 			if (!read_key_file(kfilename, armored_pubring))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
 		}
 	}
 
@@ -646,6 +612,7 @@ int main
 	for (size_t k = 0; k < keyspec.size(); k++)
 	{
 		TMCG_OpenPGP_Pubkey *primary = NULL;
+		std::string armored_pubkey;
 		if (opt_r)
 		{
 			// try to extract the public key from keyring by keyspec
@@ -666,10 +633,21 @@ int main
 			}
 			tmcg_openpgp_octets_t pkts;
 			key->Export(pkts);
-			armored_pubkey = "";
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, pkts,
 					armored_pubkey);
+		}
+		else
+		{
+			// try to read the (ASCII-armored) public key from file
+			if (!autodetect_file(keyspec[k],
+				TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
+			{
+				delete ring;
+				if (should_unlock)
+					unlock_memory();
+				return -1;
+			}
 		}
 
 		// parse the public key block and check corresponding signatures
@@ -682,40 +660,41 @@ int main
 			{
 				if (opt_weak)
 				{
-					std::cerr << "WARNING: primary key is not valid" <<
-						std::endl;
+					std::cerr << "WARNING: primary key #" << k << " is not" <<
+						" valid" << std::endl;
 				}
 				else
 				{
-					std::cerr << "ERROR: primary key is not valid" << std::endl;
+					std::cerr << "ERROR: primary key #" << k << " is not" <<
+						" valid" << std::endl;
 					delete primary;
 					delete ring;
 					if (should_unlock)
 						unlock_memory();
-					return -1;
+					return -2;
 				}
 			}
 			primary->CheckSubkeys(ring, opt_verbose);
 			primary->Reduce(); // keep only valid subkeys
 			if (primary->Weak(opt_verbose) && !opt_weak)
 			{
-				std::cerr << "ERROR: weak primary key is not allowed" <<
+				std::cerr << "ERROR: primary key #" << k << " is weak" <<
 					std::endl;
 				delete primary;
 				delete ring;
 				if (should_unlock)
 					unlock_memory();
-				return -1;
+				return -3;
 			}
 		}
 		else
 		{
-			std::cerr << "ERROR: cannot use the provided public key" <<
+			std::cerr << "ERROR: cannot use the provided public key #" << k <<
 				std::endl;
 			delete ring;
 			if (should_unlock)
 				unlock_memory();
-			return -1;
+			return -4;
 		}
 
 		// select encryption-capable subkeys
@@ -744,8 +723,8 @@ int main
 				{
 					if (opt_verbose)
 					{
-						std::cerr << "WARNING: weak subkey for encryption" <<
-							" ignored" << std::endl;
+						std::cerr << "WARNING: weak subkey of public key #" <<
+							k << " ignored" << std::endl;
 					}
 				}
 				else if ((primary->subkeys[j]->pkalgo != 
@@ -759,8 +738,8 @@ int main
 				{
 					if (opt_verbose)
 					{
-						std::cerr << "WARNING: subkey with unsupported" <<
-							" public-key algorithm for encryption ignored" <<
+						std::cerr << "WARNING: subkey of public key #" << k <<
+							" with unsupported public-key algorithm ignored" <<
 							std::endl;
 					}
 				}
@@ -853,8 +832,8 @@ int main
 			{
 				if (opt_verbose)
 				{
-					std::cerr << "INFO: primary key is encryption-capable" <<
-						std::endl;
+					std::cerr << "INFO: primary key #" << k << " is" <<
+						" encryption-capable and will be used" << std::endl;
 				}
 			}
 			else if ((primary->AccumulateFlags() == 0) &&
@@ -863,19 +842,19 @@ int main
 			{
 				if (opt_verbose)
 				{
-					std::cerr << "WARNING: primary key of type RSA without" <<
-						" key flags found and selected" << std::endl;
+					std::cerr << "WARNING: primary key #" << k << " of type" <<
+						" RSA without key flags found and used" << std::endl;
 				}
 			}
 			else
 			{
 				std::cerr << "ERROR: no encryption-capable public key" <<
-					" found" << std::endl;
+					" found for key #" << k << std::endl;
 				delete primary;
 				delete ring;
 				if (should_unlock)
 					unlock_memory();
-				return -1;
+				return -5;
 			}
 			size_t pkf = primary->AccumulateFeatures();
 			features &= pkf;
@@ -942,19 +921,19 @@ int main
 		}
 		else if ((selected.size() == 0) && !primary->valid)
 		{
-			std::cerr << "ERROR: no valid public key found for encryption" <<
-				std::endl;
+			std::cerr << "ERROR: no valid primary key found to last resort" <<
+				" for key #" << k << std::endl;
 			delete primary;
 			delete ring;
 			if (should_unlock)
 				unlock_memory();
-			return -1;
+			return -6;
 		}
 
 		// encrypt the session key (create PKESK packet)
 		if (opt_verbose > 1)
 		{
-			std::cerr << "INFO: " << selected.size() << " subkeys selected" <<
+			std::cerr << "INFO: " << selected.size() << " subkey(s) selected" <<
 				" for encryption of session key" << std::endl;
 		}
 		for (size_t j = 0; j < selected.size(); j++)

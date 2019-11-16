@@ -110,20 +110,26 @@ void run_instance
 	if (!read_key_file(pkfname, armored_seckey))
 		exit(-1);
 
-	// read the keyring
+	// read the (ASCII-armored) keyring from file
 	std::string armored_pubring;
 	if (kfilename.length() > 0)
 	{
-		if (!read_key_file(kfilename, armored_pubring))
+		if (!autodetect_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubring))
+		{
 			exit(-1);
+		}
 	}
 
 	// read the certification signatures (i.e. public key block)
 	std::string armored_pubkey;
 	if (ifilename.length() > 0)
 	{
-		if (!read_key_file(ifilename, armored_pubkey))
+		if (!autodetect_file(ifilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubkey))
+		{
 			exit(-1);
+		}
 	}
 	else
 		read_stdin("-----END PGP PUBLIC KEY BLOCK-----", armored_pubkey);

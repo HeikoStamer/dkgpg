@@ -1705,8 +1705,7 @@ int main
 
 	std::string	kfilename, filename, ofilename;
 	int			opt_verbose = 0;
-	bool		opt_a = false;
-	bool		opt_b = false, opt_r = false, opt_p = false, opt_y = false;
+	bool		opt_a = false, opt_r = false, opt_p = false, opt_y = false;
 
 	// parse command line arguments
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
@@ -1731,11 +1730,10 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) || 
+		else if ((arg.find("--") == 0) || (arg.find("-a") == 0) || 
 		    (arg.find("-r") == 0) || (arg.find("-v") == 0) ||
 		    (arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-p") == 0) || (arg.find("-y") == 0) ||
-			(arg.find("-a") == 0))
+			(arg.find("-p") == 0) || (arg.find("-y") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -1745,8 +1743,6 @@ int main
 					" mandatory for short options." << std::endl;
 				std::cout << "  -a, --attest   check attestations and" <<
 					" print attested 3rd-party certifications" << std::endl;
-				std::cout << "  -b, --binary   consider KEYFILE and" <<
-					" FILENAME as binary input" << std::endl;
 				std::cout << "  -h, --help     print this help" <<
 					std::endl;
 				std::cout << "  -k FILENAME    use keyring FILENAME" <<
@@ -1767,8 +1763,6 @@ int main
 			}
 			if ((arg.find("-a") == 0) || (arg.find("--attest") == 0))
 				opt_a = true;
-			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
-				opt_b = true;
 			if ((arg.find("-p") == 0) || (arg.find("--private") == 0))
 				opt_p = true;
 			if ((arg.find("-r") == 0) || (arg.find("--reduce") == 0))
@@ -1868,23 +1862,11 @@ int main
 	std::string armored_pubkey;
 	if (!opt_y)
 	{
-		if (opt_b)
+		if (!autodetect_file(filename, format, armored_pubkey))
 		{
-			if (!read_binary_key_file(filename, format, armored_pubkey))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
-		}
-		else
-		{
-			if (!read_key_file(filename, armored_pubkey))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
+			if (should_unlock)
+				unlock_memory();
+			return -1;
 		}
 	}
 
@@ -1893,23 +1875,11 @@ int main
 	std::string armored_pubring;
 	if (kfilename.length() > 0)
 	{
-		if (opt_b)
+		if (!autodetect_file(kfilename, kformat, armored_pubring))
 		{
-			if (!read_binary_key_file(kfilename, kformat, armored_pubring))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
-		}
-		else
-		{
-			if (!read_key_file(kfilename, armored_pubring))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
+			if (should_unlock)
+				unlock_memory();
+			return -1;
 		}
 	}
 

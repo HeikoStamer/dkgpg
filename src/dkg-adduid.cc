@@ -95,12 +95,15 @@ void run_instance
 	if (!read_key_file(pkfname, armored_seckey))
 		exit(-1);
 
-	// read the keyring
+	// read the (ASCII-armored) keyring from file
 	std::string armored_pubring;
 	if (kfilename.length() > 0)
 	{
-		if (!read_key_file(kfilename, armored_pubring))
+		if (!autodetect_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubring))
+		{
 			exit(-1);
+		}
 	}
 
 	// parse the keyring, the private key and corresponding signatures

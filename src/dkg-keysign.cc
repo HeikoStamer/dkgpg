@@ -99,19 +99,25 @@ void run_instance
 	if (!read_key_file(pkfname, armored_seckey))
 		exit(-1);
 
-	// read the public key
+	// read the public key or a keyring containing such a key
 	bool parse_ok;
 	std::string armored_pubkey;
 	if (ifilename.length() > 0)
 	{
-		if (!read_key_file(ifilename, armored_pubkey))
+		if (!autodetect_file(ifilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubkey))
+		{
 			exit(-1);
+		}
 	}
 	else if (Kfilename.length() > 0)
 	{
 		std::string armored_certring;
-		if (!read_key_file(Kfilename, armored_certring))
+		if (!autodetect_file(Kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_certring))
+		{
 			exit(-1);
+		}
 		TMCG_OpenPGP_Keyring *certring = NULL;
 		int opt_verbose_ring = opt_verbose;
 		if (opt_verbose_ring > 0)
@@ -138,12 +144,15 @@ void run_instance
 		delete certring;
 	}
 
-	// read the keyring
+	// read the (ASCII-armored) keyring from file
 	std::string armored_pubring;
 	if (kfilename.length() > 0)
 	{
-		if (!read_key_file(kfilename, armored_pubring))
+		if (!autodetect_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubring))
+		{
 			exit(-1);
+		}
 	}
 
 	// parse the keyring, the private key and corresponding signatures

@@ -41,7 +41,7 @@ int main
 
 	std::string	filename, kfilename, sfilename, ofilename;
 	int 		opt_verbose = 0;
-	bool		opt_binary = false, opt_weak = false;
+	bool		opt_weak = false;
 	std::string	sigfrom_str, sigto_str;
 	struct tm	sigfrom_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	struct tm	sigto_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -126,9 +126,9 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
-				 (arg.find("-v") == 0) || (arg.find("-h") == 0) ||
-				 (arg.find("-V") == 0) || (arg.find("-w") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
+				(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
+				(arg.find("-w") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -136,8 +136,6 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary   consider KEYFILE and FILENAME" <<
-					" as binary input" << std::endl;
 				std::cout << "  -f TIMESPEC    timestamp made before given" <<
 					" TIMESPEC is not valid" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
@@ -157,8 +155,6 @@ int main
 					std::endl;
 				return 0; // not continue
 			}
-			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
-				opt_binary = true;
 			if ((arg.find("-v") == 0) || (arg.find("--version") == 0))
 			{
 				std::cout << "dkg-timestamp-verify v" << version << std::endl;
@@ -235,48 +231,37 @@ int main
 			std::endl;
 	}
 
-	// read the public key from KEYFILE
+	// read the (ASCII-armored) public key from KEYFILE
 	std::string armored_pubkey;
 	if (filename.length() > 0)
 	{
-		if (opt_binary)
+		if (!autodetect_file(filename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubkey))
 		{
-			tmcg_openpgp_armor_t format = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 
-			if (!read_binary_key_file(filename, format, armored_pubkey))
-				return -1;
-		}
-		else
-		{
-			if (!read_key_file(filename, armored_pubkey))
-				return -1;
+			return -1;
 		}
 	}
 
-	// read the keyring
+	// read the (ASCII-armored) keyring from file
 	std::string armored_pubring;
 	if (kfilename.length() > 0)
 	{
-		if (opt_binary)
+		if (!autodetect_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubring))
 		{
-			tmcg_openpgp_armor_t format = TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK; 
-			if (!read_binary_key_file(kfilename, format, armored_pubring))
-				return -1;
-		}
-		else
-		{
-			if (!read_key_file(kfilename, armored_pubring))
-				return -1;
+			return -1;
 		}
 	}
 
-	// read the signature from stdin or from file
+	// read the (ASCII-armored) signature from stdin or from file
 	std::string armored_signature;
 	if (sfilename.length() > 0)
 	{
-		if (!opt_binary && !read_message(sfilename, armored_signature))
+		if (!autodetect_file(sfilename, TMCG_OPENPGP_ARMOR_SIGNATURE,
+			armored_signature))
+		{
 			return -1;
-		if (opt_binary && !read_binary_signature(sfilename, armored_signature))
-			return -1;
+		}
 	}
 	else
 	{

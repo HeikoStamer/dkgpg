@@ -74,8 +74,7 @@ std::string						ifilename, ofilename, kfilename;
 std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
-bool							opt_binary = false, opt_E = false;
-bool							opt_weak = false, opt_s = false;
+bool							opt_E = false, opt_weak = false, opt_s = false;
 bool							opt_nonint = false;
 unsigned long int				opt_p = 55000, opt_W = 5;
 
@@ -1946,7 +1945,6 @@ unsigned int gnunet_opt_W = opt_W;
 int gnunet_opt_nonint = 0;
 int gnunet_opt_verbose = 0;
 int gnunet_opt_weak = 0;
-int gnunet_opt_binary = 0;
 int gnunet_opt_E = 0;
 int gnunet_opt_s = 0;
 #endif
@@ -2004,11 +2002,6 @@ int main
 	char *logfile = NULL;
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
-		GNUNET_GETOPT_option_flag('b',
-			"binary",
-			"consider encrypted message from FILENAME as binary input",
-			&gnunet_opt_binary
-		),
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_flag('E',
 			"echo",
@@ -2214,11 +2207,10 @@ int main
 			}
 			continue;
 		}
-		else if ((arg.find("--") == 0) || (arg.find("-b") == 0) ||
-			(arg.find("-v") == 0) || (arg.find("-h") == 0) ||
-			(arg.find("-n") == 0) || (arg.find("-V") == 0) ||
-			(arg.find("-E") == 0) || (arg.find("-K") == 0) ||
-			(arg.find("-s") == 0))
+		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
+			(arg.find("-h") == 0) || (arg.find("-n") == 0) ||
+			(arg.find("-V") == 0) || (arg.find("-E") == 0) ||
+			(arg.find("-K") == 0) || (arg.find("-s") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -2227,8 +2219,6 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
-				std::cout << "  -b, --binary           consider encrypted" <<
-					" message from FILENAME as binary input" << std::endl;
 				std::cout << "  -E, --echo             enable terminal echo" <<
 					" when reading passphrase" << std::endl;
 				std::cout << "  -h, --help             print this help" <<
@@ -2264,8 +2254,6 @@ int main
 #endif
 				return 0; // not continue
 			}
-			if ((arg.find("-b") == 0) || (arg.find("--binary") == 0))
-				opt_binary = true;
 			if ((arg.find("-E") == 0) || (arg.find("--echo") == 0))
 				opt_E = true;
 			if ((arg.find("-K") == 0) || (arg.find("--weak") == 0))
@@ -2309,7 +2297,6 @@ int main
 	peers.push_back("Test4");
 	ifilename = "Test1_output.bin";
 	opt_verbose = 2;
-	opt_binary = true;
 #else
 #ifdef DKGPG_TESTSUITE_Y
 	yfilename = "TestY-sec.asc";
@@ -2392,35 +2379,26 @@ int main
 			std::endl;
 	}
 
-	// read message
+	// read the message
 	if (ifilename.length() > 0)
 	{
-		if (opt_binary)
+		if (!autodetect_file(ifilename, TMCG_OPENPGP_ARMOR_MESSAGE,
+			armored_message))
 		{
-			if (!read_binary_message(ifilename, armored_message))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
-		}
-		else
-		{
-			if (!read_message(ifilename, armored_message))
-			{
-				if (should_unlock)
-					unlock_memory();
-				return -1;
-			}
+			if (should_unlock)
+				unlock_memory();
+			return -1;
 		}
 	}
 	else
 		read_stdin("-----END PGP MESSAGE-----", armored_message);
 
-	// read keyring
+	// read the (ASCII-armored) public keyring from file
+	std::string armored_pubring;
 	if (kfilename.length() > 0)
 	{
-		if (!read_key_file(kfilename, armored_pubring))
+		if (!autodetect_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubring))
 		{
 			if (should_unlock)
 				unlock_memory();
@@ -2887,11 +2865,6 @@ int main
 		// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 		static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
-			GNUNET_GETOPT_option_flag('b',
-				"binary",
-				"consider encrypted message from FILENAME as binary input",
-				&gnunet_opt_binary
-			),
 			GNUNET_GETOPT_option_flag('E',
 				"echo",
 				"enable terminal echo when reading passphrase",

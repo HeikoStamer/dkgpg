@@ -1,4 +1,4 @@
-.TH DKG\-DECRYPT "1" "June 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-DECRYPT "1" "November 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-decrypt \-\- (threshold) message decryption according to OpenPGP
@@ -72,9 +72,6 @@ are needed and thus PEERS and all other communication options should be omitted.
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
-.TP
-\fB\-b\fR, \fB\-\-binary\fR
-consider encrypted message from FILENAME as in binary input format
 .TP
 \fB\-c\fR, \fB\-\-config\fR=\fI\,FILENAME\/\fR
 use GNUnet configuration file FILENAME (only interactive mode)

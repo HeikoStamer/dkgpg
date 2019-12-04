@@ -22,7 +22,8 @@ AM_CPPFLAGS = -I$(top_srcdir)/src @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@\
 LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 
 noinst_PROGRAMS = dkg-fuzzer
+bin_PROGRAMS = dkg-sop
 
 dkg_fuzzer_SOURCES = dkg-io.hh dkg-io.cc dkg-fuzzer.cc
-
+dkg_sop_SOURCES = dkg-io.hh dkg-io.cc dkg-sop.cc
 

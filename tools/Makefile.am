@@ -25,5 +25,5 @@ noinst_PROGRAMS = dkg-fuzzer
 bin_PROGRAMS = dkg-sop
 
 dkg_fuzzer_SOURCES = dkg-io.hh dkg-io.cc dkg-fuzzer.cc
-dkg_sop_SOURCES = dkg-io.hh dkg-io.cc dkg-sop.cc
+dkg_sop_SOURCES = dkg-io.hh dkg-io.cc dkg-common.hh dkg-common.cc dkg-sop.cc
 

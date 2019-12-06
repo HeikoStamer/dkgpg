@@ -3,7 +3,10 @@
 .dirstamp
 stamp-h1
 dkg-fuzzer
+dkg-sop
 dkg-io.hh
 dkg-io.cc
+dkg-common.hh
+dkg-common.cc
 *.o
 

@@ -18,6 +18,8 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
+// [DKG19] https://datatracker.ietf.org/doc/draft-dkg-openpgp-stateless-cli/
+
 // include headers
 #ifdef HAVE_CONFIG_H
 	#include "dkgpg_config.h"
@@ -122,6 +124,9 @@ int main
 	// execute each supported subcommand
 	if (subcmd == "version")
 	{
+		// The version string emitted should contain the name of the "sop"
+		// implementation, followed by a single space, followed by the version
+		// number. [DKG19]
 		std::cout << version << std::endl;
 	}
 	else if (subcmd == "generate-key")
@@ -231,7 +236,7 @@ int main
 				unlock_memory();
 			return -1;
 		}
-		// "Generate a single default OpenPGP certificate"
+		// Generate a single default OpenPGP certificate [DKG19]
 		// generate a non-shared DSA primary key
 		mpz_t dsa_y, dsa_x;
 		mpz_init(dsa_y), mpz_init(dsa_x);
@@ -341,7 +346,7 @@ int main
 			PacketBodyExtract(pub, 0, pub_hashing);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			FingerprintCompute(pub_hashing, issuer);
-		// "with zero or more User IDs"
+		// [...] with zero or more User IDs. [DKG19]
 		std::vector<tmcg_openpgp_octets_t> uid, uidsig;
 		uid.resize(args.size());
 		uidsig.resize(args.size());
@@ -387,8 +392,9 @@ int main
 		{
 			tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-					hashalgo, sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
+				PacketSigPrepareSelfSignature(
+					TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION, hashalgo,
+					sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
 			hash.clear();
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				CertificationHash(pub_hashing, args[i], empty, uidsig_hashing,

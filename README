@@ -84,8 +84,8 @@ Overview
   private key (ASCII-armored format). For example, this option is available for
   dkg-generate, dkg-decrypt, dkg-sign, dkg-keysign, and dkg-timestamp.
 
-  The programs dkg-keycheck and dkg-keyinfo print some basic information for any
-  given OpenPGP public and private key, respectively. However, there is one
+  The programs dkg-keycheck and dkg-keyinfo print some basic information for a
+  given OpenPGP public and private key, respectively. However, there is another
   special use case for DKGPG: The option "-m" of dkg-keyinfo migrates a changed
   peer identity, if the new name meets some requirements. Note that only the
   name of the peer is migrated, other parts of the private key material are not

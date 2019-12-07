@@ -73,7 +73,8 @@
 		 std::string &result);
 	void read_stdin
 		(const std::string &end_marker,
-		 std::string &result);
+		 std::string &result,
+		 const bool verbose = true);
 	bool read_data
 		(const std::string &filename,
 		 tmcg_openpgp_octets_t &result);

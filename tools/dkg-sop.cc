@@ -35,37 +35,11 @@
 
 int opt_verbose = 0;
 bool opt_armor = true;
-bool opt_passphrase = false;
-tmcg_openpgp_secure_string_t passphrase;
 
 bool generate
-	(const std::vector<std::string> &args) 
+	(const std::vector<std::string> &args,
+	 const tmcg_openpgp_secure_string_t &passphrase) 
 {
-	if (opt_passphrase)
-	{
-		tmcg_openpgp_secure_string_t passphrase_check;
-		std::string ps1 = "Passphrase to protect the private key";
-		std::string ps2 = "Please repeat the given passphrase to continue";
-		do
-		{
-			passphrase = "", passphrase_check = "";
-			if (!get_passphrase(ps1, false, passphrase))
-				return false;
-			if (!get_passphrase(ps2, false, passphrase_check))
-				return false;
-			if (passphrase != passphrase_check)
-			{
-				std::cerr << "WARNING: passphrase does not match;" <<
-					" please try again" << std::endl;
-			}
-			else if (passphrase == "")
-			{
-				std::cerr << "WARNING: private key protection disabled" <<
-					" due to empty passphrase" << std::endl;
-			}
-		}
-		while (passphrase != passphrase_check);
-	}
 	time_t keytime = time(NULL); // current time
 	time_t keyexptime = 0; // no expiration
 	std::stringstream crss;
@@ -409,6 +383,52 @@ bool generate
 	return true;
 }
 
+bool extract
+	(const tmcg_openpgp_secure_string_t &passphrase)
+{
+	// read and parse the private key
+	TMCG_OpenPGP_Prvkey *prv = NULL;
+	if (opt_armor)
+	{
+		std::string armored_key;
+		read_stdin("-----END PGP PRIVATE KEY BLOCK-----" , armored_key, false);
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			PrivateKeyBlockParse(armored_key, opt_verbose, passphrase, prv))
+		{
+			return false;
+		}
+	}
+	else
+	{
+		tmcg_openpgp_octets_t key;
+		char c;
+		while (std::cin.get(c))
+			key.push_back(c);
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			PrivateKeyBlockParse(key, opt_verbose, passphrase, prv))
+		{
+			return false;
+		}
+	}
+	// produce the output
+	tmcg_openpgp_octets_t all;
+	prv->pub->Export(all);
+	delete prv;
+	if (opt_armor)
+	{
+		std::string armor;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, all, armor);
+		std::cout << armor << std::endl;
+	}
+	else
+	{
+		for (size_t i = 0; i < all.size(); i++)
+			std::cout << all[i];
+	}
+	return true;
+}
+
 int main
 	(int argc, char **argv)
 {
@@ -417,6 +437,7 @@ int main
 	static const char *version = "dkg-sop " PACKAGE_VERSION;
 	std::string subcmd;
 	std::vector<std::string> args;
+	bool opt_passphrase = false;
 
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
@@ -493,6 +514,42 @@ int main
 			std::endl;
 	}
 
+	// read passphrase
+	tmcg_openpgp_secure_string_t passphrase;
+	if (opt_passphrase)
+	{
+		tmcg_openpgp_secure_string_t passphrase_check;
+		std::string ps1 = "Please enter the passphrase for the private key";
+		std::string ps2 = "Please repeat the passphrase to continue";
+		do
+		{
+			passphrase = "", passphrase_check = "";
+			if (!get_passphrase(ps1, false, passphrase))
+			{
+				if (should_unlock)
+					unlock_memory();
+				return -1;
+			}
+			if (!get_passphrase(ps2, false, passphrase_check))
+			{
+				if (should_unlock)
+					unlock_memory();
+				return -1;
+			}
+			if (passphrase != passphrase_check)
+			{
+				std::cerr << "WARNING: passphrase does not match;" <<
+					" please try again" << std::endl;
+			}
+			else if (passphrase == "")
+			{
+				std::cerr << "WARNING: private key protection disabled" <<
+					" due to given empty passphrase" << std::endl;
+			}
+		}
+		while (passphrase != passphrase_check);
+	}
+
 	// execute each supported subcommand
 	int ret = 0;
 	if (subcmd == "version")
@@ -506,8 +563,18 @@ int main
 	{
 		// Generate a single default OpenPGP certificate with zero or more
 		// User IDs. [DKG19]
-		if (!generate(args))
+		if (!generate(args, passphrase))
 			ret = -1;
+	}
+	else if (subcmd == "extract-cert")
+	{
+		// Extract a Certificate from a Secret Key
+		//   Standard Input: "KEY"
+		//   Standard Output: "CERTS"
+		// Note that the resultant "CERTS" object will only ever contain one
+   		// OpenPGP certificate. [DKG19]
+		if (!extract(passphrase))
+			ret = 1;
 	}
 	else
 	{
@@ -515,6 +582,7 @@ int main
 			" supported" << std::endl;
 		ret = 69;
 	}
+
 	// finish
 	if (should_unlock)
 		unlock_memory();	

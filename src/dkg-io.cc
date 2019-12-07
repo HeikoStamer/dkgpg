@@ -275,14 +275,22 @@ bool read_binary_signature
 
 void read_stdin
 	(const std::string &end_marker,
-	 std::string &result)
+	 std::string &result,
+	 const bool verbose)
 {
-	std::cerr << "Enter data (quit with a single line" <<
-		" containing \"" << end_marker << "\"):" << std::endl;
+	if (verbose)
+	{
+		std::cerr << "Enter data (quit with a single line" <<
+			" containing \"" << end_marker << "\"):" << std::endl;
+	}
 	std::string line;
 	while (std::getline(std::cin, line))
 	{
-		result += line + "\r\n";
+		result += line;
+		if (line[line.length() - 1] == '\r')
+			result += "\n";
+		else
+ 			result += "\r\n";
 		if (line.find(end_marker) != std::string::npos)
 			break;
 	}	

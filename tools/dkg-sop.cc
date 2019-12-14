@@ -35,6 +35,8 @@
 
 int opt_verbose = 0;
 bool opt_armor = true;
+bool opt_as_binary = true;
+bool opt_as_text = false;
 
 bool generate
 	(const std::vector<std::string> &args,
@@ -410,10 +412,11 @@ bool extract
 			return false;
 		}
 	}
-	// produce the output
+	// export the public key
 	tmcg_openpgp_octets_t all;
 	prv->pub->Export(all);
 	delete prv;
+	// output the result
 	if (opt_armor)
 	{
 		std::string armor;
@@ -429,6 +432,135 @@ bool extract
 	return true;
 }
 
+bool sign
+	(const std::vector<std::string> &args,
+	 const tmcg_openpgp_secure_string_t &passphrase,
+	 const tmcg_openpgp_octets_t &data)
+{
+	tmcg_openpgp_octets_t sig;
+	for (size_t i = 0; i < args.size(); i++)
+	{
+		std::string armored_key;
+		if (!autodetect_file(args[i], TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK,
+			armored_key))
+		{
+			return false;
+		}
+		TMCG_OpenPGP_Prvkey *prv = NULL;
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			PrivateKeyBlockParse(armored_key, opt_verbose, passphrase, prv))
+		{
+			return false;
+		}
+		time_t sigtime = time(NULL); // current time
+		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // fixed hash algo SHA2-512
+		tmcg_openpgp_octets_t trailer, hash, left;
+		bool hret = false;
+		if (opt_as_text)
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareDetachedSignature(
+					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+					prv->pub->pkalgo, hashalgo, sigtime, 0, "",
+					prv->pub->fingerprint, trailer);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				TextDocumentHash(data, trailer, hashalgo, hash, left);
+		}
+		else
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareDetachedSignature(
+					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pub->pkalgo,
+					hashalgo, sigtime, 0, "", prv->pub->fingerprint, trailer);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				BinaryDocumentHash(data, trailer, hashalgo, hash, left);
+		}
+		if (!hret)
+		{
+			std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
+				std::endl;
+			delete prv;
+			return false;
+		}
+
+		gcry_error_t ret;
+		gcry_mpi_t r, s;
+		r = gcry_mpi_new(2048);
+		s = gcry_mpi_new(2048);
+		switch (prv->pkalgo)
+		{
+			case TMCG_OPENPGP_PKALGO_RSA:
+			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignRSA(hash, prv->private_key, hashalgo, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_DSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_ECDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignECDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_EDDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignEdDSA(hash, prv->private_key, r, s);
+				break;
+			default:
+				std::cerr << "ERROR: public-key algorithm " <<
+					(int)prv->pkalgo << " not supported" << std::endl;
+				gcry_mpi_release(r), gcry_mpi_release(s);
+				delete prv;
+				return false;
+		}
+		if (ret)
+		{
+			std::cerr << "ERROR: signing of hash value failed " <<
+				"(rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) << ")" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			delete prv;
+			return false;
+		}
+		switch (prv->pkalgo)
+		{
+			case TMCG_OPENPGP_PKALGO_RSA:
+			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigEncode(trailer, left, s, sig);
+				break;
+			case TMCG_OPENPGP_PKALGO_DSA:
+			case TMCG_OPENPGP_PKALGO_ECDSA:
+			case TMCG_OPENPGP_PKALGO_EDDSA:
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigEncode(trailer, left, r, s, sig);
+				break;
+			default:
+				std::cerr << "ERROR: public-key algorithm " <<
+					(int)prv->pkalgo << " not supported" << std::endl;
+				gcry_mpi_release(r), gcry_mpi_release(s);
+				delete prv;
+				return false;
+		}
+		gcry_mpi_release(r), gcry_mpi_release(s);
+		delete prv;
+	}
+	// output the result
+	if (opt_armor)
+	{
+		std::string armor;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, armor);
+		std::cout << armor << std::endl;
+	}
+	else
+	{
+		for (size_t i = 0; i < sig.size(); i++)
+			std::cout << sig[i];
+	}
+	return true;
+}
+
 int main
 	(int argc, char **argv)
 {
@@ -438,12 +570,18 @@ int main
 	std::string subcmd;
 	std::vector<std::string> args;
 	bool opt_passphrase = false;
+	bool end_of_options = false;
 
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
 		std::string arg = argv[i+1];
-		if ((arg.find("--") == 0) || (arg.find("-") == 0))
+		if (!end_of_options && ((arg.find("--") == 0) || (arg.find("-") == 0)))
 		{
+			if (arg == "--")
+			{
+				end_of_options = true;
+				continue;
+			}
 			// read options
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -472,6 +610,18 @@ int main
 			if (arg.find("--no-armor") == 0)
 			{
 				opt_armor = false; // disable ASCII-armored output
+				continue;
+			}
+			if (arg.find("--as=binary") == 0)
+			{
+				opt_as_binary = true; // choose signature type "binary"
+				opt_as_text = false;
+				continue;
+			}
+			if (arg.find("--as=text") == 0)
+			{
+				opt_as_binary = false; // choose signature type "text"
+				opt_as_text = true;
 				continue;
 			}
 			std::cerr << "ERROR: unknown SOP option \"" << arg << "\"" <<
@@ -574,7 +724,25 @@ int main
 		// Note that the resultant "CERTS" object will only ever contain one
    		// OpenPGP certificate. [DKG19]
 		if (!extract(passphrase))
-			ret = 1;
+			ret = -1;
+	}
+	else if (subcmd == "sign")
+	{
+		// Create a Detached Signature
+		//   Standard Input: "DATA"
+		//   Standard Output: "SIGNATURE"
+		// "--as" defaults to "binary".  If "--as=text" and the input "DATA" is
+		// not valid "UTF-8", "sop sign" fails with a return code of 53.
+		tmcg_openpgp_octets_t data;
+		char c;
+		while (std::cin.get(c))
+			data.push_back(c);
+		if (opt_as_text)
+		{
+// TODO: check for valid UTF-8 data
+		}
+		if (!sign(args, passphrase, data))
+			ret = -1;
 	}
 	else
 	{

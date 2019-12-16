@@ -791,7 +791,10 @@ int main
 		if (opt_as_text)
 		{
 			if (!valid_utf8(data))
+			{
+				std::cerr << "ERROR: invalid UTF-8 encoding found" << std::endl;
 				ret = 53;
+			}
 		}
 		if ((ret == 0) && !sign(args, passphrase, data))
 			ret = -1;

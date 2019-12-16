@@ -38,6 +38,57 @@ bool opt_armor = true;
 bool opt_as_binary = true;
 bool opt_as_text = false;
 
+bool valid_utf8
+	(const tmcg_openpgp_octets_t &data)
+{
+	// check for valid UTF-8 encoding
+	size_t len = 0;
+	for (size_t i = 0; i < data.size(); i++)
+	{
+		tmcg_openpgp_byte_t b1 = data[i];
+		if (len > 0)
+		{
+			if ((b1 & 0xC0) != 0x80)
+				return false; // non-continuation byte detected inside character
+			len--;
+		}
+		else
+		{
+			if ((b1 == 0xC0) || (b1 == 0xC1))
+				return false; // non-minimal encoding detected
+			if ((b1 & 0x80) == 0x80)
+			{
+				if ((b1 & 0x40) != 0x40)
+					return false; // unexpected continuation byte detected
+				if ((b1 & 0x20) == 0x20)
+				{
+					if ((b1 & 0x10) == 0x10)
+						len = 3;
+					else
+						len = 2;
+				}
+				else
+					len = 1;
+				if ((i + len) >= data.size())
+					return false;
+				if ((len == 2) && (b1 == 0xE0) && (data[i+1] <= 0x9F))
+					return false; // non-minimal encoding detected
+				if ((len == 2) && (b1 == 0xED) && (data[i+1] > 0x9F))
+					return false; // invalid code points U+D800 through U+DFFF
+				if ((len == 3) && (b1 == 0xF0) && (data[i+1] <= 0x8F))
+					return false; // non-minimal encoding detected
+				if ((len == 3) && (b1 == 0xF4) && (data[i+1] > 0x8F))
+					return false; // invalid code points after U+10FFFF
+				if ((len == 3) && (b1 >= 0xF5))
+					return false; // invalid code points after U+10FFFF
+			}
+		}
+	}
+	if (len > 0)
+		return false; // string ending detected before the end of character
+	return true;
+}
+
 bool generate
 	(const std::vector<std::string> &args,
 	 const tmcg_openpgp_secure_string_t &passphrase) 
@@ -452,8 +503,8 @@ bool sign
 		{
 			return false;
 		}
-		time_t sigtime = time(NULL); // current time
-		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_SHA512; // fixed hash algo SHA2-512
+		time_t sigtime = time(NULL); // current time, fixed hash algo SHA2-512
+		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 		tmcg_openpgp_octets_t trailer, hash, left;
 		bool hret = false;
 		if (opt_as_text)
@@ -732,16 +783,17 @@ int main
 		//   Standard Input: "DATA"
 		//   Standard Output: "SIGNATURE"
 		// "--as" defaults to "binary".  If "--as=text" and the input "DATA" is
-		// not valid "UTF-8", "sop sign" fails with a return code of 53.
+		// not valid "UTF-8", "sop sign" fails with a return code of 53. [DKG19]
 		tmcg_openpgp_octets_t data;
 		char c;
 		while (std::cin.get(c))
 			data.push_back(c);
 		if (opt_as_text)
 		{
-// TODO: check for valid UTF-8 data
+			if (!valid_utf8(data))
+				ret = 53;
 		}
-		if (!sign(args, passphrase, data))
+		if ((ret == 0) && !sign(args, passphrase, data))
 			ret = -1;
 	}
 	else

@@ -554,3 +554,54 @@ bool get_key_by_signature
 	return true;
 }
 
+bool valid_utf8
+	(const tmcg_openpgp_octets_t &data)
+{
+	// check for valid UTF-8 encoding
+	size_t len = 0;
+	for (size_t i = 0; i < data.size(); i++)
+	{
+		tmcg_openpgp_byte_t b1 = data[i];
+		if (len > 0)
+		{
+			if ((b1 & 0xC0) != 0x80)
+				return false; // non-continuation byte detected inside character
+			len--;
+		}
+		else
+		{
+			if ((b1 == 0xC0) || (b1 == 0xC1))
+				return false; // non-minimal encoding detected
+			if ((b1 & 0x80) == 0x80)
+			{
+				if ((b1 & 0x40) != 0x40)
+					return false; // unexpected continuation byte detected
+				if ((b1 & 0x20) == 0x20)
+				{
+					if ((b1 & 0x10) == 0x10)
+						len = 3;
+					else
+						len = 2;
+				}
+				else
+					len = 1;
+				if ((i + len) >= data.size())
+					return false;
+				if ((len == 2) && (b1 == 0xE0) && (data[i+1] <= 0x9F))
+					return false; // non-minimal encoding detected
+				if ((len == 2) && (b1 == 0xED) && (data[i+1] > 0x9F))
+					return false; // invalid code points U+D800 through U+DFFF
+				if ((len == 3) && (b1 == 0xF0) && (data[i+1] <= 0x8F))
+					return false; // non-minimal encoding detected
+				if ((len == 3) && (b1 == 0xF4) && (data[i+1] > 0x8F))
+					return false; // invalid code points after U+10FFFF
+				if ((len == 3) && (b1 >= 0xF5))
+					return false; // invalid code points after U+10FFFF
+			}
+		}
+	}
+	if (len > 0)
+		return false; // string ending detected before the end of character
+	return true;
+}
+

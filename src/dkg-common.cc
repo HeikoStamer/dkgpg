@@ -1100,4 +1100,3 @@ int run_localtest
 	return ret;
 }
 
-

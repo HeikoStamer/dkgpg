@@ -2394,7 +2394,18 @@ int main
 #endif
 #endif
 
-	// canonicalize user ID list
+	// check and canonicalize user ID list
+	for (size_t i = 0; i < userid.size(); i++)
+	{
+		if (!valid_utf8(userid[i]))
+		{
+			std::cerr << "ERROR: invalid UTF-8 encoding found at" <<
+				" user ID #" << (i+1) << std::endl;
+			if (should_unlock)
+				unlock_memory();
+			return -1;
+		}
+	}
 	canonicalize(userid);
 	if (opt_verbose)
 	{

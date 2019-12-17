@@ -605,3 +605,12 @@ bool valid_utf8
 	return true;
 }
 
+bool valid_utf8
+	(const std::string &s)
+{
+	tmcg_openpgp_octets_t data;
+	for (size_t i = 0; i < s.length(); i++)
+		data.push_back(s[i]);
+	return valid_utf8(data);
+}
+

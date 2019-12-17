@@ -115,5 +115,7 @@
 		 std::string &armored_key);
 	bool valid_utf8
 		(const tmcg_openpgp_octets_t &data);
+	bool valid_utf8
+		(const std::string &s);
 #endif
 

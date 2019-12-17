@@ -634,7 +634,15 @@ int main
 			if (subcmd.length() == 0)
 				subcmd = arg; // 1st argument is the SOP subcommand
 			else
+			{
+				if (!valid_utf8(arg))
+				{
+					std::cerr << "ERROR: invalid UTF-8 encoding found at" <<
+						" argument #" << (i+1) << std::endl;
+					return 53;
+				}
 				args.push_back(arg);
+			}
 		}
 	}
 

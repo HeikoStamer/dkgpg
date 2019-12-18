@@ -1,4 +1,4 @@
-.TH DKG\-GENERATE "1" "March 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
+.TH DKG\-GENERATE "1" "December 2019" "@PACKAGE_NAME@ @PACKAGE_VERSION@" "User Commands"
 
 .SH NAME
 dkg\-generate \-\- distributed key generation for OpenPGP (tDSS and tElG)
@@ -136,6 +136,8 @@ Please note that the program interactively asks for a user ID (e.g. name or
 email) on STDIN, if the option "\-u" is omitted. Moreover, according to
 RFC 4880 a passphrase is used to protect the private key. Given option "\-N"
 this protection is disabled and the private key material is stored in clear.
+The option "\-u" can be repeated in order to tie more than one user ID to the
+generated key.
 
 .SH OPTIONS
 Arguments mandatory for long options are also mandatory for short options.
@@ -182,7 +184,7 @@ resilience of DKG protocol (threshold decryption)
 state that the generated key is used for timestamping
 .TP
 \fB\-u\fR, \fB\-\-uid\fR=\fI\,STRING\/\fR
-user ID of the generated key
+user ID tied to the generated key
 .TP
 \fB\-v\fR, \fB\-\-version\fR
 print the version number of the program

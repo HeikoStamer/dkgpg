@@ -1975,7 +1975,7 @@ int main
 		GNUNET_GETOPT_option_string('u',
 			"uid",
 			"STRING",
-			"user ID of the generated key",
+			"user ID tied to the generated key",
 			&gnunet_opt_u
 		),
 		GNUNET_GETOPT_option_version(version),
@@ -2144,8 +2144,8 @@ int main
 					" (threshold decryption)" << std::endl;
 				std::cout << "  -T, --timestamping  state that the generated" <<
 					" key is used for timestamping" << std::endl;
-				std::cout << "  -u STRING      user ID of the generated key" <<
-					std::endl;
+				std::cout << "  -u STRING      user ID tied to the generated" <<
+					" key" << std::endl;
 				std::cout << "  -v, --version  print the version number" <<
 					std::endl;
 				std::cout << "  -V, --verbose  turn on verbose output" <<
@@ -2558,7 +2558,7 @@ int main
 			GNUNET_GETOPT_option_string('u',
 				"uid",
 				"STRING",
-				"user ID of the generated key",
+				"user ID tied to the generated key",
 				&gnunet_opt_u
 			),
 			GNUNET_GETOPT_option_flag('V',

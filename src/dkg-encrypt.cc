@@ -414,7 +414,7 @@ int main
 	gcry_error_t ret;
 	tmcg_openpgp_octets_t lit, prefix, enc;
 	tmcg_openpgp_secure_octets_t seskey;
-	tmcg_openpgp_skalgo_t skalgo = TMCG_OPENPGP_SKALGO_AES256;
+	tmcg_openpgp_skalgo_t skalgo = TMCG_OPENPGP_SKALGO_AES256; // fixed AES256
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketLitEncode(msg, lit);
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::SymmetricEncryptAES256(lit,
 		seskey, prefix, true, enc); // seskey and prefix only

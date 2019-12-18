@@ -714,6 +714,12 @@ int main
 			std::endl;
 		return -1;
 	}
+	if (!valid_utf8(userid))
+	{
+		std::cerr << "ERROR: invalid UTF-8 encoding found in user ID" <<
+			std::endl;
+		return -1;
+	}
 	if ((hostname.length() > 0) && (passwords.length() == 0) &&
 		(yfilename.length() == 0))
 	{

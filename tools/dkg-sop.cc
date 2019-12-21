@@ -215,7 +215,7 @@ bool generate
 	sigtime = time(NULL); // current time
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareDesignatedRevoker(TMCG_OPENPGP_PKALGO_DSA, hashalgo,
-			sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty,
+			sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty, true,
 			dirsig_hashing);
 	hash.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::

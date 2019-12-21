@@ -337,7 +337,7 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareDesignatedRevoker(prv->pub->pkalgo, hashalgo, csigtime,
 			prv->pub->flags, prv->pub->fingerprint, primary->pkalgo,
-			primary->fingerprint, trailer);
+			primary->fingerprint, true, trailer);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyHash(prv->pub->pub_hashing, trailer, hashalgo, hash, left);
 	delete primary;

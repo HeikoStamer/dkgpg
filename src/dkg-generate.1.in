@@ -165,6 +165,9 @@ configure logging to use LOGLEVEL
 \fB\-l\fR, \fB\-\-logfile\fR=\fI\,FILENAME\/\fR
 configure logging to write logs to FILENAME
 .TP
+\fB\-n\fR, \fB\-\-no\-rfc4880bis\fR
+disable RFC 4880bis features
+.TP
 \fB\-N\fR, \fB\-\-no\-passphrase\fR
 disable private key protection by passphrase
 .TP

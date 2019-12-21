@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2019-12-21] dkg-generate: added option "-n" (disable RFC 4880bis features)
 * [2019-12-18] dkg-adduid,dkg-revuid: added check for valid UTF-8 encoding
 * [2019-12-17] dkg-generate: added check for valid UTF-8 encoding (user ID)
 * [2019-12-04] added program dkg-sop (Stateless OpenPGP Command Line Interface)

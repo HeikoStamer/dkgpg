@@ -65,11 +65,11 @@ std::vector<std::string>	peers;
 bool						instance_forked = false;
 
 tmcg_openpgp_secure_string_t	passphrase;
-std::vector<std::string>				userid;
+std::vector<std::string>		userid;
 std::string						passwords, hostname, port;
 int 							opt_verbose = 0;
 bool							opt_y = false, opt_timestamping = false;
-bool							opt_nopassphrase = false;
+bool							opt_nopassphrase = false, opt_rfc4880bis = true; 
 unsigned long int				opt_t = DKGPG_MAX_N, opt_s = DKGPG_MAX_N;
 unsigned long int				opt_e = 0, opt_p = 55000, opt_W = 5;
 
@@ -241,7 +241,7 @@ void run_instance
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareDesignatedRevoker(TMCG_OPENPGP_PKALGO_DSA, hashalgo,
 				sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty,
-				dirsig_hashing);
+				opt_rfc4880bis, dirsig_hashing);
 		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			KeyHash(pub_hashing, dirsig_hashing, hashalgo, hash, dirsig_left);
@@ -272,7 +272,8 @@ void run_instance
 			tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-					hashalgo, sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
+					TMCG_OPENPGP_PKALGO_DSA, hashalgo, sigtime, keyexptime,
+					dsaflags, issuer, opt_rfc4880bis, uidsig_hashing); 
 			hash.clear();
 			CallasDonnerhackeFinneyShawThayerRFC4880::
 				CertificationHash(pub_hashing, userid[i], empty, uidsig_hashing,
@@ -348,7 +349,8 @@ void run_instance
 		// Subkey Binding Signature (0x18) of sub
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
-				hashalgo, sigtime, keyexptime, elgflags, issuer, subsig_hashing);
+				TMCG_OPENPGP_PKALGO_DSA, hashalgo, sigtime, keyexptime,
+				elgflags, issuer, opt_rfc4880bis, subsig_hashing);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketBodyExtract(sub, 0, sub_hashing);
 		hash.clear();
@@ -1088,7 +1090,7 @@ void run_instance
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareDesignatedRevoker(TMCG_OPENPGP_PKALGO_DSA, hashalgo,
 			sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty,
-			dirsig_hashing);
+			opt_rfc4880bis, dirsig_hashing);
 	hash.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyHash(pub_hashing, dirsig_hashing, hashalgo, hash, dirsig_left);
@@ -1235,7 +1237,8 @@ void run_instance
 		// create a positive certification (0x13) of the included user ID
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION,
-				hashalgo, sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
+				TMCG_OPENPGP_PKALGO_DSA, hashalgo, sigtime, keyexptime,
+				dsaflags, issuer, opt_rfc4880bis, uidsig_hashing); 
 		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			CertificationHash(pub_hashing, userid[i], empty, uidsig_hashing, hashalgo,
@@ -1591,7 +1594,8 @@ void run_instance
 		// Subkey Binding Signature (0x18) of sub
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
-				hashalgo, sigtime, keyexptime, elgflags, issuer, subsig_hashing);
+				TMCG_OPENPGP_PKALGO_DSA, hashalgo, sigtime, keyexptime,
+				elgflags, issuer, opt_rfc4880bis, subsig_hashing);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketBodyExtract(sub, 0, sub_hashing);
 		hash.clear();
@@ -1856,6 +1860,7 @@ int gnunet_opt_verbose = 0;
 int gnunet_opt_y = 0;
 int gnunet_opt_timestamping = 0;
 int gnunet_opt_nopassphrase = 0;
+int gnunet_opt_norfc4880bis = 0;
 #endif
 
 void fork_instance
@@ -1938,6 +1943,11 @@ int main
 		),
 		GNUNET_GETOPT_option_logfile(&logfile),
 		GNUNET_GETOPT_option_loglevel(&loglev),
+		GNUNET_GETOPT_option_flag('n',
+			"no-rfc4880bis",
+			"disable RFC 4880bis features",
+			&gnunet_opt_norfc4880bis
+		),
 		GNUNET_GETOPT_option_flag('N',
 			"no-passphrase",
 			"disable private key protection",
@@ -2116,7 +2126,7 @@ int main
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 			(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
 			(arg.find("-y") == 0) || (arg.find("-T") == 0) ||
-			(arg.find("-N") == 0))
+			(arg.find("-N") == 0) || (arg.find("-n") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -2132,6 +2142,8 @@ int main
 					" defines underlying DDH-hard group" << std::endl;
 				std::cout << "  -H STRING      hostname (e.g. onion address)" <<
 					" of this peer within PEERS" << std::endl;
+				std::cout << "  -n, --no-rfc4880bis  disable RFC 4880bis" <<
+					" features" << std::endl;
 				std::cout << "  -N, --no-passphrase  disable private key" <<
 					" protection" << std::endl;
 				std::cout << "  -p INTEGER     start port for built-in" <<
@@ -2173,6 +2185,8 @@ int main
 				opt_timestamping = true;
 			if ((arg.find("-N") == 0) || (arg.find("--no-passphrase") == 0))
 				opt_nopassphrase = true;
+			if ((arg.find("-n") == 0) || (arg.find("--no-rfc4880bis") == 0))
+				opt_rfc4880bis = false;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -2520,6 +2534,11 @@ int main
 				"STRING",
 				"hostname (e.g. onion address) of this peer within PEERS",
 				&gnunet_opt_hostname
+			),
+			GNUNET_GETOPT_option_flag('n',
+				"no-rfc4880bis",
+				"disable RFC 4880bis features",
+				&gnunet_opt_norfc4880bis
 			),
 			GNUNET_GETOPT_option_flag('N',
 				"no-passphrase",

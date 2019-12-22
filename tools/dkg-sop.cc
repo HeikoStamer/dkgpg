@@ -34,6 +34,7 @@
 #include "dkg-common.hh"
 
 int opt_verbose = 0;
+bool opt_rfc4880bis = true;
 bool opt_armor = true;
 bool opt_as_binary = true;
 bool opt_as_text = false;
@@ -215,8 +216,8 @@ bool generate
 	sigtime = time(NULL); // current time
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareDesignatedRevoker(TMCG_OPENPGP_PKALGO_DSA, hashalgo,
-			sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty, true,
-			dirsig_hashing);
+			sigtime, dsaflags, issuer, (tmcg_openpgp_pkalgo_t)0, empty,
+			opt_rfc4880bis, dirsig_hashing);
 	hash.clear();
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		KeyHash(pub_hashing, dirsig_hashing, hashalgo, hash, dirsig_left);
@@ -247,8 +248,9 @@ bool generate
 		tmcg_openpgp_octets_t uidsig_hashing, uidsig_left;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			PacketSigPrepareSelfSignature(
-				TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION, hashalgo,
-				sigtime, keyexptime, dsaflags, issuer, uidsig_hashing); 
+				TMCG_OPENPGP_SIGNATURE_POSITIVE_CERTIFICATION, 
+				TMCG_OPENPGP_PKALGO_DSA, hashalgo, sigtime, keyexptime,
+				dsaflags, issuer, opt_rfc4880bis, uidsig_hashing); 
 		hash.clear();
 		CallasDonnerhackeFinneyShawThayerRFC4880::
 			CertificationHash(pub_hashing, args[i], empty, uidsig_hashing,
@@ -323,7 +325,8 @@ bool generate
 	// Subkey Binding Signature (0x18) of sub
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketSigPrepareSelfSignature(TMCG_OPENPGP_SIGNATURE_SUBKEY_BINDING,
-			hashalgo, sigtime, keyexptime, elgflags, issuer, subsig_hashing);
+			TMCG_OPENPGP_PKALGO_DSA, hashalgo, sigtime, keyexptime, elgflags,
+			issuer, opt_rfc4880bis, subsig_hashing);
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		PacketBodyExtract(sub, 0, sub_hashing);
 	hash.clear();
@@ -589,13 +592,20 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
-				std::cout << "  -h, --help          print this help" <<
+				std::cout << "  -h, --help           print this help" <<
 					std::endl;
-				std::cout << "  -P, --passphrase    ask user for passphrase" <<
+				std::cout << "  -n, --no-rfc4880bis  disable features of RFC" <<
+					" 4880bis" << std::endl;
+				std::cout << "  -P, --passphrase     ask user for passphrase" <<
 					std::endl;
-				std::cout << "  -V, --verbose       increase verbosity" <<
+				std::cout << "  -V, --verbose        increase verbosity" <<
 					std::endl;
 				return 0; // not continue
+			}
+			if ((arg.find("-n") == 0) || (arg.find("--no-rfc4880bis") == 0))
+			{
+				opt_rfc4880bis = false; // disable some features of RFC 4880bis
+				continue;
 			}
 			if ((arg.find("-P") == 0) || (arg.find("--passphrase") == 0))
 			{

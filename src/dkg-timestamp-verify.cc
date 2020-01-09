@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ int main
 
 	std::string	filename, kfilename, sfilename, ofilename;
 	int 		opt_verbose = 0;
-	bool		opt_weak = false;
+	bool		opt_weak = false, opt_broken = false;
 	std::string	sigfrom_str, sigto_str;
 	struct tm	sigfrom_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	struct tm	sigto_tm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -128,7 +128,7 @@ int main
 		}
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 				(arg.find("-h") == 0) || (arg.find("-V") == 0) ||
-				(arg.find("-w") == 0))
+				(arg.find("-w") == 0) || (arg.find("-B") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -136,6 +136,8 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
+				std::cout << "  -B, --broken   allow broken hash algorithms" <<
+					" (i.e. MD5, SHA1, RMD160)" << std::endl;
 				std::cout << "  -f TIMESPEC    timestamp made before given" <<
 					" TIMESPEC is not valid" << std::endl;
 				std::cout << "  -h, --help     print this help" << std::endl;
@@ -164,6 +166,8 @@ int main
 				opt_verbose++; // increase verbosity
 			if ((arg.find("-w") == 0) || (arg.find("--weak") == 0))
 				opt_weak = true;
+			if ((arg.find("-B") == 0) || (arg.find("--broken") == 0))
+				opt_broken = true;
 			continue;
 		}
 		else if (arg.find("-") == 0)
@@ -545,6 +549,32 @@ int main
 		delete primary;
 		delete ring;
 		return -2;
+	}
+	// 6. hash algorithm (reject broken hash algorithms)
+	if ((signature->hashalgo == TMCG_OPENPGP_HASHALGO_MD5) ||
+	    (signature->hashalgo == TMCG_OPENPGP_HASHALGO_SHA1) ||
+		(signature->hashalgo == TMCG_OPENPGP_HASHALGO_RMD160))
+	{
+		if (opt_broken)
+		{
+			std::cerr << "WARNING: broken hash algorithm " << 
+				(int)signature->hashalgo << " used for signature" <<
+				std::endl;
+		}
+		else
+		{
+			if (opt_verbose)
+			{
+				std::cerr << "ERROR: broken hash algorithm " << 
+					(int)signature->hashalgo << " used for signature" <<
+					std::endl;
+			}
+			delete target_signature;
+			delete signature;
+			delete primary;
+			delete ring;
+			return -6;
+		}
 	}
 
 	// verify signature cryptographically

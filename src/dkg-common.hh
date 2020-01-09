@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -86,7 +86,8 @@
 		 const TMCG_OpenPGP_Signature *signature,
 		 const TMCG_OpenPGP_Keyring *ring,
 		 const int opt_verbose,
-		 const bool opt_weak = false);
+		 const bool opt_weak = false,
+		 const bool opt_broken = false);
 	void xtest
 		(const size_t num_xtests,
 		 const size_t whoami,

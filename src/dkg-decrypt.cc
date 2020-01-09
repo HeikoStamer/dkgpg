@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -75,7 +75,7 @@ std::string						passwords, hostname, port, yfilename;
 
 int 							opt_verbose = 0;
 bool							opt_E = false, opt_weak = false, opt_s = false;
-bool							opt_nonint = false;
+bool							opt_nonint = false, opt_broken = false;
 unsigned long int				opt_p = 55000, opt_W = 5;
 
 std::string						armored_message, armored_pubring;
@@ -1034,7 +1034,7 @@ bool decrypt_and_check_message
 			if (get_key_by_signature(ring, sig, opt_verbose, ak))
 			{
 				if (!verify_signature(msg->literal_data, ak, sig, ring,
-					opt_verbose, opt_weak))
+					opt_verbose, opt_weak, opt_broken))
 				{
 					vf = false;
 					std::cerr << "WARNING: verification of included" <<
@@ -1947,6 +1947,7 @@ int gnunet_opt_verbose = 0;
 int gnunet_opt_weak = 0;
 int gnunet_opt_E = 0;
 int gnunet_opt_s = 0;
+int gnunet_opt_broken = 0;
 #endif
 
 void fork_instance
@@ -2002,6 +2003,11 @@ int main
 	char *logfile = NULL;
 	char *cfg_fn = NULL;
 	static const struct GNUNET_GETOPT_CommandLineOption options[] = {
+		GNUNET_GETOPT_option_flag('B',
+			"broken",
+			"allow broken hash algorithms (i.e. MD5, SHA1, RMD160)",
+			&gnunet_opt_broken
+		),
 		GNUNET_GETOPT_option_cfgfile(&cfg_fn),
 		GNUNET_GETOPT_option_flag('E',
 			"echo",
@@ -2210,7 +2216,8 @@ int main
 		else if ((arg.find("--") == 0) || (arg.find("-v") == 0) ||
 			(arg.find("-h") == 0) || (arg.find("-n") == 0) ||
 			(arg.find("-V") == 0) || (arg.find("-E") == 0) ||
-			(arg.find("-K") == 0) || (arg.find("-s") == 0))
+			(arg.find("-K") == 0) || (arg.find("-s") == 0) ||
+			(arg.find("-B") == 0))
 		{
 			if ((arg.find("-h") == 0) || (arg.find("--help") == 0))
 			{
@@ -2219,6 +2226,8 @@ int main
 				std::cout << about << std::endl;
 				std::cout << "Arguments mandatory for long options are also" <<
 					" mandatory for short options." << std::endl;
+				std::cout << "  -B, --broken           allow broken hash" <<
+					" algorithms (i.e. MD5, SHA1, RMD160)" << std::endl;
 				std::cout << "  -E, --echo             enable terminal echo" <<
 					" when reading passphrase" << std::endl;
 				std::cout << "  -h, --help             print this help" <<
@@ -2254,6 +2263,8 @@ int main
 #endif
 				return 0; // not continue
 			}
+			if ((arg.find("-B") == 0) || (arg.find("--broken") == 0))
+				opt_broken = true;
 			if ((arg.find("-E") == 0) || (arg.find("--echo") == 0))
 				opt_E = true;
 			if ((arg.find("-K") == 0) || (arg.find("--weak") == 0))
@@ -2865,6 +2876,11 @@ int main
 		// start interactive variant with GNUnet or otherwise a local test
 #ifdef GNUNET
 		static const struct GNUNET_GETOPT_CommandLineOption myoptions[] = {
+			GNUNET_GETOPT_option_flag('B',
+				"broken",
+				"allow broken hash algorithms (i.e. MD5, SHA1, RMD160)",
+				&gnunet_opt_broken
+			),
 			GNUNET_GETOPT_option_flag('E',
 				"echo",
 				"enable terminal echo when reading passphrase",

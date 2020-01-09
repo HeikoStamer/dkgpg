@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -583,7 +583,8 @@ bool verify_signature
 	 const TMCG_OpenPGP_Signature *signature,
 	 const TMCG_OpenPGP_Keyring *ring,
 	 const int opt_verbose,
-	 const bool opt_weak)
+	 const bool opt_weak,
+	 const bool opt_broken)
 {
 	TMCG_OpenPGP_Pubkey *primary = NULL;
 	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
@@ -715,12 +716,32 @@ bool verify_signature
 		delete primary;
 		return false;
 	}
+	// 5. hash algorithm (reject broken hash algorithms)
+	if ((signature->hashalgo == TMCG_OPENPGP_HASHALGO_MD5) ||
+	    (signature->hashalgo == TMCG_OPENPGP_HASHALGO_SHA1) ||
+		(signature->hashalgo == TMCG_OPENPGP_HASHALGO_RMD160))
+	{
+		if (opt_broken)
+		{
+			std::cerr << "WARNING: broken hash algorithm " << 
+				(int)signature->hashalgo << " used for signature" << std::endl;
+		}
+		else
+		{
+			std::cerr << "ERROR: broken hash algorithm " << 
+				(int)signature->hashalgo << " used for signature" << std::endl;
+			delete primary;
+			return false;
+		}
+	}
 
 	// verify signature cryptographically
 	bool verify_ok = false;
 	if (subkey_selected)
+	{
 		verify_ok = signature->VerifyData(primary->subkeys[subkey_idx]->key,
 			data, opt_verbose);
+	}
 	else
 		verify_ok = signature->VerifyData(primary->key, data, opt_verbose);
 	std::string fpr;

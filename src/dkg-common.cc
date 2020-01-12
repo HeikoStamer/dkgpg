@@ -721,15 +721,18 @@ bool verify_signature
 	    (signature->hashalgo == TMCG_OPENPGP_HASHALGO_SHA1) ||
 		(signature->hashalgo == TMCG_OPENPGP_HASHALGO_RMD160))
 	{
+		std::string hashname;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			AlgorithmHashTextName(signature->hashalgo, hashname);
 		if (opt_broken)
 		{
-			std::cerr << "WARNING: broken hash algorithm " << 
-				(int)signature->hashalgo << " used for signature" << std::endl;
+			std::cerr << "WARNING: broken hash algorithm " << hashname <<
+				" used for signature" << std::endl;
 		}
 		else
 		{
-			std::cerr << "ERROR: broken hash algorithm " << 
-				(int)signature->hashalgo << " used for signature" << std::endl;
+			std::cerr << "ERROR: broken hash algorithm " << hashname <<
+				" used for signature" << std::endl;
 			delete primary;
 			return false;
 		}

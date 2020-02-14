@@ -2405,7 +2405,6 @@ int main
 		read_stdin("-----END PGP MESSAGE-----", armored_message);
 
 	// read the (ASCII-armored) public keyring from file
-	std::string armored_pubring;
 	if (kfilename.length() > 0)
 	{
 		if (!autodetect_file(kfilename, TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,

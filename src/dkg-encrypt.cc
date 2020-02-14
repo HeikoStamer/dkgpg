@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -194,8 +194,8 @@ int main
 
 	std::vector<std::string> keyspec;
 	std::string	ifilename, ofilename, s, kfilename;
-	int		opt_verbose = 0;
-	bool	opt_binary = false, opt_weak = false, opt_t = false, opt_r = false;
+	int opt_verbose = 0;
+	bool opt_binary = false, opt_weak = false, opt_t = false, opt_r = false;
 	unsigned long int opt_a = 0;
 
 	// parse argument list
@@ -530,7 +530,7 @@ int main
 		while ((passphrase != passphrase_check) || (passphrase == ""));
 
 		// encrypt session key with passphrase according to S2K
-		tmcg_openpgp_octets_t plain, salt, iv, es;
+		tmcg_openpgp_octets_t plain, salt, iv2, es;
 		tmcg_openpgp_hashalgo_t s2k_hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
 		tmcg_openpgp_byte_t rand[8], count = 0xFD; // set resonable S2K count
 		tmcg_openpgp_secure_octets_t kek;
@@ -554,14 +554,14 @@ int main
 			std::cerr << "ERROR: bad session key for SKESK" << std::endl;
 		if (opt_a != 0)
 		{
-			tmcg_openpgp_octets_t ad;
-			ad.push_back(0xC3);
-			ad.push_back(0x05);
-			ad.push_back(skalgo);
-			ad.push_back(opt_a);
+			tmcg_openpgp_octets_t ad2;
+			ad2.push_back(0xC3);
+			ad2.push_back(0x05);
+			ad2.push_back(skalgo);
+			ad2.push_back(opt_a);
 			ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				SymmetricEncryptAEAD(plain, kek, skalgo, aeadalgo, 0, ad,
-				opt_verbose, iv, es);
+				SymmetricEncryptAEAD(plain, kek, skalgo, aeadalgo, 0, ad2,
+				opt_verbose, iv2, es);
 		}
 		else
 		{
@@ -576,14 +576,17 @@ int main
 		}
 
 		if (opt_verbose > 2)
+		{
 			std::cerr << "INFO: es.size() = " << es.size() << std::endl;
+			std::cerr << "INFO: iv2.size() = " << iv2.size() << std::endl;
+		}
 
 		// create a corresponding SKESK packet
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTagEncode(3, all);
 		if (opt_a != 0)
 		{
 			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketLengthEncode(6+salt.size()+iv.size()+es.size(), all);
+				PacketLengthEncode(6+salt.size()+iv2.size()+es.size(), all);
 			all.push_back(5); // V5 format
 			all.push_back(skalgo);
 			all.push_back(aeadalgo);
@@ -591,7 +594,7 @@ int main
 			all.push_back(s2k_hashalgo); // S2K hash algo
 			all.insert(all.end(), salt.begin(), salt.end()); // salt
 			all.push_back(count); // count, a one-octet, coded value
-			all.insert(all.end(), iv.begin(), iv.end()); // AEAD IV
+			all.insert(all.end(), iv2.begin(), iv2.end()); // AEAD IV
 		}
 		else
 		{

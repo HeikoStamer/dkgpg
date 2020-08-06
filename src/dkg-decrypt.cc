@@ -851,22 +851,7 @@ bool decompress_libz
 			}
 			zs.avail_in = zlen;
 			zs.next_in = zin;
-			for (size_t i = 0; i < 4; i++)
-			{
-				if ((zs.avail_in < sizeof(zin)) &&
-					(msg->compalgo == TMCG_OPENPGP_COMPALGO_ZIP))
-				{
-					if (opt_verbose > 1)
-					{
-						std::cerr << "INFO: fill with 0xFF at zs.avail_in = " <<
-							zs.avail_in << std::endl;
-					}
-					zin[zs.avail_in] = 0xFF; // dummy byte to fake zlib header
-					zs.avail_in++;
-				}
-			}
 		}
-
 		memset(zout, 0, sizeof(zout));
 		zs.avail_out = sizeof(zout);
 		zs.next_out = zout;

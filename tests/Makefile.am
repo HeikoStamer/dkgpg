@@ -16,14 +16,15 @@
 #   along with DKGPG; if not, write to the Free Software
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 
-
-TESTS = t-dkg-gencrs t-dkg-generate t-dkg-keyinfo y-dkg-generate y-dkg-keycheck\
- t-dkg-keysign t-dkg-encrypt t-dkg-decrypt t-dkg-sign t-dkg-verify t-dkg-adduid\
- t-dkg-refresh t-dkg-revuid t-dkg-addrevoker y-dkg-keysign t-dkg-attest\
- y-dkg-encrypt y-dkg-decrypt y-dkg-sign y-dkg-verify\
- y-dkg-timestamp y-dkg-timestamp-verify\
- y-dkg-adduid y-dkg-revuid y-dkg-addrevoker y-dkg-attest\
- ts-dkg-generate ts-dkg-timestamp ts-dkg-timestamp-verify t-dkg-revoke
+TESTS = t-dkg-gencrs.test t-dkg-generate.test t-dkg-keyinfo.test\
+ y-dkg-generate.test y-dkg-keycheck.test t-dkg-keysign.test t-dkg-encrypt.test\
+ t-dkg-decrypt.test t-dkg-sign.test t-dkg-verify.test t-dkg-adduid.test\
+ t-dkg-refresh.test t-dkg-revuid.test t-dkg-addrevoker.test y-dkg-keysign.test\
+ t-dkg-attest.test y-dkg-encrypt.test y-dkg-decrypt.test y-dkg-sign.test\
+ y-dkg-verify.test y-dkg-timestamp.test y-dkg-timestamp-verify.test\
+ y-dkg-adduid.test y-dkg-revuid.test y-dkg-addrevoker.test y-dkg-attest.test\
+ ts-dkg-generate.test ts-dkg-timestamp.test ts-dkg-timestamp-verify.test\
+ t-dkg-revoke.test
 t-dkg-keyinfo.log: t-dkg-generate.log
 y-dkg-keycheck.log: y-dkg-generate.log
 t-dkg-keysign.log: t-dkg-generate.log y-dkg-generate.log
@@ -55,115 +56,124 @@ AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@\
  @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 
-noinst_PROGRAMS = $(TESTS)
+EXTRA_PROGRAMS = t-dkg-gencrs.test t-dkg-generate.test t-dkg-keyinfo.test\
+ y-dkg-generate.test y-dkg-keycheck.test t-dkg-keysign.test t-dkg-encrypt.test\
+ t-dkg-decrypt.test t-dkg-sign.test t-dkg-verify.test t-dkg-adduid.test\
+ t-dkg-refresh.test t-dkg-revuid.test t-dkg-addrevoker.test y-dkg-keysign.test\
+ t-dkg-attest.test y-dkg-encrypt.test y-dkg-decrypt.test y-dkg-sign.test\
+ y-dkg-verify.test y-dkg-timestamp.test y-dkg-timestamp-verify.test\
+ y-dkg-adduid.test y-dkg-revuid.test y-dkg-addrevoker.test y-dkg-attest.test\
+ ts-dkg-generate.test ts-dkg-timestamp.test ts-dkg-timestamp-verify.test\
+ t-dkg-revoke.test
 
-t_dkg_gencrs_SOURCES = t-dkg-gencrs.cc
-t_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_gencrs_test_SOURCES = t-dkg-gencrs.cc
+t_dkg_generate_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-generate.cc
-t_dkg_keyinfo_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-common.hh t-dkg-common.cc\
+t_dkg_keyinfo_test_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-keyinfo.cc
-t_dkg_keysign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_keysign_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-keysign.cc
-t_dkg_encrypt_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-encrypt.cc
-t_dkg_decrypt_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_encrypt_test_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-encrypt.cc
+t_dkg_decrypt_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-decrypt.cc
-t_dkg_decrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+t_dkg_decrypt_test_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
  @LIBGMP_LIBS@ @COMP_LIBS@
-t_dkg_sign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_sign_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-sign.cc
-t_dkg_verify_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-verify.cc
-t_dkg_refresh_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_verify_test_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-verify.cc
+t_dkg_refresh_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-refresh.cc
-t_dkg_revoke_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_revoke_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-revoke.cc
-t_dkg_adduid_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_adduid_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-adduid.cc
-t_dkg_revuid_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_revuid_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-revuid.cc
-t_dkg_addrevoker_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_addrevoker_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-addrevoker.cc
-t_dkg_attest_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+t_dkg_attest_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-attest.cc
 
-y_dkg_generate_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_generate_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_generate_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-generate.cc
-y_dkg_keycheck_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_keycheck_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_keycheck_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-keycheck.cc
-y_dkg_keysign_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_keycheck_test_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-keycheck.cc
+y_dkg_keysign_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_keysign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_keysign_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-keysign.cc
-y_dkg_encrypt_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_encrypt_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_encrypt_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-encrypt.cc
-y_dkg_decrypt_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_encrypt_test_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-encrypt.cc
+y_dkg_decrypt_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_decrypt_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_decrypt_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-decrypt.cc
-y_dkg_decrypt_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
+y_dkg_decrypt_test_LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@\
  @LIBGMP_LIBS@ @COMP_LIBS@
-y_dkg_sign_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_sign_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_sign_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_sign_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-sign.cc
-y_dkg_verify_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_verify_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_verify_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-verify.cc
-y_dkg_timestamp_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_verify_test_SOURCES = t-dkg-io.hh t-dkg-io.cc t-dkg-verify.cc
+y_dkg_timestamp_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_timestamp_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_timestamp_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-timestamp.cc
-y_dkg_timestamp_verify_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_timestamp_verify_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_timestamp_verify_SOURCES = t-dkg-io.hh t-dkg-io.cc\
+y_dkg_timestamp_verify_test_SOURCES = t-dkg-io.hh t-dkg-io.cc\
  t-dkg-timestamp-verify.cc
-y_dkg_adduid_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_adduid_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_adduid_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_adduid_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-adduid.cc
-y_dkg_revuid_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_revuid_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_revuid_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_revuid_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-revuid.cc
-y_dkg_addrevoker_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_addrevoker_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_addrevoker_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_addrevoker_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-addrevoker.cc
-y_dkg_attest_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
+y_dkg_attest_test_CPPFLAGS = -DDKGPG_TESTSUITE_Y -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-y_dkg_attest_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+y_dkg_attest_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-attest.cc
 
-ts_dkg_generate_CPPFLAGS = -DDKGPG_TESTSUITE_TS -I$(top_srcdir)/src\
+# tests for timestamping
+ts_dkg_generate_test_CPPFLAGS = -DDKGPG_TESTSUITE_TS -I$(top_srcdir)/src\
  @LIBTMCG_CFLAGS@ @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
-ts_dkg_generate_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+ts_dkg_generate_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-generate.cc
-ts_dkg_timestamp_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
+ts_dkg_timestamp_test_SOURCES = t-dkg-tcpip-common.hh t-dkg-tcpip-common.cc\
  t-dkg-gnunet-common.hh t-dkg-gnunet-common.cc t-dkg-common.hh t-dkg-common.cc\
  t-dkg-io.hh t-dkg-io.cc t-dkg-timestamp.cc
-ts_dkg_timestamp_verify_SOURCES = t-dkg-io.hh t-dkg-io.cc\
+ts_dkg_timestamp_verify_test_SOURCES = t-dkg-io.hh t-dkg-io.cc\
  t-dkg-timestamp-verify.cc
 

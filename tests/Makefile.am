@@ -56,7 +56,7 @@ AM_CPPFLAGS = -DDKGPG_TESTSUITE -I$(top_srcdir)/src @LIBTMCG_CFLAGS@\
  @LIBGCRYPT_CFLAGS@ @GPG_ERROR_CFLAGS@ @LIBGMP_CFLAGS@
 LDADD = @LIBTMCG_LIBS@ @LIBGCRYPT_LIBS@ @GPG_ERROR_LIBS@ @LIBGMP_LIBS@
 
-EXTRA_PROGRAMS = t-dkg-gencrs.test t-dkg-generate.test t-dkg-keyinfo.test\
+check_PROGRAMS = t-dkg-gencrs.test t-dkg-generate.test t-dkg-keyinfo.test\
  y-dkg-generate.test y-dkg-keycheck.test t-dkg-keysign.test t-dkg-encrypt.test\
  t-dkg-decrypt.test t-dkg-sign.test t-dkg-verify.test t-dkg-adduid.test\
  t-dkg-refresh.test t-dkg-revuid.test t-dkg-addrevoker.test y-dkg-keysign.test\

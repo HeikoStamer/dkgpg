@@ -33,11 +33,11 @@ t-dkg-decrypt.log: t-dkg-encrypt.log
 t-dkg-sign.log: t-dkg-encrypt.log
 t-dkg-verify.log: t-dkg-sign.log
 t-dkg-adduid.log: t-dkg-generate.log
-t-dkg-refresh.log: t-dkg-generate.log
-t-dkg-revuid.log: t-dkg-adduid.log
-t-dkg-addrevoker.log: t-dkg-generate.log
+t-dkg-refresh.log: t-dkg-generate.log t-dkg-sign.log
+t-dkg-revuid.log: t-dkg-adduid.log t-dkg-refresh.log
+t-dkg-addrevoker.log: t-dkg-generate.log t-dkg-refresh.log
 y-dkg-keysign.log: t-dkg-generate.log y-dkg-generate.log
-t-dkg-attest.log: y-dkg-keysign.log
+t-dkg-attest.log: y-dkg-keysign.log t-dkg-refresh.log
 y-dkg-encrypt.log: y-dkg-generate.log
 y-dkg-decrypt.log: y-dkg-encrypt.log
 y-dkg-sign.log: y-dkg-encrypt.log

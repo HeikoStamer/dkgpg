@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-// [DKG19] https://datatracker.ietf.org/doc/draft-dkg-openpgp-stateless-cli/
+// [DKG20] https://datatracker.ietf.org/doc/draft-dkg-openpgp-stateless-cli/
 
 // include headers
 #ifdef HAVE_CONFIG_H
@@ -27,6 +27,8 @@
 
 #include <string>
 #include <vector>
+#include <ctime>
+#include <cstdio>
 
 #include <libTMCG.hh>
 
@@ -38,6 +40,10 @@ bool opt_rfc4880bis = true;
 bool opt_armor = true;
 bool opt_as_binary = true;
 bool opt_as_text = false;
+time_t opt_not_before = 0;
+time_t opt_not_after = 0;
+std::vector<std::string> opt_with_password;
+std::vector<std::string> opt_sign_with;
 
 bool generate
 	(const std::vector<std::string> &args,
@@ -564,6 +570,170 @@ bool sign
 	return true;
 }
 
+bool verify
+	(const std::vector<std::string> &args,
+	 const tmcg_openpgp_octets_t &data,
+	 std::vector<std::string> &verifications)
+{
+	// read the signature(s) 
+	std::string armored_signatures;
+	if (!autodetect_file(args[0], TMCG_OPENPGP_ARMOR_SIGNATURE,
+		armored_signatures))
+	{
+		return false;
+	}
+	// parse the signature(s)
+	TMCG_OpenPGP_Signatures sigs;
+	bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+		SignaturesParse(armored_signatures, opt_verbose, sigs);
+	if (!parse_ok)
+	{
+		std::cerr << "ERROR: cannot parse resp. use the" <<
+			" provided signature(s)" << std::endl;
+		return false;
+	}
+	// verify the signature(s)
+	for (size_t i = 0; i < sigs.size(); i++)
+	{
+		if (opt_verbose)
+			sigs[i]->PrintInfo();
+		for (size_t j = 1; j < args.size(); j++)
+		{
+			std::string armored_pubkey;
+			if (!autodetect_file(args[j], TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+				armored_pubkey))
+			{
+				for (size_t k = 0; k < sigs.size(); k++)
+					delete sigs[k];
+				return false;
+			}
+			TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
+			TMCG_OpenPGP_Pubkey *primary = NULL;
+			parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+				PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+			if (parse_ok)
+			{
+				primary->CheckSelfSignatures(ring, opt_verbose);
+				if (!primary->valid)
+				{
+					std::cerr << "WARNING: primary key is not valid" << std::endl;
+					delete primary;
+					delete ring;
+					continue;
+				}
+				primary->CheckSubkeys(ring, opt_verbose);
+				primary->Reduce(); // keep only valid subkeys
+				if (primary->Weak(opt_verbose))
+				{
+					std::cerr << "WARNING: primary key is weak" << std::endl;
+					delete primary;
+					delete ring;
+					continue;
+				}
+			}
+			else
+			{
+				std::cerr << "WARNING: cannot parse primary key" << std::endl;
+				delete ring;
+				continue;
+			}
+			// select corresponding public key of the issuer from subkeys
+			bool subkey_selected = false;
+			size_t subkey_idx = 0, keyusage = 0;
+			time_t ckeytime = 0, ekeytime = 0;
+// TODO
+			// verify signature cryptographically
+			bool verify_ok = false;
+			if (subkey_selected)
+			{
+				verify_ok = sigs[i]->Verify(primary->subkeys[subkey_idx]->key,
+					data, opt_verbose);
+			}
+			else
+				verify_ok = sigs[i]->Verify(primary->key, data, opt_verbose);
+			if (verify_ok)
+			{
+				std::string v;
+// TODO
+				verifications.push_back(v);
+			}
+			delete primary;
+			delete ring;
+		}
+	}
+	for (size_t i = 0; i < sigs.size(); i++)
+		delete sigs[i];
+	return true;
+}
+
+bool timestamp
+	(const std::string &s, time_t &ts)
+{
+	if (s == "-")
+	{
+		ts = 0; // beginning or end of time	
+	}
+	else if (s == "now")
+	{
+		ts = time(NULL); // now
+	}
+	else
+	{
+		struct tm t = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+		if ((s.find("Z") != s.npos) && (s.find("-") != s.npos))
+		{
+			char *p = strptime(s.c_str(),
+				"%Y-%m-%dT%H:%M:%SZ", &t);
+			if (p == NULL)
+				return false;
+		}
+		else if ((s.find("Z") != s.npos) && (s.find("-") == s.npos))
+		{
+			char *p = strptime(s.c_str(),
+				"%Y%m%dT%H%M%SZ", &t); // FIXME: may not work
+			if (p == NULL)
+				return false;
+		}
+		else if (s.find("+") != s.npos)
+		{
+			int tz_hour = 0, tz_min = 0, n = 0;
+			n = sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d+%d:%d",
+				&t.tm_year, &t.tm_mon, &t.tm_mday,
+				&t.tm_hour, &t.tm_min, &t.tm_sec,
+				&tz_hour, &tz_min);
+			if (n < 7)
+				return false;
+			t.tm_year -= 1900;
+			t.tm_mon -= 1;
+			if (tz_hour <= 23)
+			{
+				t.tm_hour += tz_hour;
+				t.tm_min += tz_min;
+			}
+			else
+			{
+// TODO
+			}
+		}
+		else if (s.find("+") == s.npos)
+		{
+			int tz_hour = 0, tz_min = 0, n = 0;
+			n = sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d-%d:%d",
+				&t.tm_year, &t.tm_mon, &t.tm_mday,
+				&t.tm_hour, &t.tm_min, &t.tm_sec,
+				&tz_hour, &tz_min);
+			if (n < 7)
+				return false;
+			t.tm_hour -= tz_hour;
+			t.tm_min -= tz_min;
+		}
+		ts = mktime(&t);
+		if (ts == ((time_t) -1))
+			return false;
+	}
+	return true;
+}
+
 int main
 	(int argc, char **argv)
 {
@@ -574,6 +744,8 @@ int main
 	std::vector<std::string> args;
 	bool opt_passphrase = false;
 	bool end_of_options = false;
+	opt_not_before = 0;
+	opt_not_after = time(NULL);
 
 	for (size_t i = 0; i < (size_t)(argc - 1); i++)
 	{
@@ -617,6 +789,7 @@ int main
 				opt_verbose++; // increase verbosity
 				continue;
 			}
+			// The following options are from [DKG20].
 			if (arg.find("--no-armor") == 0)
 			{
 				opt_armor = false; // disable ASCII-armored output
@@ -624,25 +797,61 @@ int main
 			}
 			if (arg.find("--as=binary") == 0)
 			{
-				opt_as_binary = true; // choose signature type "binary"
+				opt_as_binary = true; // choose format "binary"
 				opt_as_text = false;
 				continue;
 			}
 			if (arg.find("--as=text") == 0)
 			{
-				opt_as_binary = false; // choose signature type "text"
+				opt_as_binary = false; // choose format "text"
 				opt_as_text = true;
 				continue;
 			}
-			std::cerr << "ERROR: unknown SOP option \"" << arg << "\"" <<
-				std::endl;
+			if (arg.find("--not-before=") == 0)
+			{
+				std::string s = arg.substr(13);
+				if (!timestamp(s, opt_not_before))
+				{
+					std::cerr << "ERROR: wrong timestamp" <<
+						" format" << std::endl;
+					return -1;
+				}
+				continue;
+			}
+			if (arg.find("--not-after=") == 0)
+			{
+				std::string s = arg.substr(12);
+				if (!timestamp(s, opt_not_after))
+				{
+					std::cerr << "ERROR: wrong timestamp" <<
+						" format" << std::endl;
+					return -1;
+				}
+				continue;
+			}
+			if (arg.find("--with-password=") == 0)
+			{
+				std::string s = arg.substr(16);
+				opt_with_password.push_back(s);
+				continue;
+			}
+			if (arg.find("--sign-with=") == 0)
+			{
+				std::string s = arg.substr(12);
+				opt_sign_with.push_back(s);
+				continue;
+			}
+			std::cerr << "ERROR: SOP option \"" << arg << "\" not" <<
+				" supported" << std::endl;
 			return 37;
 		}
 		else
 		{
 			// read arguments
 			if (subcmd.length() == 0)
+			{
 				subcmd = arg; // 1st argument is the SOP subcommand
+			}
 			else
 			{
 				if (!valid_utf8(arg))
@@ -722,15 +931,22 @@ int main
 	int ret = 0;
 	if (subcmd == "version")
 	{
+		// Version Information
 		// The version string emitted should contain the name of the "sop"
 		// implementation, followed by a single space, followed by the version
-		// number. [DKG19]
+		// number. A "sop" implementation should use a version number that
+		// respects an established standard that is easily comparable and
+		// parsable, like [SEMVER]. [DKG20]
 		std::cout << version << std::endl;
 	}
 	else if (subcmd == "generate-key")
 	{
-		// Generate a single default OpenPGP certificate with zero or more
-		// User IDs. [DKG19]
+		// Generate a Secret Key
+		//   Standard Input: ignored
+		//   Standard Output: "KEY"
+		// Generate a single default OpenPGP key with zero or more User IDs.
+		// The generared secret key SHOULD be usable for as much of the "sop"
+		// functionality as possible. [DKG20]
 		if (!generate(args, passphrase))
 			ret = -1;
 	}
@@ -740,17 +956,19 @@ int main
 		//   Standard Input: "KEY"
 		//   Standard Output: "CERTS"
 		// Note that the resultant "CERTS" object will only ever contain one
-   		// OpenPGP certificate. [DKG19]
+   		// OpenPGP certificate, since "KEY" contains exactly one OpenPGP
+		// Transferable Secret Key. [DKG20]
 		if (!extract(passphrase))
 			ret = -1;
 	}
 	else if (subcmd == "sign")
 	{
-		// Create a Detached Signature
+		// Create Detached Signatures
 		//   Standard Input: "DATA"
-		//   Standard Output: "SIGNATURE"
-		// "--as" defaults to "binary".  If "--as=text" and the input "DATA" is
-		// not valid "UTF-8", "sop sign" fails with a return code of 53. [DKG19]
+		//   Standard Output: "SIGNATURES"
+		// Exactly one signature will be made by each supplied "KEY".
+		// "--as" defaults to "binary". If "--as=text" and the input "DATA" is
+		// not valid "UTF-8", "sop sign" fails with "EXPECTED_TEXT". [DKG20]
 		tmcg_openpgp_octets_t data;
 		char c;
 		while (std::cin.get(c))
@@ -765,6 +983,98 @@ int main
 		}
 		if ((ret == 0) && !sign(args, passphrase, data))
 			ret = -1;
+	}
+	else if (subcmd == "verify")
+	{
+		// Verify Detached Signatures
+		//  Standard Input: "DATA"
+		//  Standard Output: "VERIFICATIONS"
+		// "--not-before" and "--not-after" indicate that signatures
+		// with dates outside certain range MUST NOT be considered
+		// valid.
+		// "--not-before" defaults to the beginning of time. Accepts
+		// the special value "-" to indicate the beginning of time
+		// (i.e. no lower boundary).
+		// "--not-after" defaults to the current system time ("now").
+		// Accepts the special value "-" to indicate the end of time
+		// (i.e. no upper boundary).
+		// "sop verify" only returns "OK" if at least one certificate
+		// included in any "CERTS" object made a valid signature in
+		// the range over the "DATA" supplied.
+		// For details about the valid signatures, the user MUST
+		// inspect the "VERIFICATIONS" output. [DKG20]
+		tmcg_openpgp_octets_t data;
+		std::vector<std::string> verifications;
+		char c;
+		while (std::cin.get(c))
+			data.push_back(c);
+		// If no "CERTS" are supplied, "sop verify" fails with
+		// "MISSING_ARG". [DKG20]
+		if (args.size() < 2)
+		{
+			std::cerr << "ERROR: Missing required argument" <<
+				std::endl;
+			ret = 19;
+		}
+		if ((ret == 0) && !verify(args, data, verifications))
+			ret = -1;
+		// If no valid signatures are found, "sop verify" fails with
+		// "NO_SIGNATURE". [DKG20]
+		if ((ret == 0) && (verifications.size() < 1))
+		{
+			std::cerr << "ERROR: No acceptable signatures found" <<
+				std::endl;
+			ret = 3;
+		}
+		for (size_t i = 0; i < verifications.size(); i++)
+			std::cout << verifications[i] << std::endl;
+	}
+	else if (subcmd == "encrypt")
+	{
+		// Encrypt a Message
+		//   Standard Input: "DATA"
+		//   Standard Output: "CIPHERTEXT"
+		// "--as" defaults to "binary". The setting of "--as"
+		// corresponds to the one octet format field found in
+		// the Literal Data packet at the core of the output
+		// "CIPHERTEXT". If "--as" is set to "binary", the
+		// octet is "b" ("0x62"). If it is "text", the format
+		// octet is "u" ("0x75").  If it is "mime", the format
+		// octet is "m" ("0x6d").
+		// "--with-password" enables symmetric encryption (and
+		// can be used multiple times if multiple passwords are
+		// desired).  If "sop encrypt" encounters a "PASSWORD"
+		// which is not a valid "UTF-8" string, or is otherwise
+		// not robust in its representation to humans, it fails
+		// with "PASSWORD_NOT_HUMAN_READABLE". If "sop encrypt"
+		// sees trailing whitespace at the end of a "PASSWORD",
+		// it will trim the trailing whitespace before using the
+		// password.
+		// "--sign-with" creates exactly one signature by the
+		// identified secret key (and can be used multiple times
+		// if signatures from multiple keys are desired).
+		// If "--as" is set to "binary", then "--sign-with" will
+		// sign as a binary document (OpenPGP signature type "0x00").
+		// If "--as" is set to "text", then "--sign-with" will
+		// sign as a canonical text document (OpenPGP signature
+		// type "0x01"). In this case, if the input "DATA" is not
+		// valid "UTF-8", "sop encrypt" fails with "EXPECTED_TEXT".
+		// [DKG20]
+		tmcg_openpgp_octets_t data;
+		char c;
+		while (std::cin.get(c))
+			data.push_back(c);
+		if (opt_as_text)
+		{
+			if (!valid_utf8(data))
+			{
+				std::cerr << "ERROR: invalid UTF-8 encoding found" << std::endl;
+				ret = 53;
+			}
+		}
+
+// TODO
+
 	}
 	else
 	{

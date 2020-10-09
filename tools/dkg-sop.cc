@@ -597,6 +597,29 @@ bool verify
 	{
 		if (opt_verbose)
 			sigs[i]->PrintInfo();
+		// 5. signature time (signatures made before or after are not valid)
+		if ((sigs[i]->creationtime < opt_not_before) ||
+			(sigs[i]->creationtime > opt_not_after))
+		{
+			std::cerr << "WARNING: creation time of signature" <<
+				" #" << i << " is outside provided range;" <<
+				" signature ignored" << std::endl;
+			continue;
+		}
+		// 6. hash algorithm (reject broken hash algorithms)
+		if ((sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_MD5) ||
+		    (sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_SHA1) ||
+		    (sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_RMD160))
+		{
+			std::string hashname;
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				AlgorithmHashTextName(sigs[i]->hashalgo, hashname);
+			std::cerr << "WARNING: broken hash algorithm " <<
+				hashname << " used for signature #" << i <<
+				"; signature ignored" << std::endl;
+			continue;
+		}
+		// all provided 
 		for (size_t j = 1; j < args.size(); j++)
 		{
 			std::string armored_pubkey;
@@ -616,7 +639,8 @@ bool verify
 				primary->CheckSelfSignatures(ring, opt_verbose);
 				if (!primary->valid)
 				{
-					std::cerr << "WARNING: primary key is not valid" << std::endl;
+					std::cerr << "WARNING: primary key #" << (j-1) <<
+						" is not valid" << std::endl;
 					delete primary;
 					delete ring;
 					continue;
@@ -625,7 +649,8 @@ bool verify
 				primary->Reduce(); // keep only valid subkeys
 				if (primary->Weak(opt_verbose))
 				{
-					std::cerr << "WARNING: primary key is weak" << std::endl;
+					std::cerr << "WARNING: primary key #" << (j-1) <<
+						" is weak" << std::endl;
 					delete primary;
 					delete ring;
 					continue;
@@ -633,7 +658,8 @@ bool verify
 			}
 			else
 			{
-				std::cerr << "WARNING: cannot parse primary key" << std::endl;
+				std::cerr << "WARNING: cannot parse primary key #" << (j-1) <<
+					std::endl;
 				delete ring;
 				continue;
 			}
@@ -641,20 +667,133 @@ bool verify
 			bool subkey_selected = false;
 			size_t subkey_idx = 0, keyusage = 0;
 			time_t ckeytime = 0, ekeytime = 0;
-// TODO
+			for (size_t k = 0; k < primary->subkeys.size(); k++)
+			{
+				if (((primary->subkeys[k]->AccumulateFlags() & 0x02) == 0x02) ||
+				    (!primary->subkeys[k]->AccumulateFlags() &&
+					((primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+					(primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) ||
+					(primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_DSA) ||
+					(primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA))))
+				{
+					if (CallasDonnerhackeFinneyShawThayerRFC4880::
+						OctetsCompare(sigs[i]->issuer, primary->subkeys[k]->id) &&
+						!primary->subkeys[k]->Weak(opt_verbose))
+					{
+						subkey_selected = true;
+						subkey_idx = k;
+						keyusage = primary->subkeys[k]->AccumulateFlags();
+						ckeytime = primary->subkeys[k]->creationtime;
+						ekeytime = primary->subkeys[k]->expirationtime;
+						break;
+					}
+				}
+			}
+			// check the primary key, if no admissible subkey has been selected
+			if (!subkey_selected)
+			{
+				if (((primary->AccumulateFlags() & 0x02) != 0x02) &&
+				    (!primary->AccumulateFlags() &&
+					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) &&
+					(primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA) &&
+					(primary->pkalgo != TMCG_OPENPGP_PKALGO_ECDSA)))
+				{
+					std::cerr << "WARNING: no admissible public key found" <<
+						std::endl;
+					delete primary;
+					delete ring;
+					continue;
+				}
+				if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+					OctetsCompare(sigs[i]->issuer, primary->id))
+				{
+					std::cerr << "WARNING: no admissible public key found" <<
+						std::endl;
+					delete primary;
+					delete ring;
+					continue;
+				}
+				keyusage = primary->AccumulateFlags();
+				ckeytime = primary->creationtime;
+				ekeytime = primary->expirationtime;
+			}
+			// additional validity checks on selected key and signature
+			time_t current_time = time(NULL);
+			// 1. key validity time (signatures made before key creation or
+			//    after key expiry are not valid)
+			if (sigs[i]->creationtime < ckeytime)
+			{
+				delete primary;
+				delete ring;
+				continue;
+			}
+			if (ekeytime && (sigs[i]->creationtime > (ckeytime + ekeytime)))
+			{
+				delete primary;
+				delete ring;
+				continue;
+			}
+			// 2. signature validity time (expired signatures are not valid)
+			if (sigs[i]->expirationtime &&
+				(current_time > (sigs[i]->creationtime + sigs[i]->expirationtime)))
+			{
+				delete primary;
+				delete ring;
+				continue;
+			}
+			// 3. key usage flags (signatures made by keys not with the
+			//    "signing" capability are not valid)
+			if ((keyusage & 0x02) != 0x02)
+			{
+				delete primary;
+				delete ring;
+				continue;
+			}
+			// 4. key validity time (expired keys are not valid)
+			if (ekeytime && (current_time > (ckeytime + ekeytime)))
+			{
+				delete primary;
+				delete ring;
+				continue;
+			}
 			// verify signature cryptographically
 			bool verify_ok = false;
+			std::string fpr;
 			if (subkey_selected)
 			{
 				verify_ok = sigs[i]->Verify(primary->subkeys[subkey_idx]->key,
 					data, opt_verbose);
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					FingerprintConvertPlain(
+						primary->subkeys[subkey_idx]->fingerprint, fpr);
 			}
 			else
+			{
 				verify_ok = sigs[i]->Verify(primary->key, data, opt_verbose);
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					FingerprintConvertPlain(primary->fingerprint, fpr);
+			}
 			if (verify_ok)
 			{
 				std::string v;
-// TODO
+				struct tm *lt = gmtime(&current_time);
+				lt->tm_isdst = -1;
+				time_t utc_time = mktime(lt);
+				struct tm *ut = gmtime(&utc_time);
+				char buf[50];
+				memset(buf, 0, sizeof(buf));
+				strftime(buf, sizeof(buf), "%FT%TZ", ut);
+				v += buf; // ISO-8601 UTC datestamp
+				v += " ";
+				v += fpr; // Fingerprint of the signing key (may be a subkey)
+				v += " ";
+				fpr = "";
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					FingerprintConvertPlain(primary->fingerprint, fpr);
+				v += fpr; // Fingerprint of primary key of signing certificate
+				v += " ";
+				v += args[j]; // message describing the verification (free form)
 				verifications.push_back(v);
 			}
 			delete primary;

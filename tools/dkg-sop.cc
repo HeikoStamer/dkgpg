@@ -762,7 +762,7 @@ bool verify
 			std::string fpr;
 			if (subkey_selected)
 			{
-				verify_ok = sigs[i]->Verify(primary->subkeys[subkey_idx]->key,
+				verify_ok = sigs[i]->VerifyData(primary->subkeys[subkey_idx]->key,
 					data, opt_verbose);
 				CallasDonnerhackeFinneyShawThayerRFC4880::
 					FingerprintConvertPlain(
@@ -770,9 +770,14 @@ bool verify
 			}
 			else
 			{
-				verify_ok = sigs[i]->Verify(primary->key, data, opt_verbose);
+				verify_ok = sigs[i]->VerifyData(primary->key, data, opt_verbose);
 				CallasDonnerhackeFinneyShawThayerRFC4880::
 					FingerprintConvertPlain(primary->fingerprint, fpr);
+			}
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: key #" << (j-1) << " is " << fpr <<
+					std::endl;
 			}
 			if (verify_ok)
 			{

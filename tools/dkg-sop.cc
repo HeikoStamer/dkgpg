@@ -762,11 +762,10 @@ bool verify
 			std::string fpr;
 			if (subkey_selected)
 			{
-				verify_ok = sigs[i]->VerifyData(primary->subkeys[subkey_idx]->key,
-					data, opt_verbose);
+				TMCG_OpenPGP_Subkey *sub = primary->subkeys[subkey_idx];
+				verify_ok = sigs[i]->VerifyData(sub->key, data, opt_verbose);
 				CallasDonnerhackeFinneyShawThayerRFC4880::
-					FingerprintConvertPlain(
-						primary->subkeys[subkey_idx]->fingerprint, fpr);
+					FingerprintConvertPlain(sub->fingerprint, fpr);
 			}
 			else
 			{
@@ -782,11 +781,8 @@ bool verify
 			if (verify_ok)
 			{
 				std::string v;
-				struct tm *lt = gmtime(&current_time);
-				lt->tm_isdst = -1;
-				time_t utc_time = mktime(lt);
-				struct tm *ut = gmtime(&utc_time);
-				char buf[50];
+				struct tm *ut = gmtime(&current_time);
+				char buf[1024];
 				memset(buf, 0, sizeof(buf));
 				strftime(buf, sizeof(buf), "%FT%TZ", ut);
 				v += buf; // ISO-8601 UTC datestamp
@@ -933,7 +929,7 @@ int main
 				opt_verbose++; // increase verbosity
 				continue;
 			}
-			// The following options are from [DKG20].
+			// The following options are defined in [DKG20].
 			if (arg.find("--no-armor") == 0)
 			{
 				opt_armor = false; // disable ASCII-armored output
@@ -985,6 +981,8 @@ int main
 				opt_sign_with.push_back(s);
 				continue;
 			}
+			// If a "sop" implementation does not handle a supplied option for
+			// a given subcommand, it fails with "UNSUPPORTED_OPTION". [DKG20]
 			std::cerr << "ERROR: SOP option \"" << arg << "\" not" <<
 				" supported" << std::endl;
 			return 37;
@@ -1071,7 +1069,9 @@ int main
 		while (passphrase != passphrase_check);
 	}
 
-	// execute each supported subcommand
+	// perpare input, execute corresponding subcommand, and evaluate return code
+	// If the user supplies a subcommand that "sop" does not implement, it
+	// fails with "UNSUPPORTED_SUBCOMMAND". [DKG20]
 	int ret = 0;
 	if (subcmd == "version")
 	{
@@ -1156,8 +1156,7 @@ int main
 		// "MISSING_ARG". [DKG20]
 		if (args.size() < 2)
 		{
-			std::cerr << "ERROR: Missing required argument" <<
-				std::endl;
+			std::cerr << "ERROR: Missing required argument" << std::endl;
 			ret = 19;
 		}
 		if ((ret == 0) && !verify(args, data, verifications))
@@ -1166,8 +1165,7 @@ int main
 		// "NO_SIGNATURE". [DKG20]
 		if ((ret == 0) && (verifications.size() < 1))
 		{
-			std::cerr << "ERROR: No acceptable signatures found" <<
-				std::endl;
+			std::cerr << "ERROR: No acceptable signatures found" << std::endl;
 			ret = 3;
 		}
 		for (size_t i = 0; i < verifications.size(); i++)

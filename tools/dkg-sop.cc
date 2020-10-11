@@ -874,6 +874,29 @@ bool timestamp
 	return true;
 }
 
+bool encrypt
+	(const std::vector<std::string> &args,
+	 const tmcg_openpgp_secure_string_t &passphrase,
+	 const tmcg_openpgp_octets_t &data)
+{
+	tmcg_openpgp_octets_t msg;
+// TODO
+	// output the result
+	if (opt_armor)
+	{
+		std::string armor;
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, msg, armor);
+		std::cout << armor << std::endl;
+	}
+	else
+	{
+		for (size_t i = 0; i < msg.size(); i++)
+			std::cout << msg[i];
+	}
+	return true;
+}
+
 int main
 	(int argc, char **argv)
 {
@@ -1214,9 +1237,8 @@ int main
 				ret = 53;
 			}
 		}
-
-// TODO
-
+		if ((ret == 0) && !encrypt(args, passphrase, data))
+			ret = -1;
 	}
 	else
 	{

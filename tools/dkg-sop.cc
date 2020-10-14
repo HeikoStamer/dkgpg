@@ -30,6 +30,11 @@
 #include <ctime>
 #include <cstdio>
 
+#include <zlib.h>
+#ifdef LIBBZ
+#include <bzlib.h>
+#endif
+
 #include <libTMCG.hh>
 
 #include "dkg-io.hh"
@@ -1712,6 +1717,159 @@ bool decrypt_session_key
 	return false;
 }
 
+bool decompress_libz
+	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_octets_t &infmsg)
+{
+	int rc = 0;
+	z_stream zs;
+	unsigned char zin[4096];
+	unsigned char zout[4096];
+	zs.zalloc = Z_NULL;
+	zs.zfree = Z_NULL;
+	zs.opaque = Z_NULL;
+	zs.avail_in = 0;
+	zs.next_in = Z_NULL;
+	static const char* myZlibVersion = ZLIB_VERSION;
+	if (zlibVersion()[0] != myZlibVersion[0])
+	{
+		if (opt_verbose > 1)
+			std::cerr << "ERROR: incompatible zlib versions found" << std::endl;
+		return false;
+	}
+	else if (std::strcmp(zlibVersion(), ZLIB_VERSION) != 0)
+	{
+		if (opt_verbose > 1)
+			std::cerr << "WARNING: different zlib versions found" << std::endl;
+	}
+	switch (msg->compalgo)
+	{
+		case TMCG_OPENPGP_COMPALGO_ZIP:
+			rc = inflateInit2(&zs, -15);
+			break;
+		case TMCG_OPENPGP_COMPALGO_ZLIB:
+			rc = inflateInit(&zs);
+			break;
+		default:
+			if (opt_verbose)
+			{
+				std::cerr << "ERROR: compression algorithm " <<
+					(int)msg->compalgo << " is not supported" << std::endl;
+			}
+			return false;
+			break;
+	}
+	if (rc != Z_OK)
+	{
+		if (opt_verbose)
+		{
+			std::cerr << "ZLIB ERROR: " << (int)rc;
+			if (zs.msg != NULL)
+				std::cerr << " " << zs.msg;
+			std::cerr << std::endl;
+		}
+		return false;
+	}
+	size_t cnt = 0;
+	memset(zin, 0, sizeof(zin));
+	do
+	{
+		if (zs.avail_in == 0)
+		{
+			size_t zlen = 0;
+			for (size_t i = 0; i < sizeof(zin); i++)
+			{
+				if (cnt >= (msg->compressed_data).size())
+					break;
+				zin[i] = (msg->compressed_data)[cnt];
+				zlen++, cnt++;
+			}
+			zs.avail_in = zlen;
+			zs.next_in = zin;
+		}
+		memset(zout, 0, sizeof(zout));
+		zs.avail_out = sizeof(zout);
+		zs.next_out = zout;
+		rc = inflate(&zs, Z_SYNC_FLUSH);
+		if ((rc == Z_NEED_DICT) || (rc == Z_DATA_ERROR) ||
+			(rc == Z_MEM_ERROR) || (rc == Z_STREAM_ERROR))
+		{
+			if (opt_verbose)
+			{
+				std::cerr << "ZLIB ERROR: " << rc;
+				if (zs.msg != NULL)
+					std::cerr << " " << zs.msg;
+				std::cerr << std::endl;
+			}
+			(void)inflateEnd(&zs);
+			return false;
+		}
+		for (size_t i = 0; i < (sizeof(zout) - zs.avail_out); i++)
+			infmsg.push_back(zout[i]);
+	}
+	while ((rc != Z_STREAM_END) && (rc != Z_BUF_ERROR));
+	(void)inflateEnd(&zs);
+	return (rc == Z_STREAM_END);
+}
+
+#ifdef LIBBZ
+bool decompress_libbz
+	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_octets_t &infmsg)
+{
+	int rc = 0;
+	bz_stream zs;
+	char zin[4096];
+	char zout[4096];
+	zs.bzalloc = NULL;
+	zs.bzfree = NULL;
+	zs.opaque = NULL;
+	zs.avail_in = 0;
+	zs.next_in = NULL;
+	rc = BZ2_bzDecompressInit(&zs, 0, 0);
+	if (rc != BZ_OK)
+	{
+		if (opt_verbose)
+			std::cerr << "BZLIB ERROR: " << (int)rc << std::endl;
+		return false;
+	}
+	size_t cnt = 0;
+	memset(zin, 0, sizeof(zin));
+	do
+	{
+		if (zs.avail_in == 0)
+		{
+			size_t zlen = 0;
+			for (size_t i = 0; i < sizeof(zin); i++)
+			{
+				if (cnt >= (msg->compressed_data).size())
+					break;
+				zin[i] = (msg->compressed_data)[cnt];
+				zlen++, cnt++;
+			}
+			zs.avail_in = zlen;
+			zs.next_in = zin;
+		}
+		memset(zout, 0, sizeof(zout));
+		zs.avail_out = sizeof(zout);
+		zs.next_out = zout;
+		rc = BZ2_bzDecompress(&zs);
+		if ((rc == BZ_DATA_ERROR) || (rc == BZ_DATA_ERROR_MAGIC) ||
+			(rc == BZ_MEM_ERROR))
+		{
+			if (opt_verbose)
+				std::cerr << "BZLIB ERROR: " << rc << std::endl;
+			BZ2_bzDecompressEnd(&zs);
+			return false;
+		}
+		for (size_t i = 0; i < (sizeof(zout) - zs.avail_out); i++)
+			infmsg.push_back(zout[i]);
+	}
+	while ((rc != BZ_STREAM_END) && (rc != BZ_PARAM_ERROR));
+	BZ2_bzDecompressEnd(&zs);
+	return (rc == BZ_STREAM_END);
+}
+#endif
+
+
 bool decrypt
 	(const std::vector<std::string> &args,
 	 const tmcg_openpgp_secure_string_t &passphrase,
@@ -1738,7 +1896,7 @@ bool decrypt
 	if (!CallasDonnerhackeFinneyShawThayerRFC4880::
 		MessageParse(armored_message, opt_verbose, msg))
 	{
-		std::cerr << "ERROR: message parsing failed" << std::endl;
+		std::cerr << "ERROR: message parsing failed (1)" << std::endl;
 		return false;
 	}
 	if (opt_verbose > 1)
@@ -1749,9 +1907,11 @@ bool decrypt
 		delete msg;
 		return false;
 	}
-	// decrypt session key TODO: use option --with-session-key
+	// decrypt session key
 	tmcg_openpgp_secure_octets_t seskey;
 	bool seskey_decrypted = false;
+	if (opt_with_session_key.size() > 0)
+		seskey_decrypted = true;
 	for (size_t i = 0; (i < args.size()) && !seskey_decrypted; i++)
 	{
 		std::string armored_key;
@@ -1795,16 +1955,130 @@ bool decrypt
 		delete msg;
 		return false;
 	}
-	tmcg_openpgp_octets_t content;
-/*
-	if (!decrypt_and_check_message(seskey, msg, content))
+	// use session keys provided by option --with-session-key
+	for (size_t k = 0; k < opt_with_session_key.size(); k++)
 	{
+		size_t col = opt_with_session_key[k].find(":");
+		size_t kst = 0;
+		tmcg_openpgp_skalgo_t algo = TMCG_OPENPGP_SKALGO_PLAINTEXT;
+		seskey.clear();
+		if ((col != opt_with_session_key[k].npos) && (col > 0))
+		{
+			std::string tmp = opt_with_session_key[k].substr(0, col);
+			algo = (tmcg_openpgp_skalgo_t)strtoul(tmp.c_str(), NULL, 10);
+			seskey.push_back(algo);
+			kst = col + 1;
+		}
+		else if ((col != opt_with_session_key[k].npos) && (col == 0))
+		{
+			kst = 1;
+		}
+		if (opt_verbose)
+		{
+			std::cerr << "INFO: use algorithm " << (int)algo << " and" <<
+				" session key provided by user" << std::endl;
+		}
+		bool first = true;
+		tmcg_openpgp_secure_string_t hex;
+		for (size_t i = kst; i < opt_with_session_key[k].length(); i++)
+		{
+			if (first)
+			{
+				hex = opt_with_session_key[k][i];
+				first = false;
+			}
+			else
+			{
+				hex += opt_with_session_key[k][i];
+				hex = strtoul(hex.c_str(), NULL, 16);
+				seskey.push_back(hex[0]);
+				first = true;
+			}
+		}
+		tmcg_openpgp_octets_t data;
+		if (msg->Decrypt(seskey, 0, data))
+			break;
+	}
+	// decrypt OpenPGP message
+	tmcg_openpgp_octets_t data;
+	if (!msg->Decrypt(seskey, opt_verbose, data))
+	{
+		std::cerr << "ERROR: message decryption failed" << std::endl;
 		delete msg;
 		return false;
 	}
-*/
-	// TODO: verify signatures
-std::cerr << "TODO" << std::endl;
+	if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+		MessageParse(data, opt_verbose, msg))
+	{
+		std::cerr << "ERROR: message parsing failed (2)" << std::endl;
+		delete msg;
+		return false;
+	}
+	if (opt_verbose > 1)
+		msg->PrintInfo();
+	// decompress OpenPGP message
+	if ((msg->compressed_data).size() != 0)
+	{
+		tmcg_openpgp_octets_t data;
+		bool decompress_ok = false;
+		switch (msg->compalgo)
+		{
+			case TMCG_OPENPGP_COMPALGO_UNCOMPRESSED:
+				for (size_t i = 0; i < (msg->compressed_data).size(); i++)
+					data.push_back(msg->compressed_data[i]);
+				decompress_ok = true; // no compression
+				break;
+			case TMCG_OPENPGP_COMPALGO_ZIP:
+			case TMCG_OPENPGP_COMPALGO_ZLIB:
+				decompress_ok = decompress_libz(msg, data);
+				break;
+#ifdef LIBBZ
+			case TMCG_OPENPGP_COMPALGO_BZIP2:
+				decompress_ok = decompress_libbz(msg, data);
+				break;
+#endif
+			default:
+				if (opt_verbose > 1)
+				{
+					std::cerr << "WARNING: compression algorithm " <<
+						(int)msg->compalgo << " is not supported" <<
+						std::endl;
+				}
+				break;
+		}
+		if (!decompress_ok)
+		{
+			std::cerr << "ERROR: decompress failed" << std::endl;
+			delete msg;
+			return false;
+		}
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(data,
+			opt_verbose, msg))
+		{
+			std::cerr << "ERROR: message parsing failed (3)" << std::endl;
+			delete msg;
+			return false;
+		}
+		if (opt_verbose > 1)
+			msg->PrintInfo();
+	}
+	// handle decompressed message
+	if ((msg->literal_data).size() == 0)
+	{
+		std::cerr << "ERROR: no literal data found" << std::endl;
+		delete msg;
+		return false;
+	}
+// TODO: verify included signatures	
+	// copy the content of literal data packet
+	tmcg_openpgp_octets_t content;
+	content.insert(content.end(),
+		(msg->literal_data).begin(), (msg->literal_data).end());
+	if ((msg->filename == "_CONSOLE") && opt_verbose)
+	{
+		std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
+			std::endl;
+	}
 	// output the result
 	for (size_t i = 0; i < content.size(); i++)
 			std::cout << content[i];

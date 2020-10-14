@@ -45,6 +45,11 @@ time_t opt_not_before = 0;
 time_t opt_not_after = 0;
 std::vector<std::string> opt_with_password;
 std::vector<std::string> opt_sign_with;
+std::vector<std::string> opt_with_session_key;
+std::string opt_verify_out;
+std::vector<std::string> opt_verify_with;
+
+int encrypt_ret = -1;
 
 bool generate
 	(const std::vector<std::string> &args,
@@ -447,7 +452,7 @@ bool sign
 	 const tmcg_openpgp_secure_string_t &passphrase,
 	 const tmcg_openpgp_octets_t &data)
 {
-	tmcg_openpgp_octets_t sig;
+	tmcg_openpgp_octets_t sigs;
 	for (size_t i = 0; i < args.size(); i++)
 	{
 		std::string armored_key;
@@ -492,7 +497,6 @@ bool sign
 			delete prv;
 			return false;
 		}
-
 		gcry_error_t ret;
 		gcry_mpi_t r, s;
 		r = gcry_mpi_new(2048);
@@ -537,13 +541,13 @@ bool sign
 			case TMCG_OPENPGP_PKALGO_RSA:
 			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
 				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, s, sig);
+					PacketSigEncode(trailer, left, s, sigs);
 				break;
 			case TMCG_OPENPGP_PKALGO_DSA:
 			case TMCG_OPENPGP_PKALGO_ECDSA:
 			case TMCG_OPENPGP_PKALGO_EDDSA:
 				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, r, s, sig);
+					PacketSigEncode(trailer, left, r, s, sigs);
 				break;
 			default:
 				std::cerr << "ERROR: public-key algorithm " <<
@@ -560,13 +564,13 @@ bool sign
 	{
 		std::string armor;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sig, armor);
+			ArmorEncode(TMCG_OPENPGP_ARMOR_SIGNATURE, sigs, armor);
 		std::cout << armor << std::endl;
 	}
 	else
 	{
-		for (size_t i = 0; i < sig.size(); i++)
-			std::cout << sig[i];
+		for (size_t i = 0; i < sigs.size(); i++)
+			std::cout << sigs[i];
 	}
 	return true;
 }
@@ -600,7 +604,7 @@ bool verify
 			sigs[i]->PrintInfo();
 		// 5. signature time (signatures made before or after are not valid)
 		if ((sigs[i]->creationtime < opt_not_before) ||
-			(sigs[i]->creationtime > opt_not_after))
+			((opt_not_after > 0) && (sigs[i]->creationtime > opt_not_after)))
 		{
 			std::cerr << "WARNING: creation time of signature" <<
 				" #" << i << " is outside provided range;" <<
@@ -821,53 +825,20 @@ bool timestamp
 	else
 	{
 		struct tm t = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-		if ((s.find("Z") != s.npos) && (s.find("-") != s.npos))
-		{
-			char *p = strptime(s.c_str(),
-				"%Y-%m-%dT%H:%M:%SZ", &t);
-			if (p == NULL)
-				return false;
-		}
-		else if ((s.find("Z") != s.npos) && (s.find("-") == s.npos))
-		{
-			char *p = strptime(s.c_str(),
-				"%Y%m%dT%H%M%SZ", &t); // FIXME: may not work
-			if (p == NULL)
-				return false;
-		}
-		else if (s.find("+") != s.npos)
-		{
-			int tz_hour = 0, tz_min = 0, n = 0;
-			n = sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d+%d:%d",
+		int tz_hour = 0, tz_min = 0, n = 0;
+		float sec = 0.0;
+		n = sscanf(s.c_str(), "%d-%d-%dT%d:%d:%f%d:%dZ",
 				&t.tm_year, &t.tm_mon, &t.tm_mday,
-				&t.tm_hour, &t.tm_min, &t.tm_sec,
-				&tz_hour, &tz_min);
-			if (n < 7)
-				return false;
-			t.tm_year -= 1900;
-			t.tm_mon -= 1;
-			if (tz_hour <= 23)
-			{
-				t.tm_hour += tz_hour;
-				t.tm_min += tz_min;
-			}
-			else
-			{
-// TODO
-			}
-		}
-		else if (s.find("+") == s.npos)
-		{
-			int tz_hour = 0, tz_min = 0, n = 0;
-			n = sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d-%d:%d",
-				&t.tm_year, &t.tm_mon, &t.tm_mday,
-				&t.tm_hour, &t.tm_min, &t.tm_sec,
-				&tz_hour, &tz_min);
-			if (n < 7)
-				return false;
-			t.tm_hour -= tz_hour;
-			t.tm_min -= tz_min;
-		}
+				&t.tm_hour, &t.tm_min, &sec, &tz_hour, &tz_min);
+		if ((n < 6) || (n > 8))
+			return false;
+		if (tz_hour < 0)
+			tz_min = -tz_min;
+		t.tm_year -= 1900;
+		t.tm_mon -= 1;
+		t.tm_sec = (int)sec;
+		t.tm_hour += tz_hour;
+		t.tm_min += tz_min;
 		ts = mktime(&t);
 		if (ts == ((time_t) -1))
 			return false;
@@ -1055,13 +1026,127 @@ bool encrypt
 	lit.push_back(0); // no file name
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketTimeEncode(lit); // time
 	lit.insert(lit.end(), data.begin(), data.end()); // data
-// TODO: --sign-with
+	tmcg_openpgp_octets_t sigs;
+	for (size_t i = 0; i < opt_sign_with.size(); i++)
+	{
+		std::string armored_key;
+		if (!autodetect_file(opt_sign_with[i],
+			TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK, armored_key))
+		{
+			encrypt_ret = 61; // "MISSING_INPUT" [DKG20]
+			return false;
+		}
+		TMCG_OpenPGP_Prvkey *prv = NULL;
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			PrivateKeyBlockParse(armored_key, opt_verbose, passphrase, prv))
+		{
+			encrypt_ret = 67; // "KEY_IS_PROTECTED" [DKG20]
+			return false;
+		}
+		time_t sigtime = time(NULL); // current time, fixed hash algo SHA2-512
+		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+		tmcg_openpgp_octets_t trailer, hash, left;
+		bool hret = false;
+		if (opt_as_text || (opt_as_mime && valid_utf8(data)))
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareDetachedSignature(
+					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+					prv->pub->pkalgo, hashalgo, sigtime, 0, "",
+					prv->pub->fingerprint, trailer);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				TextDocumentHash(data, trailer, hashalgo, hash, left);
+		}
+		else
+		{
+			CallasDonnerhackeFinneyShawThayerRFC4880::
+				PacketSigPrepareDetachedSignature(
+					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pub->pkalgo,
+					hashalgo, sigtime, 0, "", prv->pub->fingerprint, trailer);
+			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+				BinaryDocumentHash(data, trailer, hashalgo, hash, left);
+		}
+		if (!hret)
+		{
+			std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
+				std::endl;
+			delete prv;
+			encrypt_ret = -1;
+			return false;
+		}
+		gcry_error_t ret;
+		gcry_mpi_t r, s;
+		r = gcry_mpi_new(2048);
+		s = gcry_mpi_new(2048);
+		switch (prv->pkalgo)
+		{
+			case TMCG_OPENPGP_PKALGO_RSA:
+			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignRSA(hash, prv->private_key, hashalgo, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_DSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_ECDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignECDSA(hash, prv->private_key, r, s);
+				break;
+			case TMCG_OPENPGP_PKALGO_EDDSA:
+				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					AsymmetricSignEdDSA(hash, prv->private_key, r, s);
+				break;
+			default:
+				std::cerr << "ERROR: public-key algorithm " <<
+					(int)prv->pkalgo << " not supported" << std::endl;
+				gcry_mpi_release(r), gcry_mpi_release(s);
+				delete prv;
+				encrypt_ret = 13; // "UNSUPPORTED_ASYMMETRIC_ALGO" [DKG20]
+				return false;
+		}
+		if (ret)
+		{
+			std::cerr << "ERROR: signing of hash value failed " <<
+				"(rc = " << gcry_err_code(ret) << ", str = " <<
+				gcry_strerror(ret) << ")" << std::endl;
+			gcry_mpi_release(r), gcry_mpi_release(s);
+			delete prv;
+			encrypt_ret = -1;
+			return false;
+		}
+		switch (prv->pkalgo)
+		{
+			case TMCG_OPENPGP_PKALGO_RSA:
+			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigEncode(trailer, left, s, sigs);
+				break;
+			case TMCG_OPENPGP_PKALGO_DSA:
+			case TMCG_OPENPGP_PKALGO_ECDSA:
+			case TMCG_OPENPGP_PKALGO_EDDSA:
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigEncode(trailer, left, r, s, sigs);
+				break;
+			default:
+				std::cerr << "ERROR: public-key algorithm " <<
+					(int)prv->pkalgo << " not supported" << std::endl;
+				gcry_mpi_release(r), gcry_mpi_release(s);
+				delete prv;
+				encrypt_ret = 13; // "UNSUPPORTED_ASYMMETRIC_ALGO" [DKG20]
+				return false;
+		}
+		gcry_mpi_release(r), gcry_mpi_release(s);
+		delete prv;
+	}
+	lit.insert(lit.begin(), sigs.begin(), sigs.end()); // prepend signatures
 	gcry_error_t ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-		SymmetricEncryptAES256(lit, seskey, prefix, true, enc); // (1)
+		SymmetricEncryptAES256(lit, seskey, prefix, true, enc); // encrypt (1)
 	if (ret)
 	{
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
 			gcry_err_code(ret) << ")" << std::endl;
+		encrypt_ret = -1;
 		return false;
 	}
 	tmcg_openpgp_octets_t mdc_hashing, hash, mdc, seipd;
@@ -1082,11 +1167,12 @@ bool encrypt
 	// generate a fresh session key, but keep the previous prefix
 	seskey.clear();
 	ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-		SymmetricEncryptAES256(lit, seskey, prefix, false, enc); // (2)
+		SymmetricEncryptAES256(lit, seskey, prefix, false, enc); // encrypt (2)
 	if (ret)
 	{
 		std::cerr << "ERROR: SymmetricEncryptAES256() failed (rc = " <<
 			gcry_err_code(ret) << ")" << std::endl;
+		encrypt_ret = -1;
 		return false;
 	}
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketSeipdEncode(enc, seipd);
@@ -1098,29 +1184,33 @@ bool encrypt
 #else
 	aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
 #endif
-	enc.clear();
-	tmcg_openpgp_octets_t ad, iv;
-	tmcg_openpgp_byte_t cs = 10; // fixed chunk of size 2^16 bytes
-	ad.push_back(0xD4); // packet tag in new format
-	ad.push_back(0x01); // packet version number
-	ad.push_back(skalgo); // cipher algorithm octet
-	ad.push_back(aeadalgo); // AEAD algorithm octet
-	ad.push_back(cs); // chunk size octet
-	for (size_t i = 0; i < 8; i++)
-		ad.push_back(0x00); // initial eight-octet big-endian chunk index
-	ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-		SymmetricEncryptAEAD(lit, seskey, skalgo, aeadalgo, cs, ad,
-			opt_verbose, iv, enc); 
-	if (ret)
+	if (opt_rfc4880bis)
 	{
-		std::cerr << "ERROR: SymmetricEncryptAEAD() failed (rc = " <<
-			gcry_err_code(ret) << ")" << std::endl;
-		return false;
+		enc.clear();
+		tmcg_openpgp_octets_t ad, iv;
+		tmcg_openpgp_byte_t cs = 10; // fixed chunk of size 2^16 bytes
+		ad.push_back(0xD4); // packet tag in new format
+		ad.push_back(0x01); // packet version number
+		ad.push_back(skalgo); // cipher algorithm octet
+		ad.push_back(aeadalgo); // AEAD algorithm octet
+		ad.push_back(cs); // chunk size octet
+		for (size_t i = 0; i < 8; i++)
+			ad.push_back(0x00); // initial eight-octet big-endian chunk index
+		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+			SymmetricEncryptAEAD(lit, seskey, skalgo, aeadalgo, cs, ad,
+				opt_verbose, iv, enc); // encrypt (3)
+		if (ret)
+		{
+			std::cerr << "ERROR: SymmetricEncryptAEAD() failed (rc = " <<
+				gcry_err_code(ret) << ")" << std::endl;
+			encrypt_ret = -1;
+			return false;
+		}
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketAeadEncode(skalgo, aeadalgo, cs, iv, enc, aead);
 	}
-	CallasDonnerhackeFinneyShawThayerRFC4880::
-		PacketAeadEncode(skalgo, aeadalgo, cs, iv, enc, aead);
 	// perform password-based symmetric encryption, for all given passwords
-	tmcg_openpgp_octets_t all;
+	tmcg_openpgp_octets_t msg;
 	bool some_skesk = false;
 	for (size_t k = 0; k < opt_with_password.size(); k++)
 	{
@@ -1153,6 +1243,7 @@ bool encrypt
 		ret = encrypt_kek(plain, skalgo, kek, es);
 		if (ret)
 		{
+			encrypt_ret = -1;
 			return false;
 		}
 		if (opt_verbose > 2)
@@ -1161,16 +1252,16 @@ bool encrypt
 			std::cerr << "INFO: iv2.size() = " << iv2.size() << std::endl;
 		}
 		// create a corresponding SKESK packet
-		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTagEncode(3, all);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketTagEncode(3, msg);
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			PacketLengthEncode(5+salt.size()+es.size(), all);
-		all.push_back(4); // V4 format
-		all.push_back(skalgo);
-		all.push_back(TMCG_OPENPGP_STRINGTOKEY_ITERATED); // Iterated+Salted
-		all.push_back(s2k_hashalgo); // S2K hash algo
-		all.insert(all.end(), salt.begin(), salt.end()); // salt
-		all.push_back(count); // count, a one-octet, coded value
-		all.insert(all.end(), es.begin(), es.end()); // encrypted session key
+			PacketLengthEncode(5+salt.size()+es.size(), msg);
+		msg.push_back(4); // V4 format
+		msg.push_back(skalgo);
+		msg.push_back(TMCG_OPENPGP_STRINGTOKEY_ITERATED); // Iterated+Salted
+		msg.push_back(s2k_hashalgo); // S2K hash algo
+		msg.insert(msg.end(), salt.begin(), salt.end()); // salt
+		msg.push_back(count); // count, a one-octet, coded value
+		msg.insert(msg.end(), es.begin(), es.end()); // encrypted session key
 		some_skesk = true;
 	}
 	// perform public-key encryption, for all specified encryption keys
@@ -1182,6 +1273,7 @@ bool encrypt
 		if (!autodetect_file(args[k],
 			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
 		{
+			encrypt_ret = 61; // "MISSING_INPUT" [DKG20]
 			return false;
 		}
 		// parse the public key block and check self-signatures
@@ -1191,29 +1283,30 @@ bool encrypt
 			PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 		if (!parse_ok)
 		{
-			std::cerr << "WARNING: cannot parse public key #" <<
-				k << std::endl;
+			std::cerr << "ERROR: cannot parse public key #" << k << std::endl;
 			delete ring;
-			continue;
+			encrypt_ret = 17; // "CERT_CANNOT_ENCRYPT" [DKG20]
+			return false;
 		}
 		primary->CheckSelfSignatures(ring, opt_verbose);
 		if (!primary->valid)
 		{
-			std::cerr << "WARNING: primary key #" << k <<
-				" is not valid" << std::endl;
+			std::cerr << "ERROR: primary key #" << k << " is invalid" <<
+				std::endl;
 			delete primary;
 			delete ring;
-			continue;
+			encrypt_ret = 17; // "CERT_CANNOT_ENCRYPT" [DKG20]
+			return false;
 		}
 		primary->CheckSubkeys(ring, opt_verbose);
 		primary->Reduce(); // keep only valid subkeys
 		if (primary->Weak(opt_verbose))
 		{
-			std::cerr << "WARNING: primary key #" << k <<
-				" is weak" << std::endl;
+			std::cerr << "ERROR: primary key #" << k << " is weak" << std::endl;
 			delete primary;
 			delete ring;
-			continue;
+			encrypt_ret = 17; // "CERT_CANNOT_ENCRYPT" [DKG20]
+			return false;
 		}
 		// select encryption-capable subkeys
 		std::vector<TMCG_OpenPGP_Subkey*> selected;
@@ -1244,7 +1337,7 @@ bool encrypt
 						" of public key #" << k <<
 						" with unsupported public-key" <<
 						" algorithm ignored" << std::endl;
-					continue;
+					continue; // FIXME: ret = 13 UNSUPPORTED_ASYMMETRIC_ALGO
 				}
 				selected.push_back(primary->subkeys[j]);
 				size_t skf = primary->subkeys[j]->AccumulateFeatures();
@@ -1273,29 +1366,32 @@ bool encrypt
 							"use MDC anyway" << std::endl;
 					}
 				}
-				if (((skf & 0x02) != 0x02) &&
-				    ((pkf & 0x02) != 0x02))
+				if (opt_rfc4880bis)
 				{
-					if (opt_verbose)
+					if (((skf & 0x02) != 0x02) &&
+					    ((pkf & 0x02) != 0x02))
 					{
-						std::cerr << "WARNING: recipient does not state" <<
-							" support for AEAD Encrypted Data Packet;" <<
-							" AEAD disabled" << std::endl;
+						if (opt_verbose)
+						{
+							std::cerr << "WARNING: recipient does not state" <<
+								" support for AEAD Encrypted Data Packet;" <<
+								" AEAD disabled" << std::endl;
+						}
 					}
-				}
-				if ((std::find(primary->subkeys[j]->paa.begin(),
-					primary->subkeys[j]->paa.end(),
-					aeadalgo) == primary->subkeys[j]->paa.end()) &&
-				    (std::find(primary->paa.begin(), primary->paa.end(),
-						aeadalgo) == primary->paa.end()))
-				{
-					if (opt_verbose)
+					if ((std::find(primary->subkeys[j]->paa.begin(),
+						primary->subkeys[j]->paa.end(),
+						aeadalgo) == primary->subkeys[j]->paa.end()) &&
+					    (std::find(primary->paa.begin(), primary->paa.end(),
+							aeadalgo) == primary->paa.end()))
 					{
-						std::cerr << "WARNING: selected algorithm is" <<
-							" none of the preferred AEAD algorithms;" <<
-							" AEAD disabled" << std::endl;
+						if (opt_verbose)
+						{
+							std::cerr << "WARNING: selected algorithm is" <<
+								" none of the preferred AEAD algorithms;" <<
+								" AEAD disabled" << std::endl;
+						}
+						aead.clear(); // fallback to SEIPD packet
 					}
-					aead.clear(); // fallback to SEIPD packet
 				}
 			}
 		}
@@ -1324,11 +1420,12 @@ bool encrypt
 			}
 			else
 			{
-				std::cerr << "WARNING: no encryption-capable public key" <<
+				std::cerr << "ERROR: no encryption-capable public key" <<
 					" found for key #" << k << std::endl;
 				delete primary;
 				delete ring;
-				continue;
+				encrypt_ret = 17; // "CERT_CANNOT_ENCRYPT" [DKG20]
+				return false;
 			}
 			size_t pkf = primary->AccumulateFeatures();
 			features &= pkf;
@@ -1351,24 +1448,28 @@ bool encrypt
 						"use MDC protection anyway" << std::endl;
 				}
 			}
-			if (((pkf & 0x02) != 0x02))
+			if (opt_rfc4880bis)
 			{
-				if (opt_verbose)
+				if (((pkf & 0x02) != 0x02))
 				{
-					std::cerr << "WARNING: recipient does not state support" <<
-						" for AEAD Encrypted Data Packet; AEAD disabled" <<
-						std::endl;
+					if (opt_verbose)
+					{
+						std::cerr << "WARNING: recipient does not state" <<
+							" support for AEAD Encrypted Data Packet; AEAD" <<
+							" disabled" << std::endl;
+					}
 				}
-			}
-			if (std::find(primary->paa.begin(), primary->paa.end(),
-				aeadalgo) == primary->paa.end())
-			{
-				if (opt_verbose)
+				if (std::find(primary->paa.begin(), primary->paa.end(),
+					aeadalgo) == primary->paa.end())
 				{
-					std::cerr << "WARNING: selected algorithm is none of the" <<
-						" preferred AEAD algorithms; AEAD disabled" << std::endl;
+					if (opt_verbose)
+					{
+						std::cerr << "WARNING: selected algorithm is none of" <<
+							" the preferred AEAD algorithms; AEAD disabled" <<
+							std::endl;
+					}
+					aead.clear(); // fallback to SEIPD packet
 				}
-				aead.clear(); // fallback to SEIPD packet
 			}
 		}
 		// encrypt the session key (create PKESK packet)
@@ -1386,9 +1487,11 @@ bool encrypt
 			{
 				delete primary;
 				delete ring;
-				continue;
+				std::cerr << "ERROR: encryption failed" << std::endl;
+				encrypt_ret = 17; // "CERT_CANNOT_ENCRYPT" [DKG20]
+				return false;
 			}
-			all.insert(all.end(), pkesk.begin(), pkesk.end());
+			msg.insert(msg.end(), pkesk.begin(), pkesk.end());
 			some_pkesk = true;
 		}
 		if (selected.size() == 0)
@@ -1400,9 +1503,11 @@ bool encrypt
 			{
 				delete primary;
 				delete ring;
-				continue;
+				std::cerr << "ERROR: encryption failed" << std::endl;
+				encrypt_ret = 17; // "CERT_CANNOT_ENCRYPT" [DKG20]
+				return false;
 			}
-			all.insert(all.end(), pkesk.begin(), pkesk.end());
+			msg.insert(msg.end(), pkesk.begin(), pkesk.end());
 			some_pkesk = true;
 		}
 		delete primary;
@@ -1410,33 +1515,299 @@ bool encrypt
 	}
 	if (!some_pkesk && !some_skesk)
 	{
-		std::cerr << "ERROR: encryption failed (no SKESK/PKESK)" << std::endl;
+		std::cerr << "ERROR: encryption failed" << std::endl;
+		encrypt_ret = 17; // "CERT_CANNOT_ENCRYPT" [DKG20]
 		return false;
 	}
 	// append the encrypted data packet(s) according to supported features
 	if (((features & 0x02) == 0x02) && (aead.size() > 0) && (args.size() > 0))
 	{
 		// append AEAD, because all selected recipients/keys have support
-		all.insert(all.end(), aead.begin(), aead.end());
+		msg.insert(msg.end(), aead.begin(), aead.end());
 	}
 	else
 	{
-		// append SEIPD, because some selected recipients/keys have no support
-		all.insert(all.end(), seipd.begin(), seipd.end());
+		// append SEIPD, because some of the recipients/keys have no AEAD yet
+		msg.insert(msg.end(), seipd.begin(), seipd.end());
 	}
 	// output the result
 	if (opt_armor)
 	{
 		std::string armor;
 		CallasDonnerhackeFinneyShawThayerRFC4880::
-			ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, all, armor);
+			ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, msg, armor);
 		std::cout << armor << std::endl;
 	}
 	else
 	{
-		for (size_t i = 0; i < all.size(); i++)
-			std::cout << all[i];
+		for (size_t i = 0; i < msg.size(); i++)
+			std::cout << msg[i];
 	}
+	return true;
+}
+
+gcry_error_t decrypt_kek
+	(const tmcg_openpgp_octets_t &kek, const tmcg_openpgp_skalgo_t algo,
+	 const tmcg_openpgp_secure_octets_t &key, tmcg_openpgp_secure_octets_t &out)
+{
+	gcry_error_t ret = 0;
+	size_t bs = CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmIVLength(algo); // get block size of algorithm
+	size_t ks = CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmKeyLength(algo); // get key size of algorithm
+	if ((bs == 0) || (ks == 0))
+		return gcry_error(GPG_ERR_CIPHER_ALGO); // error: bad algorithm
+	size_t buflen = (kek.size() >= key.size()) ? kek.size() : key.size();
+	unsigned char *buf = (unsigned char*)gcry_malloc_secure(buflen);
+	if (buf == NULL)
+		return gcry_error(GPG_ERR_RESOURCE_LIMIT); // cannot alloc secure memory
+	gcry_cipher_hd_t hd;
+	ret = gcry_cipher_open(&hd, CallasDonnerhackeFinneyShawThayerRFC4880::
+		AlgorithmSymGCRY(algo), GCRY_CIPHER_MODE_CFB, GCRY_CIPHER_SECURE);
+	if (ret)
+	{
+		gcry_free(buf);
+		return ret;
+	}
+	for (size_t i = 0; i < key.size(); i++)
+		buf[i] = key[i];
+	ret = gcry_cipher_setkey(hd, buf, key.size());
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	// set "an IV of all zeros" [RFC 4880]
+	ret = gcry_cipher_setiv(hd, NULL, 0);
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	for (size_t i = 0; i < kek.size(); i++)
+		buf[i] = kek[i];
+	ret = gcry_cipher_decrypt(hd, buf, kek.size(), NULL, 0);
+	if (ret)
+	{
+		gcry_free(buf);
+		gcry_cipher_close(hd);
+		return ret;
+	}
+	for (size_t i = 0; i < kek.size(); i++)
+		out.push_back(buf[i]);
+	gcry_free(buf);
+	gcry_cipher_close(hd);
+	return ret;
+}
+
+bool decrypt_session_key
+	(const TMCG_OpenPGP_Message* msg, tmcg_openpgp_secure_octets_t &seskey)
+{
+	if (msg->SKESKs.size() == 0)
+		return false;
+	if (opt_verbose > 1)
+	{
+		std::cerr << "INFO: every PKESK decryption failed;" <<
+			" now try each SKESK" << std::endl;
+	}
+	for (size_t k = 0; k < opt_with_password.size(); k++)
+	{
+		tmcg_openpgp_secure_string_t p;
+		for (size_t i = 0; i < opt_with_password[k].length(); i++)
+			p += opt_with_password[k][i];
+		for (size_t i = 0; i < msg->SKESKs.size(); i++)
+		{
+			const TMCG_OpenPGP_SKESK *esk = msg->SKESKs[i];
+			tmcg_openpgp_secure_octets_t kek;
+			size_t klen = CallasDonnerhackeFinneyShawThayerRFC4880::
+				AlgorithmKeyLength(esk->skalgo);
+			if (opt_verbose > 2)
+			{
+				std::cerr << "INFO: s2k_salt = " << std::hex;
+				for (size_t j = 0; j < (esk->s2k_salt).size(); j++)
+					std::cerr << (int)esk->s2k_salt[j] << " ";
+				std::cerr << std::dec << std::endl;
+			}
+			switch (esk->s2k_type)
+			{
+				case TMCG_OPENPGP_STRINGTOKEY_SIMPLE:
+					if (opt_verbose)
+					{
+						std::cerr << "WARNING: S2K specifier not" <<
+							" supported; skip SKESK" << std::endl;
+					}
+					break;
+				case TMCG_OPENPGP_STRINGTOKEY_SALTED:
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						S2KCompute(esk->s2k_hashalgo, klen, p,
+							esk->s2k_salt, false, esk->s2k_count, kek);
+					break;
+				case TMCG_OPENPGP_STRINGTOKEY_ITERATED:
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						S2KCompute(esk->s2k_hashalgo, klen, p,
+							esk->s2k_salt, true, esk->s2k_count, kek);
+					break;
+				default:
+					if (opt_verbose)
+					{
+						std::cerr << "WARNING: S2K specifier not" <<
+							" supported; skip SKESK" << std::endl;
+					}
+					break;
+			}
+			if (opt_verbose > 2)
+			{
+				std::cerr << "INFO: kek.size() = " << kek.size() << std::endl;
+				std::cerr << "INFO: kek = " << std::hex;
+				for (size_t j = 0; j < kek.size(); j++)
+					std::cerr << (int)kek[j] << " ";
+				std::cerr << std::dec << std::endl;
+			}
+			seskey.clear();
+			if (esk->encrypted_key.size() > 0)
+			{
+				gcry_error_t ret = 0;
+				if (esk->aeadalgo == 0)
+				{
+					ret = decrypt_kek(esk->encrypted_key, esk->skalgo, kek,
+						seskey);
+				}
+				else
+				{
+					tmcg_openpgp_octets_t decrypted_key;
+					tmcg_openpgp_octets_t ad; // additional data
+					ad.push_back(0xC3); // packet tag in new format
+					ad.push_back(esk->version); // packet version number
+					ad.push_back(esk->skalgo); // cipher algorithm octet
+					ad.push_back(esk->aeadalgo); // AEAD algorithm octet
+					ret = CallasDonnerhackeFinneyShawThayerRFC4880::
+						SymmetricDecryptAEAD(esk->encrypted_key, kek,
+							esk->skalgo, esk->aeadalgo, 0, esk->iv, ad,
+							opt_verbose, decrypted_key);
+					for (size_t j = 0; j < decrypted_key.size(); j++)
+						seskey.push_back(decrypted_key[j]);
+				}
+				if (ret)
+				{
+					std::cerr << "ERROR: SymmetricDecrypt[AEAD]() failed" <<
+						" with rc = " << gcry_err_code(ret) <<
+						" str = " << gcry_strerror(ret) << std::endl;
+					return false;
+				}
+			}
+			else
+			{
+				seskey.push_back(esk->skalgo);
+				for (size_t j = 0; j < kek.size(); j++)
+					seskey.push_back(kek[j]);
+			}
+			// quick check, whether decryption of session key was successful
+			tmcg_openpgp_octets_t tmpmsg;				
+			if (msg->Decrypt(seskey, 0, tmpmsg))
+				return true;
+		}
+	}
+	return false;
+}
+
+bool decrypt
+	(const std::vector<std::string> &args,
+	 const tmcg_openpgp_secure_string_t &passphrase,
+	 const tmcg_openpgp_octets_t &ciphertext)
+{
+	// autodetect ASCII armor
+	std::string input_str, armored_message;
+	for (size_t i = 0; ((i < ciphertext.size()) && (i < 20)); i++)
+		input_str += ciphertext[i];
+	if (input_str.find("-----BEGIN PGP") == 0)
+	{
+		for (size_t i = 0; i < ciphertext.size(); i++)
+			armored_message += ciphertext[i];
+		armored_message += "\r\n";	
+	}
+	else
+	{
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			ArmorEncode(TMCG_OPENPGP_ARMOR_MESSAGE, ciphertext,
+				armored_message);
+	}
+	// parse OpenPGP message
+	TMCG_OpenPGP_Message *msg = NULL;
+	if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+		MessageParse(armored_message, opt_verbose, msg))
+	{
+		std::cerr << "ERROR: message parsing failed" << std::endl;
+		return false;
+	}
+	if (opt_verbose > 1)
+		msg->PrintInfo();
+	if (msg->encrypted_message.size() == 0)
+	{
+		std::cerr << "ERROR: no encrypted data found" << std::endl;
+		delete msg;
+		return false;
+	}
+	// decrypt session key TODO: use option --with-session-key
+	tmcg_openpgp_secure_octets_t seskey;
+	bool seskey_decrypted = false;
+	for (size_t i = 0; (i < args.size()) && !seskey_decrypted; i++)
+	{
+		std::string armored_key;
+		if (!autodetect_file(args[i], TMCG_OPENPGP_ARMOR_PRIVATE_KEY_BLOCK,
+			armored_key))
+		{
+			delete msg;
+			return false;
+		}
+		TMCG_OpenPGP_Prvkey *prv = NULL;
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			PrivateKeyBlockParse(armored_key, opt_verbose, passphrase, prv))
+		{
+			delete msg;
+			return false;
+		}
+		for (size_t k = 0; k < prv->private_subkeys.size(); k++)
+		{
+			TMCG_OpenPGP_PrivateSubkey *ssb = prv->private_subkeys[k];
+			// try to decrypt the session key for all PKESK packets
+			for (size_t j = 0; j < (msg->PKESKs).size(); j++)
+			{
+				if (ssb->Decrypt(msg->PKESKs[j], opt_verbose, seskey))
+				{
+					seskey_decrypted = true;
+					msg->decryptionfpr.clear();
+					msg->decryptionfpr.insert(msg->decryptionfpr.end(),
+						prv->pub->fingerprint.begin(),
+						prv->pub->fingerprint.end());
+					break;
+				}
+			}
+			if (seskey_decrypted)
+				break;
+		}
+		delete prv;
+	}
+	if (!seskey_decrypted && !decrypt_session_key(msg, seskey))
+	{
+		std::cerr << "ERROR: session key decryption failed" << std::endl;
+		delete msg;
+		return false;
+	}
+	tmcg_openpgp_octets_t content;
+/*
+	if (!decrypt_and_check_message(seskey, msg, content))
+	{
+		delete msg;
+		return false;
+	}
+*/
+	// TODO: verify signatures
+std::cerr << "TODO" << std::endl;
+	// output the result
+	for (size_t i = 0; i < content.size(); i++)
+			std::cout << content[i];
 	return true;
 }
 
@@ -1475,7 +1846,7 @@ int main
 				std::cout << "  -n, --no-rfc4880bis  disable features of RFC" <<
 					" 4880bis" << std::endl;
 				std::cout << "  -P, --passphrase     ask user for passphrase" <<
-					std::endl;
+					" protecting private key material" << std::endl;
 				std::cout << "  -V, --verbose        increase verbosity" <<
 					std::endl;
 				return 0; // not continue
@@ -1503,14 +1874,20 @@ int main
 			}
 			if (arg.find("--as=binary") == 0)
 			{
-				opt_as_binary = true; // choose format "binary"
+				opt_as_binary = true; // choose format "binary" (default)
 				opt_as_text = false;
 				continue;
 			}
 			if (arg.find("--as=text") == 0)
 			{
-				opt_as_binary = false; // choose format "text"
-				opt_as_text = true;
+				opt_as_binary = false;
+				opt_as_text = true; // choose format "text"
+				continue;
+			}
+			if (arg.find("--as=mime") == 0)
+			{
+				opt_as_binary = false;
+				opt_as_mime = true; // choose format "mime"
 				continue;
 			}
 			if (arg.find("--not-before=") == 0)
@@ -1552,6 +1929,55 @@ int main
 			{
 				std::string s = arg.substr(12);
 				opt_sign_with.push_back(s);
+				continue;
+			}
+			if (arg.find("--with-session-key=") == 0)
+			{
+				std::string s = arg.substr(19);
+				opt_with_session_key.push_back(s);
+				continue;	
+			}
+			if (arg.find("--verify-not-before=") == 0)
+			{
+				std::string s = arg.substr(20);
+				if (!timestamp(s, opt_not_before))
+				{
+					std::cerr << "ERROR: wrong timestamp" <<
+						" format" << std::endl;
+					return -1;
+				}
+				continue;
+			}
+			if (arg.find("--verify-not-after=") == 0)
+			{
+				std::string s = arg.substr(19);
+				if (!timestamp(s, opt_not_after))
+				{
+					std::cerr << "ERROR: wrong timestamp" <<
+						" format" << std::endl;
+					return -1;
+				}
+				continue;
+			}
+			if (arg.find("--verify-out=") == 0)
+			{
+				opt_verify_out = arg.substr(14);
+				// If the designated file already exists in the filesystem,
+				// "sop decrypt" will fail with "OUTPUT_EXISTS". [DKG20]
+				std::ifstream ifs(opt_verify_out.c_str(), std::ifstream::in);
+				if (ifs.is_open())
+				{
+					ifs.close();
+					std::cerr << "ERROR: output file already exists" <<
+						std::endl;
+					return 59;
+				}
+				continue;		
+			}
+			if (arg.find("--verify-with=") == 0)
+			{
+				std::string s = arg.substr(14);
+				opt_verify_with.push_back(s);
 				continue;
 			}
 			// If a "sop" implementation does not handle a supplied option for
@@ -1643,49 +2069,47 @@ int main
 	}
 
 	// perpare input, execute corresponding subcommand, and evaluate return code
-	// If the user supplies a subcommand that "sop" does not implement, it
-	// fails with "UNSUPPORTED_SUBCOMMAND". [DKG20]
 	int ret = 0;
 	if (subcmd == "version")
 	{
-		// Version Information
+		// Version Information [DKG20]
 		// The version string emitted should contain the name of the "sop"
 		// implementation, followed by a single space, followed by the version
 		// number. A "sop" implementation should use a version number that
 		// respects an established standard that is easily comparable and
-		// parsable, like [SEMVER]. [DKG20]
+		// parsable, like [SEMVER].
 		std::cout << version << std::endl;
 	}
 	else if (subcmd == "generate-key")
 	{
-		// Generate a Secret Key
+		// Generate a Secret Key [DKG20]
 		//   Standard Input: ignored
 		//   Standard Output: "KEY"
 		// Generate a single default OpenPGP key with zero or more User IDs.
 		// The generared secret key SHOULD be usable for as much of the "sop"
-		// functionality as possible. [DKG20]
+		// functionality as possible.
 		if (!generate(args, passphrase))
 			ret = -1;
 	}
 	else if (subcmd == "extract-cert")
 	{
-		// Extract a Certificate from a Secret Key
+		// Extract a Certificate from a Secret Key [DKG20]
 		//   Standard Input: "KEY"
 		//   Standard Output: "CERTS"
 		// Note that the resultant "CERTS" object will only ever contain one
    		// OpenPGP certificate, since "KEY" contains exactly one OpenPGP
-		// Transferable Secret Key. [DKG20]
+		// Transferable Secret Key.
 		if (!extract(passphrase))
 			ret = -1;
 	}
 	else if (subcmd == "sign")
 	{
-		// Create Detached Signatures
+		// Create Detached Signatures [DKG20]
 		//   Standard Input: "DATA"
 		//   Standard Output: "SIGNATURES"
 		// Exactly one signature will be made by each supplied "KEY".
 		// "--as" defaults to "binary". If "--as=text" and the input "DATA" is
-		// not valid "UTF-8", "sop sign" fails with "EXPECTED_TEXT". [DKG20]
+		// not valid "UTF-8", "sop sign" fails with "EXPECTED_TEXT".
 		tmcg_openpgp_octets_t data;
 		char c;
 		while (std::cin.get(c))
@@ -1703,7 +2127,7 @@ int main
 	}
 	else if (subcmd == "verify")
 	{
-		// Verify Detached Signatures
+		// Verify Detached Signatures [DKG20]
 		//  Standard Input: "DATA"
 		//  Standard Output: "VERIFICATIONS"
 		// "--not-before" and "--not-after" indicate that signatures
@@ -1719,7 +2143,7 @@ int main
 		// included in any "CERTS" object made a valid signature in
 		// the range over the "DATA" supplied.
 		// For details about the valid signatures, the user MUST
-		// inspect the "VERIFICATIONS" output. [DKG20]
+		// inspect the "VERIFICATIONS" output.
 		tmcg_openpgp_octets_t data;
 		std::vector<std::string> verifications;
 		char c;
@@ -1746,7 +2170,7 @@ int main
 	}
 	else if (subcmd == "encrypt")
 	{
-		// Encrypt a Message
+		// Encrypt a Message [DKG20]
 		//   Standard Input: "DATA"
 		//   Standard Output: "CIPHERTEXT"
 		// "--as" defaults to "binary". The setting of "--as"
@@ -1774,7 +2198,6 @@ int main
 		// sign as a canonical text document (OpenPGP signature
 		// type "0x01"). In this case, if the input "DATA" is not
 		// valid "UTF-8", "sop encrypt" fails with "EXPECTED_TEXT".
-		// [DKG20]
 		tmcg_openpgp_octets_t data;
 		char c;
 		while (std::cin.get(c))
@@ -1788,10 +2211,53 @@ int main
 			}
 		}
 		if ((ret == 0) && !encrypt(args, passphrase, data))
-			ret = -1;
+			ret = encrypt_ret;
+	}
+	else if (subcmd == "decrypt")
+	{
+		// Decrypt a Message [DKG20]
+		//   Standard Input: "CIPHERTEXT"
+		//   Standard Output: "DATA"
+		// "--with-password" enables decryption based on any "SKESK" packets
+		// in the "CIPHERTEXT". This option can be used multiple times if the
+		// user wants to try more than one password.
+		// "--verify-out" produces signature verification status to the
+		// designated file. If the designated file already exists in the
+		// filesystem, "sop decrypt" will fail with "OUTPUT_EXISTS".
+		// The return code of "sop decrypt" is not affected by the results of
+		// signature verification. The caller MUST check the returned
+		// "VERIFICATIONS" to confirm signature status. An empty
+		// "VERIFICATIONS" output indicates that no valid signatures were found.
+		// "--verify-with" identifies a set of certificates whose signatures
+		// would be acceptable for signatures over this message.
+		// If the caller is interested in signature verification, both
+		// "--verify-out" and at least one "--verify-with" must be supplied. If
+		// only one of these arguments is supplied, "sop decrypt" fails with
+		// "INCOMPLETE_VERIFICATION".
+		// "--verify-not-before" and "--verify-not-after" provide a date range
+		// for acceptable signatures, by analogy with the options for "sop
+		// verify". They should only be supplied when doing signature
+		// verification.
+		tmcg_openpgp_octets_t ciphertext;
+		char c;
+		while (std::cin.get(c))
+			ciphertext.push_back(c);
+		// If no "KEY" or "--with-password" or "--with-session-key" options are
+		// present, "sop decrypt" fails with "MISSING_ARG". [DKG20]
+		if ((args.size() < 1) && (opt_with_password.size() < 1) &&
+			(opt_with_session_key.size() < 1))
+		{
+			std::cerr << "ERROR: Missing required argument" << std::endl;
+			ret = 19;
+		}
+		// If unable to decrypt, "sop decrypt" fails with "CANNOT_DECRYPT".
+		if ((ret == 0) && !decrypt(args, passphrase, ciphertext))
+			ret = 29; // "CANNOT_DECRYPT" [DKG20]
 	}
 	else
 	{
+		// If the user supplies a subcommand that "sop" does not implement, it
+		// fails with "UNSUPPORTED_SUBCOMMAND". [DKG20]
 		std::cerr << "ERROR: SOP subcommand \"" << subcmd << "\" not" <<
 			" supported" << std::endl;
 		ret = 69;

@@ -580,6 +580,170 @@ bool sign
 	return true;
 }
 
+void verify_signatures
+	(const std::vector<std::string> &args,
+	 const TMCG_OpenPGP_Signatures &sigs,
+	 const TMCG_OpenPGP_Pubkeys &keys,
+	 const tmcg_openpgp_octets_t &data,
+	 std::vector<std::string> &verifications)
+{
+	// verify the signature(s)
+	for (size_t i = 0; i < sigs.size(); i++)
+	{
+		if (opt_verbose)
+			sigs[i]->PrintInfo();
+		// 5. signature time (signatures made before or after are not valid)
+		if ((sigs[i]->creationtime < opt_not_before) ||
+			((opt_not_after > 0) && (sigs[i]->creationtime > opt_not_after)))
+		{
+			if (opt_verbose)
+			{
+				std::cerr << "WARNING: creation time of signature" <<
+					" #" << i << " is outside provided range;" <<
+					" signature ignored" << std::endl;
+			}
+			continue;
+		}
+		// 6. hash algorithm (reject broken hash algorithms)
+		if ((sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_MD5) ||
+		    (sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_SHA1) ||
+		    (sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_RMD160))
+		{
+			if (opt_verbose)
+			{
+				std::string hashname;
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					AlgorithmHashTextName(sigs[i]->hashalgo, hashname);
+				std::cerr << "WARNING: broken hash algorithm " <<
+					hashname << " used for signature #" << i <<
+					"; signature ignored" << std::endl;
+			}
+			continue;
+		}
+		// for all provided certs
+		for (size_t j = 0; j < keys.size(); j++)
+		{
+			TMCG_OpenPGP_Pubkey *pr = keys[j];
+			// select corresponding public key of the issuer from subkeys
+			bool subkey_selected = false;
+			size_t subkey_idx = 0, keyusage = 0;
+			time_t ckeytime = 0, ekeytime = 0;
+			for (size_t k = 0; k < pr->subkeys.size(); k++)
+			{
+				if (((pr->subkeys[k]->AccumulateFlags() & 0x02) == 0x02) ||
+				    (!pr->subkeys[k]->AccumulateFlags() &&
+					((pr->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
+					(pr->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) ||
+					(pr->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_DSA) ||
+					(pr->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA))))
+				{
+					if (CallasDonnerhackeFinneyShawThayerRFC4880::
+						OctetsCompare(sigs[i]->issuer, pr->subkeys[k]->id) &&
+						!pr->subkeys[k]->Weak(opt_verbose))
+					{
+						subkey_selected = true;
+						subkey_idx = k;
+						keyusage = pr->subkeys[k]->AccumulateFlags();
+						ckeytime = pr->subkeys[k]->creationtime;
+						ekeytime = pr->subkeys[k]->expirationtime;
+						break;
+					}
+				}
+			}
+			// check the primary key, if no admissible subkey has been selected
+			if (!subkey_selected)
+			{
+				if (((pr->AccumulateFlags() & 0x02) != 0x02) &&
+				    (!pr->AccumulateFlags() &&
+					(pr->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
+					(pr->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) &&
+					(pr->pkalgo != TMCG_OPENPGP_PKALGO_DSA) &&
+					(pr->pkalgo != TMCG_OPENPGP_PKALGO_ECDSA)))
+				{
+					continue;
+				}
+				if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+					OctetsCompare(sigs[i]->issuer, pr->id))
+				{
+					continue;
+				}
+				keyusage = pr->AccumulateFlags();
+				ckeytime = pr->creationtime;
+				ekeytime = pr->expirationtime;
+			}
+			// additional validity checks on selected key and signature
+			time_t current_time = time(NULL);
+			// 1. key validity time (signatures made before key creation or
+			//    after key expiry are not valid)
+			if (sigs[i]->creationtime < ckeytime)
+			{
+				continue;
+			}
+			if (ekeytime && (sigs[i]->creationtime > (ckeytime + ekeytime)))
+			{
+				continue;
+			}
+			// 2. signature validity time (expired signatures are not valid)
+			if (sigs[i]->expirationtime &&
+				(current_time > (sigs[i]->creationtime + sigs[i]->expirationtime)))
+			{
+				continue;
+			}
+			// 3. key usage flags (signatures made by keys not with the
+			//    "signing" capability are not valid)
+			if ((keyusage & 0x02) != 0x02)
+			{
+				continue;
+			}
+			// 4. key validity time (expired keys are not valid)
+			if (ekeytime && (current_time > (ckeytime + ekeytime)))
+			{
+				continue;
+			}
+			// verify signature cryptographically
+			bool verify_ok = false;
+			std::string fpr;
+			if (subkey_selected)
+			{
+				TMCG_OpenPGP_Subkey *sub = pr->subkeys[subkey_idx];
+				verify_ok = sigs[i]->VerifyData(sub->key, data, opt_verbose);
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					FingerprintConvertPlain(sub->fingerprint, fpr);
+			}
+			else
+			{
+				verify_ok = sigs[i]->VerifyData(pr->key, data, opt_verbose);
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					FingerprintConvertPlain(pr->fingerprint, fpr);
+			}
+			if (opt_verbose)
+			{
+				std::cerr << "INFO: key #" << (j-1) << " is " << fpr <<
+					std::endl;
+			}
+			if (verify_ok)
+			{
+				std::string v;
+				struct tm *ut = gmtime(&current_time);
+				char buf[1024];
+				memset(buf, 0, sizeof(buf));
+				strftime(buf, sizeof(buf), "%FT%TZ", ut);
+				v += buf; // ISO-8601 UTC datestamp
+				v += " ";
+				v += fpr; // Fingerprint of the signing key (may be a subkey)
+				v += " ";
+				fpr = "";
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					FingerprintConvertPlain(pr->fingerprint, fpr);
+				v += fpr; // Fingerprint of primary key of signing certificate
+				v += " ";
+				v += args[j]; // message describing the verification (free form)
+				verifications.push_back(v);
+			}
+		}
+	}
+}
+
 bool verify
 	(const std::vector<std::string> &args,
 	 const tmcg_openpgp_octets_t &data,
@@ -602,217 +766,73 @@ bool verify
 			" provided signature(s)" << std::endl;
 		return false;
 	}
-	// verify the signature(s)
-	for (size_t i = 0; i < sigs.size(); i++)
+	// parse all provided certs
+	TMCG_OpenPGP_Pubkeys certs;
+	std::vector<std::string> cargs;
+	for (size_t j = 1; j < args.size(); j++)
 	{
-		if (opt_verbose)
-			sigs[i]->PrintInfo();
-		// 5. signature time (signatures made before or after are not valid)
-		if ((sigs[i]->creationtime < opt_not_before) ||
-			((opt_not_after > 0) && (sigs[i]->creationtime > opt_not_after)))
+		std::string armored_pubkey;
+		if (!autodetect_file(args[j], TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
+			armored_pubkey))
 		{
-			std::cerr << "WARNING: creation time of signature" <<
-				" #" << i << " is outside provided range;" <<
-				" signature ignored" << std::endl;
-			continue;
+			for (size_t k = 0; k < certs.size(); k++)
+				delete certs[k];
+			for (size_t k = 0; k < sigs.size(); k++)
+				delete sigs[k];
+			return false;
 		}
-		// 6. hash algorithm (reject broken hash algorithms)
-		if ((sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_MD5) ||
-		    (sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_SHA1) ||
-		    (sigs[i]->hashalgo == TMCG_OPENPGP_HASHALGO_RMD160))
+		TMCG_OpenPGP_Pubkey *primary = NULL;
+		parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+		if (parse_ok)
 		{
-			std::string hashname;
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				AlgorithmHashTextName(sigs[i]->hashalgo, hashname);
-			std::cerr << "WARNING: broken hash algorithm " <<
-				hashname << " used for signature #" << i <<
-				"; signature ignored" << std::endl;
-			continue;
-		}
-		// all provided 
-		for (size_t j = 1; j < args.size(); j++)
-		{
-			std::string armored_pubkey;
-			if (!autodetect_file(args[j], TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK,
-				armored_pubkey))
-			{
-				for (size_t k = 0; k < sigs.size(); k++)
-					delete sigs[k];
-				return false;
-			}
 			TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
-			TMCG_OpenPGP_Pubkey *primary = NULL;
-			parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
-				PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
-			if (parse_ok)
+			primary->CheckSelfSignatures(ring, opt_verbose);
+			if (!primary->valid)
 			{
-				primary->CheckSelfSignatures(ring, opt_verbose);
-				if (!primary->valid)
+				if (opt_verbose)
 				{
 					std::cerr << "WARNING: primary key #" << (j-1) <<
 						" is not valid" << std::endl;
-					delete primary;
-					delete ring;
-					continue;
 				}
-				primary->CheckSubkeys(ring, opt_verbose);
-				primary->Reduce(); // keep only valid subkeys
-				if (primary->Weak(opt_verbose))
+				delete primary;
+				delete ring;
+				continue;
+			}
+			primary->CheckSubkeys(ring, opt_verbose);
+			primary->Reduce(); // keep only valid subkeys
+			if (primary->Weak(opt_verbose))
+			{
+				if (opt_verbose)
 				{
 					std::cerr << "WARNING: primary key #" << (j-1) <<
 						" is weak" << std::endl;
-					delete primary;
-					delete ring;
-					continue;
 				}
+				delete primary;
+				delete ring;
+				continue;
 			}
-			else
+			delete ring;
+		}
+		else
+		{
+			if (opt_verbose)
 			{
 				std::cerr << "WARNING: cannot parse primary key #" << (j-1) <<
 					std::endl;
-				delete ring;
-				continue;
 			}
-			// select corresponding public key of the issuer from subkeys
-			bool subkey_selected = false;
-			size_t subkey_idx = 0, keyusage = 0;
-			time_t ckeytime = 0, ekeytime = 0;
-			for (size_t k = 0; k < primary->subkeys.size(); k++)
-			{
-				if (((primary->subkeys[k]->AccumulateFlags() & 0x02) == 0x02) ||
-				    (!primary->subkeys[k]->AccumulateFlags() &&
-					((primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_RSA) || 
-					(primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) ||
-					(primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_DSA) ||
-					(primary->subkeys[k]->pkalgo == TMCG_OPENPGP_PKALGO_ECDSA))))
-				{
-					if (CallasDonnerhackeFinneyShawThayerRFC4880::
-						OctetsCompare(sigs[i]->issuer, primary->subkeys[k]->id) &&
-						!primary->subkeys[k]->Weak(opt_verbose))
-					{
-						subkey_selected = true;
-						subkey_idx = k;
-						keyusage = primary->subkeys[k]->AccumulateFlags();
-						ckeytime = primary->subkeys[k]->creationtime;
-						ekeytime = primary->subkeys[k]->expirationtime;
-						break;
-					}
-				}
-			}
-			// check the primary key, if no admissible subkey has been selected
-			if (!subkey_selected)
-			{
-				if (((primary->AccumulateFlags() & 0x02) != 0x02) &&
-				    (!primary->AccumulateFlags() &&
-					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA) &&
-					(primary->pkalgo != TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY) &&
-					(primary->pkalgo != TMCG_OPENPGP_PKALGO_DSA) &&
-					(primary->pkalgo != TMCG_OPENPGP_PKALGO_ECDSA)))
-				{
-					std::cerr << "WARNING: no admissible public key found" <<
-						std::endl;
-					delete primary;
-					delete ring;
-					continue;
-				}
-				if (!CallasDonnerhackeFinneyShawThayerRFC4880::
-					OctetsCompare(sigs[i]->issuer, primary->id))
-				{
-					std::cerr << "WARNING: no admissible public key found" <<
-						std::endl;
-					delete primary;
-					delete ring;
-					continue;
-				}
-				keyusage = primary->AccumulateFlags();
-				ckeytime = primary->creationtime;
-				ekeytime = primary->expirationtime;
-			}
-			// additional validity checks on selected key and signature
-			time_t current_time = time(NULL);
-			// 1. key validity time (signatures made before key creation or
-			//    after key expiry are not valid)
-			if (sigs[i]->creationtime < ckeytime)
-			{
-				delete primary;
-				delete ring;
-				continue;
-			}
-			if (ekeytime && (sigs[i]->creationtime > (ckeytime + ekeytime)))
-			{
-				delete primary;
-				delete ring;
-				continue;
-			}
-			// 2. signature validity time (expired signatures are not valid)
-			if (sigs[i]->expirationtime &&
-				(current_time > (sigs[i]->creationtime + sigs[i]->expirationtime)))
-			{
-				delete primary;
-				delete ring;
-				continue;
-			}
-			// 3. key usage flags (signatures made by keys not with the
-			//    "signing" capability are not valid)
-			if ((keyusage & 0x02) != 0x02)
-			{
-				delete primary;
-				delete ring;
-				continue;
-			}
-			// 4. key validity time (expired keys are not valid)
-			if (ekeytime && (current_time > (ckeytime + ekeytime)))
-			{
-				delete primary;
-				delete ring;
-				continue;
-			}
-			// verify signature cryptographically
-			bool verify_ok = false;
-			std::string fpr;
-			if (subkey_selected)
-			{
-				TMCG_OpenPGP_Subkey *sub = primary->subkeys[subkey_idx];
-				verify_ok = sigs[i]->VerifyData(sub->key, data, opt_verbose);
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					FingerprintConvertPlain(sub->fingerprint, fpr);
-			}
-			else
-			{
-				verify_ok = sigs[i]->VerifyData(primary->key, data, opt_verbose);
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					FingerprintConvertPlain(primary->fingerprint, fpr);
-			}
-			if (opt_verbose)
-			{
-				std::cerr << "INFO: key #" << (j-1) << " is " << fpr <<
-					std::endl;
-			}
-			if (verify_ok)
-			{
-				std::string v;
-				struct tm *ut = gmtime(&current_time);
-				char buf[1024];
-				memset(buf, 0, sizeof(buf));
-				strftime(buf, sizeof(buf), "%FT%TZ", ut);
-				v += buf; // ISO-8601 UTC datestamp
-				v += " ";
-				v += fpr; // Fingerprint of the signing key (may be a subkey)
-				v += " ";
-				fpr = "";
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					FingerprintConvertPlain(primary->fingerprint, fpr);
-				v += fpr; // Fingerprint of primary key of signing certificate
-				v += " ";
-				v += args[j]; // message describing the verification (free form)
-				verifications.push_back(v);
-			}
-			delete primary;
-			delete ring;
+			continue;
 		}
+		certs.push_back(primary);
+		cargs.push_back(args[j]);
 	}
-	for (size_t i = 0; i < sigs.size(); i++)
-		delete sigs[i];
+	// verify signature(s)
+	verify_signatures(cargs, sigs, certs, data, verifications);
+	// release
+	for (size_t k = 0; k < certs.size(); k++)
+		delete certs[k];
+	for (size_t k = 0; k < sigs.size(); k++)
+		delete sigs[k];
 	return true;
 }
 
@@ -1997,7 +2017,7 @@ bool decrypt
 		}
 		tmcg_openpgp_octets_t data;
 		if (msg->Decrypt(seskey, 0, data))
-			break;
+			break; // use this session key, if decryption has been successful
 	}
 	// decrypt OpenPGP message
 	tmcg_openpgp_octets_t data;
@@ -2052,8 +2072,8 @@ bool decrypt
 			delete msg;
 			return false;
 		}
-		if (!CallasDonnerhackeFinneyShawThayerRFC4880::MessageParse(data,
-			opt_verbose, msg))
+		if (!CallasDonnerhackeFinneyShawThayerRFC4880::
+			MessageParse(data, opt_verbose, msg))
 		{
 			std::cerr << "ERROR: message parsing failed (3)" << std::endl;
 			delete msg;
@@ -2069,19 +2089,86 @@ bool decrypt
 		delete msg;
 		return false;
 	}
-// TODO: verify included signatures	
-	// copy the content of literal data packet
-	tmcg_openpgp_octets_t content;
-	content.insert(content.end(),
-		(msg->literal_data).begin(), (msg->literal_data).end());
+	// parse all provided certs
+	TMCG_OpenPGP_Pubkeys certs;
+	std::vector<std::string> cargs;
+	for (size_t j = 0; j < opt_verify_with.size(); j++)
+	{
+		std::string armored_pubkey;
+		if (!autodetect_file(opt_verify_with[j],
+			TMCG_OPENPGP_ARMOR_PUBLIC_KEY_BLOCK, armored_pubkey))
+		{
+			for (size_t k = 0; k < certs.size(); k++)
+				delete certs[k];
+			delete msg;
+			return false;
+		}
+		TMCG_OpenPGP_Pubkey *primary = NULL;
+		bool parse_ok = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
+		if (parse_ok)
+		{
+			TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
+			primary->CheckSelfSignatures(ring, opt_verbose);
+			if (!primary->valid)
+			{
+				if (opt_verbose)
+				{
+					std::cerr << "WARNING: primary key #" << j <<
+						" is not valid" << std::endl;
+				}
+				delete primary;
+				delete ring;
+				continue;
+			}
+			primary->CheckSubkeys(ring, opt_verbose);
+			primary->Reduce(); // keep only valid subkeys
+			if (primary->Weak(opt_verbose))
+			{
+				if (opt_verbose)
+				{
+					std::cerr << "WARNING: primary key #" << j <<
+						" is weak" << std::endl;
+				}
+				delete primary;
+				delete ring;
+				continue;
+			}
+			delete ring;
+		}
+		else
+		{
+			if (opt_verbose)
+			{
+				std::cerr << "WARNING: cannot parse primary key #" << j <<
+					std::endl;
+			}
+			continue;
+		}
+		certs.push_back(primary);
+		cargs.push_back(opt_verify_with[j]);
+	}
+	// verify included signature(s)
+	std::vector<std::string> vers;
+	verify_signatures(cargs, msg->signatures, certs, msg->literal_data, vers);
+	for (size_t k = 0; k < certs.size(); k++)
+		delete certs[k];
+	if (opt_verify_out.length() > 0)
+	{
+		std::string verifications;
+		for (size_t i = 0; i < vers.size(); i++)
+			verifications += (vers[i] + "\r\n");
+		write_message(opt_verify_out, verifications);
+	}
 	if ((msg->filename == "_CONSOLE") && opt_verbose)
 	{
 		std::cerr << "INFO: sender requested \"for-your-eyes-only\"" <<
 			std::endl;
 	}
 	// output the result
-	for (size_t i = 0; i < content.size(); i++)
-			std::cout << content[i];
+	for (size_t i = 0; i < msg->literal_data.size(); i++)
+			std::cout << msg->literal_data[i];
+	delete msg;
 	return true;
 }
 
@@ -2235,7 +2322,7 @@ int main
 			}
 			if (arg.find("--verify-out=") == 0)
 			{
-				opt_verify_out = arg.substr(14);
+				opt_verify_out = arg.substr(13);
 				// If the designated file already exists in the filesystem,
 				// "sop decrypt" will fail with "OUTPUT_EXISTS". [DKG20]
 				std::ifstream ifs(opt_verify_out.c_str(), std::ifstream::in);
@@ -2427,7 +2514,7 @@ int main
 		// "MISSING_ARG". [DKG20]
 		if (args.size() < 2)
 		{
-			std::cerr << "ERROR: Missing required argument" << std::endl;
+			std::cerr << "ERROR: missing required argument" << std::endl;
 			ret = 19;
 		}
 		if ((ret == 0) && !verify(args, data, verifications))
@@ -2436,7 +2523,7 @@ int main
 		// "NO_SIGNATURE". [DKG20]
 		if ((ret == 0) && (verifications.size() < 1))
 		{
-			std::cerr << "ERROR: No acceptable signatures found" << std::endl;
+			std::cerr << "ERROR: no acceptable signatures found" << std::endl;
 			ret = 3;
 		}
 		for (size_t i = 0; i < verifications.size(); i++)
@@ -2504,10 +2591,6 @@ int main
 		// "VERIFICATIONS" output indicates that no valid signatures were found.
 		// "--verify-with" identifies a set of certificates whose signatures
 		// would be acceptable for signatures over this message.
-		// If the caller is interested in signature verification, both
-		// "--verify-out" and at least one "--verify-with" must be supplied. If
-		// only one of these arguments is supplied, "sop decrypt" fails with
-		// "INCOMPLETE_VERIFICATION".
 		// "--verify-not-before" and "--verify-not-after" provide a date range
 		// for acceptable signatures, by analogy with the options for "sop
 		// verify". They should only be supplied when doing signature
@@ -2521,12 +2604,66 @@ int main
 		if ((args.size() < 1) && (opt_with_password.size() < 1) &&
 			(opt_with_session_key.size() < 1))
 		{
-			std::cerr << "ERROR: Missing required argument" << std::endl;
+			std::cerr << "ERROR: missing required argument" << std::endl;
 			ret = 19;
+		}
+		// If the caller is interested in signature verification, both
+		// "--verify-out" and at least one "--verify-with" must be supplied. If
+		// only one of these arguments is supplied, "sop decrypt" fails with
+		// "INCOMPLETE_VERIFICATION". [DKG20]
+		if (((opt_verify_with.size() > 0) && (opt_verify_out.length() == 0)) ||
+			((opt_verify_with.size() == 0) && (opt_verify_out.length() > 0)))
+		{
+			std::cerr << "ERROR: incomplete verification instructions" <<
+				std::endl;
+			ret = 23;
 		}
 		// If unable to decrypt, "sop decrypt" fails with "CANNOT_DECRYPT".
 		if ((ret == 0) && !decrypt(args, passphrase, ciphertext))
+		{
+			std::cerr << "ERROR: unable to decrypt" << std::endl;
 			ret = 29; // "CANNOT_DECRYPT" [DKG20]
+		}
+	}
+	else if (subcmd == "dearmor")
+	{
+		// Convert ASCII to binary [DKG20]
+		//   Standard Input: OpenPGP material (SIGNATURES, KEY, CERTS, or [...])
+		//   Standard Output: the same material with any ASCII-armoring removed
+		std::string data_s;
+		tmcg_openpgp_octets_t data;
+		char c;
+		while (std::cin.get(c))
+		{
+			data_s += c;
+			data.push_back(c);
+		}
+		if (data_s.find("-----BEGIN PGP") == 0)
+		{
+			data.clear();
+			CallasDonnerhackeFinneyShawThayerRFC4880::ArmorDecode(data_s, data);
+		}
+		// If the input packet stream does not match any of the the expected
+		// sequence of packet types, sop dearmor fails with BAD_DATA. [DKG20]
+		tmcg_openpgp_packet_ctx_t ctx;
+		tmcg_openpgp_octets_t cp;
+		tmcg_openpgp_notations_t nt;
+		tmcg_openpgp_multiple_octets_t es, rf;
+		tmcg_openpgp_byte_t r = CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketDecode(data, opt_verbose, ctx, cp, nt, es, rf);
+		CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
+		if ((r == 0x02) || (r == 0x05) || (r == 0x06) || (r == 0x01) ||
+			(r == 0x03))  
+		{
+			data.insert(data.begin(), cp.begin(), cp.end());
+			for (size_t i = 0; i < data.size(); i++)
+				std::cout << data[i];
+		}
+		else
+		{
+			std::cerr << "ERROR: invalid data type" << std::endl;
+			ret = 41;
+		}
 	}
 	else
 	{

@@ -1,4 +1,4 @@
-# Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+# Copyright (C) 2017, 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
 #
 # This file is part of Distributed Privacy Guard (DKGPG).
 #
@@ -18,7 +18,7 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 
-AC_REVISION([20191206])
+AC_REVISION([20201016])
 AC_PREREQ(2.61)
 
 AC_INIT([Distributed Privacy Guard], [1.2.0], [HeikoStamer@gmx.net], [dkgpg],
@@ -234,6 +234,8 @@ AC_CONFIG_LINKS([tests/t-dkg-io.hh:src/dkg-io.hh])
 AC_CONFIG_LINKS([tests/t-dkg-io.cc:src/dkg-io.cc])
 AC_CONFIG_LINKS([tests/t-dkg-common.hh:src/dkg-common.hh])
 AC_CONFIG_LINKS([tests/t-dkg-common.cc:src/dkg-common.cc])
+AC_CONFIG_LINKS([tests/t-dkg-openpgp.hh:src/dkg-openpgp.hh])
+AC_CONFIG_LINKS([tests/t-dkg-openpgp.cc:src/dkg-openpgp.cc])
 AC_CONFIG_LINKS([tests/t-dkg-generate.cc:src/dkg-generate.cc])
 AC_CONFIG_LINKS([tests/t-dkg-keyinfo.cc:src/dkg-keyinfo.cc])
 AC_CONFIG_LINKS([tests/t-dkg-keycheck.cc:src/dkg-keycheck.cc])
@@ -254,6 +256,8 @@ AC_CONFIG_LINKS([tools/dkg-io.hh:src/dkg-io.hh])
 AC_CONFIG_LINKS([tools/dkg-io.cc:src/dkg-io.cc])
 AC_CONFIG_LINKS([tools/dkg-common.hh:src/dkg-common.hh])
 AC_CONFIG_LINKS([tools/dkg-common.cc:src/dkg-common.cc])
+AC_CONFIG_LINKS([tools/dkg-openpgp.hh:src/dkg-openpgp.hh])
+AC_CONFIG_LINKS([tools/dkg-openpgp.cc:src/dkg-openpgp.cc])
 
 # Define output
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile tools/Makefile\

@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2020-10-16] tools: fixed bug #59223 (finish the SOP implementation)
 * [2020-08-17] tests: fixed bug #58772 (tests cannot be run in parallel)
 * [2020-08-06] dkg-decrypt: fixed bug #58906 (removed obsolete zlib header fake)
 * [2020-01-09] dkg-decrypt: added option "-B" (allow broken hash algorithms)

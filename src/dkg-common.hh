@@ -80,14 +80,6 @@
 		(const TMCG_OpenPGP_PrivateSubkey *sub,
 		 const int opt_verbose,
 		 GennaroJareckiKrawczykRabinDKG* &dkg);
-	bool verify_signature
-		(const tmcg_openpgp_octets_t &data,
-		 const std::string &armored_pubkey,
-		 const TMCG_OpenPGP_Signature *signature,
-		 const TMCG_OpenPGP_Keyring *ring,
-		 const int opt_verbose,
-		 const bool opt_weak = false,
-		 const bool opt_broken = false);
 	void xtest
 		(const size_t num_xtests,
 		 const size_t whoami,

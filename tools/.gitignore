@@ -8,5 +8,7 @@ dkg-io.hh
 dkg-io.cc
 dkg-common.hh
 dkg-common.cc
+dkg-openpgp.hh
+dkg-openpgp.cc
 *.o
 

@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2019, 2021  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -404,6 +404,32 @@ void run_instance
 			sigpkt.insert(sigpkt.end(), sig->hspd.begin(), sig->hspd.end());
 			sigpkt.push_back(0x00);
 			sigpkt.push_back(0x00);
+			sigpkt.insert(sigpkt.end(), sig->left.begin(), sig->left.end());
+			switch (sig->pkalgo)
+			{
+				case TMCG_OPENPGP_PKALGO_RSA:
+				case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketMPIEncode(sig->rsa_md, sigpkt);
+					break;
+				case TMCG_OPENPGP_PKALGO_DSA:
+				case TMCG_OPENPGP_PKALGO_ECDSA:
+				case TMCG_OPENPGP_PKALGO_EDDSA:
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketMPIEncode(sig->dsa_r, sigpkt);
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketMPIEncode(sig->dsa_s, sigpkt);
+					break;
+				default:
+					if (opt_verbose)
+					{
+						std::cerr << "INFO: bad public-key algorithm to" <<
+							" attest for user ID #" << i <<
+							" (" << pub->userids[i]->certsigs.size() <<
+							" 3rd-party certs)" << std::endl;
+					}			
+					continue; // skip this signature
+			}			
 			hash_input.push_back(0x88);
 			hash_input.push_back((sigpkt.size() >> 24) & 0xFF);
 			hash_input.push_back((sigpkt.size() >> 16) & 0xFF);

@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2018, 2019, 2020, 2021  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ bool verify_signature
 	// select corresponding public key of the issuer from subkeys
 	bool subkey_selected = false;
 	size_t subkey_idx = 0, keyusage = 0;
-	time_t ckeytime = 0, ekeytime = 0;
+	time_t ckeytime = 0, ekeytime = 0, bkeytime = 0;
 	for (size_t j = 0; j < primary->subkeys.size(); j++)
 	{
 		if (((primary->subkeys[j]->AccumulateFlags() & 0x02) == 0x02) ||
@@ -83,6 +83,7 @@ bool verify_signature
 				keyusage = primary->subkeys[j]->AccumulateFlags();
 				ckeytime = primary->subkeys[j]->creationtime;
 				ekeytime = primary->subkeys[j]->expirationtime;
+				bkeytime = primary->subkeys[j]->bindingtime;
 				break;
 			}
 		}
@@ -112,6 +113,7 @@ bool verify_signature
 		keyusage = primary->AccumulateFlags();
 		ckeytime = primary->creationtime;
 		ekeytime = primary->expirationtime;
+		bkeytime = primary->creationtime; // because no subkey selected
 	}
 	else
 	{
@@ -139,6 +141,14 @@ bool verify_signature
 		std::cerr << "ERROR: signature was made after key expiry" << std::endl;
 		delete primary;
 		return false;
+	}
+	// 1a. signature was made before subkey was bound to primary key
+	if (signature->creationtime < bkeytime)
+	{
+		std::cerr << "ERROR: signature was made before key binding" <<
+			std::endl;
+		delete primary;
+		return false;	
 	}
 	// 2. signature validity time (expired signatures are not valid)
 	if (signature->expirationtime &&

@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2019, 2020, 2021  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -623,7 +623,7 @@ void verify_signatures
 			// select corresponding public key of the issuer from subkeys
 			bool subkey_selected = false;
 			size_t subkey_idx = 0, keyusage = 0;
-			time_t ckeytime = 0, ekeytime = 0;
+			time_t ckeytime = 0, ekeytime = 0, bkeytime = 0;
 			for (size_t k = 0; k < pr->subkeys.size(); k++)
 			{
 				if (((pr->subkeys[k]->AccumulateFlags() & 0x02) == 0x02) ||
@@ -642,6 +642,7 @@ void verify_signatures
 						keyusage = pr->subkeys[k]->AccumulateFlags();
 						ckeytime = pr->subkeys[k]->creationtime;
 						ekeytime = pr->subkeys[k]->expirationtime;
+						bkeytime = pr->subkeys[k]->bindingtime;
 						break;
 					}
 				}
@@ -666,6 +667,7 @@ void verify_signatures
 				keyusage = pr->AccumulateFlags();
 				ckeytime = pr->creationtime;
 				ekeytime = pr->expirationtime;
+				bkeytime = pr->creationtime; // because no subkey selected
 			}
 			// additional validity checks on selected key and signature
 			time_t current_time = time(NULL);
@@ -676,6 +678,11 @@ void verify_signatures
 				continue;
 			}
 			if (ekeytime && (sigs[i]->creationtime > (ckeytime + ekeytime)))
+			{
+				continue;
+			}
+			// 1a. signature was made before subkey was bound to primary key
+			if (sigs[i]->creationtime < bkeytime)
 			{
 				continue;
 			}

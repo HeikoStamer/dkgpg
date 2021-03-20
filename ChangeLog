@@ -7,6 +7,7 @@ no Front-Cover Texts, and no Back-Cover Texts. A copy of the license is included
 in the sources of this package and additionally can be obtained from Internet
 <https://www.gnu.org/licenses>.
 
+* [2021-03-20] tools: added check for binding time of subkeys
 * [2021-03-02] dkg-attest: fixed bug #60154 (hash calc first-party attestations)
 * [2020-10-16] tools: fixed bug #59223 (finish the SOP implementation)
 * [2020-08-17] tests: fixed bug #58772 (tests cannot be run in parallel)

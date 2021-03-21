@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2021  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1335,7 +1335,8 @@ int rsa_check
 }
 
 int rsa_check
-	(mpz_srcptr rsa_p, mpz_srcptr rsa_q, mpz_srcptr rsa_d, mpz_srcptr rsa_n, mpz_srcptr rsa_e)
+	(mpz_srcptr rsa_p, mpz_srcptr rsa_q, mpz_srcptr rsa_d, mpz_srcptr rsa_n,
+	 mpz_srcptr rsa_e)
 {
 	int ret = 0;
 	size_t nbits = mpz_sizeinbase(rsa_n, 2L);
@@ -2367,6 +2368,10 @@ int main
 					}
 				}
 			}
+			else
+			{
+				std::cerr << "WARNING: CheckAttestations() failed" << std::endl;
+			}
 		}
 	}
 	// show information w.r.t. (valid) user attributes
@@ -2406,6 +2411,10 @@ int main
 							std::dec << "-3PC " << f << std::endl;
 					}
 				}
+			}
+			else
+			{
+				std::cerr << "WARNING: CheckAttestations() failed" << std::endl;
 			}
 		}
 	}

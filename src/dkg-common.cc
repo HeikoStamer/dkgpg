@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2020, 2021  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -703,12 +703,11 @@ bool sign_hash
 		std::cerr << std::dec << std::endl;
 
 	// sign the hash value
-	gcry_error_t ret;
-	gcry_mpi_t r, s;
-	r = gcry_mpi_new(2048);
-	s = gcry_mpi_new(2048);
 	if (opt_y == false)
 	{
+		gcry_error_t ret;
+		gcry_mpi_t r = gcry_mpi_new(2048);
+		gcry_mpi_t s = gcry_mpi_new(2048);
 		gcry_mpi_t h;
 		ret = gcry_mpi_scan(&h, GCRYMPI_FMT_USG, buffer, buflen, NULL);
 		if (ret)
@@ -766,64 +765,18 @@ bool sign_hash
 			return false;
 		}
 		mpz_clear(dsa_m), mpz_clear(dsa_r), mpz_clear(dsa_s);
+		CallasDonnerhackeFinneyShawThayerRFC4880::
+			PacketSigEncode(trailer, left, r, s, sig);
 	}
 	else
 	{
-		switch (prv->pkalgo)
+		if (!prv->SignData(hash, hashalgo, trailer, left, opt_verbose, sig))
 		{
-			case TMCG_OPENPGP_PKALGO_RSA:
-			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignRSA(hash, prv->private_key, hashalgo, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_DSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignDSA(hash, prv->private_key, r, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_ECDSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignECDSA(hash, prv->private_key, r, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_EDDSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignEdDSA(hash, prv->private_key, r, s);
-				break;
-			default:
-				std::cerr << "ERROR: public-key algorithm " <<
-					(int)prv->pkalgo << " not supported" << std::endl;
-				gcry_mpi_release(r), gcry_mpi_release(s);
-				return false;
-		}
-		if (ret)
-		{
-			std::cerr << "ERROR: signing of hash value failed " <<
-				"(rc = " << gcry_err_code(ret) << ", str = " <<
-				gcry_strerror(ret) << ")" << std::endl;
-			gcry_mpi_release(r), gcry_mpi_release(s);
+			std::cerr << "ERROR: TMCG_OpenPGP_Prvkey::SignData() failed" <<
+				std::endl;
 			return false;
 		}
 	}
-	switch (prv->pkalgo)
-	{
-		case TMCG_OPENPGP_PKALGO_RSA:
-		case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigEncode(trailer, left, s, sig);
-			break;
-		case TMCG_OPENPGP_PKALGO_DSA:
-		case TMCG_OPENPGP_PKALGO_ECDSA:
-		case TMCG_OPENPGP_PKALGO_EDDSA:
-		case TMCG_OPENPGP_PKALGO_EXPERIMENTAL7:
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigEncode(trailer, left, r, s, sig);
-			break;
-		default:
-			std::cerr << "ERROR: public-key algorithm " << (int)prv->pkalgo <<
-				" not supported" << std::endl;
-			gcry_mpi_release(r), gcry_mpi_release(s);
-			return false;
-	}
-	gcry_mpi_release(r), gcry_mpi_release(s);
 	return true;
 }
 

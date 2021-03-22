@@ -468,96 +468,116 @@ bool sign
 		{
 			return false;
 		}
+		TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring(); // empty ring
+		prv->RelinkPublicSubkeys(); // relink the contained subkeys
+		prv->pub->CheckSelfSignatures(ring, opt_verbose);
+		prv->pub->CheckSubkeys(ring, opt_verbose);
+		prv->RelinkPrivateSubkeys(); // undo the relinking
+		delete ring;
 		time_t sigtime = time(NULL); // current time, fixed hash algo SHA2-512
-		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+		tmcg_openpgp_hashalgo_t halgo = TMCG_OPENPGP_HASHALGO_SHA512;
 		tmcg_openpgp_octets_t trailer, hash, left;
-		bool hret = false;
-		if (opt_as_text)
+		bool hret = false;		
+		// check whether primary key is capable of singing data
+		if ((prv->pub->AccumulateFlags() & 0x02) == 0x02)
 		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
-					prv->pub->pkalgo, hashalgo, sigtime, 0, "",
-					prv->pub->fingerprint, trailer);
-			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				TextDocumentHash(data, trailer, hashalgo, hash, left);
+			if (opt_as_text)
+			{
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigPrepareDetachedSignature(
+						TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+						prv->pub->pkalgo, halgo, sigtime, 0, "",
+						prv->pub->fingerprint, trailer);
+				hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					TextDocumentHash(data, trailer, halgo, hash, left);
+			}
+			else
+			{
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigPrepareDetachedSignature(
+						TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
+						prv->pub->pkalgo, halgo, sigtime, 0, "",
+						prv->pub->fingerprint, trailer);
+				hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					BinaryDocumentHash(data, trailer, halgo, hash, left);
+			}
+			if (!hret)
+			{
+				std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
+					std::endl;
+				delete prv;
+				return false;
+			}
+			if (!prv->SignData(hash, halgo, trailer, left, opt_verbose, sigs))
+			{
+				std::cerr << "ERROR: TMCG_OpenPGP_Prvkey::SignData() failed" <<
+					std::endl;
+				delete prv;
+				return false;
+			}
 		}
 		else
 		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pub->pkalgo,
-					hashalgo, sigtime, 0, "", prv->pub->fingerprint, trailer);
-			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				BinaryDocumentHash(data, trailer, hashalgo, hash, left);
-		}
-		if (!hret)
-		{
-			std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
-				std::endl;
-			delete prv;
-			return false;
-		}
-		gcry_error_t ret;
-		gcry_mpi_t r, s;
-		r = gcry_mpi_new(2048);
-		s = gcry_mpi_new(2048);
-		switch (prv->pkalgo)
-		{
-			case TMCG_OPENPGP_PKALGO_RSA:
-			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignRSA(hash, prv->private_key, hashalgo, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_DSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignDSA(hash, prv->private_key, r, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_ECDSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignECDSA(hash, prv->private_key, r, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_EDDSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignEdDSA(hash, prv->private_key, r, s);
-				break;
-			default:
-				std::cerr << "ERROR: public-key algorithm " <<
-					(int)prv->pkalgo << " not supported" << std::endl;
-				gcry_mpi_release(r), gcry_mpi_release(s);
+			// select first subkey that is capable of signing data
+			bool selected = false;
+			size_t idx = 0;
+			for (size_t k = 0; k < prv->private_subkeys.size(); k++)
+			{
+				TMCG_OpenPGP_Subkey *sub = prv->private_subkeys[k]->pub;
+				if ((sub->AccumulateFlags() & 0x02) == 0x02)
+				{
+					selected = true;
+					idx = k;
+					break;
+				}
+			}
+			if (selected)
+			{
+				TMCG_OpenPGP_PrivateSubkey *ssb = prv->private_subkeys[idx];
+				if (opt_as_text)
+				{
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketSigPrepareDetachedSignature(
+							TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+							ssb->pub->pkalgo, halgo, sigtime, 0, "",
+							ssb->pub->fingerprint, trailer);
+					hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+						TextDocumentHash(data, trailer, halgo, hash, left);
+				}
+				else
+				{
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketSigPrepareDetachedSignature(
+							TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
+							ssb->pub->pkalgo, halgo, sigtime, 0, "",
+							ssb->pub->fingerprint, trailer);
+					hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+						BinaryDocumentHash(data, trailer, halgo, hash, left);
+				}
+				if (!hret)
+				{
+					std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
+						std::endl;
+					delete prv;
+					return false;
+				}
+				if (!ssb->SignData(hash, halgo, trailer, left, opt_verbose,
+					sigs))
+				{
+					std::cerr << "ERROR: TMCG_OpenPGP_PrivateSubkey::" <<
+						"SignData() failed" << std::endl;
+					delete prv;
+					return false;
+				}			
+			}
+			else
+			{
+				std::cerr << "ERROR: key is not capable of signing data" <<
+					std::endl;
 				delete prv;
 				return false;
+			}
 		}
-		if (ret)
-		{
-			std::cerr << "ERROR: signing of hash value failed " <<
-				"(rc = " << gcry_err_code(ret) << ", str = " <<
-				gcry_strerror(ret) << ")" << std::endl;
-			gcry_mpi_release(r), gcry_mpi_release(s);
-			delete prv;
-			return false;
-		}
-		switch (prv->pkalgo)
-		{
-			case TMCG_OPENPGP_PKALGO_RSA:
-			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, s, sigs);
-				break;
-			case TMCG_OPENPGP_PKALGO_DSA:
-			case TMCG_OPENPGP_PKALGO_ECDSA:
-			case TMCG_OPENPGP_PKALGO_EDDSA:
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, r, s, sigs);
-				break;
-			default:
-				std::cerr << "ERROR: public-key algorithm " <<
-					(int)prv->pkalgo << " not supported" << std::endl;
-				gcry_mpi_release(r), gcry_mpi_release(s);
-				delete prv;
-				return false;
-		}
-		gcry_mpi_release(r), gcry_mpi_release(s);
 		delete prv;
 	}
 	// output the result
@@ -789,7 +809,7 @@ bool verify
 			PublicKeyBlockParse(armored_pubkey, opt_verbose, primary);
 		if (parse_ok)
 		{
-			TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring();
+			TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring(); // empty
 			primary->CheckSelfSignatures(ring, opt_verbose);
 			if (!primary->valid)
 			{
@@ -911,100 +931,121 @@ bool encrypt
 			encrypt_ret = 67; // "KEY_IS_PROTECTED" [DKG20]
 			return false;
 		}
+		TMCG_OpenPGP_Keyring *ring = new TMCG_OpenPGP_Keyring(); // empty ring
+		prv->RelinkPublicSubkeys(); // relink the contained subkeys
+		prv->pub->CheckSelfSignatures(ring, opt_verbose);
+		prv->pub->CheckSubkeys(ring, opt_verbose);
+		prv->RelinkPrivateSubkeys(); // undo the relinking
+		delete ring;
 		time_t sigtime = time(NULL); // current time, fixed hash algo SHA2-512
-		tmcg_openpgp_hashalgo_t hashalgo = TMCG_OPENPGP_HASHALGO_SHA512;
+		tmcg_openpgp_hashalgo_t halgo = TMCG_OPENPGP_HASHALGO_SHA512;
 		tmcg_openpgp_octets_t trailer, hash, left;
 		bool hret = false;
-		if (opt_as_text || (opt_as_mime && valid_utf8(data)))
+		// check whether primary key is capable of singing data
+		if ((prv->pub->AccumulateFlags() & 0x02) == 0x02)
 		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
-					prv->pub->pkalgo, hashalgo, sigtime, 0, "",
-					prv->pub->fingerprint, trailer);
-			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				TextDocumentHash(data, trailer, hashalgo, hash, left);
+			if (opt_as_text || (opt_as_mime && valid_utf8(data)))
+			{
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigPrepareDetachedSignature(
+						TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+						prv->pub->pkalgo, halgo, sigtime, 0, "",
+						prv->pub->fingerprint, trailer);
+				hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					TextDocumentHash(data, trailer, halgo, hash, left);
+			}
+			else
+			{
+				CallasDonnerhackeFinneyShawThayerRFC4880::
+					PacketSigPrepareDetachedSignature(
+						TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
+						prv->pub->pkalgo, halgo, sigtime, 0, "",
+						prv->pub->fingerprint, trailer);
+				hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+					BinaryDocumentHash(data, trailer, halgo, hash, left);
+			}
+			if (!hret)
+			{
+				std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
+					std::endl;
+				delete prv;
+				encrypt_ret = -1;
+				return false;
+			}
+			if (!prv->SignData(hash, halgo, trailer, left, opt_verbose, sigs))
+			{
+				std::cerr << "ERROR: TMCG_OpenPGP_Prvkey::SignData() failed" <<
+					std::endl;
+				delete prv;
+				encrypt_ret = -1;
+				return false;
+			}
 		}
 		else
 		{
-			CallasDonnerhackeFinneyShawThayerRFC4880::
-				PacketSigPrepareDetachedSignature(
-					TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT, prv->pub->pkalgo,
-					hashalgo, sigtime, 0, "", prv->pub->fingerprint, trailer);
-			hret = CallasDonnerhackeFinneyShawThayerRFC4880::
-				BinaryDocumentHash(data, trailer, hashalgo, hash, left);
-		}
-		if (!hret)
-		{
-			std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
-				std::endl;
-			delete prv;
-			encrypt_ret = -1;
-			return false;
-		}
-		gcry_error_t ret;
-		gcry_mpi_t r, s;
-		r = gcry_mpi_new(2048);
-		s = gcry_mpi_new(2048);
-		switch (prv->pkalgo)
-		{
-			case TMCG_OPENPGP_PKALGO_RSA:
-			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignRSA(hash, prv->private_key, hashalgo, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_DSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignDSA(hash, prv->private_key, r, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_ECDSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignECDSA(hash, prv->private_key, r, s);
-				break;
-			case TMCG_OPENPGP_PKALGO_EDDSA:
-				ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-					AsymmetricSignEdDSA(hash, prv->private_key, r, s);
-				break;
-			default:
-				std::cerr << "ERROR: public-key algorithm " <<
-					(int)prv->pkalgo << " not supported" << std::endl;
-				gcry_mpi_release(r), gcry_mpi_release(s);
+			// select first subkey that is capable of signing data
+			bool selected = false;
+			size_t idx = 0;
+			for (size_t k = 0; k < prv->private_subkeys.size(); k++)
+			{
+				TMCG_OpenPGP_Subkey *sub = prv->private_subkeys[k]->pub;
+				if ((sub->AccumulateFlags() & 0x02) == 0x02)
+				{
+					selected = true;
+					idx = k;
+					break;
+				}
+			}
+			if (selected)
+			{
+				TMCG_OpenPGP_PrivateSubkey *ssb = prv->private_subkeys[idx];
+				if (opt_as_text)
+				{
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketSigPrepareDetachedSignature(
+							TMCG_OPENPGP_SIGNATURE_CANONICAL_TEXT_DOCUMENT,
+							ssb->pub->pkalgo, halgo, sigtime, 0, "",
+							ssb->pub->fingerprint, trailer);
+					hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+						TextDocumentHash(data, trailer, halgo, hash, left);
+				}
+				else
+				{
+					CallasDonnerhackeFinneyShawThayerRFC4880::
+						PacketSigPrepareDetachedSignature(
+							TMCG_OPENPGP_SIGNATURE_BINARY_DOCUMENT,
+							ssb->pub->pkalgo, halgo, sigtime, 0, "",
+							ssb->pub->fingerprint, trailer);
+					hret = CallasDonnerhackeFinneyShawThayerRFC4880::
+						BinaryDocumentHash(data, trailer, halgo, hash, left);
+				}
+				if (!hret)
+				{
+					std::cerr << "ERROR: [Text|Binary]DocumentHash() failed" <<
+						std::endl;
+					delete prv;
+					encrypt_ret = -1;
+					return false;
+				}
+				if (!ssb->SignData(hash, halgo, trailer, left, opt_verbose,
+					sigs))
+				{
+					std::cerr << "ERROR: TMCG_OpenPGP_PrivateSubkey::" <<
+						"SignData() failed" << std::endl;
+					delete prv;
+					encrypt_ret = -1;
+					return false;
+				}			
+			}
+			else
+			{
+				std::cerr << "ERROR: key is not capable of signing data" <<
+					std::endl;
 				delete prv;
-				encrypt_ret = 13; // "UNSUPPORTED_ASYMMETRIC_ALGO" [DKG20]
+				encrypt_ret = -1;
 				return false;
+			}
 		}
-		if (ret)
-		{
-			std::cerr << "ERROR: signing of hash value failed " <<
-				"(rc = " << gcry_err_code(ret) << ", str = " <<
-				gcry_strerror(ret) << ")" << std::endl;
-			gcry_mpi_release(r), gcry_mpi_release(s);
-			delete prv;
-			encrypt_ret = -1;
-			return false;
-		}
-		switch (prv->pkalgo)
-		{
-			case TMCG_OPENPGP_PKALGO_RSA:
-			case TMCG_OPENPGP_PKALGO_RSA_SIGN_ONLY:
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, s, sigs);
-				break;
-			case TMCG_OPENPGP_PKALGO_DSA:
-			case TMCG_OPENPGP_PKALGO_ECDSA:
-			case TMCG_OPENPGP_PKALGO_EDDSA:
-				CallasDonnerhackeFinneyShawThayerRFC4880::
-					PacketSigEncode(trailer, left, r, s, sigs);
-				break;
-			default:
-				std::cerr << "ERROR: public-key algorithm " <<
-					(int)prv->pkalgo << " not supported" << std::endl;
-				gcry_mpi_release(r), gcry_mpi_release(s);
-				delete prv;
-				encrypt_ret = 13; // "UNSUPPORTED_ASYMMETRIC_ALGO" [DKG20]
-				return false;
-		}
-		gcry_mpi_release(r), gcry_mpi_release(s);
 		delete prv;
 	}
 	lit.insert(lit.begin(), sigs.begin(), sigs.end()); // prepend signatures

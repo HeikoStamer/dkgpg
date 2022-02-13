@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2019, 2020, 2021  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2019, 2020, 2021, 2022  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1058,7 +1058,7 @@ bool encrypt
 		encrypt_ret = -1;
 		return false;
 	}
-	tmcg_openpgp_octets_t mdc_hashing, hash, mdc, seipd;
+	tmcg_openpgp_octets_t mdc_hashing, hash, mdc, seipd, lit_without_mdc;
 	enc.clear();
 	// "it includes the prefix data described above" [RFC 4880]
 	mdc_hashing.insert(mdc_hashing.end(), prefix.begin(), prefix.end());
@@ -1072,6 +1072,8 @@ bool encrypt
 	CallasDonnerhackeFinneyShawThayerRFC4880::
 		HashCompute(TMCG_OPENPGP_HASHALGO_SHA1, mdc_hashing, hash);
 	CallasDonnerhackeFinneyShawThayerRFC4880::PacketMdcEncode(hash, mdc);
+	for (size_t i = 0; i < lit.size(); i++)
+		lit_without_mdc.push_back(lit[i]);
 	lit.insert(lit.end(), mdc.begin(), mdc.end()); // append MDC packet
 	// generate a fresh session key, but keep the previous prefix
 	seskey.clear();
@@ -1106,8 +1108,8 @@ bool encrypt
 		for (size_t i = 0; i < 8; i++)
 			ad.push_back(0x00); // initial eight-octet big-endian chunk index
 		ret = CallasDonnerhackeFinneyShawThayerRFC4880::
-			SymmetricEncryptAEAD(lit, seskey, skalgo, aeadalgo, cs, ad,
-				opt_verbose, iv, enc); // encrypt (3)
+			SymmetricEncryptAEAD(lit_without_mdc, seskey, skalgo, aeadalgo, cs,
+				ad, opt_verbose, iv, enc); // encrypt (3)
 		if (ret)
 		{
 			std::cerr << "ERROR: SymmetricEncryptAEAD() failed (rc = " <<
@@ -2219,7 +2221,7 @@ int main
 			PacketDecode(data, opt_verbose, ctx, cp, nt, es, rf);
 		CallasDonnerhackeFinneyShawThayerRFC4880::PacketContextRelease(ctx);
 		if ((r == 0x02) || (r == 0x05) || (r == 0x06) || (r == 0x01) ||
-			(r == 0x03))  
+			(r == 0x03))
 		{
 			data.insert(data.begin(), cp.begin(), cp.end());
 			for (size_t i = 0; i < data.size(); i++)

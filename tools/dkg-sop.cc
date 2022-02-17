@@ -1093,7 +1093,7 @@ bool encrypt
 #if GCRYPT_VERSION_NUMBER < 0x010900
 	// FIXME: remove, if libgcrypt >= 1.9.0 required by configure.ac
 #else
-	aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
+	//aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
 #endif
 	if (opt_rfc4880bis)
 	{

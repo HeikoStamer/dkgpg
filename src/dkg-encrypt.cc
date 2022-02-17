@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019, 2020  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2020, 2022  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -308,7 +308,7 @@ int main
 #if GCRYPT_VERSION_NUMBER < 0x010900
 	// FIXME: remove, if libgcrypt >= 1.9.0 required by configure.ac
 #else
-	aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
+	//aeadalgo = TMCG_OPENPGP_AEADALGO_EAX;
 #endif
 	if (opt_a != 0)
 		aeadalgo = (tmcg_openpgp_aeadalgo_t)opt_a; // enforce given algorithm

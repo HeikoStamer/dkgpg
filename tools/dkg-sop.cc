@@ -2013,6 +2013,9 @@ int main
 		// number. A "sop" implementation should use a version number that
 		// respects an established standard that is easily comparable and
 		// parsable, like [SEMVER].
+		// If --backend is supplied, the implementation should produce a
+		// comparable line of implementation and version information about
+		// the primary underlying OpenPGP toolkit.
 		if (opt_backend)
 			std::cout << "LibTMCG " << version_libTMCG() << std::endl;
 		else

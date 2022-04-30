@@ -42,6 +42,7 @@ bool opt_armor = true;
 bool opt_as_binary = true;
 bool opt_as_text = false;
 bool opt_as_mime = false;
+bool opt_backend = false;
 time_t opt_not_before = 0;
 time_t opt_not_after = 0;
 std::vector<std::string> opt_with_password;
@@ -1796,6 +1797,11 @@ int main
 				continue;
 			}
 			// The following options are defined in [DKG20].
+			if (arg.find("--backend") == 0)
+			{
+				opt_backend = true; // return version of backend library
+				continue;
+			}
 			if (arg.find("--no-armor") == 0)
 			{
 				opt_armor = false; // disable ASCII-armored output
@@ -2007,7 +2013,10 @@ int main
 		// number. A "sop" implementation should use a version number that
 		// respects an established standard that is easily comparable and
 		// parsable, like [SEMVER].
-		std::cout << version << std::endl;
+		if (opt_backend)
+			std::cout << "LibTMCG " << version_libTMCG() << std::endl;
+		else
+			std::cout << version << std::endl;
 	}
 	else if (subcmd == "generate-key")
 	{

@@ -18,7 +18,8 @@
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
 *******************************************************************************/
 
-// [DKG20] https://datatracker.ietf.org/doc/draft-dkg-openpgp-stateless-cli/
+// [DKG21] https://datatracker.ietf.org/doc/draft-dkg-openpgp-stateless-cli/
+//         D.K. Gillmor, Stateless OpenPGP Command Line Interface, October 2021
 
 // include headers
 #ifdef HAVE_CONFIG_H
@@ -1796,7 +1797,7 @@ int main
 				opt_verbose++; // increase verbosity
 				continue;
 			}
-			// The following options are defined in [DKG20].
+			// The following options are defined in [DKG21].
 			if (arg.find("--backend") == 0)
 			{
 				opt_backend = true; // return version of backend library
@@ -2007,7 +2008,9 @@ int main
 	int ret = 0;
 	if (subcmd == "version")
 	{
-		// Version Information [DKG20]
+		// Version Information [DKG21]
+		//   Standard Input: ignored
+		//   Standard Output: version information
 		// The version string emitted should contain the name of the "sop"
 		// implementation, followed by a single space, followed by the version
 		// number. A "sop" implementation should use a version number that
@@ -2023,9 +2026,9 @@ int main
 	}
 	else if (subcmd == "generate-key")
 	{
-		// Generate a Secret Key [DKG20]
+		// Generate a Secret Key [DKG21]
 		//   Standard Input: ignored
-		//   Standard Output: "KEY"
+		//   Standard Output: "KEYS"
 		// Generate a single default OpenPGP key with zero or more User IDs.
 		// The generared secret key SHOULD be usable for as much of the "sop"
 		// functionality as possible.
@@ -2034,12 +2037,16 @@ int main
 	}
 	else if (subcmd == "extract-cert")
 	{
-		// Extract a Certificate from a Secret Key [DKG20]
-		//   Standard Input: "KEY"
+		// Extract a Certificate from a Secret Key [DKG21]
+		//   Standard Input: "KEYS"
 		//   Standard Output: "CERTS"
-		// Note that the resultant "CERTS" object will only ever contain one
-   		// OpenPGP certificate, since "KEY" contains exactly one OpenPGP
-		// Transferable Secret Key.
+		// The output should contain one OpenPGP certificate in CERTS per
+		// OpenPGP Transferable Secret Key found in KEYS. There is no guarantee
+		// what order the CERTS will be in.
+		//
+		/// Note that the resultant "CERTS" object will only ever contain one
+   		/// OpenPGP certificate, since "KEY" contains exactly one OpenPGP
+		/// Transferable Secret Key. [DKG20]
 		if (!extract(passphrase))
 			ret = -1;
 	}
@@ -2048,7 +2055,8 @@ int main
 		// Create Detached Signatures [DKG20]
 		//   Standard Input: "DATA"
 		//   Standard Output: "SIGNATURES"
-		// Exactly one signature will be made by each supplied "KEY".
+		// Exactly one signature will be made by each key in the supplied
+		// "KEYS" argument.
 		// "--as" defaults to "binary". If "--as=text" and the input "DATA" is
 		// not valid "UTF-8", "sop sign" fails with "EXPECTED_TEXT".
 		tmcg_openpgp_octets_t data;
@@ -2064,7 +2072,11 @@ int main
 			}
 		}
 		if ((ret == 0) && !sign(args, passphrase, data))
-			ret = -1;
+		{
+			// If any key in the KEYS objects is not capable of producing a
+			// signature, sop sign will fail with KEY_CANNOT_SIGN.
+			ret = 79;
+		}
 	}
 	else if (subcmd == "verify")
 	{

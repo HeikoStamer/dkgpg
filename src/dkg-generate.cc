@@ -1,7 +1,7 @@
 /*******************************************************************************
    This file is part of Distributed Privacy Guard (DKGPG).
 
- Copyright (C) 2017, 2018, 2019  Heiko Stamer <HeikoStamer@gmx.net>
+ Copyright (C) 2017, 2018, 2019, 2022  Heiko Stamer <HeikoStamer@gmx.net>
 
    DKGPG is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -2036,7 +2036,7 @@ int main
 		.homepage = "https://www.nongnu.org/dkgpg/",
 		.config_file = "dkgpg.conf",
 		.user_config_file = "~/.config/dkgpg.conf",
-		.version = PACKAGE_VERSION,
+		.version = version,
 		.is_gnu = 0,
 		.gettext_domain = NULL,
 		.gettext_path = NULL
